@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Tortas Tortuga - Ordenar</title>
+    <meta name="description" content="Las mejores tortas de San Antonio, Texas. Pide ahora!">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#FF5A00">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link rel="apple-touch-icon" href="icons/icon-apple.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script type="module">
+        import { auth, db } from './js/firebase-config.js';
+        import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+        import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) { window.location.href = 'pages/auth.html'; return; }
+            window._firebaseUser = user;
+            try {
+                const idx = await getDoc(doc(db, 'uid_index', user.uid));
+                if (idx.exists()) {
+                    const p = (await getDoc(doc(db, 'usuarios', idx.data().id))).data();
+                    if (p) {
+                        const n = document.getElementById('customer-name');
+                        const t = document.getElementById('customer-phone');
+                        if (n && !n.value) n.value = p.nombre || '';
+                        if (t && !t.value) t.value = p.telefono || '';
+                        window._userProfile = p;
+                    }
+                }
+            } catch(e) {}
+        });
+        window.cerrarSesion = async () => {
+            const { signOut } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
+            await signOut(auth); window.location.href = 'pages/auth.html';
+        };
+    </script>
+</head>
+<body>
+<header class="app-header">
+        <a href="index.html" class="app-logo" style="text-decoration:none;">Tortas Tortuga</a>
+    <div class="header-actions">
+        <button class="clear-cart-btn" id="clear-cart-btn" onclick="limpiarCarrito()" style="display:none;">Vaciar</button>
+        <button class="signout-btn" onclick="window.location.href='index.html'" title="Ir al inicio"> Inicio</button>
+        <button class="signout-btn" onclick="window.location.href='pages/admin.html'" title="Panel de Administrador"> Admin</button>
+        <button class="signout-btn" onclick="cerrarSesion()" title="Cerrar sesion">Salir</button>
+        <div class="cart-icon" id="cart-icon"> <span id="cart-count">0</span></div>
+    </div>
+</header>
+
+<main>
+    <section class="app-hero">
+        <h1>Las Verdaderas Tortas de Texas </h1>
+        <h2 style="font-size: 1.5rem; font-weight: 800; margin-top: -0.5rem; margin-bottom: 1rem; color: #FFD700;">PARE DE SUFRIR NO SE CASTIGE</h2>
+        <p>Todos los combos incluyen Chips y Refresco · Lun–Sab 10am–6pm</p>
+        <div class="hero-phone"> 210-TORTA-10 | 210-86782-10</div>
+        <a href="index.html" class="hero-back-btn"> Regresar</a>
+    </section>
+
+    <section class="app-menu-section">
+        <h2 class="app-section-title"> Nuestras Tortas</h2>
+        <div class="app-menu-grid" id="menu-container"></div>
+    </section>
+
+    <section class="app-menu-section">
+        <h2 class="app-section-title"> Drinks & Micheladas</h2>
+        <div class="app-menu-grid drinks-grid" id="drinks-container"></div>
+    </section>
+
+    <section class="app-menu-section">
+        <h2 class="app-section-title"> Para Botanear & Sides</h2>
+        <div class="app-menu-grid drinks-grid" id="botanas-container"></div>
+    </section>
+</main>
+
+<!-- MODAL CARRITO -->
+<div class="modal-overlay" id="cart-modal">
+    <div class="cart-container">
+        <div class="cart-header">
+            <h3>Tu Pedido </h3>
+            <button id="close-cart" class="close-btn">x</button>
+        </div>
+        <div class="cart-body">
+            <div class="tracker-section" style="margin-bottom: 1.5rem; padding: 1rem; background: var(--surface2); border-radius: 12px; border: 1px solid var(--border);">
+                <p style="font-size:0.9rem; font-weight:700; margin-bottom:0.5rem; display:flex; align-items:center; gap:0.4rem;"> Rastrear Pedido (Ticket)</p>
+                <div style="display:flex; gap:0.5rem;">
+                    <input type="text" id="ticket-search-input" placeholder="Ej. A4B2" style="flex:1; padding:0.6rem; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:white; font-weight:700; text-transform:uppercase;">
+                    <button id="ticket-search-btn" style="background:var(--primary); color:white; border:none; padding:0 1rem; border-radius:8px; font-weight:700; cursor:pointer; transition:0.2s;">Buscar</button>
+                </div>
+                <div id="ticket-search-result" style="margin-top:0.8rem; font-size:0.85rem; display:none; padding:0.8rem; border-radius:8px; background: rgba(0,0,0,0.3);"></div>
+            </div>
+
+            <div class="cart-items" id="cart-items">
+                <p class="empty-cart">Tu carrito esta vacio </p>
+            </div>
+            <div class="cart-footer">
+                <div class="total-row">
+                    <span>Total:</span>
+                    <span id="cart-total">$0.00</span>
+                </div>
+                <div class="checkout-form">
+                    <div class="form-section-label"> Datos del Cliente</div>
+                    <input type="text" id="customer-name" class="form-input" placeholder="Nombre completo" required>
+                    <div class="phone-field-wrap">
+                        <span class="phone-flag"></span>
+                        <input type="tel" id="customer-phone" class="form-input phone-input" placeholder="Telefono · OBLIGATORIO" inputmode="numeric" required>
+                        <button type="button" id="locate-by-phone-btn" class="locate-phone-btn" title="GPS"></button>
+                    </div>
+                    <p class="phone-hint" id="phone-hint"> Requerido para identificar tu pedido.</p>
+                    <label class="no-phone-check" id="no-phone-label">
+                        <input type="checkbox" id="no-phone-checkbox">
+                        <span> Estoy en la tienda / sin telefono</span>
+                    </label>
+
+                    <div class="form-section-label" style="margin-top:1rem;"> Tipo de Entrega</div>
+                    <div class="delivery-options">
+                        <label class="delivery-label"><input type="radio" name="order-type" value="pickup" checked><span> Recoger</span></label>
+                        <label class="delivery-label"><input type="radio" name="order-type" value="delivery"><span> Domicilio</span></label>
+                    </div>
+
+                    <div class="store-location-card">
+                        <div class="store-loc-header">
+                            <span class="store-loc-icon"></span>
+                            <div>
+                                <div class="store-loc-title">Tortas Tortuga — Tienda</div>
+                                <div class="store-loc-addr">San Antonio, TX 78201</div>
+                            </div>
+                            <a href="https://maps.google.com/?q=29.4241,-98.4936" target="_blank" class="store-map-btn">Ver mapa </a>
+                        </div>
+                        <iframe src="https://www.openstreetmap.org/export/embed.html?bbox=-98.5086,29.4091,-98.4786,29.4391&layer=mapnik&marker=29.4241,-98.4936"
+                            title="Ubicacion tienda" class="store-map-iframe" loading="lazy"></iframe>
+                    </div>
+
+                    <div id="location-section" style="display:none; margin-bottom:1rem;">
+                        <div class="form-section-label"> Tu Ubicacion</div>
+                        <div class="location-tabs">
+                            <button class="loc-tab active" id="tab-gps" type="button"> GPS</button>
+                            <button class="loc-tab" id="tab-address" type="button"> Direccion</button>
+                        </div>
+                        <div id="panel-gps" class="loc-panel">
+                            <button type="button" id="get-location-btn" class="location-btn"> Obtener ubicacion</button>
+                            <p class="live-location-hint"> Comparte tu <strong>ubicacion en vivo</strong> por WhatsApp al repartidor.</p>
+                            <div id="location-status"></div>
+                        </div>
+                        <div id="panel-address" class="loc-panel" style="display:none;">
+                            <input type="text" id="addr-street" class="addr-input" placeholder=" Calle y numero">
+                            <input type="text" id="addr-apt" class="addr-input" placeholder="Apt / Suite (opcional)">
+                            <div class="addr-row">
+                                <input type="text" id="addr-city" class="addr-input" placeholder="Ciudad" value="San Antonio">
+                                <input type="text" id="addr-zip" class="addr-input addr-zip" placeholder="ZIP">
+                            </div>
+                            <button type="button" id="search-address-btn" class="location-btn"> Buscar Direccion</button>
+                            <div id="address-status"></div>
+                        </div>
+                    </div>
+
+                    <div class="wait-time-estimate" id="wait-time-display"> Tiempo estimado: <strong>20 minutos</strong></div>
+
+                    <button id="checkout-btn" class="whatsapp-btn"> Enviar Orden por WhatsApp</button>
+                    <button id="pay-now-btn" class="pay-now-btn"> Pagar Ahora</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL MODIFICACIONES -->
+<div class="mods-overlay" id="mods-modal">
+    <div class="mods-container">
+        <div class="mods-header">
+            <div>
+                <h3>Personaliza tu torta</h3>
+                <p class="mods-subtitle" id="mods-item-name"></p>
+            </div>
+            <button class="close-btn" id="close-mods">x</button>
+        </div>
+        <div class="mods-body">
+            <div class="mods-section">
+                <p class="mods-section-title"> Opciones de Combo</p>
+                <div class="mods-chips">
+                    <label class="mod-chip chip-beer" data-price="-1"><input type="checkbox" value="Solo Torta (-$1)" data-price="-1"> Solo Torta (Sin Soda ni Chips) <span class="chip-price">-$1</span></label>
+                </div>
+            </div>
+            <div class="mods-section">
+                <p class="mods-section-title"> Quitar ingrediente</p>
+                <div class="mods-chips">
+                    <label class="mod-chip"><input type="checkbox" value="Sin cebolla"> Sin cebolla</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin tomate"> Sin tomate</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin mayonesa"> Sin mayonesa</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin lechuga"> Sin lechuga</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin aguacate"> Sin aguacate</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin queso"> Sin queso</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin jalapenos"> Sin jalapenos</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin frijoles"> Sin frijoles</label>
+                </div>
+            </div>
+            <div class="mods-section">
+                <p class="mods-section-title"> Poquito de...</p>
+                <div class="mods-chips">
+                    <label class="mod-chip"><input type="checkbox" value="Poca mayonesa"> Poca mayo</label>
+                    <label class="mod-chip"><input type="checkbox" value="Poca cebolla"> Poca cebolla</label>
+                    <label class="mod-chip"><input type="checkbox" value="Poco aguacate"> Poco aguacate</label>
+                    <label class="mod-chip"><input type="checkbox" value="Poco tomate"> Poco tomate</label>
+                    <label class="mod-chip"><input type="checkbox" value="Poco queso"> Poco queso</label>
+                </div>
+            </div>
+            <div class="mods-section">
+                <p class="mods-section-title"> Extras</p>
+                <div class="mods-chips">
+                    <label class="mod-chip" data-price="1"><input type="checkbox" value="Extra Slice of Meat +$1" data-price="1"> Extra Meat Slice <span class="chip-price">+$1</span></label>
+                    <label class="mod-chip" data-price="5"><input type="checkbox" value="6 Shrimp +$5" data-price="5"> 6 Shrimp <span class="chip-price">+$5</span></label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra aguacate"> Extra aguacate</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra queso"> Extra queso</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra picante">  Extra picante</label>
+                    <label class="mod-chip"><input type="checkbox" value="Bien tostada"> Bien tostada</label>
+                    <label class="mod-chip"><input type="checkbox" value="Pan suave"> Pan suave</label>
+                    <label class="mod-chip"><input type="checkbox" value="Partida a la mitad">  Mitad</label>
+                </div>
+            </div>
+
+            <div class="mods-section">
+                <p class="mods-section-title"> Nota especial</p>
+                <textarea class="mods-notes" id="mods-notes" placeholder="Ej: calentar bien, sin sal..."></textarea>
+            </div>
+        </div>
+        <div class="mods-footer">
+            <button class="mods-skip-btn" id="mods-skip">Sin cambios</button>
+            <button class="mods-confirm-btn" id="mods-confirm"> Agregar al Pedido</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL POS -->
+<div class="pos-overlay" id="pos-modal">
+    <div class="pos-container">
+        <div class="pos-header">
+            <div>
+                <h3> Selecciona como pagar</h3>
+                <p class="pos-total-label">Total a pagar: <strong id="pos-total-amount">$0.00</strong></p>
+            </div>
+            <button class="close-btn" id="close-pos">x</button>
+        </div>
+        <div class="pos-body">
+            <button class="pos-method" id="pay-stripe" onclick="pagarConStripe()">
+                <span class="pos-method-icon"></span>
+                <div class="pos-method-info">
+                    <div class="pos-method-name">Tarjeta de Credito / Debito</div>
+                    <div class="pos-method-sub">Visa · Mastercard · Apple Pay · Google Pay</div>
+                </div>
+                <span class="pos-method-arrow">></span>
+            </button>
+            <button class="pos-method" onclick="mostrarInfoPago('cashapp')">
+                <span class="pos-method-icon" style="background:#00D64F;">$</span>
+                <div class="pos-method-info">
+                    <div class="pos-method-name">Cash App</div>
+                    <div class="pos-method-sub">$danielgomez580</div>
+                </div>
+                <span class="pos-method-arrow">></span>
+            </button>
+            <button class="pos-method" onclick="mostrarInfoPago('zelle')">
+                <span class="pos-method-icon" style="background:#6D1ED4;">Z</span>
+                <div class="pos-method-info">
+                    <div class="pos-method-name">Zelle</div>
+                    <div class="pos-method-sub">210-771-3679 · Daniel Mata</div>
+                </div>
+                <span class="pos-method-arrow">></span>
+            </button>
+            <button class="pos-method" onclick="mostrarInfoPago('venmo')">
+                <span class="pos-method-icon" style="background:#008CFF;">V</span>
+                <div class="pos-method-info">
+                    <div class="pos-method-name">Venmo</div>
+                    <div class="pos-method-sub">@danielgomez580</div>
+                </div>
+                <span class="pos-method-arrow">></span>
+            </button>
+            <button class="pos-method" onclick="mostrarInfoPago('cash')">
+                <span class="pos-method-icon" style="background:#25D366;"></span>
+                <div class="pos-method-info">
+                    <div class="pos-method-name">Efectivo</div>
+                    <div class="pos-method-sub">Paga al recibir tu orden</div>
+                </div>
+                <span class="pos-method-arrow">></span>
+            </button>
+        </div>
+
+        <div class="pos-info-panel" id="pos-info-panel" style="display:none;">
+            <button class="back-pos-btn" onclick="ocultarInfoPago()"><- Volver</button>
+            <div id="pos-info-content"></div>
+            <button class="btn-confirmar-pago" id="btn-confirmar-pago" onclick="confirmarPago()">
+                Confirmar — Ya envie el pago
+            </button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+<script type="module">
+    import { seedProductos, renderMenu } from './js/menu.js';
+    (async () => {
+        try {
+            await seedProductos();
+            await renderMenu();
+        } catch(e) {
+            console.warn('Error al cargar menu:', e);
+        }
+    })();
+</script>
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        });
+    }
+</script>
+</body>
+</html>

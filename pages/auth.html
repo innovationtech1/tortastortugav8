@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Tortas Tortuga — Iniciar Sesion</title>
+    <meta name="description" content="Inicia sesion o crea tu cuenta en Tortas Tortuga para hacer pedidos mas rapido.">
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#FF5A00">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="../icons/icon-apple.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/auth.css">
+</head>
+<body>
+
+<div class="auth-bg">
+    <div class="auth-card">
+
+        <div class="auth-logo">
+            <span class="logo-emoji"></span>
+            <h1 class="logo-text">Tortas Tortuga</h1>
+            <p class="logo-sub">San Antonio, Texas</p>
+        </div>
+
+        <div class="auth-tabs">
+            <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Iniciar Sesion</button>
+            <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Crear Cuenta</button>
+        </div>
+
+        <form id="form-login" class="auth-form active" novalidate>
+            <button type="button" class="btn-google" id="btn-google-login">
+                <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                Continuar con Google
+            </button>
+
+            <div class="divider"><span>o con tu correo</span></div>
+
+            <div class="field-wrap">
+                <label class="field-label">Correo electronico</label>
+                <input type="email" id="login-email" class="field-input" placeholder="tu@correo.com" autocomplete="email">
+                <span class="field-error" id="err-login-email"></span>
+            </div>
+
+            <div class="field-wrap">
+                <label class="field-label">Contrasena</label>
+                <div class="password-wrap">
+                    <input type="password" id="login-password" class="field-input" placeholder="Tu contrasena" autocomplete="current-password">
+                    <button type="button" class="toggle-pass" onclick="togglePass('login-password', this)"></button>
+                </div>
+                <span class="field-error" id="err-login-password"></span>
+            </div>
+
+            <button type="button" class="link-btn" id="forgot-link" onclick="switchTab('forgot')">
+                Olvidaste tu contrasena?
+            </button>
+
+            <div class="auth-message" id="msg-login"></div>
+
+            <button type="submit" class="btn-primary" id="btn-login">
+                <span class="btn-text">Iniciar Sesion</span>
+                <span class="btn-spinner" style="display:none;"></span>
+            </button>
+        </form>
+
+        <form id="form-register" class="auth-form" novalidate>
+            <button type="button" class="btn-google" id="btn-google-register">
+                <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                Registrarse con Google
+            </button>
+
+            <div class="divider"><span>o crea tu cuenta</span></div>
+
+            <div class="field-wrap">
+                <label class="field-label">Nombre completo</label>
+                <input type="text" id="reg-nombre" class="field-input" placeholder="Juan Garcia" autocomplete="name">
+                <span class="field-error" id="err-reg-nombre"></span>
+            </div>
+
+            <div class="field-wrap">
+                <label class="field-label">
+                    Nombre de usuario
+                    <span class="username-status" id="username-status"></span>
+                </label>
+                <input type="text" id="reg-username" class="field-input" placeholder="juangarcia92" autocomplete="username" maxlength="20">
+                <small class="field-hint">Solo letras, numeros y _ · Minimo 4 caracteres</small>
+                <span class="field-error" id="err-reg-username"></span>
+            </div>
+
+            <div class="field-wrap">
+                <label class="field-label">Telefono</label>
+                <input type="tel" id="reg-telefono" class="field-input" placeholder="2101234567" inputmode="numeric" maxlength="10">
+                <small class="field-hint">10 digitos (area de San Antonio)</small>
+                <span class="field-error" id="err-reg-telefono"></span>
+            </div>
+
+            <div class="field-wrap">
+                <label class="field-label">Correo electronico</label>
+                <input type="email" id="reg-email" class="field-input" placeholder="tu@correo.com" autocomplete="email">
+                <span class="field-error" id="err-reg-email"></span>
+            </div>
+
+            <div class="field-wrap">
+                <label class="field-label">Contrasena</label>
+                <div class="password-wrap">
+                    <input type="password" id="reg-password" class="field-input" placeholder="Minimo 8 caracteres" autocomplete="new-password">
+                    <button type="button" class="toggle-pass" onclick="togglePass('reg-password', this)"></button>
+                </div>
+                <div class="password-strength" id="pass-strength">
+                    <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
+                    <span class="strength-label" id="strength-label"></span>
+                </div>
+                <span class="field-error" id="err-reg-password"></span>
+            </div>
+
+            <div class="field-wrap">
+                <label class="field-label">Confirmar contrasena</label>
+                <div class="password-wrap">
+                    <input type="password" id="reg-confirm" class="field-input" placeholder="Repite tu contrasena" autocomplete="new-password">
+                    <button type="button" class="toggle-pass" onclick="togglePass('reg-confirm', this)"></button>
+                </div>
+                <span class="field-error" id="err-reg-confirm"></span>
+            </div>
+
+            <div class="auth-message" id="msg-register"></div>
+
+            <button type="submit" class="btn-primary" id="btn-register">
+                <span class="btn-text">Crear Cuenta</span>
+                <span class="btn-spinner" style="display:none;"></span>
+            </button>
+        </form>
+
+        <form id="form-forgot" class="auth-form" novalidate>
+            <div class="forgot-header">
+                <button type="button" class="back-btn" onclick="switchTab('login')"><- Regresar</button>
+                <h2>Recuperar Contrasena</h2>
+                <p>Te enviaremos un correo para restablecer tu contrasena.</p>
+            </div>
+
+            <div class="field-wrap">
+                <label class="field-label">Correo electronico</label>
+                <input type="email" id="forgot-email" class="field-input" placeholder="tu@correo.com" autocomplete="email">
+                <span class="field-error" id="err-forgot-email"></span>
+            </div>
+
+            <div class="auth-message" id="msg-forgot"></div>
+
+            <button type="submit" class="btn-primary" id="btn-forgot">
+                <span class="btn-text">Enviar correo de recuperacion</span>
+                <span class="btn-spinner" style="display:none;"></span>
+            </button>
+        </form>
+
+    </div>
+</div>
+
+<script type="module" src="../js/auth.js"></script>
+</body>
+</html>
