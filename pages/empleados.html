@@ -903,7 +903,7 @@ window.guardarTelefono = async function(){
 };
 
 /* ─── MOSTRAR PANEL ADMIN ─────────────────────── */
-function mostrarAdmin(nivel){
+async function mostrarAdmin(nivel){
   nivelAdmin=nivel;
   showScreen('s-admin');
   el('btn-logout').style.display='none';
@@ -913,7 +913,19 @@ function mostrarAdmin(nivel){
   el('rchip').style.display='inline-flex';
   el('hname').textContent=nivel>=4?'Gerente':'Supervisor';
   el('hname').style.display='inline';
-  // Pestaña "Nuevo" solo para gerente y supervisor
+
+  // Si no hay sesión activa, hacer login silencioso con la cuenta del gerente
+  // para que Firestore acepte las lecturas con las reglas de seguridad
+  if(!user){
+    try{
+      const cred = await signInWithEmailAndPassword(auth,
+        GERENTE_INICIAL.email, GERENTE_INICIAL.password);
+      user = cred.user;
+    } catch(e){
+      console.warn('Login silencioso admin:', e.message);
+    }
+  }
+
   cargarListaEmps();
   semOffA=0; cargarRep();
   poblarSelects();
