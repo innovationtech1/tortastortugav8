@@ -1575,9 +1575,6 @@ window.loginEmp = async function(){
     msg('msg-login','er','❌ '+(m[e.code]||'Número o PIN incorrecto.'));
   }finally{ btnLd('btn-login',false); }
 };
-    msg('msg-login','er','❌ '+(m[e.code]||'Error: '+e.code));
-  }finally{ btnLd('btn-login',false); }
-};
 
 /* auto-registro eliminado — solo admin puede crear empleados */
 
