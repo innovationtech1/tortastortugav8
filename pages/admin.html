@@ -104,8 +104,8 @@
         <div class="login-logo">🐢</div>
         <h2>Panel Admin Vivo</h2>
         <p>Tortas Tortuga — Pedidos en Tiempo Real</p>
-        <input type="password" id="password-input" class="login-input" placeholder="Contraseña">
-        <button class="login-btn" id="btn-login" style="margin-bottom: 0.8rem;">Entrar al Panel</button>
+        <input type="password" id="password-input" class="login-input" placeholder="Contraseña" onkeydown="if(event.key==='Enter')entrarAdmin()">
+        <button class="login-btn" id="btn-login" onclick="entrarAdmin()" style="margin-bottom: 0.8rem;">Entrar al Panel</button>
         <button class="filter-btn" onclick="window.location.href='../ordenar.html'" style="width: 100%;">🏠 Volver a la Tienda</button>
         <p class="login-error" id="login-error">❌ Contraseña incorrecta</p>
     </div>
@@ -326,6 +326,33 @@
     </div>
 </div>
 
+<script>
+// Login del panel — función global para que funcione aunque el módulo tarde en cargar
+function entrarAdmin() {
+    var pw = document.getElementById('password-input').value;
+    if (pw === 'tortuga2025' || pw === 'supervisor') {
+        sessionStorage.setItem('tt_admin_logged', 'true');
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        // Disparar evento para que el módulo inicie Firebase
+        window.dispatchEvent(new Event('admin-logged-in'));
+    } else {
+        document.getElementById('login-error').style.display = 'block';
+        document.getElementById('password-input').value = '';
+        document.getElementById('password-input').focus();
+    }
+}
+// Permitir acceso directo si ya estaba logueado
+if (sessionStorage.getItem('tt_admin_logged') === 'true') {
+    document.addEventListener('DOMContentLoaded', function() {
+        var ls = document.getElementById('login-screen');
+        var db = document.getElementById('dashboard');
+        if(ls) ls.style.display = 'none';
+        if(db) db.style.display = 'block';
+    });
+}
+</script>
+
 <script type="module">
     import { db } from '../js/firebase-config.js';
     import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, addDoc, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
@@ -340,16 +367,15 @@
         iniciarFirebaseEnVivo();
     }
 
-    document.getElementById('btn-login').addEventListener('click', () => {
-        if (document.getElementById('password-input').value === ADMIN_PASSWORD || document.getElementById('password-input').value === 'supervisor') {
-            sessionStorage.setItem('tt_admin_logged', 'true');
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'block';
-            iniciarFirebaseEnVivo();
-        } else {
-            document.getElementById('login-error').style.display = 'block';
-        }
+    // El login lo maneja entrarAdmin() (función global)
+    // Aquí solo escuchamos el evento para iniciar Firebase
+    window.addEventListener('admin-logged-in', () => {
+        iniciarFirebaseEnVivo();
     });
+    // Si ya estaba logueado, iniciar Firebase directamente
+    if (sessionStorage.getItem('tt_admin_logged') === 'true') {
+        iniciarFirebaseEnVivo();
+    }
 
     function iniciarFirebaseEnVivo() {
         const q = query(collection(db, 'pedidos'), orderBy('creado', 'desc'));
