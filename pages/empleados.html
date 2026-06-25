@@ -306,7 +306,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'Out
       <label>PIN (4 dígitos)</label>
       <input type="tel" id="l-pw" placeholder="• • • •" maxlength="4" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginEmp()" style="font-size:1.4rem;letter-spacing:.5em;font-weight:700;text-align:center;">
       <span class="ferr" id="e-lpw"></span>
-      <span class="fhint" style="text-align:center;display:block;margin-top:.3rem;">Tu supervisor te dará tu número y PIN</span>
+      <span class="fhint" style="text-align:center;display:block;margin-top:.3rem;">Gerente: <strong>EMP-GERENTE</strong> · PIN <strong>1234</strong></span>
     </div>
     <button class="btn bp" id="btn-login" onclick="loginEmp()"><span class="lbl">Entrar</span><div class="spin"></div></button>
     <div class="dvd">acceso rápido para checar</div>
@@ -326,8 +326,8 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'Out
     <div id="info-setup" class="card" style="border-color:rgba(255,215,0,.25);background:rgba(255,215,0,.06);margin-top:.6rem;">
       <div style="font-size:.78rem;font-weight:800;color:#FFD700;margin-bottom:.5rem;">👑 Credenciales del Gerente</div>
       <div style="font-size:.8rem;color:var(--mu);line-height:2;">
-        Usuario: <strong style="color:var(--tx);">gerente@tortuga.local</strong><br>
-        Contraseña: <strong style="color:var(--tx);">GerenteTortuga2026</strong>
+        Número: <strong style="color:var(--tx);">EMP-GERENTE</strong><br>
+        PIN: <strong style="color:var(--tx);">1234</strong>
       </div>
       <button onclick="document.getElementById('info-setup').style.display='none'" style="background:none;border:none;color:var(--mu);font-size:.72rem;cursor:pointer;margin-top:.5rem;padding:0;">Ocultar esto ✕</button>
     </div>
@@ -624,8 +624,10 @@ const CREDS = {
    Se crea automaticamente la primera vez.
    ════════════════════════════════════════════════ */
 const GERENTE_INICIAL = {
-  email:    'gerente@tortuga.local',
-  password: 'GerenteTortuga2026',
+  email:    'emp-gerente@tortuga.local',   // número: EMP-GERENTE
+  password: 'EMP-GERENTE1234',             // número + PIN 1234
+  empId:    'EMP-GERENTE',
+  pin:      '1234',
   nombre:   'Gerente',
   apellido: 'Principal',
   puesto:   'Gerente General',
@@ -732,12 +734,13 @@ async function setupInicial(){
       // Ya existe — verificar que tenga perfil Firestore
       const snap = await getDoc(doc(db,'empleados', cred.user.uid));
       if(!snap.exists()){
-        const empId = 'EMP-GERENTE';
+        const empId = GERENTE_INICIAL.empId;
         await setDoc(doc(db,'empleados', cred.user.uid),{
           uid:cred.user.uid, empleadoId:empId,
           nombre:GERENTE_INICIAL.nombre, apellido:GERENTE_INICIAL.apellido,
           email:GERENTE_INICIAL.email, telefono:'2100000000',
           puesto:GERENTE_INICIAL.puesto, rol:GERENTE_INICIAL.rol,
+          pin:GERENTE_INICIAL.pin,
           salarioHora:0, estado:'activo',
           creado:serverTimestamp(), turnoActivo:false
         });
@@ -751,10 +754,11 @@ async function setupInicial(){
       GERENTE_INICIAL.email, GERENTE_INICIAL.password);
     await updateProfile(newCred.user,{displayName:'Gerente Principal'});
     await setDoc(doc(db,'empleados', newCred.user.uid),{
-      uid:newCred.user.uid, empleadoId:'EMP-GERENTE',
+      uid:newCred.user.uid, empleadoId:GERENTE_INICIAL.empId,
       nombre:GERENTE_INICIAL.nombre, apellido:GERENTE_INICIAL.apellido,
       email:GERENTE_INICIAL.email, telefono:'2100000000',
       puesto:GERENTE_INICIAL.puesto, rol:GERENTE_INICIAL.rol,
+      pin:GERENTE_INICIAL.pin,
       salarioHora:0, estado:'activo',
       creado:serverTimestamp(), turnoActivo:false
     });
@@ -779,12 +783,13 @@ onAuthStateChanged(auth, async u=>{
     if(!s.exists()){
       // Si es la cuenta del gerente, crear el perfil automáticamente
       if(u.email === GERENTE_INICIAL.email){
-        const empId = 'EMP-GERENTE';
+        const empId = GERENTE_INICIAL.empId;
         await setDoc(doc(db,'empleados', u.uid),{
           uid:u.uid, empleadoId:empId,
           nombre:GERENTE_INICIAL.nombre, apellido:GERENTE_INICIAL.apellido,
           email:GERENTE_INICIAL.email, telefono:'2100000000',
           puesto:GERENTE_INICIAL.puesto, rol:GERENTE_INICIAL.rol,
+          pin:GERENTE_INICIAL.pin,
           salarioHora:0, estado:'activo',
           creado:serverTimestamp(), turnoActivo:false
         });
@@ -952,7 +957,7 @@ async function mostrarAdmin(nivel){
   if(!user){
     try{
       const cred = await signInWithEmailAndPassword(auth,
-        GERENTE_INICIAL.email, GERENTE_INICIAL.password);
+        GERENTE_INICIAL.email, GERENTE_INICIAL.password);  // emp-gerente@tortuga.local + EMP-GERENTE1234
       user = cred.user;
     } catch(e){
       console.warn('Login silencioso admin:', e.message);
