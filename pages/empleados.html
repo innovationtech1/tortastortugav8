@@ -818,26 +818,104 @@ function mostrarPanelAdminDireto(nivel){
     // Guardar nivel para que el módulo lo use cuando cargue
     window._adminNivel = nivel;
 
-    // Si el módulo ya cargó, usarlo para cargar datos
+    // Cargar datos via REST API inmediatamente — no esperar al módulo
+    window._adminNivel = nivel;
+    cargarListaEmpsREST();
+    poblarSelectsREST();
+    // Si el módulo también cargó, dejar que tome control
     if(window._mostrarAdminReal){
         window._mostrarAdminReal(nivel);
-    } else {
-        // Esperar hasta 5 segundos a que el módulo cargue
-        var tries = 0;
-        var wait = setInterval(function(){
-            tries++;
-            if(window._mostrarAdminReal){
-                clearInterval(wait);
-                window._mostrarAdminReal(nivel);
-            }
-            if(tries > 50){ 
-                clearInterval(wait);
-                var grid = document.getElementById('emp-grid');
-                if(grid) grid.innerHTML='<div class="no-emp"><div class="ico">⚠️</div><p>Firebase tarda en conectar. <button onclick="location.reload()" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:.4rem .8rem;cursor:pointer;font-weight:700;margin-top:.5rem;">🔄 Recargar página</button></p></div>';
-            }
-        }, 200);
     }
 }
+
+/* ─── FUNCIONES REST API (independientes del módulo) ─────────── */
+var _restToken = null;
+
+async function getRestToken(){
+    if(_restToken) return _restToken;
+    // Login silencioso del gerente para obtener token
+    var API_KEY = 'AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k';
+    var res = await fetch(
+        'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+API_KEY,
+        { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({email:'gerente@tortuga.local', password:'GerenteTortuga2026', returnSecureToken:true}) }
+    );
+    var d = await res.json();
+    if(d.idToken){ _restToken = d.idToken; return _restToken; }
+    // Intentar con nueva cuenta
+    var res2 = await fetch(
+        'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+API_KEY,
+        { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({email:'emp-gerente@tortuga.local', password:'EMP-GERENTE1234', returnSecureToken:true}) }
+    );
+    var d2 = await res2.json();
+    if(d2.idToken){ _restToken = d2.idToken; return _restToken; }
+    return null;
+}
+
+async function cargarListaEmpsREST(){
+    var grid = el('emp-grid');
+    if(!grid) return;
+    grid.innerHTML = '<div class="no-emp"><div class="ico">⏳</div><p>Cargando empleados…</p></div>';
+    try{
+        var token = await getRestToken();
+        if(!token){ grid.innerHTML='<div class="no-emp"><div class="ico">❌</div><p>No se pudo conectar.</p></div>'; return; }
+        var PROJECT = 'tortas-tortuga';
+        var res = await fetch(
+            'https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents/empleados?pageSize=100',
+            { headers:{'Authorization':'Bearer '+token} }
+        );
+        var d = await res.json();
+        var docs = d.documents || [];
+        allEmps = docs.map(function(doc){
+            var f = doc.fields||{};
+            return {
+                uid: doc.name.split('/').pop(),
+                nombre: f.nombre?.stringValue||'',
+                apellido: f.apellido?.stringValue||'',
+                empleadoId: f.empleadoId?.stringValue||'',
+                puesto: f.puesto?.stringValue||'',
+                rol: f.rol?.stringValue||'empleado',
+                estado: f.estado?.stringValue||'activo',
+                turnoActivo: f.turnoActivo?.booleanValue||false,
+                email: f.email?.stringValue||''
+            };
+        });
+        // Ordenar por nombre
+        allEmps.sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
+        var cnt = el('emp-cnt');
+        if(cnt) cnt.textContent = allEmps.length;
+        renderEmps(allEmps);
+    } catch(e){
+        console.error('cargarListaEmpsREST:', e);
+        grid.innerHTML='<div class="no-emp"><div class="ico">❌</div><p>Error: '+e.message+'</p></div>';
+    }
+}
+
+async function poblarSelectsREST(){
+    var token = await getRestToken();
+    if(!token) return;
+    var PROJECT = 'tortas-tortuga';
+    try{
+        var res = await fetch(
+            'https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents/empleados?pageSize=100',
+            { headers:{'Authorization':'Bearer '+token} }
+        );
+        var d = await res.json();
+        var docs = d.documents||[];
+        var opts = docs.map(function(doc){
+            var f = doc.fields||{};
+            var uid = doc.name.split('/').pop();
+            var nom = (f.nombre?.stringValue||'')+' '+(f.apellido?.stringValue||'');
+            return '<option value="'+uid+'">'+nom.trim()+'</option>';
+        }).join('');
+        var repSel = el('rep-sel');
+        if(repSel) repSel.innerHTML='<option value="">— Todos los empleados —</option>'+opts;
+        var privSel = el('priv-sel');
+        if(privSel) privSel.innerHTML='<option value="">— Selecciona empleado —</option>'+opts;
+    } catch(e){ console.error('poblarSelectsREST:', e); }
+}
+
 </script>
 
 <script type="module">
@@ -1846,7 +1924,13 @@ window.gateV = async function(){
 window.cerrarGate = ()=>{ cOv('ov-gate'); gatePin=''; };
 
 window.mostrarAdminDirecto = function(nivel=3){ mostrarAdmin(nivel); };
-window._mostrarAdminReal = function(nivel){ mostrarAdmin(nivel||3); };
+window._mostrarAdminReal = async function(nivel){
+    nivelAdmin = nivel||3;
+    // Cargar empleados via REST API
+    await cargarListaEmpsREST();
+    await poblarSelectsREST();
+    console.log('✅ Admin panel cargado via modulo Firebase');
+};
 console.log('✅ Firebase módulo cargado - _mostrarAdminReal registrado');
 
 /* ─── CERRAR SESIÓN ───────────────────────────── */
