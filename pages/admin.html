@@ -486,23 +486,34 @@
     window.abrirProductos = async () => { document.getElementById('productos-modal').classList.add('active'); await cargarListaProductos(); };
     window.cerrarProductos = () => { document.getElementById('productos-modal').classList.remove('active'); cancelarEdicion(); };
 
+    let productosCache = []; // cache para no re-descargar al editar
+
     async function cargarListaProductos() {
         const q = query(collection(db, 'productos'), orderBy('orden'));
         const snap = await getDocs(q);
         const lista = document.getElementById('prod-lista');
-        const productos = [];
-        snap.forEach(d => productos.push({ id: d.id, ...d.data() }));
-        if (!productos.length) { lista.innerHTML = '<p style="text-align:center; padding:2rem; color:var(--muted);">No hay productos.</p>'; return; }
-        lista.innerHTML = productos.map(p => {
+        productosCache = [];
+        snap.forEach(d => productosCache.push({ id: d.id, ...d.data() }));
+        if (!productosCache.length) { lista.innerHTML = '<p style="text-align:center; padding:2rem; color:var(--muted);">No hay productos.</p>'; return; }
+        lista.innerHTML = productosCache.map(p => {
             const preciosStr = p.variantes?.map(v => `$${v.precio}`).join(' / ') || '—';
             const badge = p.badge?.texto || '';
-            return `<div style="display:flex; align-items:center; gap:0.75rem; padding:0.75rem; border-bottom:1px solid var(--border); transition:0.15s;">
+            return `<div style="display:flex; align-items:center; gap:0.75rem; padding:0.75rem; border-bottom:1px solid var(--border);" data-prod-id="${p.id}">
                 <div style="flex:1; min-width:0;"><div style="font-weight:700; font-size:0.9rem;">${p.nombre} ${badge ? `<span style="font-size:0.7rem; color:var(--primary);">${badge}</span>` : ''}</div>
                 <div style="font-size:0.75rem; color:var(--muted);">${p.categoria === 'tortas' ? '🥖' : p.categoria === 'drinks' ? '🍹' : '🥒'} ${p.categoria} · ${preciosStr} · <span style="color:${p.disponible ? 'var(--green)' : '#F44336'};">${p.disponible ? '✅ Disponible' : '❌ Agotado'}</span></div></div>
-                <button class="filter-btn" onclick="editarProducto('${p.id}')" style="padding:0.3rem 0.7rem;">✏️ Editar</button>
-                <button class="delete-btn" onclick="confirmarEliminarProducto('${p.id}')" title="Eliminar" style="padding:0.3rem 0.5rem;">🗑️</button>
+                <button class="filter-btn btn-editar-prod" data-id="${p.id}" style="padding:0.3rem 0.7rem;">✏️ Editar</button>
+                <button class="delete-btn btn-eliminar-prod" data-id="${p.id}" title="Eliminar" style="padding:0.3rem 0.5rem;">🗑️</button>
             </div>`;
         }).join('');
+
+        // Event delegation — un solo listener para todos los botones
+        // Listener en el contenedor (no en los botones) — funciona aunque el HTML se regenere
+        lista.onclick = (e) => {
+            const editBtn = e.target.closest('.btn-editar-prod');
+            const delBtn  = e.target.closest('.btn-eliminar-prod');
+            if (editBtn) { e.stopPropagation(); editarProducto(editBtn.dataset.id); }
+            if (delBtn)  { e.stopPropagation(); confirmarEliminarProducto(delBtn.dataset.id); }
+        };
     }
 
     window.nuevoProducto = () => {
@@ -515,9 +526,13 @@
     };
 
     window.editarProducto = async (id) => {
-        const snap = await getDocs(collection(db, 'productos')); let producto = null;
-        snap.forEach(d => { if (d.id === id) producto = { id: d.id, ...d.data() }; });
-        if (!producto) return;
+        // Usar cache primero, si no hay volver a Firebase
+        let producto = productosCache.find(p => p.id === id) || null;
+        if (!producto) {
+            const snap = await getDocs(collection(db, 'productos'));
+            snap.forEach(d => { if (d.id === id) producto = { id: d.id, ...d.data() }; });
+        }
+        if (!producto) { alert('Producto no encontrado.'); return; }
         document.getElementById('prod-edit-id').value = producto.id; document.getElementById('prod-edit-productid').value = producto.productId || '';
         document.getElementById('prod-nombre').value = producto.nombre || ''; document.getElementById('prod-descripcion').value = producto.descripcion || '';
         document.getElementById('prod-categoria').value = producto.categoria || 'tortas'; document.getElementById('prod-tipo').value = producto.tipo || 'torta';
