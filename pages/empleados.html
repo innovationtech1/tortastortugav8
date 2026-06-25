@@ -830,11 +830,10 @@ function mostrarPanelAdminDireto(nivel){
                 clearInterval(wait);
                 window._mostrarAdminReal(nivel);
             }
-            if(tries > 25){ 
+            if(tries > 50){ 
                 clearInterval(wait);
-                // Módulo no cargó — mostrar error en el grid
                 var grid = document.getElementById('emp-grid');
-                if(grid) grid.innerHTML='<div class="no-emp"><div class="ico">⚠️</div><p>Firebase no pudo conectar. Recarga la página e intenta de nuevo.</p></div>';
+                if(grid) grid.innerHTML='<div class="no-emp"><div class="ico">⚠️</div><p>Firebase tarda en conectar. <button onclick="location.reload()" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:.4rem .8rem;cursor:pointer;font-weight:700;margin-top:.5rem;">🔄 Recargar página</button></p></div>';
             }
         }, 200);
     }
@@ -842,6 +841,10 @@ function mostrarPanelAdminDireto(nivel){
 </script>
 
 <script type="module">
+// Capturar errores del módulo para debug
+window.addEventListener('error', function(e){ console.error('Error global:', e.message, e.filename, e.lineno); });
+window.addEventListener('unhandledrejection', function(e){ console.error('Promise rechazada:', e.reason); });
+
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
          onAuthStateChanged, signOut, updateProfile }
@@ -1844,6 +1847,7 @@ window.cerrarGate = ()=>{ cOv('ov-gate'); gatePin=''; };
 
 window.mostrarAdminDirecto = function(nivel=3){ mostrarAdmin(nivel); };
 window._mostrarAdminReal = function(nivel){ mostrarAdmin(nivel||3); };
+console.log('✅ Firebase módulo cargado - _mostrarAdminReal registrado');
 
 /* ─── CERRAR SESIÓN ───────────────────────────── */
 
@@ -1965,6 +1969,12 @@ document.querySelectorAll('.ov').forEach(o=>{ o.addEventListener('click',e=>{ if
 // Registrar funciones reales para los proxies
 window.checaRapido = window._checaRapidoReal;
 console.log('✅ Portal empleados Tortas Tortuga — módulo cargado correctamente');
+// Si hay nivel admin pendiente (entró con contraseña antes de que cargara el módulo)
+if(window._adminNivel && window._mostrarAdminReal){
+    console.log('🔄 Cargando datos admin pendientes para nivel', window._adminNivel);
+    window._mostrarAdminReal(window._adminNivel);
+    window._adminNivel = null;
+}
 </script>
 </body>
 </html>
