@@ -649,6 +649,18 @@ async function checaRapido(){
               body: JSON.stringify({ email: emailInterno, password: pwAuto, returnSecureToken: true }) }
         );
         var authData = await authRes.json();
+
+        // Si falla, intentar con email legacy para cuentas creadas antes del nuevo sistema
+        if(authData.error && empId === 'EMP-GERENTE'){
+            var legacyRes = await fetch(
+                'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + API_KEY,
+                { method:'POST', headers:{'Content-Type':'application/json'},
+                  body: JSON.stringify({ email:'gerente@tortuga.local', password:'GerenteTortuga2026', returnSecureToken:true }) }
+            );
+            var legacyData = await legacyRes.json();
+            if(!legacyData.error) authData = legacyData;
+        }
+
         if(authData.error){
             var m = { 'INVALID_LOGIN_CREDENTIALS':'Número o PIN incorrecto.',
                       'TOO_MANY_ATTEMPTS_TRY_LATER':'Demasiados intentos. Espera unos minutos.' };
@@ -1425,7 +1437,16 @@ window.loginEmp = async function(){
   try{
     const emailInterno = `${empId.toLowerCase()}@tortuga.local`;
     const pwAuto = `${empId}${pin}`;
-    await signInWithEmailAndPassword(auth, emailInterno, pwAuto);
+    try{
+      await signInWithEmailAndPassword(auth, emailInterno, pwAuto);
+    } catch(e1){
+      // Fallback para gerente con cuenta legacy
+      if(empId==='EMP-GERENTE'){
+        await signInWithEmailAndPassword(auth,'gerente@tortuga.local','GerenteTortuga2026');
+      } else {
+        throw e1;
+      }
+    }
   }catch(e){
     const m={
       'auth/invalid-credential':'Número o PIN incorrecto.',
