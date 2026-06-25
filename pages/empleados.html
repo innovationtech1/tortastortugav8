@@ -617,14 +617,148 @@ function abrirGatePass(tipo, cb){
     setTimeout(function(){ var p=document.getElementById('gate-pw'); if(p)p.focus(); },300);
 }
 function mostrarAdminDirecto(nivel){ window._adminNivel = nivel || 3; }
-function checaRapido(){
-    // Esta la maneja el módulo — mostrar mensaje de espera si no está lista
-    var msg = document.getElementById('msg-checar');
-    if(msg){ msg.className='msg on m-in'; msg.innerHTML='⏳ Conectando con Firebase…'; }
-    setTimeout(function(){ 
-        if(window._checaRapidoReal) window._checaRapidoReal();
-        else if(msg){ msg.className='msg on m-er'; msg.innerHTML='❌ El sistema aún está cargando. Espera 2 segundos e intenta de nuevo.'; }
-    }, 1500);
+async function checaRapido(){
+    var empId = (document.getElementById('ck-emp-id').value||'').trim().toUpperCase();
+    var pin   = (document.getElementById('ck-pin').value||'').replace(/\D/g,'');
+    var msgEl = document.getElementById('msg-checar');
+    var btn   = document.getElementById('btn-checa-rapido');
+
+    function showMsg(tipo, txt){
+        if(!msgEl) return;
+        var cls = {ok:'msg on m-ok', er:'msg on m-er', in:'msg on m-in', wa:'msg on m-wa'};
+        msgEl.className = cls[tipo]||cls.in;
+        msgEl.innerHTML = txt;
+    }
+
+    if(!empId.startsWith('EMP-')){ showMsg('er','Ingresa tu número: EMP-001 o EMP-GERENTE'); return; }
+    if(pin.length!==4){ showMsg('er','Ingresa tu PIN de 4 dígitos'); return; }
+
+    if(btn){ btn.disabled=true; btn.querySelector('.lbl').textContent='Verificando…'; }
+    showMsg('in','⏳ Verificando…');
+
+    var API_KEY = 'AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k';
+    var PROJECT = 'tortas-tortuga';
+    var emailInterno = empId.toLowerCase() + '@tortuga.local';
+    var pwAuto = empId + pin;
+
+    try{
+        // 1. Login con Firebase Auth REST API
+        var authRes = await fetch(
+            'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + API_KEY,
+            { method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ email: emailInterno, password: pwAuto, returnSecureToken: true }) }
+        );
+        var authData = await authRes.json();
+        if(authData.error){
+            var m = { 'INVALID_LOGIN_CREDENTIALS':'Número o PIN incorrecto.',
+                      'TOO_MANY_ATTEMPTS_TRY_LATER':'Demasiados intentos. Espera unos minutos.' };
+            showMsg('er','❌ ' + (m[authData.error.message] || 'Número o PIN incorrecto.'));
+            return;
+        }
+        var uid   = authData.localId;
+        var token = authData.idToken;
+        var hoyISO = new Date().toISOString().split('T')[0];
+        var ahora  = new Date();
+
+        // 2. Buscar empleado en Firestore
+        var empRes = await fetch(
+            'https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents/empleados/'+uid,
+            { headers:{ 'Authorization':'Bearer '+token } }
+        );
+        var empData = await empRes.json();
+        if(!empData.fields){ showMsg('er','❌ Perfil de empleado no encontrado.'); return; }
+        var nombre = empData.fields.nombre?.stringValue || empId;
+
+        // 3. Buscar turno activo de hoy
+        var turnosRes = await fetch(
+            'https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents:runQuery',
+            { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+              body: JSON.stringify({ structuredQuery:{
+                from:[{collectionId:'turnos'}],
+                where:{ compositeFilter:{ op:'AND', filters:[
+                    {fieldFilter:{field:{fieldPath:'uid'},op:'EQUAL',value:{stringValue:uid}}},
+                    {fieldFilter:{field:{fieldPath:'fechaISO'},op:'EQUAL',value:{stringValue:hoyISO}}},
+                    {fieldFilter:{field:{fieldPath:'estado'},op:'IN',value:{arrayValue:{values:[
+                        {stringValue:'activo'},{stringValue:'descanso'}
+                    ]}}}}
+                ]}},
+                limit: 1
+              }})
+            }
+        );
+        var turnosData = await turnosRes.json();
+        var turnoDoc = turnosData[0]?.document;
+
+        var fHora = function(d){ return d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:true}); };
+        var mToH  = function(m){ return Math.floor(m/60)+'h '+Math.round(m%60)+'m'; };
+
+        if(!turnoDoc){
+            // SIN turno → CHECAR ENTRADA
+            var entradaISO = ahora.toISOString();
+            await fetch(
+                'https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents/turnos',
+                { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+                  body: JSON.stringify({ fields:{
+                    uid:{stringValue:uid},
+                    empleadoId:{stringValue:empId},
+                    nombre:{stringValue:nombre},
+                    apellido:{stringValue:empData.fields.apellido?.stringValue||''},
+                    entrada:{timestampValue:entradaISO},
+                    estado:{stringValue:'activo'},
+                    fechaISO:{stringValue:hoyISO},
+                    minDescanso:{integerValue:0},
+                    editado:{booleanValue:false},
+                    nota:{stringValue:''}
+                  }})
+                }
+            );
+            document.getElementById('ck-estado-info').style.display='block';
+            document.getElementById('ck-estado-txt').innerHTML =
+                '<span style="color:#25D366">✅ Entrada registrada</span><br>' +
+                '<span style="font-size:.85rem;color:#888">'+nombre+' — '+fHora(ahora)+'</span>';
+            showMsg('ok','✅ ¡Buen día, '+nombre+'! Entrada: '+fHora(ahora));
+            setTimeout(function(){ document.getElementById('ov-checar').classList.remove('open'); }, 3000);
+
+        } else {
+            // CON turno → CHECAR SALIDA
+            var turnoId = turnoDoc.name.split('/').pop();
+            var entradaStr = turnoDoc.fields.entrada?.timestampValue;
+            var entrada = entradaStr ? new Date(entradaStr) : ahora;
+            var totalDesc = parseInt(turnoDoc.fields.minDescanso?.integerValue||0);
+            var neto = Math.max(0, Math.round((ahora - entrada)/60000) - totalDesc);
+
+            await fetch(
+                'https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents/turnos/'+turnoId+'?updateMask.fieldPaths=salida&updateMask.fieldPaths=estado&updateMask.fieldPaths=minTrabajados&updateMask.fieldPaths=horas',
+                { method:'PATCH', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+                  body: JSON.stringify({ fields:{
+                    ...turnoDoc.fields,
+                    salida:{timestampValue:ahora.toISOString()},
+                    estado:{stringValue:'completo'},
+                    minTrabajados:{integerValue:neto},
+                    horas:{doubleValue:parseFloat((neto/60).toFixed(2))}
+                  }})
+                }
+            );
+            document.getElementById('ck-estado-info').style.display='block';
+            document.getElementById('ck-estado-txt').innerHTML =
+                '<span style="color:#FF4444">⏹ Salida registrada</span><br>' +
+                '<span style="font-size:.85rem;color:#888">'+nombre+' — '+fHora(ahora)+' · '+mToH(neto)+' trabajadas</span>';
+            showMsg('ok','✅ ¡Hasta luego, '+nombre+'! Trabajaste '+mToH(neto)+' hoy.');
+            setTimeout(function(){ document.getElementById('ov-checar').classList.remove('open'); }, 3000);
+        }
+
+        // 4. Cerrar sesión REST
+        await fetch(
+            'https://securetoken.googleapis.com/v1/token?key='+API_KEY,
+            { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+              body:'grant_type=refresh_token&refresh_token='+authData.refreshToken }
+        );
+
+    } catch(e){
+        showMsg('er','❌ Error de conexión: '+e.message);
+    } finally {
+        if(btn){ btn.disabled=false; btn.querySelector('.lbl').textContent='Verificar y checar'; }
+    }
 }
 function gateV(){
     var pw = document.getElementById('gate-pw');
