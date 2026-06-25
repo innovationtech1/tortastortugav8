@@ -775,30 +775,68 @@ async function checaRapido(){
 function gateV(){
     var pw = document.getElementById('gate-pw');
     if(!pw || !pw.value){ return; }
-    var p = pw.value;
+    var p = pw.value.trim();
     var nivel = 0;
     if(p === 'GerenteTortuga2026') nivel = 4;
     else if(p === 'SupervisorTortuga2026') nivel = 3;
+
     if(nivel > 0){
+        // Cerrar modal
         var ov = document.getElementById('ov-gate');
         if(ov) ov.classList.remove('open');
         pw.value = '';
-        if(window.mostrarAdminDirecto && window._mostrarAdminReal) {
-            window._mostrarAdminReal(nivel);
-        } else {
-            window._adminNivel = nivel;
-            // Esperar a que el módulo cargue
-            var tries = 0;
-            var wait = setInterval(function(){
-                tries++;
-                if(window._mostrarAdminReal){ clearInterval(wait); window._mostrarAdminReal(nivel); }
-                if(tries > 20){ clearInterval(wait); }
-            }, 200);
-        }
+
+        // Mostrar panel admin directamente en el DOM sin depender del módulo
+        mostrarPanelAdminDireto(nivel);
     } else {
         var msg2 = document.getElementById('msg-gpw');
         if(msg2){ msg2.className='msg on m-er'; msg2.innerHTML='❌ Contraseña incorrecta.'; }
         if(pw) pw.value='';
+    }
+}
+
+function mostrarPanelAdminDireto(nivel){
+    // Mostrar pantalla admin inmediatamente
+    document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('on'); });
+    var sa = document.getElementById('s-admin');
+    if(sa) sa.classList.add('on');
+
+    // Header
+    var rc = document.getElementById('rchip');
+    if(rc){
+        rc.className = 'rchip rc-' + (nivel>=4?'gerente':'supervisor');
+        rc.textContent = nivel>=4 ? '👑 Gerente' : '🛡️ Supervisor';
+        rc.style.display = 'inline-flex';
+    }
+    var hn = document.getElementById('hname');
+    if(hn){ hn.textContent = nivel>=4?'Gerente':'Supervisor'; hn.style.display='inline'; }
+    var bl = document.getElementById('btn-logout');
+    if(bl) bl.style.display='flex';
+    var bb = document.getElementById('btn-back');
+    if(bb) bb.style.display='flex';
+
+    // Guardar nivel para que el módulo lo use cuando cargue
+    window._adminNivel = nivel;
+
+    // Si el módulo ya cargó, usarlo para cargar datos
+    if(window._mostrarAdminReal){
+        window._mostrarAdminReal(nivel);
+    } else {
+        // Esperar hasta 5 segundos a que el módulo cargue
+        var tries = 0;
+        var wait = setInterval(function(){
+            tries++;
+            if(window._mostrarAdminReal){
+                clearInterval(wait);
+                window._mostrarAdminReal(nivel);
+            }
+            if(tries > 25){ 
+                clearInterval(wait);
+                // Módulo no cargó — mostrar error en el grid
+                var grid = document.getElementById('emp-grid');
+                if(grid) grid.innerHTML='<div class="no-emp"><div class="ico">⚠️</div><p>Firebase no pudo conectar. Recarga la página e intenta de nuevo.</p></div>';
+            }
+        }, 200);
     }
 }
 </script>
