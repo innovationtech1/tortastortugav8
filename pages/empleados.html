@@ -298,8 +298,8 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'Out
   <div class="card">
     <div id="msg-login" class="msg"></div>
     <div class="f">
-      <label>Número de empleado</label>
-      <input type="text" id="l-id" placeholder="EMP-001" autocapitalize="characters" autocomplete="username" style="font-size:1.1rem;font-weight:700;letter-spacing:.05em;" oninput="this.value=this.value.toUpperCase()">
+      <label>Número de empleado (Ej: EMP-001 o EMP-GERENTE)</label>
+      <input type="text" id="l-id" placeholder="EMP-001 o EMP-GERENTE" maxlength="20" autocapitalize="characters" autocomplete="username" style="font-size:1.1rem;font-weight:700;letter-spacing:.05em;" oninput="this.value=this.value.toUpperCase()">
       <span class="ferr" id="e-lid"></span>
     </div>
     <div class="f">
