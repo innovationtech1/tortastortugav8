@@ -585,6 +585,78 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'Out
 </div>
 
 <!-- ═══════════════════ FIREBASE + LÓGICA ═══════════════════ -->
+<script>
+// Proxy functions — funcionan inmediatamente aunque Firebase tarde en cargar
+// Se sobreescriben automáticamente cuando el módulo termina de cargar
+function abrirChecarRapido(){
+    var ov = document.getElementById('ov-checar');
+    if(ov){ 
+        ov.classList.add('open');
+        setTimeout(function(){ var inp=document.getElementById('ck-emp-id'); if(inp)inp.focus(); }, 300);
+    }
+}
+function cOv(id){ var e=document.getElementById(id); if(e) e.classList.remove('open'); }
+function abrirGatePass(tipo, cb){
+    // Guardar callback para cuando el módulo cargue
+    window._pendingGateCb = cb;
+    window._pendingGateTipo = tipo;
+    var ov = document.getElementById('ov-gate');
+    var gpass = document.getElementById('gate-pass');
+    var gpin = document.getElementById('gate-pin');
+    var gico = document.getElementById('gate-ico');
+    var gsub = document.getElementById('gate-sub');
+    var gdesc = document.getElementById('gate-desc');
+    var gpw = document.getElementById('gate-pw');
+    if(gpass) gpass.style.display='block';
+    if(gpin) gpin.style.display='none';
+    if(gico) gico.textContent = tipo==='admin' ? '🔐' : '🛡️';
+    if(gsub) gsub.textContent = 'Acceso Privilegiado';
+    if(gdesc) gdesc.textContent = 'Ingresa la contraseña de gerente o supervisor.';
+    if(gpw) gpw.value='';
+    if(ov) ov.classList.add('open');
+    setTimeout(function(){ var p=document.getElementById('gate-pw'); if(p)p.focus(); },300);
+}
+function mostrarAdminDirecto(nivel){ window._adminNivel = nivel || 3; }
+function checaRapido(){
+    // Esta la maneja el módulo — mostrar mensaje de espera si no está lista
+    var msg = document.getElementById('msg-checar');
+    if(msg){ msg.className='msg on m-in'; msg.innerHTML='⏳ Conectando con Firebase…'; }
+    setTimeout(function(){ 
+        if(window._checaRapidoReal) window._checaRapidoReal();
+        else if(msg){ msg.className='msg on m-er'; msg.innerHTML='❌ El sistema aún está cargando. Espera 2 segundos e intenta de nuevo.'; }
+    }, 1500);
+}
+function gateV(){
+    var pw = document.getElementById('gate-pw');
+    if(!pw || !pw.value){ return; }
+    var p = pw.value;
+    var nivel = 0;
+    if(p === 'GerenteTortuga2026') nivel = 4;
+    else if(p === 'SupervisorTortuga2026') nivel = 3;
+    if(nivel > 0){
+        var ov = document.getElementById('ov-gate');
+        if(ov) ov.classList.remove('open');
+        pw.value = '';
+        if(window.mostrarAdminDirecto && window._mostrarAdminReal) {
+            window._mostrarAdminReal(nivel);
+        } else {
+            window._adminNivel = nivel;
+            // Esperar a que el módulo cargue
+            var tries = 0;
+            var wait = setInterval(function(){
+                tries++;
+                if(window._mostrarAdminReal){ clearInterval(wait); window._mostrarAdminReal(nivel); }
+                if(tries > 20){ clearInterval(wait); }
+            }, 200);
+        }
+    } else {
+        var msg2 = document.getElementById('msg-gpw');
+        if(msg2){ msg2.className='msg on m-er'; msg2.innerHTML='❌ Contraseña incorrecta.'; }
+        if(pw) pw.value='';
+    }
+}
+</script>
+
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
@@ -1577,12 +1649,13 @@ window.gateV = async function(){
 
 window.cerrarGate = ()=>{ cOv('ov-gate'); gatePin=''; };
 
-window.mostrarAdminDirecto = function mostrarAdminDirecto(nivel=3){ mostrarAdmin(nivel); }
+window.mostrarAdminDirecto = function(nivel=3){ mostrarAdmin(nivel); };
+window._mostrarAdminReal = function(nivel){ mostrarAdmin(nivel||3); };
 
 /* ─── CERRAR SESIÓN ───────────────────────────── */
 
 /* ─── CHECAR RÁPIDO (sin login completo) ─────────────────────── */
-window.abrirChecarRapido = function(){
+window.abrirChecarRapido = function(){  // sobreescribe el proxy
   el('ck-emp-id').value='';
   el('ck-pin').value='';
   el('msg-checar').className='msg';
@@ -1591,7 +1664,7 @@ window.abrirChecarRapido = function(){
   setTimeout(()=>el('ck-emp-id')?.focus(),280);
 };
 
-window.checaRapido = async function(){
+window._checaRapidoReal = async function checaRapidoImpl(){
   const empId = el('ck-emp-id').value.trim().toUpperCase();
   const pin   = el('ck-pin').value.replace(/\D/g,'');
   if(!empId.startsWith('EMP-')){ msg('msg-checar','er','Ingresa tu número: EMP-001'); return; }
@@ -1696,6 +1769,9 @@ window.swAdmin=t=>{ ['emp','rep','priv','new'].forEach(x=>{ el(`at-${x}`)?.class
 
 /* ─── CERRAR MODALES AL TOCAR OVERLAY ────────── */
 document.querySelectorAll('.ov').forEach(o=>{ o.addEventListener('click',e=>{ if(e.target===o)o.classList.remove('open'); }); });
+// Registrar funciones reales para los proxies
+window.checaRapido = window._checaRapidoReal;
+console.log('✅ Portal empleados Tortas Tortuga — módulo cargado correctamente');
 </script>
 </body>
 </html>
