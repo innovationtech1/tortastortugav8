@@ -1328,14 +1328,15 @@ async function cargarTurnoActivo(){
   if(!user) return;
   const hoyISO = new Date().toISOString().split('T')[0];
   // Buscar turno activo de hoy
+  // Sin filtro estado para evitar índice — filtramos en JS
   const q = query(collection(db,'turnos'),
     where('uid','==',user.uid),
-    where('fechaISO','==',hoyISO),
-    where('estado','in',['activo','descanso'])
+    where('fechaISO','==',hoyISO)
   );
   const s = await getDocs(q);
-  if(!s.empty){
-    const d = s.docs[0];
+  const docActivo = s.docs.find(d=>['activo','descanso'].includes(d.data().estado));
+  if(docActivo){
+    const d = docActivo;
     turnoId   = d.id;
     turnoData = d.data();
     renderEstadoTurno();
@@ -1506,14 +1507,20 @@ async function cargarHistEmp(){
   if(!user) return;
   const {l,d}=semRng(semOff);
   el('wlbl-emp').textContent=semLbl(l,d);
+  // Sin orderBy para evitar índice compuesto — ordenamos en JS
   const q=query(collection(db,'turnos'),
     where('uid','==',user.uid),
     where('entrada','>=',Timestamp.fromDate(l)),
-    where('entrada','<=',Timestamp.fromDate(d)),
-    orderBy('entrada','desc'));
+    where('entrada','<=',Timestamp.fromDate(d)));
   const s=await getDocs(q);
   let mins=0,cnt=0,items=[];
   s.forEach(d=>{ const t={...d.data(),id:d.id}; if(t.minTrabajados)mins+=t.minTrabajados; cnt++; items.push(t); });
+  // Ordenar por fecha descendente en JS
+  items.sort((a,b)=>{
+    const ta=a.entrada?.toDate?.().getTime()||(a.entrada?.seconds*1000)||0;
+    const tb=b.entrada?.toDate?.().getTime()||(b.entrada?.seconds*1000)||0;
+    return tb-ta;
+  });
   el('wtot-emp').textContent=mToH(mins);
   el('wshift-emp').textContent=cnt;
   const list=el('hist-emp');
@@ -1734,11 +1741,18 @@ window.cargarRep = async function(){
   const {l,d}=semRng(semOffA);
   el('wlbl-adm').textContent=semLbl(l,d);
   const empF=el('rep-sel')?.value;
-  let c=[where('entrada','>=',Timestamp.fromDate(l)),where('entrada','<=',Timestamp.fromDate(d)),orderBy('entrada','desc')];
+  // Sin orderBy para evitar índice compuesto — ordenamos en JS
+  let c=[where('entrada','>=',Timestamp.fromDate(l)),where('entrada','<=',Timestamp.fromDate(d))];
   if(empF) c=[where('uid','==',empF),...c];
   const s=await getDocs(query(collection(db,'turnos'),...c));
   let mins=0,cnt=0,items=[];
   s.forEach(d=>{ const t={...d.data(),id:d.id}; if(t.minTrabajados)mins+=t.minTrabajados; cnt++; items.push(t); });
+  // Ordenar en JS
+  items.sort((a,b)=>{
+    const ta=a.entrada?.toDate?.().getTime()||(a.entrada?.seconds*1000)||0;
+    const tb=b.entrada?.toDate?.().getTime()||(b.entrada?.seconds*1000)||0;
+    return tb-ta;
+  });
   el('rep-tot').textContent=mToH(mins);
   el('rep-sh').textContent=cnt;
   const list=el('hist-adm');
