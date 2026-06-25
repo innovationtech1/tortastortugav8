@@ -735,15 +735,36 @@ async function setupInicial(){
   }
 }
 
-// Ejecutar al cargar
-setupInicial();
+// Ejecutar al cargar — con pequeño delay para que Firebase se inicialice
+setTimeout(setupInicial, 500);
 
 /* ─── AUTH STATE ──────────────────────────────── */
 onAuthStateChanged(auth, async u=>{
   if(u){
     user=u;
     const s=await getDoc(doc(db,'empleados',u.uid));
-    if(!s.exists()){ msg('msg-login','er','❌ Perfil no encontrado. Contacta al supervisor.'); await signOut(auth); return; }
+    if(!s.exists()){
+      // Si es la cuenta del gerente, crear el perfil automáticamente
+      if(u.email === GERENTE_INICIAL.email){
+        const empId = 'EMP-GERENTE';
+        await setDoc(doc(db,'empleados', u.uid),{
+          uid:u.uid, empleadoId:empId,
+          nombre:GERENTE_INICIAL.nombre, apellido:GERENTE_INICIAL.apellido,
+          email:GERENTE_INICIAL.email, telefono:'2100000000',
+          puesto:GERENTE_INICIAL.puesto, rol:GERENTE_INICIAL.rol,
+          salarioHora:0, estado:'activo',
+          creado:serverTimestamp(), turnoActivo:false
+        });
+        // Recargar datos recién creados
+        const snap2 = await getDoc(doc(db,'empleados', u.uid));
+        empData = snap2.data();
+        rolActual   = empData.rol || 'gerente';
+        nivelActual = ROLES[rolActual]?.nivel || 4;
+        mostrarEmp();
+        return;
+      }
+      msg('msg-login','er','❌ Perfil no encontrado. Contacta al supervisor.'); await signOut(auth); return;
+    }
     empData=s.data();
     if(empData.estado==='inactivo'){ msg('msg-login','er','❌ Cuenta desactivada. Contacta al supervisor.'); await signOut(auth); return; }
     rolActual   = empData.rol || 'empleado';
