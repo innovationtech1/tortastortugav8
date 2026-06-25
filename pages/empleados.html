@@ -1497,14 +1497,19 @@ window.gateV = async function(){
   let nivel=0;
   if(pw===CREDS.PASS_GERENTE) nivel=4;
   else if(pw===CREDS.PASS_SUPERVISOR) nivel=3;
-  if(nivel>0){ cerrarGate(); if(gateCb) gateCb(nivel); }
-  else{ msg('msg-gpw','er','❌ Contraseña incorrecta.'); el('gate-pw').value=''; }
+  if(nivel>0){
+    cerrarGate();
+    if(typeof gateCb === 'function') gateCb(nivel);
+    else console.error('gateCb no es función:', gateCb);
+  } else {
+    msg('msg-gpw','er','❌ Contraseña incorrecta.'); el('gate-pw').value='';
+  }
   btnLd('btn-gv',false);
 };
 
 window.cerrarGate = ()=>{ cOv('ov-gate'); gatePin=''; };
 
-function mostrarAdminDirecto(nivel=3){ mostrarAdmin(nivel); }
+window.mostrarAdminDirecto = function mostrarAdminDirecto(nivel=3){ mostrarAdmin(nivel); }
 
 /* ─── CERRAR SESIÓN ───────────────────────────── */
 window.cerrarSesion = async function(){
