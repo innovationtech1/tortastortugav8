@@ -586,6 +586,21 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'Out
 
 <!-- ═══════════════════ FIREBASE + LÓGICA ═══════════════════ -->
 <script>
+/* ── Funciones globales básicas — disponibles inmediatamente ── */
+function el(id){ return document.getElementById(id); }
+function showScreen(id){ document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('on');}); var e=el(id); if(e)e.classList.add('on'); }
+function aOv(id){ var e=el(id); if(e)e.classList.add('open'); }
+function cOv(id){ var e=el(id); if(e)e.classList.remove('open'); }
+function msg(id,tipo,html,auto){ var e=el(id); if(!e)return; var m={ok:'msg on m-ok',er:'msg on m-er',wa:'msg on m-wa','in':'msg on m-in'}; e.className=m[tipo]||m['in']; e.innerHTML=html; if(auto!==false&&tipo==='ok')setTimeout(function(){if(e){e.className='msg';e.innerHTML='';}},5000); }
+function btnLd(id,v){ var b=el(id); if(!b)return; b.classList.toggle('ld',v); b.disabled=v; }
+function fErr(id,eid,m){ var e=el(id); if(e){e.classList.add('er');e.classList.remove('ok');} var er=el(eid); if(er)er.textContent=m; }
+function fOk(id){ var e=el(id); if(e){e.classList.remove('er');e.classList.add('ok');} }
+function eye(id,btn){ var e=el(id); if(!e)return; e.type=e.type==='password'?'text':'password'; btn.textContent=e.type==='password'?'👁️':'🙈'; }
+function swAuth(t){ ['login','reg'].forEach(function(x){ var tb=el('t-'+x); var p=el('p-'+x); if(tb)tb.classList.toggle('on',x===t); if(p)p.classList.toggle('on',x===t); }); }
+function swEmp(t){ ['clk','hist','prof'].forEach(function(x){ var tb=el('et-'+x); var p=el('ep-'+x); if(tb)tb.classList.toggle('on',x===t); if(p)p.classList.toggle('on',x===t); }); }
+function swAdmin(t){ ['emp','rep','priv','new'].forEach(function(x){ var tb=el('at-'+x); var p=el('ap-'+x); if(tb)tb.classList.toggle('on',x===t); if(p)p.classList.toggle('on',x===t); }); }
+function volverLogin(){ showScreen('s-auth'); var rc=el('rchip'); if(rc)rc.style.display='none'; var hn=el('hname'); if(hn)hn.style.display='none'; var bl=el('btn-logout'); if(bl)bl.style.display='none'; var bb=el('btn-back'); if(bb)bb.style.display='none'; }
+
 // Proxy functions — funcionan inmediatamente aunque Firebase tarde en cargar
 // Se sobreescriben automáticamente cuando el módulo termina de cargar
 function abrirChecarRapido(){
