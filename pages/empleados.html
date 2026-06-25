@@ -298,16 +298,21 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'Out
   <div class="card">
     <div id="msg-login" class="msg"></div>
     <div class="f">
-      <label>Número de empleado o correo</label>
-      <input type="text" id="l-id" placeholder="EMP-XXXXXX o correo@..." autocapitalize="none" autocomplete="username">
+      <label>Número de empleado</label>
+      <input type="text" id="l-id" placeholder="EMP-001" autocapitalize="characters" autocomplete="username" style="font-size:1.1rem;font-weight:700;letter-spacing:.05em;" oninput="this.value=this.value.toUpperCase()">
       <span class="ferr" id="e-lid"></span>
     </div>
     <div class="f">
-      <label>Contraseña</label>
-      <div class="pw"><input type="password" id="l-pw" placeholder="Tu contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginEmp()"><button class="eye" type="button" onclick="eye('l-pw',this)">👁️</button></div>
+      <label>PIN (4 dígitos)</label>
+      <input type="tel" id="l-pw" placeholder="• • • •" maxlength="4" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginEmp()" style="font-size:1.4rem;letter-spacing:.5em;font-weight:700;text-align:center;">
       <span class="ferr" id="e-lpw"></span>
+      <span class="fhint" style="text-align:center;display:block;margin-top:.3rem;">Tu supervisor te dará tu número y PIN</span>
     </div>
     <button class="btn bp" id="btn-login" onclick="loginEmp()"><span class="lbl">Entrar</span><div class="spin"></div></button>
+    <div class="dvd">acceso rápido para checar</div>
+    <button class="btn" onclick="abrirChecarRapido()" style="background:linear-gradient(135deg,#25D366,#18a849);color:#fff;font-size:1rem;padding:1rem;border-radius:var(--r);box-shadow:0 5px 16px rgba(37,211,102,.25);">
+      <span style="font-size:1.3rem;">⏱</span> Checar Entrada / Salida
+    </button>
     <div class="dvd">¿No tienes cuenta?</div>
     <div style="background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rxs);padding:.85rem;text-align:center;">
       <div style="font-size:.82rem;color:var(--mu);line-height:1.7;">
@@ -467,7 +472,6 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'Out
         <div class="f"><label>Nombre *</label><input type="text" id="n-nom" placeholder="Nombre"><span class="ferr" id="e-nnom"></span></div>
         <div class="f"><label>Apellido *</label><input type="text" id="n-ape" placeholder="Apellido"><span class="ferr" id="e-nape"></span></div>
       </div>
-      <div class="f"><label>Correo *</label><input type="email" id="n-email" placeholder="correo@ejemplo.com"><span class="ferr" id="e-nemail"></span></div>
       <div class="f"><label>Teléfono *</label><input type="tel" id="n-tel" placeholder="2105550000" maxlength="10"><span class="ferr" id="e-ntel"></span></div>
       <div class="f"><label>Puesto *</label>
         <select id="n-puesto"><option value="">— Selecciona —</option><option value="cajero">Cajero/a</option><option value="cocinero">Cocinero/a</option><option value="mesero">Mesero/a</option><option value="repartidor">Repartidor</option><option value="limpieza">Limpieza</option><option value="otro">Otro</option></select>
@@ -477,9 +481,11 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'Out
         <select id="n-rol"><option value="empleado">👤 Empleado (básico)</option><option value="cajero">💼 Cajero / Líder</option><option value="supervisor">🛡️ Supervisor</option><option value="gerente">👑 Gerente</option></select>
       </div>
       <div class="f"><label>Salario por hora ($) — opcional</label><input type="number" id="n-sal" placeholder="0.00" min="0" step="0.25"></div>
-      <div class="f"><label>Contraseña temporal *</label>
-        <div class="pw"><input type="password" id="n-pw" placeholder="Mín 8 caracteres"><button class="eye" type="button" onclick="eye('n-pw',this)">👁️</button></div>
-        <span class="ferr" id="e-npw"></span><span class="fhint">El empleado podrá cambiarla después.</span>
+      <div class="f">
+        <label>PIN de acceso (4 dígitos) *</label>
+        <input type="tel" id="n-pin" placeholder="Ej: 1234" maxlength="4" style="letter-spacing:.3em;font-size:1.1rem;font-weight:700;">
+        <span class="ferr" id="e-npin"></span>
+        <span class="fhint">El empleado usará su número EMP-001 + este PIN para entrar. Fácil de recordar.</span>
       </div>
       <button class="btn bp" id="btn-new" onclick="crearEmpAdmin()"><span class="lbl">Registrar empleado</span><div class="spin"></div></button>
     </div>
@@ -487,6 +493,33 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'Out
 </div>
 
 </div><!-- /app -->
+
+
+<!-- MODAL CHECAR RÁPIDO -->
+<div class="ov" id="ov-checar">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mhd">⏱ Checar Entrada / Salida <button class="mclose" onclick="cOv('ov-checar')">✕</button></div>
+    <div id="msg-checar" class="msg" style="margin-bottom:.75rem;"></div>
+    <div class="f">
+      <label>Número de empleado</label>
+      <input type="text" id="ck-emp-id" placeholder="EMP-001" maxlength="7"
+        style="font-size:1.2rem;font-weight:700;letter-spacing:.1em;text-align:center;"
+        oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')el('ck-pin').focus()">
+    </div>
+    <div class="f">
+      <label>PIN (4 dígitos)</label>
+      <input type="tel" id="ck-pin" placeholder="• • • •" maxlength="4"
+        style="font-size:1.6rem;letter-spacing:.6em;font-weight:700;text-align:center;"
+        onkeydown="if(event.key==='Enter')checaRapido()">
+    </div>
+    <div id="ck-estado-info" style="display:none;background:var(--sf2);border-radius:var(--rxs);padding:.85rem;text-align:center;margin-bottom:.85rem;">
+      <div style="font-size:.82rem;color:var(--mu);">Estado actual</div>
+      <div id="ck-estado-txt" style="font-size:1.1rem;font-weight:700;margin-top:.25rem;">—</div>
+    </div>
+    <button class="btn bp" id="btn-checa-rapido" onclick="checaRapido()"><span class="lbl">Verificar y checar</span><div class="spin"></div></button>
+  </div>
+</div>
 
 <!-- MODAL GATE (PIN / CONTRASEÑA) -->
 <div class="ov" id="ov-gate">
@@ -1171,28 +1204,26 @@ function hiRow(t, adminMode){
 
 /* ─── LOGIN EMPLEADO ──────────────────────────── */
 window.loginEmp = async function(){
-  const id=el('l-id').value.trim(), pw=el('l-pw').value; let ok=true;
-  if(!id){ fErr('l-id','e-lid','Ingresa tu ID o correo'); ok=false; }
-  if(!pw){ fErr('l-pw','e-lpw','Ingresa tu contraseña'); ok=false; }
+  const empId = el('l-id').value.trim().toUpperCase();
+  const pin   = el('l-pw').value.replace(/\D/g,'');
+  let ok=true;
+  if(!empId||!empId.startsWith('EMP-')){ fErr('l-id','e-lid','Ej: EMP-001'); ok=false; }
+  if(pin.length!==4){ fErr('l-pw','e-lpw','PIN de 4 dígitos'); ok=false; }
   if(!ok) return;
   btnLd('btn-login',true);
   try{
-    let email=id;
-    if(/^EMP-/i.test(id)){
-      const q=query(collection(db,'empleados'),where('empleadoId','==',id.toUpperCase()));
-      const s=await getDocs(q);
-      if(s.empty){ fErr('l-id','e-lid','Número de empleado no encontrado'); return; }
-      email=s.docs[0].data().email;
-    }
-    await signInWithEmailAndPassword(auth,email,pw);
+    const emailInterno = `${empId.toLowerCase()}@tortuga.local`;
+    const pwAuto = `${empId}${pin}`;
+    await signInWithEmailAndPassword(auth, emailInterno, pwAuto);
   }catch(e){
     const m={
-      'auth/invalid-credential':'Credenciales incorrectas. Verifica tu ID y contraseña.',
+      'auth/invalid-credential':'Número o PIN incorrecto.',
       'auth/too-many-requests':'Demasiados intentos. Espera unos minutos.',
-      'auth/user-not-found':'Usuario no encontrado.',
-      'auth/wrong-password':'Contraseña incorrecta.',
-      'auth/network-request-failed':'Error de conexión. Verifica tu internet.',
+      'auth/network-request-failed':'Sin conexión. Verifica tu internet.',
     };
+    msg('msg-login','er','❌ '+(m[e.code]||'Número o PIN incorrecto.'));
+  }finally{ btnLd('btn-login',false); }
+};
     msg('msg-login','er','❌ '+(m[e.code]||'Error: '+e.code));
   }finally{ btnLd('btn-login',false); }
 };
@@ -1201,36 +1232,56 @@ window.loginEmp = async function(){
 
 /* ─── CREAR EMPLEADO (SOLO GERENTE/SUPERVISOR) ── */
 window.crearEmpAdmin = async function(){
-  const nom=el('n-nom').value.trim(),ape=el('n-ape').value.trim();
-  const email=el('n-email').value.trim(),tel=el('n-tel').value.replace(/\D/g,'');
-  const psto=el('n-puesto').value,pw=el('n-pw').value;
-  const rol=el('n-rol').value||'empleado';
+  const nom=el('n-nom').value.trim(), ape=el('n-ape').value.trim();
+  const tel=el('n-tel').value.replace(/\D/g,'');
+  const psto=el('n-puesto').value, rol=el('n-rol').value||'empleado';
   const sal=parseFloat(el('n-sal').value)||0;
+  // PIN de 4 dígitos para acceso rápido del empleado
+  const pin=el('n-pin').value.replace(/\D/g,'');
   let ok=true;
-  [['n-nom','e-nnom',nom.length>=2,'Mínimo 2 caracteres'],
-   ['n-ape','e-nape',ape.length>=2,'Mínimo 2 caracteres'],
-   ['n-email','e-nemail',/\S+@\S+\.\S+/.test(email),'Correo inválido'],
-   ['n-tel','e-ntel',tel.length===10,'10 dígitos exactos'],
-   ['n-puesto','e-npuesto',!!psto,'Selecciona un puesto'],
-   ['n-pw','e-npw',pw.length>=8,'Mínimo 8 caracteres']
-  ].forEach(([id,eid,cond,m])=>{ if(!cond){ fErr(id,eid,m); ok=false; } else fOk(id); });
+
+  if(nom.length<2){ fErr('n-nom','e-nnom','Mínimo 2 caracteres'); ok=false; } else fOk('n-nom');
+  if(ape.length<2){ fErr('n-ape','e-nape','Mínimo 2 caracteres'); ok=false; } else fOk('n-ape');
+  if(tel.length!==10){ fErr('n-tel','e-ntel','10 dígitos exactos'); ok=false; } else fOk('n-tel');
+  if(!psto){ fErr('n-puesto','e-npuesto','Selecciona un puesto'); ok=false; }
+  if(pin.length!==4){ fErr('n-pin','e-npin','PIN de exactamente 4 dígitos'); ok=false; } else fOk('n-pin');
   if(!ok) return;
+
   btnLd('btn-new',true);
   try{
-    const cred=await createUserWithEmailAndPassword(auth,email,pw);
-    const empId=genId();
-    await setDoc(doc(db,'empleados',cred.user.uid),{
-      uid:cred.user.uid,empleadoId:empId,nombre:nom,apellido:ape,
-      email,telefono:tel,puesto:psto,rol,salarioHora:sal,
-      estado:'activo',creado:serverTimestamp(),turnoActivo:false
+    // Auto-generar número de empleado secuencial
+    const empId = await genId();
+    // Auto-generar email interno: empId@tortuga.local
+    const emailInterno = `${empId.toLowerCase()}@tortuga.local`;
+    // Contraseña = empId + PIN  (ej: EMP-001+1234 = "EMP-0011234")
+    const pwAuto = `${empId}${pin}`;
+
+    const cred = await createUserWithEmailAndPassword(auth, emailInterno, pwAuto);
+    await setDoc(doc(db,'empleados', cred.user.uid),{
+      uid:cred.user.uid, empleadoId:empId,
+      nombre:nom, apellido:ape,
+      email:emailInterno, telefono:tel, puesto:psto, rol,
+      salarioHora:sal, pin:pin,
+      estado:'activo', creado:serverTimestamp(), turnoActivo:false
     });
     await updateProfile(cred.user,{displayName:`${nom} ${ape}`});
     await signOut(auth);
-    msg('msg-new','ok',`✅ Empleado creado. ID: <strong>${empId}</strong> · Rol: ${ROLES[rol].ico} ${ROLES[rol].label}`);
-    ['n-nom','n-ape','n-email','n-tel','n-puesto','n-pw','n-sal'].forEach(i=>{ const e=el(i); if(e)e.value=''; });
+
+    // Mostrar resumen claro de credenciales
+    msg('msg-new','ok',`
+      ✅ Empleado registrado exitosamente<br><br>
+      <div style="background:rgba(0,0,0,.2);border-radius:8px;padding:.75rem;line-height:2;font-size:.9rem;">
+        <strong>Número:</strong> ${empId}<br>
+        <strong>PIN:</strong> ${pin}<br>
+        <strong>Rol:</strong> ${ROLES[rol].ico} ${ROLES[rol].label}<br>
+        <strong>Cómo entrar:</strong> Número ${empId} + PIN ${pin}
+      </div>
+    `);
+    ['n-nom','n-ape','n-tel','n-pin','n-sal'].forEach(i=>{ const e=el(i); if(e)e.value=''; });
+    if(el('n-puesto')) el('n-puesto').value='';
     cargarListaEmps(); poblarSelects();
   }catch(e){
-    const m={'auth/email-already-in-use':'Ese correo ya está registrado.'};
+    const m={'auth/email-already-in-use':'Ese número de empleado ya está en uso.'};
     msg('msg-new','er','❌ '+(m[e.code]||e.message));
   }finally{ btnLd('btn-new',false); }
 };
@@ -1524,6 +1575,76 @@ window.cerrarGate = ()=>{ cOv('ov-gate'); gatePin=''; };
 window.mostrarAdminDirecto = function mostrarAdminDirecto(nivel=3){ mostrarAdmin(nivel); }
 
 /* ─── CERRAR SESIÓN ───────────────────────────── */
+
+/* ─── CHECAR RÁPIDO (sin login completo) ─────────────────────── */
+window.abrirChecarRapido = function(){
+  el('ck-emp-id').value='';
+  el('ck-pin').value='';
+  el('msg-checar').className='msg';
+  el('ck-estado-info').style.display='none';
+  aOv('ov-checar');
+  setTimeout(()=>el('ck-emp-id')?.focus(),280);
+};
+
+window.checaRapido = async function(){
+  const empId = el('ck-emp-id').value.trim().toUpperCase();
+  const pin   = el('ck-pin').value.replace(/\D/g,'');
+  if(!empId.startsWith('EMP-')){ msg('msg-checar','er','Ingresa tu número: EMP-001'); return; }
+  if(pin.length!==4){ msg('msg-checar','er','Ingresa tu PIN de 4 dígitos'); return; }
+  btnLd('btn-checa-rapido',true);
+  try{
+    const emailInterno = `${empId.toLowerCase()}@tortuga.local`;
+    const pwAuto = `${empId}${pin}`;
+    const cred = await signInWithEmailAndPassword(auth, emailInterno, pwAuto);
+    const u = cred.user;
+    const snap = await getDoc(doc(db,'empleados', u.uid));
+    if(!snap.exists()){ msg('msg-checar','er','Empleado no encontrado.'); await signOut(auth); return; }
+    const emp = snap.data();
+    const hoyISO = new Date().toISOString().split('T')[0];
+    const qT = query(collection(db,'turnos'),
+      where('uid','==',u.uid), where('fechaISO','==',hoyISO),
+      where('estado','in',['activo','descanso']));
+    const tSnap = await getDocs(qT);
+    const ahora = new Date();
+    if(tSnap.empty){
+      await addDoc(collection(db,'turnos'),{
+        uid:u.uid, empleadoId:emp.empleadoId,
+        nombre:emp.nombre, apellido:emp.apellido,
+        entrada:Timestamp.fromDate(ahora), salida:null,
+        inicioDescanso:null, finDescanso:null,
+        minDescanso:0, minTrabajados:null, horas:null,
+        estado:'activo', editado:false, nota:'',
+        fechaISO:hoyISO, creado:serverTimestamp()
+      });
+      el('ck-estado-info').style.display='block';
+      el('ck-estado-txt').innerHTML=`<span style="color:var(--ok)">✅ Entrada registrada</span><br><span style="font-size:.85rem;color:var(--mu);">${emp.nombre} — ${fHora(ahora)}</span>`;
+      msg('msg-checar','ok',`✅ ¡Buen día, ${emp.nombre}! Entrada: ${fHora(ahora)}`);
+    } else {
+      const turnoDoc = tSnap.docs[0];
+      const turno = turnoDoc.data();
+      const entrada = turno.entrada?.toDate?.() || new Date(turno.entrada?.seconds*1000);
+      let totalDesc = turno.minDescanso || 0;
+      if(turno.estado==='descanso' && turno.inicioDescanso){
+        const iniDesc = turno.inicioDescanso?.toDate?.() || new Date(turno.inicioDescanso?.seconds*1000);
+        totalDesc += Math.round((ahora - iniDesc)/60000);
+      }
+      const neto = Math.max(0, Math.round((ahora - entrada)/60000) - totalDesc);
+      await updateDoc(doc(db,'turnos', turnoDoc.id),{
+        salida:Timestamp.fromDate(ahora), estado:'completo',
+        minDescanso:totalDesc, minTrabajados:neto, horas:(neto/60).toFixed(2)
+      });
+      el('ck-estado-info').style.display='block';
+      el('ck-estado-txt').innerHTML=`<span style="color:var(--er)">⏹ Salida registrada</span><br><span style="font-size:.85rem;color:var(--mu);">${emp.nombre} — ${fHora(ahora)} · ${mToH(neto)} trabajadas</span>`;
+      msg('msg-checar','ok',`✅ ¡Hasta luego, ${emp.nombre}! Trabajaste ${mToH(neto)} hoy.`);
+    }
+    await signOut(auth);
+    setTimeout(()=>cOv('ov-checar'), 3000);
+  }catch(e){
+    const m={'auth/invalid-credential':'Número o PIN incorrecto.','auth/too-many-requests':'Demasiados intentos.'};
+    msg('msg-checar','er','❌ '+(m[e.code]||'Error: '+e.message));
+  }finally{ btnLd('btn-checa-rapido',false); }
+};
+
 window.cerrarSesion = async function(){
   clearInterval(rlj);
   if(user) await signOut(auth);
@@ -1541,7 +1662,22 @@ function clearMsg(id){ const e=el(id); if(e){e.className='msg';e.innerHTML='';} 
 function btnLd(id,v){ const b=el(id); if(!b)return; b.classList.toggle('ld',v); b.disabled=v; }
 function fErr(id,eid,m){ const e=el(id); if(e){e.classList.add('er');e.classList.remove('ok');} const er=el(eid); if(er)er.textContent=m; }
 function fOk(id){ const e=el(id); if(e){e.classList.remove('er');e.classList.add('ok');} }
-function genId(){ const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let id='EMP-'; for(let i=0;i<6;i++)id+=c[Math.floor(Math.random()*c.length)]; return id; }
+async function genId(){
+  // Genera EMP-001, EMP-002... buscando el número más alto en Firestore
+  try{
+    const snap = await getDocs(query(collection(db,'empleados'), orderBy('empleadoId','desc')));
+    let max = 0;
+    snap.forEach(d=>{
+      const id = d.data().empleadoId || '';
+      const num = parseInt(id.replace('EMP-','')) || 0;
+      if(num > max) max = num;
+    });
+    const next = max + 1;
+    return 'EMP-' + String(next).padStart(3,'0');
+  } catch(e){
+    return 'EMP-001';
+  }
+}
 window.eye=function(id,btn){ const e=el(id); if(!e)return; e.type=e.type==='password'?'text':'password'; btn.textContent=e.type==='password'?'👁️':'🙈'; };
 
 /* ─── FORM VALIDATIONS ────────────────────────── */
