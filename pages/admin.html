@@ -47,6 +47,8 @@
         .filters-bar { padding: 0 1.5rem 1rem; display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
         .filter-btn { padding: 0.4rem 1rem; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.18s; }
         .filter-btn.active, .filter-btn:hover { background: rgba(255,90,0,0.15); border-color: var(--primary); color: var(--primary); }
+        /* Botón empleados mantiene color morado en hover */
+        .btn-empleados:hover { background: rgba(167,139,250,0.15) !important; border-color: #A78BFA !important; color: #A78BFA !important; }
 
         /* Table */
         .table-wrapper { padding: 0 1.5rem 2rem; overflow-x: auto; }
@@ -116,6 +118,7 @@
         <div class="top-bar-actions" style="display:flex; align-items:center; gap:1rem;">
             <button class="filter-btn" onclick="abrirCorteCaja()" style="border-color:var(--green); color:var(--green);">💰 Corte de Caja</button>
             <button class="filter-btn" onclick="abrirProductos()" style="border-color:var(--primary); color:var(--primary);">📦 Productos</button>
+            <button class="filter-btn btn-empleados" onclick="window.location.href='empleados.html'" style="border-color:#A78BFA; color:#A78BFA;">👥 Empleados</button>
             <button class="filter-btn" onclick="window.location.href='../ordenar.html'" style="border-color:var(--border);">🏠 Tienda</button>
             <div class="live-badge"><div class="live-dot"></div> En vivo</div>
         </div>
@@ -327,12 +330,10 @@
     import { db } from '../js/firebase-config.js';
     import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, addDoc, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-    const ADMIN_PASSWORD = 'tortuga2025'; // Clave de acceso
+    const ADMIN_PASSWORD = 'tortuga2025';
     let pedidosDB = [];
     let filtroActual = 'todos';
 
-    // ─── LOGIN (CON PERSISTENCIA DE SUPERVISOR) ──────────────
-    // Si ya está logueado como supervisor, saltar pantalla
     if (sessionStorage.getItem('tt_admin_logged') === 'true') {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
@@ -350,59 +351,38 @@
         }
     });
 
-    // ─── FIREBASE REALTIME ──────────────────────────────────
     function iniciarFirebaseEnVivo() {
-        // Traer pedidos ordenados del más reciente al más antiguo
         const q = query(collection(db, 'pedidos'), orderBy('creado', 'desc'));
-        
         onSnapshot(q, (snapshot) => {
             pedidosDB = [];
-            snapshot.forEach(doc => {
-                pedidosDB.push({ id: doc.id, ...doc.data() });
-            });
+            snapshot.forEach(doc => { pedidosDB.push({ id: doc.id, ...doc.data() }); });
             actualizarUI();
-            
-            // Reproducir sonido si hay un pedido "Nuevo"
             const hayNuevos = pedidosDB.some(p => p.estado === 'Nuevo 🆕');
             if(hayNuevos) {
-                // Alarma suave de restaurante
                 const audio = new Audio('https://actions.google.com/sounds/v1/alarms/dinner_bell.ogg');
                 audio.play().catch(e=>{});
             }
         });
-        
-        // Actualizar temporizadores cada minuto
         setInterval(actualizarUI, 60000);
     }
 
-    // ─── HELPER HIGHLIGHT ───────────────────────────────────
     function resaltar(texto, busqueda) {
         if(!busqueda || !texto) return texto;
         const regex = new RegExp(`(${busqueda.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
         return texto.replace(regex, '<span class="highlight">$1</span>');
     }
 
-    // ─── ACTUALIZAR UI ──────────────────────────────────────
     function actualizarUI() {
         const searchInput = document.getElementById('admin-search');
         const searchText = (searchInput?.value || '').trim().toLowerCase();
         const clearBtn = document.getElementById('clear-search');
         const searchStats = document.getElementById('search-stats');
-        
         if(clearBtn) clearBtn.style.display = searchText ? 'flex' : 'none';
-        
-        // Estadísticas
         document.getElementById('stat-total').textContent = pedidosDB.length;
         document.getElementById('stat-nuevos').textContent = pedidosDB.filter(p => p.estado?.includes('Nuevo')).length;
         document.getElementById('stat-prep').textContent = pedidosDB.filter(p => p.estado?.includes('preparación')).length;
         document.getElementById('stat-entregados').textContent = pedidosDB.filter(p => p.estado?.includes('Entregado')).length;
-
-        // Filtrar por estado
-        let filtrados = filtroActual === 'todos' 
-            ? pedidosDB 
-            : pedidosDB.filter(p => p.estado?.includes(filtroActual));
-            
-        // Filtrar por búsqueda inteligente extendida
+        let filtrados = filtroActual === 'todos' ? pedidosDB : pedidosDB.filter(p => p.estado?.includes(filtroActual));
         if (searchText) {
             filtrados = filtrados.filter(p => {
                 const ticket = p.id.slice(-4).toLowerCase();
@@ -412,28 +392,13 @@
                 const pago = (p.metodoPagoReal || p.metodoPago || '').toLowerCase();
                 const estado = (p.estado || '').toLowerCase();
                 const tipo = (p.tipo || '').toLowerCase();
-                
-                return ticket.includes(searchText) || 
-                       nombre.includes(searchText) || 
-                       tel.includes(searchText) ||
-                       items.includes(searchText) ||
-                       pago.includes(searchText) ||
-                       estado.includes(searchText) ||
-                       tipo.includes(searchText);
+                return ticket.includes(searchText) || nombre.includes(searchText) || tel.includes(searchText) || items.includes(searchText) || pago.includes(searchText) || estado.includes(searchText) || tipo.includes(searchText);
             });
-            
-            if(searchStats) {
-                searchStats.style.display = 'block';
-                searchStats.innerHTML = `✨ Mostrando ${filtrados.length} pedido${filtrados.length !== 1 ? 's' : ''} coincidiendo con "${searchText}"`;
-            }
-        } else {
-            if(searchStats) searchStats.style.display = 'none';
-        }
-        
+            if(searchStats) { searchStats.style.display = 'block'; searchStats.innerHTML = `✨ Mostrando ${filtrados.length} pedido${filtrados.length !== 1 ? 's' : ''} coincidiendo con "${searchText}"`; }
+        } else { if(searchStats) searchStats.style.display = 'none'; }
         renderTabla(filtrados);
     }
 
-    // ─── FILTROS Y BÚSQUEDA ─────────────────────────────────
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -442,206 +407,84 @@
             actualizarUI();
         });
     });
-    
     document.getElementById('admin-search')?.addEventListener('input', actualizarUI);
     document.getElementById('clear-search')?.addEventListener('click', () => {
         const input = document.getElementById('admin-search');
-        if(input) {
-            input.value = '';
-            actualizarUI();
-            input.focus();
-        }
+        if(input) { input.value = ''; actualizarUI(); input.focus(); }
     });
 
-    // ─── RENDER TABLA ───────────────────────────────────────
     function renderTabla(pedidos) {
         const tbody = document.getElementById('tabla-pedidos');
-        if (!pedidos.length) {
-            tbody.innerHTML = `<tr><td colspan="6"><div class="empty-msg">No hay pedidos para mostrar.</div></td></tr>`;
-            return;
-        }
-
+        if (!pedidos.length) { tbody.innerHTML = `<tr><td colspan="6"><div class="empty-msg">No hay pedidos para mostrar.</div></td></tr>`; return; }
         tbody.innerHTML = pedidos.map(p => {
-            const estadoCls = p.estado?.includes('Nuevo') ? 'status-nuevo'
-                            : p.estado?.includes('preparación') ? 'status-prep'
-                            : p.estado?.includes('Listo') ? 'status-listo'
-                            : p.estado?.includes('Entregado') ? 'status-entregado'
-                            : 'status-cancelado';
-            
+            const estadoCls = p.estado?.includes('Nuevo') ? 'status-nuevo' : p.estado?.includes('preparación') ? 'status-prep' : p.estado?.includes('Listo') ? 'status-listo' : p.estado?.includes('Entregado') ? 'status-entregado' : 'status-cancelado';
             const tipo = p.tipo === 'delivery' ? 'Delivery 🛵' : 'Pickup 🏪';
             const tipoCls = p.tipo === 'delivery' ? 'tipo-delivery' : 'tipo-pickup';
-            
-            let hora = '—';
-            let timerHTML = '';
+            let hora = '—'; let timerHTML = '';
             if (p.creado?.toDate) {
                 hora = p.creado.toDate().toLocaleTimeString('es-US', { hour: '2-digit', minute: '2-digit' });
-                
-                // Calcular tiempo transcurrido
                 if (!p.estado?.includes('Entregado') && !p.estado?.includes('Cancelado')) {
-                    const diffMs = new Date() - p.creado.toDate();
-                    const diffMins = Math.floor(diffMs / 60000);
-                    let color = 'var(--green)';
-                    if (diffMins > 15) color = 'var(--yellow)';
-                    if (diffMins > 25) color = '#F44336';
+                    const diffMs = new Date() - p.creado.toDate(); const diffMins = Math.floor(diffMs / 60000);
+                    let color = 'var(--green)'; if (diffMins > 15) color = 'var(--yellow)'; if (diffMins > 25) color = '#F44336';
                     timerHTML = `<div style="color:${color}; font-weight:bold; font-size: 0.85rem; margin-top:2px;">⏱️ ${diffMins} min</div>`;
                 }
             }
-            
-            const ticketId = p.id.slice(-4).toUpperCase(); // Ticket de 4 letras/numeros
-            
-            // Lógica de Pago
+            const ticketId = p.id.slice(-4).toUpperCase();
             const isPaid = p.estadoPago === 'Pagado';
             let pagoHTML = '';
-            if (isPaid) {
-                pagoHTML = `<div class="pagado-badge">✅ Pagado (${p.metodoPagoReal || 'Caja'})<br><strong style="color:white">${p.total}</strong></div>`;
-            } else {
-                pagoHTML = `<button class="btn-cobrar-grid" onclick="abrirCaja('${p.id}', '${ticketId}', '${p.total}')">🔴 Cobrar ${p.total}</button><br><span class="pay-badge" style="margin-top:4px;display:inline-block">Pide: ${p.metodoPago || '?'}</span>`;
-            }
-
+            if (isPaid) { pagoHTML = `<div class="pagado-badge">✅ Pagado (${p.metodoPagoReal || 'Caja'})<br><strong style="color:white">${p.total}</strong></div>`; }
+            else { pagoHTML = `<button class="btn-cobrar-grid" onclick="abrirCaja('${p.id}', '${ticketId}', '${p.total}')">🔴 Cobrar ${p.total}</button><br><span class="pay-badge" style="margin-top:4px;display:inline-block">Pide: ${p.metodoPago || '?'}</span>`; }
             const searchText = (document.getElementById('admin-search')?.value || '').trim();
-            
-            let displayTicket = ticketId;
-            let displayNombre = p.nombre || '—';
-            let displayTel = p.telefono || 'En tienda';
-            let displayItems = p.items || '—';
-            let displayTipo = tipo;
-            
-            if (searchText) {
-                displayTicket = resaltar(displayTicket, searchText);
-                displayNombre = resaltar(displayNombre, searchText);
-                displayTel = resaltar(displayTel, searchText);
-                displayItems = resaltar(displayItems, searchText);
-                displayTipo = resaltar(displayTipo, searchText);
-            }
+            let displayTicket = ticketId, displayNombre = p.nombre || '—', displayTel = p.telefono || 'En tienda', displayItems = p.items || '—', displayTipo = tipo;
+            if (searchText) { displayTicket = resaltar(displayTicket, searchText); displayNombre = resaltar(displayNombre, searchText); displayTel = resaltar(displayTel, searchText); displayItems = resaltar(displayItems, searchText); displayTipo = resaltar(displayTipo, searchText); }
             displayItems = displayItems.replace(/\n/g, '<br>');
-
             return `<tr>
-                <td>
-                    <span class="order-id" style="font-size:1.1rem;color:var(--yellow)">#${displayTicket}</span><br>
-                    <small style="color:var(--muted)">${hora}</small>
-                    ${timerHTML}
-                    <button class="print-btn" onclick="window.imprimirTicket('${ticketId}')" style="margin-top:6px; font-size:0.7rem; padding:2px 5px; background:var(--surface2); color:white; border:1px solid var(--border); border-radius:4px; cursor:pointer; width:100%;">🖨️ Imprimir</button>
-                </td>
-                <td>
-                    <strong>${displayNombre}</strong><br>
-                    <span style="color:var(--muted);font-size:0.85rem">📞 ${displayTel}</span><br>
-                    <span class="tipo-badge ${tipoCls}" style="margin-top:4px">${displayTipo}</span>
-                </td>
+                <td><span class="order-id" style="font-size:1.1rem;color:var(--yellow)">#${displayTicket}</span><br><small style="color:var(--muted)">${hora}</small>${timerHTML}<button class="print-btn" onclick="window.imprimirTicket('${ticketId}')" style="margin-top:6px; font-size:0.7rem; padding:2px 5px; background:var(--surface2); color:white; border:1px solid var(--border); border-radius:4px; cursor:pointer; width:100%;">🖨️ Imprimir</button></td>
+                <td><strong>${displayNombre}</strong><br><span style="color:var(--muted);font-size:0.85rem">📞 ${displayTel}</span><br><span class="tipo-badge ${tipoCls}" style="margin-top:4px">${displayTipo}</span></td>
                 <td><div class="order-items">${displayItems}</div></td>
                 <td>${pagoHTML}</td>
-                <td>
-                    <select class="status-select ${estadoCls}" data-id="${p.id}" style="width:100%">
-                        <option ${p.estado?.includes('Nuevo') ? 'selected' : ''}>Nuevo 🆕</option>
-                        <option ${p.estado?.includes('preparación') ? 'selected' : ''}>En preparación 🧑‍🍳</option>
-                        <option ${p.estado?.includes('Listo') ? 'selected' : ''}>Listo ✅</option>
-                        <option ${p.estado?.includes('Entregado') ? 'selected' : ''}>Entregado 🎉</option>
-                        <option ${p.estado?.includes('Cancelado') ? 'selected' : ''}>Cancelado ❌</option>
-                    </select>
-                </td>
-                <td style="text-align:right">
-                    <button class="delete-btn" data-id="${p.id}" title="Eliminar permanentemente">🗑️</button>
-                </td>
+                <td><select class="status-select ${estadoCls}" data-id="${p.id}" style="width:100%"><option ${p.estado?.includes('Nuevo') ? 'selected' : ''}>Nuevo 🆕</option><option ${p.estado?.includes('preparación') ? 'selected' : ''}>En preparación 🧑‍🍳</option><option ${p.estado?.includes('Listo') ? 'selected' : ''}>Listo ✅</option><option ${p.estado?.includes('Entregado') ? 'selected' : ''}>Entregado 🎉</option><option ${p.estado?.includes('Cancelado') ? 'selected' : ''}>Cancelado ❌</option></select></td>
+                <td style="text-align:right"><button class="delete-btn" data-id="${p.id}" title="Eliminar permanentemente">🗑️</button></td>
             </tr>`;
         }).join('');
-
-        // Agregar Event Listeners a los selects
         document.querySelectorAll('.status-select').forEach(select => {
             select.addEventListener('change', async (e) => {
                 const id = e.target.getAttribute('data-id');
-                const nuevoEstado = e.target.value;
-                try {
-                    await updateDoc(doc(db, 'pedidos', id), { estado: nuevoEstado });
-                } catch(error) {
-                    alert('Error al actualizar estado. Revisa tu conexión.');
-                    console.error(error);
-                }
+                try { await updateDoc(doc(db, 'pedidos', id), { estado: e.target.value }); } catch(error) { alert('Error al actualizar estado.'); }
             });
         });
-
-        // Agregar Event Listeners a los botones de eliminar
         document.querySelectorAll('.delete-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const id = e.currentTarget.getAttribute('data-id');
-                if (confirm('⚠️ ¿Estás seguro de que deseas eliminar este pedido PERMANENTEMENTE? Esta acción no se puede deshacer.')) {
-                    try {
-                        await deleteDoc(doc(db, 'pedidos', id));
-                    } catch(error) {
-                        alert('Error al eliminar el pedido.');
-                        console.error(error);
-                    }
+                if (confirm('⚠️ ¿Eliminar este pedido PERMANENTEMENTE?')) {
+                    try { await deleteDoc(doc(db, 'pedidos', id)); } catch(error) { alert('Error al eliminar.'); }
                 }
             });
         });
     }
 
-    // ─── LÓGICA DE COBRO (CAJA REGISTRADORA) ─────────────────
     let currentOrderId = null;
-
-    window.abrirCaja = (id, ticket, total) => {
-        currentOrderId = id;
-        document.getElementById('caja-ticket-id').textContent = '#' + ticket;
-        document.getElementById('caja-total-monto').textContent = total;
-        document.getElementById('caja-modal').classList.add('active');
-    };
-
-    window.cerrarCaja = () => {
-        document.getElementById('caja-modal').classList.remove('active');
-        currentOrderId = null;
-    };
-
+    window.abrirCaja = (id, ticket, total) => { currentOrderId = id; document.getElementById('caja-ticket-id').textContent = '#' + ticket; document.getElementById('caja-total-monto').textContent = total; document.getElementById('caja-modal').classList.add('active'); };
+    window.cerrarCaja = () => { document.getElementById('caja-modal').classList.remove('active'); currentOrderId = null; };
     window.procesarPago = async (metodoReal) => {
         if(!currentOrderId) return;
-        try {
-            await updateDoc(doc(db, 'pedidos', currentOrderId), { 
-                estadoPago: 'Pagado',
-                metodoPagoReal: metodoReal,
-                estado: 'En preparación 🧑‍🍳' 
-            });
-            cerrarCaja();
-        } catch(e) {
-            alert('Error procesando el cobro en la base de datos.');
-            console.error(e);
-        }
+        try { await updateDoc(doc(db, 'pedidos', currentOrderId), { estadoPago: 'Pagado', metodoPagoReal: metodoReal, estado: 'En preparación 🧑‍🍳' }); cerrarCaja(); } catch(e) { alert('Error procesando cobro.'); }
     };
 
-    // ─── CORTE DE CAJA ───────────────────────────────────────
     window.abrirCorteCaja = () => {
-        let totales = { Efectivo: 0, Zelle: 0, 'Cash App': 0, Venmo: 0, Tarjeta: 0 };
-        let granTotal = 0;
-        
-        // Sumar solo los pedidos de "hoy" (o los actualmente cargados) que estén pagados
-        pedidosDB.forEach(p => {
-            if (p.estadoPago === 'Pagado' && p.estado !== 'Cancelado ❌' && p.totalNum) {
-                const metodo = p.metodoPagoReal || 'Efectivo';
-                if(totales[metodo] !== undefined) {
-                    totales[metodo] += p.totalNum;
-                    granTotal += p.totalNum;
-                }
-            }
-        });
-
+        let totales = { Efectivo: 0, Zelle: 0, 'Cash App': 0, Venmo: 0, Tarjeta: 0 }; let granTotal = 0;
+        pedidosDB.forEach(p => { if (p.estadoPago === 'Pagado' && p.estado !== 'Cancelado ❌' && p.totalNum) { const metodo = p.metodoPagoReal || 'Efectivo'; if(totales[metodo] !== undefined) { totales[metodo] += p.totalNum; granTotal += p.totalNum; } } });
         document.getElementById('corte-efectivo').textContent = '$' + totales.Efectivo.toFixed(2);
         document.getElementById('corte-zelle').textContent = '$' + totales.Zelle.toFixed(2);
         document.getElementById('corte-cashapp').textContent = '$' + totales['Cash App'].toFixed(2);
         document.getElementById('corte-venmo').textContent = '$' + totales.Venmo.toFixed(2);
         document.getElementById('corte-tarjeta').textContent = '$' + totales.Tarjeta.toFixed(2);
         document.getElementById('corte-total-ventas').textContent = '$' + granTotal.toFixed(2);
-        
         document.getElementById('corte-modal').classList.add('active');
     };
 
-    // ─── GESTIÓN DE PRODUCTOS ─────────────────────────────────
-    let productosListeners = [];
-
-    window.abrirProductos = async () => {
-        document.getElementById('productos-modal').classList.add('active');
-        await cargarListaProductos();
-    };
-
-    window.cerrarProductos = () => {
-        document.getElementById('productos-modal').classList.remove('active');
-        cancelarEdicion();
-    };
+    window.abrirProductos = async () => { document.getElementById('productos-modal').classList.add('active'); await cargarListaProductos(); };
+    window.cerrarProductos = () => { document.getElementById('productos-modal').classList.remove('active'); cancelarEdicion(); };
 
     async function cargarListaProductos() {
         const q = query(collection(db, 'productos'), orderBy('orden'));
@@ -649,24 +492,13 @@
         const lista = document.getElementById('prod-lista');
         const productos = [];
         snap.forEach(d => productos.push({ id: d.id, ...d.data() }));
-
-        if (!productos.length) {
-            lista.innerHTML = '<p style="text-align:center; padding:2rem; color:var(--muted);">No hay productos. Crea el primero.</p>';
-            return;
-        }
-
+        if (!productos.length) { lista.innerHTML = '<p style="text-align:center; padding:2rem; color:var(--muted);">No hay productos.</p>'; return; }
         lista.innerHTML = productos.map(p => {
             const preciosStr = p.variantes?.map(v => `$${v.precio}`).join(' / ') || '—';
             const badge = p.badge?.texto || '';
             return `<div style="display:flex; align-items:center; gap:0.75rem; padding:0.75rem; border-bottom:1px solid var(--border); transition:0.15s;">
-                <div style="flex:1; min-width:0;">
-                    <div style="font-weight:700; font-size:0.9rem;">${p.nombre} ${badge ? `<span style="font-size:0.7rem; color:var(--primary);">${badge}</span>` : ''}</div>
-                    <div style="font-size:0.75rem; color:var(--muted);">
-                        ${p.categoria === 'tortas' ? '🥖' : p.categoria === 'drinks' ? '🍹' : '🥒'} ${p.categoria}
-                        · ${preciosStr}
-                        · <span style="color:${p.disponible ? 'var(--green)' : '#F44336'};">${p.disponible ? '✅ Disponible' : '❌ Agotado'}</span>
-                    </div>
-                </div>
+                <div style="flex:1; min-width:0;"><div style="font-weight:700; font-size:0.9rem;">${p.nombre} ${badge ? `<span style="font-size:0.7rem; color:var(--primary);">${badge}</span>` : ''}</div>
+                <div style="font-size:0.75rem; color:var(--muted);">${p.categoria === 'tortas' ? '🥖' : p.categoria === 'drinks' ? '🍹' : '🥒'} ${p.categoria} · ${preciosStr} · <span style="color:${p.disponible ? 'var(--green)' : '#F44336'};">${p.disponible ? '✅ Disponible' : '❌ Agotado'}</span></div></div>
                 <button class="filter-btn" onclick="editarProducto('${p.id}')" style="padding:0.3rem 0.7rem;">✏️ Editar</button>
                 <button class="delete-btn" onclick="confirmarEliminarProducto('${p.id}')" title="Eliminar" style="padding:0.3rem 0.5rem;">🗑️</button>
             </div>`;
@@ -674,72 +506,36 @@
     }
 
     window.nuevoProducto = () => {
-        document.getElementById('prod-edit-id').value = '';
-        document.getElementById('prod-edit-productid').value = '';
-        document.getElementById('prod-nombre').value = '';
-        document.getElementById('prod-descripcion').value = '';
-        document.getElementById('prod-categoria').value = 'tortas';
-        document.getElementById('prod-tipo').value = 'torta';
-        document.getElementById('prod-imagen').value = '';
-        document.getElementById('prod-incluye').value = '';
-        document.getElementById('prod-orden').value = '50';
-        document.getElementById('prod-badge-texto').value = '';
-        document.getElementById('prod-badge-clase').value = '';
-        document.getElementById('prod-disponible').checked = true;
-        document.getElementById('variantes-container').innerHTML = '';
-        agregarVariante();
-        document.getElementById('btn-eliminar-producto').style.display = 'none';
-        document.getElementById('prod-list-view').style.display = 'none';
-        document.getElementById('prod-editor').style.display = 'block';
+        ['prod-edit-id','prod-edit-productid','prod-nombre','prod-descripcion','prod-imagen','prod-incluye','prod-badge-texto'].forEach(id => { const e = document.getElementById(id); if(e) e.value = ''; });
+        document.getElementById('prod-categoria').value = 'tortas'; document.getElementById('prod-tipo').value = 'torta';
+        document.getElementById('prod-orden').value = '50'; document.getElementById('prod-badge-clase').value = '';
+        document.getElementById('prod-disponible').checked = true; document.getElementById('variantes-container').innerHTML = '';
+        agregarVariante(); document.getElementById('btn-eliminar-producto').style.display = 'none';
+        document.getElementById('prod-list-view').style.display = 'none'; document.getElementById('prod-editor').style.display = 'block';
     };
 
     window.editarProducto = async (id) => {
-        const snap = await getDocs(collection(db, 'productos'));
-        let producto = null;
+        const snap = await getDocs(collection(db, 'productos')); let producto = null;
         snap.forEach(d => { if (d.id === id) producto = { id: d.id, ...d.data() }; });
         if (!producto) return;
-
-        document.getElementById('prod-edit-id').value = producto.id;
-        document.getElementById('prod-edit-productid').value = producto.productId || '';
-        document.getElementById('prod-nombre').value = producto.nombre || '';
-        document.getElementById('prod-descripcion').value = producto.descripcion || '';
-        document.getElementById('prod-categoria').value = producto.categoria || 'tortas';
-        document.getElementById('prod-tipo').value = producto.tipo || 'torta';
-        document.getElementById('prod-imagen').value = producto.imagen || '';
-        document.getElementById('prod-incluye').value = producto.incluye || '';
-        document.getElementById('prod-orden').value = producto.orden || 50;
-        document.getElementById('prod-badge-texto').value = producto.badge?.texto || '';
-        document.getElementById('prod-badge-clase').value = producto.badge?.clase || '';
-        document.getElementById('prod-disponible').checked = producto.disponible !== false;
-
-        const vc = document.getElementById('variantes-container');
-        vc.innerHTML = '';
-        if (producto.variantes?.length) {
-            producto.variantes.forEach(v => agregarVariante(v.label, v.precio));
-        } else {
-            agregarVariante();
-        }
-
+        document.getElementById('prod-edit-id').value = producto.id; document.getElementById('prod-edit-productid').value = producto.productId || '';
+        document.getElementById('prod-nombre').value = producto.nombre || ''; document.getElementById('prod-descripcion').value = producto.descripcion || '';
+        document.getElementById('prod-categoria').value = producto.categoria || 'tortas'; document.getElementById('prod-tipo').value = producto.tipo || 'torta';
+        document.getElementById('prod-imagen').value = producto.imagen || ''; document.getElementById('prod-incluye').value = producto.incluye || '';
+        document.getElementById('prod-orden').value = producto.orden || 50; document.getElementById('prod-badge-texto').value = producto.badge?.texto || '';
+        document.getElementById('prod-badge-clase').value = producto.badge?.clase || ''; document.getElementById('prod-disponible').checked = producto.disponible !== false;
+        const vc = document.getElementById('variantes-container'); vc.innerHTML = '';
+        if (producto.variantes?.length) { producto.variantes.forEach(v => agregarVariante(v.label, v.precio)); } else { agregarVariante(); }
         document.getElementById('btn-eliminar-producto').style.display = 'block';
-        document.getElementById('prod-list-view').style.display = 'none';
-        document.getElementById('prod-editor').style.display = 'block';
+        document.getElementById('prod-list-view').style.display = 'none'; document.getElementById('prod-editor').style.display = 'block';
     };
 
-    window.cancelarEdicion = () => {
-        document.getElementById('prod-list-view').style.display = 'block';
-        document.getElementById('prod-editor').style.display = 'none';
-    };
+    window.cancelarEdicion = () => { document.getElementById('prod-list-view').style.display = 'block'; document.getElementById('prod-editor').style.display = 'none'; };
 
     window.agregarVariante = (label = '', precio = '') => {
-        const container = document.getElementById('variantes-container');
-        const div = document.createElement('div');
+        const container = document.getElementById('variantes-container'); const div = document.createElement('div');
         div.style.cssText = 'display:flex; gap:0.5rem; margin-bottom:0.5rem;';
-        const idx = container.children.length;
-        div.innerHTML = `
-            <input type="text" class="login-input" style="flex:2; margin-bottom:0;" placeholder="Label (ej: COMBO A — \$17)" value="${label.replace(/"/g, '&quot;')}">
-            <input type="number" step="0.01" class="login-input" style="flex:1; margin-bottom:0;" placeholder="Precio" value="${precio}">
-            <button type="button" style="background:rgba(244,67,54,0.15); border:1px solid rgba(244,67,54,0.3); color:#F44336; border-radius:8px; width:36px; cursor:pointer; font-weight:700;" onclick="this.parentElement.remove()">✕</button>
-        `;
+        div.innerHTML = `<input type="text" class="login-input" style="flex:2; margin-bottom:0;" placeholder='Label (ej: COMBO A — $17)' value="${label.replace(/"/g, '&quot;')}"><input type="number" step="0.01" class="login-input" style="flex:1; margin-bottom:0;" placeholder="Precio" value="${precio}"><button type="button" style="background:rgba(244,67,54,0.15); border:1px solid rgba(244,67,54,0.3); color:#F44336; border-radius:8px; width:36px; cursor:pointer; font-weight:700;" onclick="this.parentElement.remove()">✕</button>`;
         container.appendChild(div);
     };
 
@@ -747,103 +543,32 @@
         const id = document.getElementById('prod-edit-id').value;
         const nombre = document.getElementById('prod-nombre').value.trim();
         if (!nombre) { alert('⚠️ El nombre es obligatorio.'); return; }
-
         const variantes = [];
         document.querySelectorAll('#variantes-container > div').forEach(row => {
-            const inputs = row.querySelectorAll('input');
-            const label = inputs[0]?.value.trim();
-            const precio = parseFloat(inputs[1]?.value);
-            if (label && !isNaN(precio)) {
-                variantes.push({ label, precio });
-            }
+            const inputs = row.querySelectorAll('input'); const label = inputs[0]?.value.trim(); const precio = parseFloat(inputs[1]?.value);
+            if (label && !isNaN(precio)) variantes.push({ label, precio });
         });
         if (!variantes.length) { alert('⚠️ Agrega al menos una variante con precio.'); return; }
-
         const data = {
             productId: document.getElementById('prod-edit-productid').value || nombre.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now().toString(36).slice(-4),
-            nombre,
-            descripcion: document.getElementById('prod-descripcion').value.trim(),
-            categoria: document.getElementById('prod-categoria').value,
-            tipo: document.getElementById('prod-tipo').value,
-            imagen: document.getElementById('prod-imagen').value.trim() || null,
-            incluye: document.getElementById('prod-incluye').value.trim() || null,
-            orden: parseInt(document.getElementById('prod-orden').value) || 50,
-            badge: null,
-            disponible: document.getElementById('prod-disponible').checked,
-            variantes
+            nombre, descripcion: document.getElementById('prod-descripcion').value.trim(),
+            categoria: document.getElementById('prod-categoria').value, tipo: document.getElementById('prod-tipo').value,
+            imagen: document.getElementById('prod-imagen').value.trim() || null, incluye: document.getElementById('prod-incluye').value.trim() || null,
+            orden: parseInt(document.getElementById('prod-orden').value) || 50, badge: null,
+            disponible: document.getElementById('prod-disponible').checked, variantes
         };
-
-        const badgeTexto = document.getElementById('prod-badge-texto').value.trim();
-        const badgeClase = document.getElementById('prod-badge-clase').value;
-        if (badgeTexto && badgeClase) {
-            data.badge = { texto: badgeTexto, clase: badgeClase };
-        }
-
-        try {
-            if (id) {
-                await updateDoc(doc(db, 'productos', id), data);
-            } else {
-                await addDoc(collection(db, 'productos'), data);
-            }
-            cancelarEdicion();
-            await cargarListaProductos();
-        } catch(e) {
-            alert('Error al guardar: ' + e.message);
-        }
+        const badgeTexto = document.getElementById('prod-badge-texto').value.trim(); const badgeClase = document.getElementById('prod-badge-clase').value;
+        if (badgeTexto && badgeClase) data.badge = { texto: badgeTexto, clase: badgeClase };
+        try { if (id) { await updateDoc(doc(db, 'productos', id), data); } else { await addDoc(collection(db, 'productos'), data); } cancelarEdicion(); await cargarListaProductos(); } catch(e) { alert('Error al guardar: ' + e.message); }
     };
 
-    window.confirmarEliminarProducto = (id) => {
-        if (confirm('⚠️ ¿Eliminar este producto permanentemente?')) {
-            deleteDoc(doc(db, 'productos', id)).then(() => cargarListaProductos());
-        }
-    };
+    window.confirmarEliminarProducto = (id) => { if (confirm('⚠️ ¿Eliminar este producto permanentemente?')) { deleteDoc(doc(db, 'productos', id)).then(() => cargarListaProductos()); } };
+    window.eliminarProducto = () => { const id = document.getElementById('prod-edit-id').value; if (!id) return; if (confirm('⚠️ ¿Eliminar permanentemente?')) { deleteDoc(doc(db, 'productos', id)).then(() => { cancelarEdicion(); cargarListaProductos(); }); } };
 
-    window.eliminarProducto = () => {
-        const id = document.getElementById('prod-edit-id').value;
-        if (!id) return;
-        if (confirm('⚠️ ¿Eliminar este producto permanentemente? Esta acción no se puede deshacer.')) {
-            deleteDoc(doc(db, 'productos', id)).then(() => {
-                cancelarEdicion();
-                cargarListaProductos();
-            });
-        }
-    };
-
-    // ─── IMPRESIÓN DE TICKET ──────────────────────────────────
     window.imprimirTicket = (ticketId) => {
-        const pedido = pedidosDB.find(p => p.id.slice(-4).toUpperCase() === ticketId);
-        if(!pedido) return;
-        
+        const pedido = pedidosDB.find(p => p.id.slice(-4).toUpperCase() === ticketId); if(!pedido) return;
         const win = window.open('', '_blank');
-        win.document.write(`
-            <html>
-            <head>
-                <style>
-                    body { font-family: monospace; width: 300px; padding: 10px; margin: 0 auto; color: black; background: white; }
-                    .center { text-align: center; }
-                    .bold { font-weight: bold; }
-                    .items { margin: 15px 0; border-top: 1px dashed black; border-bottom: 1px dashed black; padding: 10px 0; }
-                </style>
-            </head>
-            <body>
-                <div class="center">
-                    <h2 style="margin:0;">TORTAS TORTUGA</h2>
-                    <p style="margin:5px 0;">Ticket #${ticketId}</p>
-                    <p style="margin:5px 0;">${new Date().toLocaleString()}</p>
-                </div>
-                <div class="items">
-                    <p class="bold">Cliente: ${pedido.nombre}</p>
-                    <p>Tel: ${pedido.telefono || 'En tienda'}</p>
-                    <p>Tipo: ${pedido.tipo}</p>
-                    <br>
-                    <div style="white-space: pre-wrap;">${pedido.items}</div>
-                </div>
-                <h3 style="text-align:right;">TOTAL: ${pedido.total}</h3>
-                <p class="center" style="margin-top:20px; font-size:12px;">¡Gracias por tu compra!</p>
-                <script>window.print(); window.close();<\/script>
-            </body>
-            </html>
-        `);
+        win.document.write(`<html><head><style>body{font-family:monospace;width:300px;padding:10px;margin:0 auto;color:black;background:white;}.center{text-align:center;}.bold{font-weight:bold;}.items{margin:15px 0;border-top:1px dashed black;border-bottom:1px dashed black;padding:10px 0;}</style></head><body><div class="center"><h2 style="margin:0;">TORTAS TORTUGA</h2><p style="margin:5px 0;">Ticket #${ticketId}</p><p style="margin:5px 0;">${new Date().toLocaleString()}</p></div><div class="items"><p class="bold">Cliente: ${pedido.nombre}</p><p>Tel: ${pedido.telefono || 'En tienda'}</p><p>Tipo: ${pedido.tipo}</p><br><div style="white-space:pre-wrap;">${pedido.items}</div></div><h3 style="text-align:right;">TOTAL: ${pedido.total}</h3><p class="center" style="margin-top:20px;font-size:12px;">¡Gracias por tu compra!</p><script>window.print();window.close();<\/script></body></html>`);
     };
 </script>
 </body>
