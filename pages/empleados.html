@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Tortas Tortuga — Portal Empleados</title>
+<link rel="manifest" href="../manifest.json">
+<meta name="theme-color" content="#FF5A00">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="../icons/icon-apple.png">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════
+   TORTAS TORTUGA — SISTEMA DE EMPLEADOS v3 FINAL
+   Credenciales configurables · Estados de turno completos
+   ═══════════════════════════════════════════════════════ */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{
+  --primary:#FF5A00;--pdark:#CC4700;--pglow:rgba(255,90,0,.15);
+  --bg:#0D0D0D;--sf:#1A1A1A;--sf2:#222;--sf3:#2A2A2A;--sf4:#333;
+  --tx:#FFF;--mu:#888;--bd:rgba(255,255,255,.1);--bd2:rgba(255,255,255,.06);
+  --ok:#25D366;--ok2:rgba(37,211,102,.12);
+  --er:#FF4444;--er2:rgba(255,68,68,.12);
+  --wa:#F59E0B;--wa2:rgba(245,158,11,.12);
+  --in:#3B82F6;--in2:rgba(59,130,246,.12);
+  --rest:#A78BFA;--rest2:rgba(167,139,250,.12);
+  --g:#FFD700;--g2:rgba(255,215,0,.12);
+  --sup:#A78BFA;--sup2:rgba(167,139,250,.12);
+  --caj:#38BDF8;--caj2:rgba(56,189,248,.12);
+  --emp:#94A3B8;--emp2:rgba(148,163,184,.12);
+  --r:14px;--rs:10px;--rxs:8px;
+}
+html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'Outfit',sans-serif;overflow-x:hidden;}
+.gbg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+.gbg::before{content:'';position:absolute;width:700px;height:700px;background:radial-gradient(circle,var(--pglow),transparent 65%);top:-300px;left:-200px;animation:drift 22s ease-in-out infinite alternate;}
+.gbg::after{content:'';position:absolute;width:500px;height:500px;background:radial-gradient(circle,rgba(59,130,246,.07),transparent 65%);bottom:-200px;right:-100px;animation:drift 28s ease-in-out infinite alternate-reverse;}
+@keyframes drift{to{transform:translate(80px,60px);}}
+#app{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;}
+
+/* HDR */
+.hdr{background:rgba(13,13,13,.92);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-bottom:1px solid var(--bd);padding:.85rem 1.2rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;}
+.hdr-logo{font-size:.95rem;font-weight:900;color:var(--primary);text-decoration:none;display:flex;align-items:center;gap:.4rem;}
+.hdr-r{display:flex;align-items:center;gap:.5rem;}
+.rchip{font-size:.7rem;font-weight:800;padding:.2rem .6rem;border-radius:20px;letter-spacing:.04em;display:none;}
+.rc-gerente{background:var(--g2);color:var(--g);border:1px solid rgba(255,215,0,.25);}
+.rc-supervisor{background:var(--sup2);color:var(--sup);border:1px solid rgba(167,139,250,.25);}
+.rc-cajero{background:var(--caj2);color:var(--caj);border:1px solid rgba(56,189,248,.25);}
+.rc-empleado{background:var(--emp2);color:var(--emp);border:1px solid rgba(148,163,184,.2);}
+.hname{font-size:.8rem;color:var(--mu);display:none;}
+.ibtn{background:none;border:1px solid var(--bd);color:var(--mu);border-radius:var(--rxs);padding:.38rem .65rem;font-size:.76rem;font-family:inherit;cursor:pointer;transition:.15s;display:none;}
+.ibtn:hover{background:var(--sf2);color:var(--tx);}
+
+/* SCREENS */
+.screen{display:none;flex:1;padding:1.2rem 1rem 2.5rem;max-width:560px;margin:0 auto;width:100%;}
+.screen.on{display:flex;flex-direction:column;animation:fup .28s ease;}
+@keyframes fup{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+/* CARD */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:1.35rem;margin-bottom:.85rem;}
+.card-hd{font-size:.93rem;font-weight:700;margin-bottom:.95rem;display:flex;align-items:center;gap:.45rem;}
+
+/* LOGO HERO */
+.hero{text-align:center;padding:1.5rem 0 1rem;}
+.turtle{font-size:3.5rem;animation:bob 3s ease-in-out infinite;}
+@keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
+.hero h1{font-size:1.5rem;font-weight:900;color:var(--primary);margin:.3rem 0 .15rem;}
+.hero p{font-size:.82rem;color:var(--mu);}
+
+/* TABS */
+.tabs{display:flex;background:var(--sf2);border-radius:var(--rs);padding:.2rem;margin-bottom:1rem;gap:.2rem;overflow-x:auto;}
+.tab{flex:1;min-width:max-content;padding:.48rem .7rem;border:none;border-radius:var(--rxs);background:transparent;color:var(--mu);font-family:inherit;font-size:.8rem;font-weight:600;cursor:pointer;transition:.15s;white-space:nowrap;}
+.tab.on{background:var(--sf);color:var(--primary);box-shadow:0 2px 8px rgba(0,0,0,.3);}
+.pane{display:none;}
+.pane.on{display:block;animation:fup .22s ease;}
+
+/* FORM */
+.f{margin-bottom:.85rem;}
+.f label{display:block;font-size:.76rem;font-weight:700;color:var(--mu);margin-bottom:.32rem;letter-spacing:.03em;}
+.f input,.f select{width:100%;padding:.7rem .92rem;background:var(--sf2);border:1.5px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:.92rem;outline:none;transition:.2s;-webkit-appearance:none;appearance:none;}
+.f input:focus,.f select:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--pglow);}
+.f input.ok{border-color:var(--ok);box-shadow:0 0 0 3px var(--ok2);}
+.f input.er{border-color:var(--er);box-shadow:0 0 0 3px var(--er2);animation:shk .3s ease;}
+@keyframes shk{0%,100%{transform:translateX(0);}30%{transform:translateX(-5px);}70%{transform:translateX(5px);}}
+.ferr{font-size:.71rem;color:var(--er);margin-top:.25rem;min-height:.85rem;display:block;}
+.fhint{font-size:.68rem;color:var(--mu);margin-top:.18rem;}
+.pw{position:relative;}
+.pw input{padding-right:2.9rem;}
+.eye{position:absolute;right:.7rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:.9rem;opacity:.5;transition:.15s;}
+.eye:hover{opacity:1;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:.65rem;}
+
+/* BTNS */
+.btn{width:100%;padding:.82rem;border:none;border-radius:var(--rxs);font-family:inherit;font-size:.95rem;font-weight:700;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;gap:.42rem;position:relative;}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.bp{background:linear-gradient(135deg,var(--primary),#FF8800);color:#fff;box-shadow:0 5px 16px rgba(255,90,0,.28);}
+.bp:hover:not(:disabled){filter:brightness(1.08);}
+.bp:active:not(:disabled){transform:scale(.98);}
+.bs{background:var(--sf2);color:var(--tx);border:1px solid var(--bd);}
+.bs:hover:not(:disabled){background:var(--sf3);}
+.bd{background:var(--er2);color:var(--er);border:1px solid rgba(255,68,68,.28);}
+.bd:hover:not(:disabled){background:rgba(255,68,68,.2);}
+.bok{background:var(--ok2);color:var(--ok);border:1px solid rgba(37,211,102,.28);}
+.bok:hover:not(:disabled){background:rgba(37,211,102,.22);}
+.bwa{background:var(--rest2);color:var(--rest);border:1px solid rgba(167,139,250,.28);}
+.bwa:hover:not(:disabled){background:rgba(167,139,250,.22);}
+.bsm{padding:.48rem .88rem;font-size:.78rem;width:auto;}
+.spin{width:16px;height:16px;border:2.5px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite;display:none;}
+.btn.ld .spin{display:block;}
+.btn.ld .lbl{display:none;}
+@keyframes sp{to{transform:rotate(360deg);}}
+.dvd{display:flex;align-items:center;gap:.65rem;margin:.8rem 0;color:var(--mu);font-size:.76rem;}
+.dvd::before,.dvd::after{content:'';flex:1;height:1px;background:var(--bd);}
+
+/* MSGS */
+.msg{padding:.6rem .9rem;border-radius:var(--rxs);font-size:.84rem;line-height:1.55;display:none;align-items:flex-start;gap:.42rem;}
+.msg.on{display:flex;}
+.m-ok{background:var(--ok2);border:1px solid rgba(37,211,102,.28);color:var(--ok);}
+.m-er{background:var(--er2);border:1px solid rgba(255,68,68,.28);color:var(--er);}
+.m-wa{background:var(--wa2);border:1px solid rgba(245,158,11,.28);color:var(--wa);}
+.m-in{background:var(--in2);border:1px solid rgba(59,130,246,.28);color:var(--in);}
+
+/* STRENGTH */
+.sbar{height:4px;background:var(--bd);border-radius:4px;overflow:hidden;margin-top:.28rem;}
+.sfill{height:100%;border-radius:4px;width:0;transition:width .3s,background .3s;}
+.slbl{font-size:.7rem;font-weight:700;margin-top:.2rem;}
+
+/* ═══════════════════════════════════════════
+   RELOJ / CONTROL DE TURNO
+   ═══════════════════════════════════════════ */
+.clock-card{background:linear-gradient(160deg,var(--sf2),var(--sf));border:1px solid var(--bd);border-radius:var(--r);padding:1.6rem 1.4rem;text-align:center;margin-bottom:.85rem;}
+.ck-sub{font-size:.75rem;color:var(--mu);font-weight:700;letter-spacing:.06em;margin-bottom:.22rem;}
+.ck-name{font-size:1.3rem;font-weight:900;margin-bottom:1rem;}
+.ck-time{font-size:2.8rem;font-weight:900;color:var(--primary);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+.ck-date{font-size:.8rem;color:var(--mu);margin-top:.22rem;}
+
+/* Estado badge del turno */
+.estado-badge{display:inline-flex;align-items:center;gap:.35rem;margin-top:.65rem;font-size:.76rem;font-weight:800;padding:.28rem .8rem;border-radius:20px;letter-spacing:.03em;}
+.eb-off{background:rgba(136,136,136,.12);color:var(--mu);}
+.eb-in{background:var(--ok2);color:var(--ok);border:1px solid rgba(37,211,102,.25);}
+.eb-rest{background:var(--rest2);color:var(--rest);border:1px solid rgba(167,139,250,.25);}
+.pulse{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pl 1.5s ease-in-out infinite;}
+@keyframes pl{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* Botones de turno grandes */
+.turno-btns{display:flex;flex-direction:column;gap:.65rem;margin-top:.85rem;}
+.btn-ck{padding:1rem;font-size:1rem;border-radius:var(--r);}
+.btn-entrada{background:linear-gradient(135deg,var(--ok),#18a849);color:#fff;box-shadow:0 5px 16px rgba(37,211,102,.22);}
+.btn-descanso{background:linear-gradient(135deg,#7C3AED,#A78BFA);color:#fff;box-shadow:0 5px 16px rgba(124,58,237,.22);}
+.btn-regreso{background:linear-gradient(135deg,#1D4ED8,#3B82F6);color:#fff;box-shadow:0 5px 16px rgba(59,130,246,.22);}
+.btn-salida{background:linear-gradient(135deg,var(--er),#c93333);color:#fff;box-shadow:0 5px 16px rgba(255,68,68,.22);}
+
+/* Contador de tiempo activo */
+.timer-strip{background:var(--ok2);border:1px solid rgba(37,211,102,.22);border-radius:var(--rxs);padding:.55rem 1rem;display:none;text-align:center;font-size:.88rem;font-weight:700;color:var(--ok);margin-top:.65rem;}
+.rest-strip{background:var(--rest2);border:1px solid rgba(167,139,250,.22);border-radius:var(--rxs);padding:.55rem 1rem;display:none;text-align:center;font-size:.88rem;font-weight:700;color:var(--rest);margin-top:.65rem;}
+
+/* Resumen del día */
+.day-summary{background:var(--sf2);border:1px solid var(--bd2);border-radius:var(--rxs);padding:.9rem 1rem;margin-top:.65rem;display:none;}
+.ds-row{display:flex;justify-content:space-between;align-items:center;padding:.3rem 0;border-bottom:1px solid var(--bd2);font-size:.85rem;}
+.ds-row:last-child{border:none;font-weight:800;font-size:.95rem;}
+.ds-key{color:var(--mu);}
+.ds-val{font-weight:700;color:var(--tx);}
+.ds-val.accent{color:var(--primary);}
+
+/* HISTORIAL */
+.wnav{display:flex;align-items:center;gap:.55rem;margin-bottom:.85rem;}
+.wnav button{background:var(--sf2);border:1px solid var(--bd);color:var(--tx);border-radius:var(--rxs);padding:.42rem .6rem;cursor:pointer;font-size:.9rem;transition:.15s;}
+.wnav button:hover{background:var(--sf3);}
+.wnav-lbl{flex:1;text-align:center;font-size:.85rem;font-weight:700;}
+.week-box{background:linear-gradient(135deg,var(--pglow),transparent);border:1px solid rgba(255,90,0,.18);border-radius:var(--rxs);padding:.85rem 1rem;margin-bottom:.85rem;display:flex;justify-content:space-between;align-items:center;}
+.wb-l h4{font-size:.75rem;color:var(--mu);}
+.wb-l p{font-size:1.65rem;font-weight:900;color:var(--primary);}
+.wb-r{text-align:right;}
+.wb-r h4{font-size:.75rem;color:var(--mu);}
+.wb-r p{font-size:1.3rem;font-weight:900;}
+.hist-list{display:flex;flex-direction:column;gap:.5rem;}
+.hi{background:var(--sf2);border:1px solid var(--bd2);border-radius:var(--rxs);padding:.78rem .9rem;}
+.hi-top{display:flex;align-items:center;gap:.7rem;margin-bottom:.4rem;}
+.hi-ico{font-size:1.15rem;width:28px;text-align:center;flex-shrink:0;}
+.hi-inf{flex:1;min-width:0;}
+.hi-date{font-size:.73rem;color:var(--mu);}
+.hi-emp{font-size:.83rem;font-weight:700;color:var(--tx);}
+.hi-hrs{font-size:.76rem;font-weight:800;padding:.14rem .52rem;border-radius:20px;flex-shrink:0;}
+.hc-ok{background:var(--pglow);color:var(--primary);}
+.hc-wa{background:var(--wa2);color:var(--wa);}
+.hc-rest{background:var(--rest2);color:var(--rest);}
+.hi-detail{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.2rem;}
+.seg-pill{font-size:.7rem;padding:.15rem .5rem;border-radius:20px;font-weight:600;}
+.sp-in{background:var(--ok2);color:var(--ok);}
+.sp-rest{background:var(--rest2);color:var(--rest);}
+.sp-out{background:var(--er2);color:var(--er);}
+.hi-empty{text-align:center;padding:2.2rem 1rem;color:var(--mu);font-size:.86rem;}
+
+/* EMP GRID */
+.emp-grid{display:flex;flex-direction:column;gap:.5rem;}
+.ec{background:var(--sf2);border:1px solid var(--bd2);border-radius:var(--rxs);padding:.82rem .9rem;display:flex;align-items:center;gap:.65rem;cursor:pointer;transition:.15s;}
+.ec:hover{border-color:rgba(255,90,0,.3);background:var(--sf3);}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:900;flex-shrink:0;}
+.av-g{background:var(--g2);color:var(--g);border:1.5px solid rgba(255,215,0,.3);}
+.av-s{background:var(--sup2);color:var(--sup);border:1.5px solid rgba(167,139,250,.3);}
+.av-c{background:var(--caj2);color:var(--caj);border:1.5px solid rgba(56,189,248,.3);}
+.av-e{background:var(--emp2);color:var(--emp);border:1.5px solid rgba(148,163,184,.2);}
+.ei{flex:1;min-width:0;}
+.ei h4{font-size:.88rem;font-weight:700;margin-bottom:.1rem;}
+.ei p{font-size:.73rem;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.echips{display:flex;flex-direction:column;align-items:flex-end;gap:.22rem;flex-shrink:0;}
+.chip{font-size:.66rem;font-weight:800;padding:.16rem .52rem;border-radius:20px;}
+.ch-g{background:var(--g2);color:var(--g);}
+.ch-s{background:var(--sup2);color:var(--sup);}
+.ch-c{background:var(--caj2);color:var(--caj);}
+.ch-e{background:var(--emp2);color:var(--emp);}
+.ch-on{background:var(--ok2);color:var(--ok);border:1px solid rgba(37,211,102,.2);}
+.ch-rest{background:var(--rest2);color:var(--rest);border:1px solid rgba(167,139,250,.2);}
+.ch-off{background:rgba(136,136,136,.1);color:var(--mu);}
+
+/* MODAL */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center;z-index:500;opacity:0;pointer-events:none;transition:opacity .22s;}
+.ov.open{opacity:1;pointer-events:all;}
+.modal{background:var(--sf);border:1px solid var(--bd);border-radius:20px 20px 0 0;padding:1.35rem 1.15rem 2rem;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);}
+.ov.open .modal{transform:translateY(0);}
+.mhandle{width:32px;height:4px;background:var(--bd);border-radius:4px;margin:0 auto 1.05rem;}
+.mhd{font-size:1.02rem;font-weight:800;margin-bottom:1.05rem;display:flex;align-items:center;gap:.42rem;}
+.mclose{margin-left:auto;background:none;border:none;color:var(--mu);font-size:1.2rem;cursor:pointer;padding:.18rem;}
+.mclose:hover{color:var(--tx);}
+
+/* PIN PAD */
+.gate-center{text-align:center;padding:.5rem 0 1rem;}
+.gate-ico{font-size:2.6rem;margin-bottom:.42rem;}
+.gate-ttl{font-size:.95rem;font-weight:700;margin-bottom:.25rem;}
+.gate-sub{font-size:.8rem;color:var(--mu);margin-bottom:1.1rem;line-height:1.5;}
+.pin-dots{display:flex;justify-content:center;gap:.5rem;margin-bottom:.95rem;}
+.dot{width:13px;height:13px;border-radius:50%;border:2px solid var(--bd);transition:.18s;}
+.dot.f{background:var(--primary);border-color:var(--primary);}
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:.45rem;max-width:210px;margin:0 auto .85rem;}
+.npb{padding:.85rem;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:1.15rem;font-weight:700;cursor:pointer;transition:.14s;}
+.npb:hover{background:var(--sf3);}
+.npb:active{transform:scale(.95);}
+.npd{font-size:.95rem;color:var(--mu);}
+
+/* PRIV GRID */
+.priv-grid{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;margin-bottom:.9rem;}
+.po{border:2px solid var(--bd);border-radius:var(--rs);padding:.85rem;cursor:pointer;transition:.15s;text-align:center;}
+.po:hover{border-color:rgba(255,90,0,.38);}
+.po-ico{font-size:1.5rem;margin-bottom:.28rem;}
+.po-nm{font-size:.82rem;font-weight:800;}
+.po-desc{font-size:.68rem;color:var(--mu);margin-top:.18rem;line-height:1.4;}
+.po.sel-g{border-color:var(--g);background:var(--g2);}
+.po.sel-s{border-color:var(--sup);background:var(--sup2);}
+.po.sel-c{border-color:var(--caj);background:var(--caj2);}
+.po.sel-e{border-color:var(--emp);background:var(--emp2);}
+
+/* ROLE MATRIX */
+.rm{border-radius:var(--r);overflow:hidden;border:1px solid var(--bd);margin-bottom:.85rem;}
+.rm-hd,.rm-row{display:grid;grid-template-columns:1fr repeat(4,55px);}
+.rm-hd{background:var(--sf3);}
+.rm-hd span{padding:.55rem .35rem;font-size:.65rem;font-weight:800;color:var(--mu);text-align:center;letter-spacing:.04em;}
+.rm-row{border-top:1px solid var(--bd2);}
+.rm-row:nth-child(even){background:var(--sf);}
+.rm-row:nth-child(odd){background:var(--sf2);}
+.rm-row span:first-child{padding:.6rem .75rem;font-size:.78rem;color:var(--tx);}
+.rm-row span:not(:first-child){padding:.6rem 0;text-align:center;font-size:.85rem;}
+
+/* INFO ROW */
+.ir{display:flex;align-items:center;justify-content:space-between;padding:.52rem 0;border-bottom:1px solid var(--bd2);font-size:.86rem;}
+.ir:last-child{border:none;}
+.ir-k{color:var(--mu);}
+.ir-v{font-weight:600;}
+.no-emp{text-align:center;padding:2.2rem 1rem;color:var(--mu);}
+.no-emp .ico{font-size:2rem;margin-bottom:.35rem;}
+@media(max-width:380px){.g2{grid-template-columns:1fr;}.ck-time{font-size:2.3rem;}}
+</style>
+</head>
+<body>
+<div class="gbg"></div>
+<div id="app">
+
+<!-- ─── HEADER ────────────────────────────────── -->
+<header class="hdr">
+  <a href="../index.html" class="hdr-logo">🐢 <span style="color:var(--tx);font-weight:400;">Tortas Tortuga</span></a>
+  <div class="hdr-r">
+    <span class="rchip" id="rchip"></span>
+    <span class="hname" id="hname"></span>
+    <button class="ibtn" id="btn-back" onclick="volverLogin()">← Salir</button>
+    <button class="ibtn" id="btn-logout" onclick="cerrarSesion()">Salir →</button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════
+     S1 · LOGIN / REGISTRO
+     ═══════════════════════════════════════════════════ -->
+<div class="screen on" id="s-auth">
+  <div class="hero">
+    <div class="turtle">🐢</div>
+    <h1>Portal Empleados</h1>
+    <p>Tortas Tortuga · San Antonio TX</p>
+  </div>
+
+  <!-- LOGIN — pantalla única, sin auto-registro -->
+  <div class="card">
+    <div id="msg-login" class="msg"></div>
+    <div class="f">
+      <label>Número de empleado o correo</label>
+      <input type="text" id="l-id" placeholder="EMP-XXXXXX o correo@..." autocapitalize="none" autocomplete="username">
+      <span class="ferr" id="e-lid"></span>
+    </div>
+    <div class="f">
+      <label>Contraseña</label>
+      <div class="pw"><input type="password" id="l-pw" placeholder="Tu contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginEmp()"><button class="eye" type="button" onclick="eye('l-pw',this)">👁️</button></div>
+      <span class="ferr" id="e-lpw"></span>
+    </div>
+    <button class="btn bp" id="btn-login" onclick="loginEmp()"><span class="lbl">Entrar</span><div class="spin"></div></button>
+    <div class="dvd">¿No tienes cuenta?</div>
+    <div style="background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rxs);padding:.85rem;text-align:center;">
+      <div style="font-size:.82rem;color:var(--mu);line-height:1.7;">
+        Las cuentas de empleados solo las puede crear el <strong style="color:var(--tx);">Gerente</strong> o <strong style="color:var(--tx);">Supervisor</strong>.<br>
+        Contacta a tu gerente para que te registre en el sistema.
+      </div>
+    </div>
+    <div class="dvd">acceso gerente / supervisor</div>
+    <button class="btn bs" onclick="abrirGatePass('admin', mostrarAdminDirecto)">⚙️ Acceso Gerente / Supervisor</button>
+    <!-- Credenciales de gerente para primer uso -->
+    <div id="info-setup" class="card" style="border-color:rgba(255,215,0,.25);background:rgba(255,215,0,.06);margin-top:.6rem;">
+      <div style="font-size:.78rem;font-weight:800;color:#FFD700;margin-bottom:.5rem;">👑 Credenciales del Gerente</div>
+      <div style="font-size:.8rem;color:var(--mu);line-height:2;">
+        Usuario: <strong style="color:var(--tx);">gerente@tortuga.local</strong><br>
+        Contraseña: <strong style="color:var(--tx);">GerenteTortuga2026</strong>
+      </div>
+      <button onclick="document.getElementById('info-setup').style.display='none'" style="background:none;border:none;color:var(--mu);font-size:.72rem;cursor:pointer;margin-top:.5rem;padding:0;">Ocultar esto ✕</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     S2 · PANEL EMPLEADO (reloj + historial + perfil)
+     ═══════════════════════════════════════════════════ -->
+<div class="screen" id="s-emp">
+  <div class="tabs">
+    <button class="tab on" id="et-clk" onclick="swEmp('clk')">⏱ Mi Turno</button>
+    <button class="tab" id="et-hist" onclick="swEmp('hist')">📋 Mis Horas</button>
+    <button class="tab" id="et-prof" onclick="swEmp('prof')">👤 Perfil</button>
+  </div>
+
+  <!-- MI TURNO (reloj + botones de estado) -->
+  <div class="pane on" id="ep-clk">
+    <div class="clock-card">
+      <div class="ck-sub">EMPLEADO</div>
+      <div class="ck-name" id="ck-name">—</div>
+      <div class="ck-time" id="ck-time">00:00:00</div>
+      <div class="ck-date" id="ck-date">—</div>
+      <div class="estado-badge eb-off" id="estado-badge">
+        <span class="pulse"></span>
+        <span id="estado-txt">Sin turno activo</span>
+      </div>
+    </div>
+
+    <!-- Tira de tiempo activo -->
+    <div class="timer-strip" id="timer-strip">⏱ Tiempo trabajado: <strong id="timer-txt">0h 0m</strong></div>
+    <div class="rest-strip" id="rest-strip">☕ En descanso: <strong id="rest-txt">0m</strong></div>
+
+    <!-- Botones de turno -->
+    <div class="turno-btns" id="turno-btns">
+      <!-- Se renderizan dinámicamente según el estado -->
+    </div>
+
+    <div id="msg-clk" class="msg" style="margin-top:.6rem;"></div>
+
+    <!-- Resumen del día -->
+    <div class="day-summary" id="day-sum">
+      <div class="ds-row"><span class="ds-key">Entrada</span><span class="ds-val" id="ds-entrada">—</span></div>
+      <div class="ds-row" id="ds-desc-row" style="display:none;"><span class="ds-key">Descanso</span><span class="ds-val" id="ds-descanso">—</span></div>
+      <div class="ds-row" id="ds-sal-row" style="display:none;"><span class="ds-key">Salida</span><span class="ds-val" id="ds-salida">—</span></div>
+      <div class="ds-row"><span class="ds-key">Horas trabajadas</span><span class="ds-val accent" id="ds-horas">0h 0m</span></div>
+    </div>
+  </div>
+
+  <!-- MIS HORAS -->
+  <div class="pane" id="ep-hist">
+    <div class="wnav">
+      <button onclick="cambSem(-1)">‹</button>
+      <div class="wnav-lbl" id="wlbl-emp">—</div>
+      <button onclick="cambSem(1)">›</button>
+    </div>
+    <div class="week-box">
+      <div class="wb-l"><h4>Horas trabajadas</h4><p id="wtot-emp">0h 0m</p></div>
+      <div class="wb-r"><h4>Días / Turnos</h4><p id="wshift-emp">0</p></div>
+    </div>
+    <div class="hist-list" id="hist-emp"><div class="hi-empty">Cargando…</div></div>
+  </div>
+
+  <!-- PERFIL -->
+  <div class="pane" id="ep-prof">
+    <div class="card"><div class="card-hd">👤 Mi perfil</div><div id="prof-body">Cargando…</div></div>
+    <button class="btn bs" onclick="cerrarSesion()" style="margin-top:.4rem;">Cerrar sesión →</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     S3 · PANEL ADMIN / GERENTE / SUPERVISOR
+     ═══════════════════════════════════════════════════ -->
+<div class="screen" id="s-admin">
+  <div class="tabs" id="admin-tabs">
+    <button class="tab on" id="at-emp" onclick="swAdmin('emp')">👥 Empleados</button>
+    <button class="tab" id="at-rep" onclick="swAdmin('rep')">📊 Reportes</button>
+    <button class="tab" id="at-priv" onclick="swAdmin('priv')">🛡 Roles</button>
+    <button class="tab" id="at-new" onclick="swAdmin('new')">➕ Nuevo</button>
+  </div>
+
+  <!-- LISTA EMPLEADOS -->
+  <div class="pane on" id="ap-emp">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;">
+      <span style="font-size:.88rem;font-weight:700;">Empleados <span style="background:var(--pglow);color:var(--primary);border-radius:20px;padding:.1rem .52rem;font-size:.7rem;font-weight:800;" id="emp-cnt">0</span></span>
+    </div>
+    <div class="f" style="margin-bottom:.6rem;"><input type="search" id="srch-emp" placeholder="Buscar por nombre, ID o puesto…" oninput="filtrarEmp()" style="font-size:.84rem;padding:.52rem .88rem;"></div>
+    <div class="emp-grid" id="emp-grid"><div class="no-emp"><div class="ico">👥</div><p>Cargando empleados…</p></div></div>
+  </div>
+
+  <!-- REPORTE -->
+  <div class="pane" id="ap-rep">
+    <div class="wnav">
+      <button onclick="cambSemA(-1)">‹</button>
+      <div class="wnav-lbl" id="wlbl-adm">—</div>
+      <button onclick="cambSemA(1)">›</button>
+    </div>
+    <div class="f" style="margin-bottom:.6rem;"><select id="rep-sel" onchange="cargarRep()"><option value="">— Todos los empleados —</option></select></div>
+    <div class="week-box">
+      <div class="wb-l"><h4>Horas totales del período</h4><p id="rep-tot">0h 0m</p></div>
+      <div class="wb-r"><h4>Turnos</h4><p id="rep-sh">0</p></div>
+    </div>
+    <div class="hist-list" id="hist-adm"><div class="hi-empty">Selecciona período o empleado</div></div>
+  </div>
+
+  <!-- ROLES / PRIVILEGIOS -->
+  <div class="pane" id="ap-priv">
+    <div class="rm">
+      <div class="rm-hd"><span>Función</span><span style="color:var(--g)">GER</span><span style="color:var(--sup)">SUP</span><span style="color:var(--caj)">CAJ</span><span style="color:var(--emp)">EMP</span></div>
+      <div class="rm-row"><span>Reloj entrada/descanso/salida</span><span>✅</span><span>✅</span><span>✅</span><span>✅</span></div>
+      <div class="rm-row"><span>Ver sus propias horas</span><span>✅</span><span>✅</span><span>✅</span><span>✅</span></div>
+      <div class="rm-row"><span>Ver lista de empleados</span><span>✅</span><span>✅</span><span>🔐</span><span>🚫</span></div>
+      <div class="rm-row"><span>Ver reportes generales</span><span>✅</span><span>✅</span><span>🔐</span><span>🚫</span></div>
+      <div class="rm-row"><span>Crear / editar empleados</span><span>✅</span><span>✅</span><span>🚫</span><span>🚫</span></div>
+      <div class="rm-row"><span>Eliminar / desactivar</span><span>✅</span><span>✅</span><span>🚫</span><span>🚫</span></div>
+      <div class="rm-row"><span>Editar turnos (corrección)</span><span>✅</span><span>✅</span><span>🚫</span><span>🚫</span></div>
+      <div class="rm-row"><span>Cambiar roles</span><span>✅</span><span>🔐PIN</span><span>🚫</span><span>🚫</span></div>
+    </div>
+    <div class="msg m-in on" style="font-size:.75rem;line-height:1.6;margin-bottom:1rem;">✅ Libre · 🔐 Requiere PIN · 🚫 Sin acceso</div>
+
+    <p style="font-size:.75rem;font-weight:800;color:var(--mu);letter-spacing:.05em;margin-bottom:.55rem;">CAMBIAR ROL DE EMPLEADO</p>
+    <div class="f" style="margin-bottom:.6rem;"><select id="priv-sel" onchange="cargarRolActual()"><option value="">— Selecciona empleado —</option></select></div>
+    <div id="priv-body" style="display:none;">
+      <div class="msg m-in on" id="msg-rol-act" style="margin-bottom:.7rem;font-size:.8rem;"></div>
+      <div class="priv-grid">
+        <div class="po" id="po-g" onclick="selRol('gerente')"><div class="po-ico">👑</div><div class="po-nm" style="color:var(--g)">Gerente</div><div class="po-desc">Acceso total sin restricciones</div></div>
+        <div class="po" id="po-s" onclick="selRol('supervisor')"><div class="po-ico">🛡️</div><div class="po-nm" style="color:var(--sup)">Supervisor</div><div class="po-desc">Gestión completa, PIN en roles</div></div>
+        <div class="po" id="po-c" onclick="selRol('cajero')"><div class="po-ico">💼</div><div class="po-nm" style="color:var(--caj)">Cajero / Líder</div><div class="po-desc">Reportes con PIN de supervisor</div></div>
+        <div class="po" id="po-e" onclick="selRol('empleado')"><div class="po-ico">👤</div><div class="po-nm" style="color:var(--emp)">Empleado</div><div class="po-desc">Solo reloj y sus horas</div></div>
+      </div>
+      <div id="msg-priv" class="msg" style="margin-bottom:.6rem;"></div>
+      <button class="btn bp" id="btn-save-rol" onclick="guardarRol()" style="display:none;"><span class="lbl">Guardar cambio de rol</span><div class="spin"></div></button>
+    </div>
+  </div>
+
+  <!-- NUEVO EMPLEADO -->
+  <div class="pane" id="ap-new">
+    <div class="card">
+      <div class="card-hd">➕ Registrar nuevo empleado</div>
+      <div id="msg-new" class="msg"></div>
+      <div class="g2">
+        <div class="f"><label>Nombre *</label><input type="text" id="n-nom" placeholder="Nombre"><span class="ferr" id="e-nnom"></span></div>
+        <div class="f"><label>Apellido *</label><input type="text" id="n-ape" placeholder="Apellido"><span class="ferr" id="e-nape"></span></div>
+      </div>
+      <div class="f"><label>Correo *</label><input type="email" id="n-email" placeholder="correo@ejemplo.com"><span class="ferr" id="e-nemail"></span></div>
+      <div class="f"><label>Teléfono *</label><input type="tel" id="n-tel" placeholder="2105550000" maxlength="10"><span class="ferr" id="e-ntel"></span></div>
+      <div class="f"><label>Puesto *</label>
+        <select id="n-puesto"><option value="">— Selecciona —</option><option value="cajero">Cajero/a</option><option value="cocinero">Cocinero/a</option><option value="mesero">Mesero/a</option><option value="repartidor">Repartidor</option><option value="limpieza">Limpieza</option><option value="otro">Otro</option></select>
+        <span class="ferr" id="e-npuesto"></span>
+      </div>
+      <div class="f"><label>Rol inicial</label>
+        <select id="n-rol"><option value="empleado">👤 Empleado (básico)</option><option value="cajero">💼 Cajero / Líder</option><option value="supervisor">🛡️ Supervisor</option><option value="gerente">👑 Gerente</option></select>
+      </div>
+      <div class="f"><label>Salario por hora ($) — opcional</label><input type="number" id="n-sal" placeholder="0.00" min="0" step="0.25"></div>
+      <div class="f"><label>Contraseña temporal *</label>
+        <div class="pw"><input type="password" id="n-pw" placeholder="Mín 8 caracteres"><button class="eye" type="button" onclick="eye('n-pw',this)">👁️</button></div>
+        <span class="ferr" id="e-npw"></span><span class="fhint">El empleado podrá cambiarla después.</span>
+      </div>
+      <button class="btn bp" id="btn-new" onclick="crearEmpAdmin()"><span class="lbl">Registrar empleado</span><div class="spin"></div></button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<!-- MODAL GATE (PIN / CONTRASEÑA) -->
+<div class="ov" id="ov-gate">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mhd" id="gate-ttl">🔐 Verificar acceso <button class="mclose" onclick="cerrarGate()">✕</button></div>
+    <div class="gate-center">
+      <div class="gate-ico" id="gate-ico">🛡️</div>
+      <div class="gate-ttl" id="gate-sub">Acceso protegido</div>
+      <div class="gate-sub" id="gate-desc">Ingresa la contraseña para continuar.</div>
+      <!-- PIN mode -->
+      <div id="gate-pin">
+        <div class="pin-dots"><div class="dot" id="d0"></div><div class="dot" id="d1"></div><div class="dot" id="d2"></div><div class="dot" id="d3"></div></div>
+        <div class="numpad">
+          <button class="npb" onclick="pk('1')">1</button><button class="npb" onclick="pk('2')">2</button><button class="npb" onclick="pk('3')">3</button>
+          <button class="npb" onclick="pk('4')">4</button><button class="npb" onclick="pk('5')">5</button><button class="npb" onclick="pk('6')">6</button>
+          <button class="npb" onclick="pk('7')">7</button><button class="npb" onclick="pk('8')">8</button><button class="npb" onclick="pk('9')">9</button>
+          <button class="npb" onclick="pclr()">C</button><button class="npb" onclick="pk('0')">0</button><button class="npb npd" onclick="pdel()">⌫</button>
+        </div>
+        <div id="msg-pin" class="msg" style="margin-top:.4rem;"></div>
+      </div>
+      <!-- PASS mode -->
+      <div id="gate-pass" style="display:none;width:100%;">
+        <div class="f"><div class="pw"><input type="password" id="gate-pw" placeholder="Contraseña" autocomplete="off" onkeydown="if(event.key==='Enter')gateV()"><button class="eye" type="button" onclick="eye('gate-pw',this)">👁️</button></div></div>
+        <div id="msg-gpw" class="msg" style="margin-bottom:.6rem;"></div>
+        <button class="btn bp" id="btn-gv" onclick="gateV()"><span class="lbl">Verificar</span><div class="spin"></div></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE EMPLEADO -->
+<div class="ov" id="ov-detail">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mhd">👤 Detalle de empleado <button class="mclose" onclick="cOv('ov-detail')">✕</button></div>
+    <div id="detail-body">Cargando…</div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR TURNO -->
+<div class="ov" id="ov-edit">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mhd">✏️ Editar / Agregar turno <button class="mclose" onclick="cOv('ov-edit')">✕</button></div>
+    <p style="font-size:.8rem;color:var(--mu);margin-bottom:.85rem;">Empleado: <strong id="edit-name" style="color:var(--tx)">—</strong></p>
+    <div id="msg-edit" class="msg"></div>
+    <div class="f"><label>Fecha</label><input type="date" id="et-fecha"></div>
+    <div class="g2">
+      <div class="f"><label>Hora entrada</label><input type="time" id="et-in" oninput="calcEditH()"></div>
+      <div class="f"><label>Hora salida</label><input type="time" id="et-out" oninput="calcEditH()"></div>
+    </div>
+    <div class="g2">
+      <div class="f"><label>Inicio descanso</label><input type="time" id="et-rd"></div>
+      <div class="f"><label>Fin descanso</label><input type="time" id="et-rv"></div>
+    </div>
+    <div id="et-calc" style="background:var(--pglow);border:1px solid rgba(255,90,0,.2);border-radius:var(--rxs);padding:.6rem;text-align:center;margin-bottom:.8rem;display:none;">
+      Horas netas calculadas: <strong id="et-tot" style="color:var(--primary)">—</strong>
+    </div>
+    <div class="f"><label>Nota / Razón de corrección</label><input type="text" id="et-nota" placeholder="Ej: Empleado olvidó marcar entrada"></div>
+    <button class="btn bp" id="btn-edit" onclick="guardarEditT()"><span class="lbl">Guardar turno</span><div class="spin"></div></button>
+  </div>
+</div>
+
+<!-- ═══════════════════ FIREBASE + LÓGICA ═══════════════════ -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+         onAuthStateChanged, signOut, updateProfile }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, setDoc, getDoc, addDoc, updateDoc,
+         collection, query, where, orderBy, getDocs, serverTimestamp, Timestamp }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+/* ─── FIREBASE CONFIG ─────────────────────────── */
+const FB = {
+  apiKey:"AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k",
+  authDomain:"tortas-tortuga.firebaseapp.com",
+  projectId:"tortas-tortuga",
+  storageBucket:"tortas-tortuga.firebasestorage.app",
+  messagingSenderId:"828578668114",
+  appId:"1:828578668114:web:747331efe534341d97098b"
+};
+const fbApp = initializeApp(FB);
+const auth  = getAuth(fbApp);
+const db    = getFirestore(fbApp);
+
+/* ════════════════════════════════════════════════
+   ⚙️  CREDENCIALES — CAMBIA ESTAS ANTES DE PUBLICAR
+   ════════════════════════════════════════════════ */
+const CREDS = {
+  PASS_GERENTE:    'GerenteTortuga2026',    // contraseña del dueño/gerente
+  PASS_SUPERVISOR: 'SupervisorTortuga2026', // contraseña del supervisor
+  PIN_ELEVACION:   '2812',                  // PIN de 4 dígitos para funciones críticas
+};
+
+/* ─── ROLES ───────────────────────────────────── */
+/* ════════════════════════════════════════════════
+   CUENTA INICIAL DEL GERENTE
+   Usuario para login: gerente@tortuga.local
+   Contraseña para login: GerenteTortuga2026
+   Se crea automaticamente la primera vez.
+   ════════════════════════════════════════════════ */
+const GERENTE_INICIAL = {
+  email:    'gerente@tortuga.local',
+  password: 'GerenteTortuga2026',
+  nombre:   'Gerente',
+  apellido: 'Principal',
+  puesto:   'Gerente General',
+  rol:      'gerente',
+};
+
+const ROLES = {
+  gerente:   { nivel:4, label:'Gerente',      ico:'👑', css:'g' },
+  supervisor:{ nivel:3, label:'Supervisor',   ico:'🛡️', css:'s' },
+  cajero:    { nivel:2, label:'Cajero/Líder', ico:'💼', css:'c' },
+  empleado:  { nivel:1, label:'Empleado',     ico:'👤', css:'e' },
+};
+
+/* ─── ESTADOS DE TURNO ────────────────────────── */
+// off → activo → descanso → activo → completo
+const ESTADOS = {
+  off:      { label:'Sin turno activo',  css:'eb-off',  ico:'⬜' },
+  activo:   { label:'En turno',          css:'eb-in',   ico:'🟢' },
+  descanso: { label:'En descanso',       css:'eb-rest', ico:'☕' },
+  completo: { label:'Turno completado',  css:'eb-off',  ico:'✅' },
+};
+
+/* ─── ESTADO GLOBAL ───────────────────────────── */
+let user       = null;
+let empData    = null;
+let rolActual  = 'empleado';
+let nivelActual= 1;
+let turnoId    = null;
+let turnoData  = null;
+let semOff     = 0;
+let semOffA    = 0;
+let rlj        = null;
+let editEUid   = null;
+let editTId    = null;
+let allEmps    = [];
+let nivelAdmin = 0;
+let rolSel     = null;
+let gatePin    = '';
+let gateCb     = null;
+let gateMode   = 'pass';
+
+/* ─── HELPERS DE TIEMPO ───────────────────────── */
+const fTime = d=> d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
+const fDate = d=> d.toLocaleDateString('es-MX',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+const fShort= d=> d.toLocaleDateString('es-MX',{weekday:'short',month:'short',day:'numeric'});
+const fHora = d=> d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:true});
+const mToH  = m=>{ const h=Math.floor(m/60),mn=Math.round(m%60); return `${h}h ${mn}m`; };
+const mToM  = m=> `${Math.round(m)}m`;
+const calcM = (a,b)=>(b-a)/60000;
+const pad   = n=> String(n).padStart(2,'0');
+function semRng(off=0){
+  const n=new Date(),dy=n.getDay();
+  const l=new Date(n); l.setDate(n.getDate()-((dy===0?7:dy)-1)+off*7); l.setHours(0,0,0,0);
+  const d=new Date(l); d.setDate(l.getDate()+6); d.setHours(23,59,59,999);
+  return {l,d};
+}
+function semLbl(l,d){ const f=x=>x.toLocaleDateString('es-MX',{month:'short',day:'numeric'}); return `${f(l)} — ${f(d)}`; }
+
+/* ─── RELOJ EN VIVO ───────────────────────────── */
+function startClock(){
+  clearInterval(rlj);
+  rlj = setInterval(()=>{
+    const n=new Date();
+    el('ck-time').textContent = fTime(n);
+    el('ck-date').textContent = fDate(n);
+    actualizarTimers(n);
+  },1000);
+}
+
+function actualizarTimers(now){
+  if(!turnoData) return;
+  const entrada = turnoData.entrada?.toDate?.();
+  if(!entrada) return;
+  const estado = turnoData.estado || 'off';
+
+  if(estado==='activo'){
+    // tiempo trabajado = ahora - entrada - minutos de descanso ya tomados
+    const descMin = turnoData.minDescanso || 0;
+    const trabMin = calcM(entrada, now) - descMin;
+    el('timer-txt').textContent = mToH(Math.max(0, trabMin));
+    // actualizar resumen
+    el('ds-horas').textContent = mToH(Math.max(0, trabMin));
+  }
+  if(estado==='descanso'){
+    const inicioDesc = turnoData.inicioDescanso?.toDate?.();
+    if(inicioDesc){
+      const durDesc = calcM(inicioDesc, now);
+      el('rest-txt').textContent = mToM(durDesc);
+    }
+  }
+}
+
+/* ════════════════════════════════════════════════
+   SETUP INICIAL — crea la cuenta del gerente
+   si no existe en Firebase al cargar la app.
+   ════════════════════════════════════════════════ */
+async function setupInicial(){
+  try {
+    // Intentar login silencioso para ver si ya existe
+    const cred = await signInWithEmailAndPassword(auth,
+      GERENTE_INICIAL.email, GERENTE_INICIAL.password).catch(()=>null);
+
+    if(cred){
+      // Ya existe — verificar que tenga perfil Firestore
+      const snap = await getDoc(doc(db,'empleados', cred.user.uid));
+      if(!snap.exists()){
+        const empId = 'EMP-GERENTE';
+        await setDoc(doc(db,'empleados', cred.user.uid),{
+          uid:cred.user.uid, empleadoId:empId,
+          nombre:GERENTE_INICIAL.nombre, apellido:GERENTE_INICIAL.apellido,
+          email:GERENTE_INICIAL.email, telefono:'2100000000',
+          puesto:GERENTE_INICIAL.puesto, rol:GERENTE_INICIAL.rol,
+          salarioHora:0, estado:'activo',
+          creado:serverTimestamp(), turnoActivo:false
+        });
+      }
+      await signOut(auth); // volver a pantalla de login
+      return;
+    }
+
+    // No existe — crear cuenta nueva
+    const newCred = await createUserWithEmailAndPassword(auth,
+      GERENTE_INICIAL.email, GERENTE_INICIAL.password);
+    await updateProfile(newCred.user,{displayName:'Gerente Principal'});
+    await setDoc(doc(db,'empleados', newCred.user.uid),{
+      uid:newCred.user.uid, empleadoId:'EMP-GERENTE',
+      nombre:GERENTE_INICIAL.nombre, apellido:GERENTE_INICIAL.apellido,
+      email:GERENTE_INICIAL.email, telefono:'2100000000',
+      puesto:GERENTE_INICIAL.puesto, rol:GERENTE_INICIAL.rol,
+      salarioHora:0, estado:'activo',
+      creado:serverTimestamp(), turnoActivo:false
+    });
+    await signOut(auth);
+    console.log('✅ Cuenta de gerente creada:', GERENTE_INICIAL.email);
+  } catch(e){
+    // Si el correo ya está en uso por otra cuenta, ignorar
+    if(e.code !== 'auth/email-already-in-use'){
+      console.warn('Setup inicial:', e.message);
+    }
+  }
+}
+
+// Ejecutar al cargar
+setupInicial();
+
+/* ─── AUTH STATE ──────────────────────────────── */
+onAuthStateChanged(auth, async u=>{
+  if(u){
+    user=u;
+    const s=await getDoc(doc(db,'empleados',u.uid));
+    if(!s.exists()){ msg('msg-login','er','❌ Perfil no encontrado. Contacta al supervisor.'); await signOut(auth); return; }
+    empData=s.data();
+    if(empData.estado==='inactivo'){ msg('msg-login','er','❌ Cuenta desactivada. Contacta al supervisor.'); await signOut(auth); return; }
+    rolActual   = empData.rol || 'empleado';
+    nivelActual = ROLES[rolActual]?.nivel || 1;
+    mostrarEmp();
+  } else {
+    user=null; empData=null; rolActual='empleado'; nivelActual=1; turnoId=null; turnoData=null;
+    clearInterval(rlj);
+    showScreen('s-auth');
+    el('rchip').style.display='none';
+    el('hname').style.display='none';
+    el('btn-logout').style.display='none';
+    el('btn-back').style.display='none';
+  }
+});
+
+/* ─── MOSTRAR PANEL EMPLEADO ──────────────────── */
+function mostrarEmp(){
+  showScreen('s-emp');
+  el('btn-logout').style.display='flex';
+  el('btn-back').style.display='none';
+  const R=ROLES[rolActual];
+  el('rchip').className=`rchip rc-${rolActual}`;
+  el('rchip').textContent=`${R.ico} ${R.label}`;
+  el('rchip').style.display='inline-flex';
+  el('hname').textContent=empData.nombre.split(' ')[0];
+  el('hname').style.display='inline';
+  el('ck-name').textContent=`${empData.nombre} ${empData.apellido}`;
+  startClock();
+  cargarTurnoActivo();
+  semOff=0; cargarHistEmp();
+  renderPerfil();
+}
+
+function renderPerfil(){
+  const R=ROLES[rolActual];
+  el('prof-body').innerHTML=`
+    <div style="background:var(--sf2);border-radius:var(--rxs);padding:.9rem;margin-bottom:.7rem;display:flex;align-items:center;gap:.8rem;">
+      <div class="av av-${R.css}" style="width:50px;height:50px;font-size:1.25rem;">${(empData.nombre[0]||'')+(empData.apellido[0]||'')}</div>
+      <div>
+        <div style="font-weight:800;font-size:.98rem;">${empData.nombre} ${empData.apellido}</div>
+        <div style="font-size:.73rem;color:var(--mu);">${empData.empleadoId} · ${empData.puesto}</div>
+      </div>
+    </div>
+    <div class="ir"><span class="ir-k">Rol</span><span class="ir-v"><span class="chip ch-${R.css}">${R.ico} ${R.label}</span></span></div>
+    <div class="ir"><span class="ir-k">Correo</span><span class="ir-v" style="font-size:.82rem;">${empData.email}</span></div>
+
+    <!-- TELÉFONO CON EDICIÓN EN LÍNEA -->
+    <div class="ir" id="tel-display-row">
+      <span class="ir-k">Teléfono</span>
+      <span class="ir-v" style="display:flex;align-items:center;gap:.5rem;">
+        <span id="tel-display">${empData.telefono}</span>
+        <button onclick="abrirEditTel()" style="background:var(--pglow);border:1px solid rgba(255,90,0,.3);color:var(--primary);border-radius:6px;padding:.18rem .5rem;font-size:.7rem;font-weight:700;cursor:pointer;font-family:inherit;">✏️ Editar</button>
+      </span>
+    </div>
+    <div id="tel-edit-row" style="display:none;padding:.7rem 0;border-bottom:1px solid var(--bd2);">
+      <div style="font-size:.76rem;font-weight:700;color:var(--mu);margin-bottom:.4rem;letter-spacing:.03em;">NUEVO TELÉFONO (10 dígitos)</div>
+      <div style="display:flex;gap:.5rem;align-items:center;">
+        <input type="tel" id="tel-input" maxlength="10" placeholder="2105550000" oninput="this.value=this.value.replace(/\D/g,'');validarTelInput()"
+          style="flex:1;padding:.62rem .85rem;background:var(--sf2);border:1.5px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:.92rem;outline:none;transition:.2s;"
+          onkeydown="if(event.key==='Enter')guardarTelefono();if(event.key==='Escape')cancelarEditTel()">
+        <button onclick="guardarTelefono()" id="btn-tel-save"
+          style="background:linear-gradient(135deg,var(--ok),#18a849);color:#fff;border:none;border-radius:var(--rxs);padding:.62rem .95rem;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;opacity:.5;pointer-events:none;"
+          disabled>Guardar</button>
+        <button onclick="cancelarEditTel()"
+          style="background:var(--sf3);border:1px solid var(--bd);color:var(--mu);border-radius:var(--rxs);padding:.62rem .75rem;font-size:.82rem;cursor:pointer;font-family:inherit;">✕</button>
+      </div>
+      <div id="tel-err" style="font-size:.72rem;color:var(--er);margin-top:.28rem;min-height:.85rem;"></div>
+      <div id="tel-ok" class="msg m-ok" style="margin-top:.5rem;"></div>
+    </div>
+
+    <div class="ir"><span class="ir-k">Alta en sistema</span><span class="ir-v" style="font-size:.82rem;">${empData.creado?.toDate?.().toLocaleDateString('es-MX')||'N/A'}</span></div>`;
+}
+
+/* ─── EDITAR TELÉFONO ─────────────────────────── */
+window.abrirEditTel = function(){
+  el('tel-display-row').style.borderBottom='none';
+  el('tel-edit-row').style.display='block';
+  const inp=el('tel-input');
+  inp.value='';
+  inp.style.borderColor='var(--bd)';
+  el('tel-err').textContent='';
+  el('tel-ok').className='msg m-ok';
+  inp.focus();
+};
+
+window.cancelarEditTel = function(){
+  el('tel-edit-row').style.display='none';
+  el('tel-display-row').style.borderBottom='1px solid var(--bd2)';
+};
+
+window.validarTelInput = function(){
+  const v=el('tel-input').value;
+  const btn=el('btn-tel-save');
+  const err=el('tel-err');
+  if(v.length===0){
+    err.textContent='';
+    btn.style.opacity='.5'; btn.style.pointerEvents='none'; btn.disabled=true;
+  } else if(v.length<10){
+    err.textContent=`Faltan ${10-v.length} dígito${10-v.length!==1?'s':''}`;
+    el('tel-input').style.borderColor='var(--er)';
+    btn.style.opacity='.5'; btn.style.pointerEvents='none'; btn.disabled=true;
+  } else {
+    err.textContent='';
+    el('tel-input').style.borderColor='var(--ok)';
+    btn.style.opacity='1'; btn.style.pointerEvents='auto'; btn.disabled=false;
+  }
+};
+
+window.guardarTelefono = async function(){
+  const nuevo=el('tel-input').value.replace(/\D/g,'');
+  if(nuevo.length!==10){ el('tel-err').textContent='Ingresa exactamente 10 dígitos.'; return; }
+  if(nuevo===empData.telefono){ el('tel-err').textContent='Es el mismo número actual.'; return; }
+
+  const btn=el('btn-tel-save');
+  btn.textContent='Guardando…'; btn.disabled=true; btn.style.opacity='.6';
+
+  try{
+    await updateDoc(doc(db,'empleados',user.uid),{ telefono:nuevo });
+    empData.telefono=nuevo;
+    // Actualizar vista sin re-renderizar todo
+    el('tel-display').textContent=nuevo;
+    el('tel-ok').className='msg m-ok on';
+    el('tel-ok').textContent='✅ Teléfono actualizado correctamente.';
+    el('tel-err').textContent='';
+    el('tel-input').style.borderColor='var(--ok)';
+    setTimeout(()=>{
+      cancelarEditTel();
+      el('tel-ok').className='msg m-ok';
+    }, 2000);
+  } catch(e){
+    el('tel-err').textContent='❌ Error al guardar: '+e.message;
+  } finally {
+    btn.textContent='Guardar'; btn.disabled=false; btn.style.opacity='1';
+  }
+};
+
+/* ─── MOSTRAR PANEL ADMIN ─────────────────────── */
+function mostrarAdmin(nivel){
+  nivelAdmin=nivel;
+  showScreen('s-admin');
+  el('btn-logout').style.display='none';
+  el('btn-back').style.display='flex';
+  el('rchip').className=`rchip rc-${nivel>=4?'gerente':'supervisor'}`;
+  el('rchip').textContent=nivel>=4?'👑 Gerente':'🛡️ Supervisor';
+  el('rchip').style.display='inline-flex';
+  el('hname').textContent=nivel>=4?'Gerente':'Supervisor';
+  el('hname').style.display='inline';
+  // Pestaña "Nuevo" solo para gerente y supervisor
+  cargarListaEmps();
+  semOffA=0; cargarRep();
+  poblarSelects();
+}
+
+/* ════════════════════════════════════════════════
+   CONTROL DE TURNO — ESTADOS: off / activo / descanso / completo
+   ════════════════════════════════════════════════ */
+async function cargarTurnoActivo(){
+  if(!user) return;
+  const hoyISO = new Date().toISOString().split('T')[0];
+  // Buscar turno activo de hoy
+  const q = query(collection(db,'turnos'),
+    where('uid','==',user.uid),
+    where('fechaISO','==',hoyISO),
+    where('estado','in',['activo','descanso'])
+  );
+  const s = await getDocs(q);
+  if(!s.empty){
+    const d = s.docs[0];
+    turnoId   = d.id;
+    turnoData = d.data();
+    renderEstadoTurno();
+  } else {
+    turnoId=null; turnoData=null;
+    renderEstadoTurno();
+  }
+  // Cargar resumen del día completo
+  cargarResumenHoy();
+}
+
+function renderEstadoTurno(){
+  const estado = turnoData?.estado || 'off';
+  const E = ESTADOS[estado] || ESTADOS.off;
+
+  // badge de estado
+  const badge = el('estado-badge');
+  badge.className = `estado-badge ${E.css}`;
+  el('estado-txt').textContent = E.label;
+
+  // tiras de tiempo
+  el('timer-strip').style.display = estado==='activo'   ? 'block' : 'none';
+  el('rest-strip').style.display  = estado==='descanso' ? 'block' : 'none';
+
+  // botones según estado
+  const cont = el('turno-btns');
+  if(estado==='off' || estado==='completo'){
+    cont.innerHTML=`<button class="btn btn-ck btn-entrada" id="btn-entrada" onclick="accionTurno('entrada')"><span class="lbl">▶ Iniciar turno</span><div class="spin"></div></button>`;
+  } else if(estado==='activo'){
+    cont.innerHTML=`
+      <button class="btn btn-ck btn-descanso" id="btn-desc" onclick="accionTurno('descanso')"><span class="lbl">☕ Tomar descanso</span><div class="spin"></div></button>
+      <button class="btn btn-ck btn-salida" id="btn-sal" onclick="accionTurno('salida')"><span class="lbl">⏹ Terminar turno</span><div class="spin"></div></button>`;
+  } else if(estado==='descanso'){
+    cont.innerHTML=`
+      <button class="btn btn-ck btn-regreso" id="btn-reg" onclick="accionTurno('regreso')"><span class="lbl">▶ Regresar del descanso</span><div class="spin"></div></button>
+      <button class="btn btn-ck btn-salida" id="btn-sal" onclick="accionTurno('salida')"><span class="lbl">⏹ Terminar turno</span><div class="spin"></div></button>`;
+  }
+
+  // Resumen del día
+  if(turnoData){
+    const daySumEl = el('day-sum');
+    daySumEl.style.display='block';
+    const entrada = turnoData.entrada?.toDate?.();
+    el('ds-entrada').textContent = entrada ? fHora(entrada) : '—';
+  } else {
+    el('day-sum').style.display='none';
+  }
+}
+
+window.accionTurno = async function(accion){
+  if(!user) return;
+  const ahora = new Date();
+  const ahoraTs = Timestamp.fromDate(ahora);
+  const hoyISO = ahora.toISOString().split('T')[0];
+
+  // Deshabilitar todos los botones mientras se procesa
+  document.querySelectorAll('.btn-ck').forEach(b=>{ b.disabled=true; });
+  clearMsg('msg-clk');
+
+  try {
+    if(accion==='entrada'){
+      if(turnoId){ msg('msg-clk','wa','⚠️ Ya tienes un turno activo hoy.'); return; }
+      const ref = await addDoc(collection(db,'turnos'),{
+        uid:user.uid, empleadoId:empData.empleadoId,
+        nombre:empData.nombre, apellido:empData.apellido,
+        entrada:ahoraTs, salida:null,
+        inicioDescanso:null, finDescanso:null,
+        minDescanso:0, minTrabajados:null,
+        horas:null, estado:'activo', editado:false, nota:'',
+        fechaISO:hoyISO, creado:serverTimestamp()
+      });
+      turnoId = ref.id;
+      turnoData = { uid:user.uid, entrada:ahoraTs, estado:'activo', minDescanso:0,
+                    nombre:empData.nombre, apellido:empData.apellido,
+                    empleadoId:empData.empleadoId };
+      msg('msg-clk','ok',`✅ Turno iniciado a las ${fHora(ahora)}`);
+
+    } else if(accion==='descanso'){
+      if(!turnoId || turnoData?.estado!=='activo'){ msg('msg-clk','wa','Sin turno activo.'); return; }
+      await updateDoc(doc(db,'turnos',turnoId),{ inicioDescanso:ahoraTs, estado:'descanso' });
+      turnoData = {...turnoData, inicioDescanso:ahoraTs, estado:'descanso'};
+      msg('msg-clk','ok',`☕ Descanso iniciado a las ${fHora(ahora)}`);
+
+    } else if(accion==='regreso'){
+      if(!turnoId || turnoData?.estado!=='descanso'){ msg('msg-clk','wa','No estás en descanso.'); return; }
+      const inicioDesc = turnoData.inicioDescanso?.toDate?.() || turnoData.inicioDescanso?.seconds
+        ? new Date(turnoData.inicioDescanso.seconds*1000) : null;
+      const minDesc = inicioDesc ? Math.round(calcM(inicioDesc, ahora)) : 0;
+      const totalDesc = (turnoData.minDescanso || 0) + minDesc;
+      await updateDoc(doc(db,'turnos',turnoId),{
+        finDescanso:ahoraTs, estado:'activo',
+        minDescanso:totalDesc, inicioDescanso:null
+      });
+      turnoData = {...turnoData, finDescanso:ahoraTs, estado:'activo',
+                   minDescanso:totalDesc, inicioDescanso:null};
+      msg('msg-clk','ok',`▶ Regresaste del descanso (${mToM(minDesc)} de descanso)`);
+
+    } else if(accion==='salida'){
+      if(!turnoId){ msg('msg-clk','wa','Sin turno activo.'); return; }
+      // Si estaba en descanso, cerrar descanso primero
+      let totalDesc = turnoData.minDescanso || 0;
+      if(turnoData.estado==='descanso'){
+        const inicioDesc = turnoData.inicioDescanso?.toDate?.()
+          || (turnoData.inicioDescanso?.seconds ? new Date(turnoData.inicioDescanso.seconds*1000) : null);
+        if(inicioDesc) totalDesc += Math.round(calcM(inicioDesc, ahora));
+      }
+      const entrada = turnoData.entrada?.toDate?.()
+        || (turnoData.entrada?.seconds ? new Date(turnoData.entrada.seconds*1000) : null);
+      if(!entrada){ msg('msg-clk','er','Error: no se encontró la hora de entrada.'); return; }
+      const totalBruto = Math.round(calcM(entrada, ahora));
+      const minTrab    = Math.max(0, totalBruto - totalDesc);
+      if(minTrab < 1){ msg('msg-clk','wa','⚠️ El turno debe tener al menos 1 minuto trabajado.'); return; }
+      await updateDoc(doc(db,'turnos',turnoId),{
+        salida:ahoraTs, estado:'completo',
+        minDescanso:totalDesc, minTrabajados:minTrab,
+        horas:(minTrab/60).toFixed(2)
+      });
+      msg('msg-clk','ok',`✅ Turno terminado. Trabajaste ${mToH(minTrab)} netos (descanso: ${mToM(totalDesc)})`);
+      turnoId=null; turnoData=null;
+      cargarHistEmp();
+    }
+  } catch(e){
+    msg('msg-clk','er','❌ Error: '+e.message);
+  } finally {
+    renderEstadoTurno();
+    cargarResumenHoy();
+  }
+};
+
+async function cargarResumenHoy(){
+  if(!user) return;
+  const hoy = new Date().toISOString().split('T')[0];
+  const q   = query(collection(db,'turnos'),
+    where('uid','==',user.uid),
+    where('fechaISO','==',hoy));
+  const s = await getDocs(q);
+  let minTot=0, hay=false;
+  s.forEach(d=>{
+    const t=d.data();
+    if(t.minTrabajados) { minTot+=t.minTrabajados; hay=true; }
+  });
+  // Si hay turno activo NO completado, calcular en tiempo real
+  if(turnoData?.estado==='activo'||turnoData?.estado==='descanso'){
+    const entrada = turnoData.entrada?.toDate?.()
+      ||(turnoData.entrada?.seconds ? new Date(turnoData.entrada.seconds*1000) : null);
+    if(entrada){
+      const desc = turnoData.minDescanso||0;
+      const bruto = calcM(entrada, new Date());
+      minTot += Math.max(0, bruto - desc);
+      hay=true;
+    }
+  }
+  if(hay){
+    el('ds-horas').textContent = mToH(Math.round(minTot));
+    el('day-sum').style.display='block';
+    // mostrar detalles si hay turno
+    if(turnoData?.entrada){
+      const ent = turnoData.entrada?.toDate?.()
+        ||(turnoData.entrada?.seconds ? new Date(turnoData.entrada.seconds*1000) : null);
+      if(ent) el('ds-entrada').textContent = fHora(ent);
+    }
+  }
+}
+
+/* ─── HISTORIAL EMPLEADO ──────────────────────── */
+window.cambSem = d=>{ semOff+=d; if(semOff>0)semOff=0; cargarHistEmp(); };
+async function cargarHistEmp(){
+  if(!user) return;
+  const {l,d}=semRng(semOff);
+  el('wlbl-emp').textContent=semLbl(l,d);
+  const q=query(collection(db,'turnos'),
+    where('uid','==',user.uid),
+    where('entrada','>=',Timestamp.fromDate(l)),
+    where('entrada','<=',Timestamp.fromDate(d)),
+    orderBy('entrada','desc'));
+  const s=await getDocs(q);
+  let mins=0,cnt=0,items=[];
+  s.forEach(d=>{ const t={...d.data(),id:d.id}; if(t.minTrabajados)mins+=t.minTrabajados; cnt++; items.push(t); });
+  el('wtot-emp').textContent=mToH(mins);
+  el('wshift-emp').textContent=cnt;
+  const list=el('hist-emp');
+  if(!items.length){ list.innerHTML='<div class="hi-empty">Sin turnos esta semana.</div>'; return; }
+  list.innerHTML=items.map(t=>hiRow(t,false)).join('');
+}
+
+/* ─── FILA DE HISTORIAL ───────────────────────── */
+function hiRow(t, adminMode){
+  const e = t.entrada?.toDate?.() || (t.entrada?.seconds ? new Date(t.entrada.seconds*1000) : null);
+  const s = t.salida?.toDate?.()  || (t.salida?.seconds  ? new Date(t.salida.seconds*1000)  : null);
+  const inc = !s || t.estado==='activo' || t.estado==='descanso';
+  const hrs = t.minTrabajados ? mToH(t.minTrabajados) : '—';
+
+  // segmentos de detalle
+  let segs = '';
+  if(e) segs += `<span class="seg-pill sp-in">Entrada: ${fHora(e)}</span>`;
+  if(t.inicioDescanso){
+    const id = t.inicioDescanso?.toDate?.() || new Date(t.inicioDescanso.seconds*1000);
+    segs += `<span class="seg-pill sp-rest">Descanso: ${fHora(id)}</span>`;
+    if(t.finDescanso){
+      const fd = t.finDescanso?.toDate?.() || new Date(t.finDescanso.seconds*1000);
+      segs += `<span class="seg-pill sp-rest">Regreso: ${fHora(fd)}</span>`;
+    }
+  }
+  if(t.minDescanso) segs += `<span class="seg-pill sp-rest">Desc: ${mToM(t.minDescanso)}</span>`;
+  if(s) segs += `<span class="seg-pill sp-out">Salida: ${fHora(s)}</span>`;
+
+  return `<div class="hi">
+    <div class="hi-top">
+      <div class="hi-ico">${t.editado?'✏️':inc?'🟡':'✅'}</div>
+      <div class="hi-inf">
+        ${adminMode?`<div class="hi-emp">${t.nombre||''} ${t.apellido||''}</div>`:''}
+        <div class="hi-date">${e?fShort(e):'—'}${t.editado?' · corregido':''}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.25rem;">
+        <div class="hi-hrs ${inc?'hc-wa':'hc-ok'}">${inc?t.estado||'activo':hrs}</div>
+        ${adminMode?`<button class="btn bs bsm" style="font-size:.68rem;padding:.28rem .5rem;" onclick="abrirEditT('${t.uid}','${t.nombre||''} ${t.apellido||''}','${t.id}')">✏️ Editar</button>`:''}
+      </div>
+    </div>
+    <div class="hi-detail">${segs}</div>
+    ${t.nota?`<div style="font-size:.7rem;color:var(--wa);margin-top:.25rem;">📝 ${t.nota}</div>`:''}
+  </div>`;
+}
+
+/* ─── LOGIN EMPLEADO ──────────────────────────── */
+window.loginEmp = async function(){
+  const id=el('l-id').value.trim(), pw=el('l-pw').value; let ok=true;
+  if(!id){ fErr('l-id','e-lid','Ingresa tu ID o correo'); ok=false; }
+  if(!pw){ fErr('l-pw','e-lpw','Ingresa tu contraseña'); ok=false; }
+  if(!ok) return;
+  btnLd('btn-login',true);
+  try{
+    let email=id;
+    if(/^EMP-/i.test(id)){
+      const q=query(collection(db,'empleados'),where('empleadoId','==',id.toUpperCase()));
+      const s=await getDocs(q);
+      if(s.empty){ fErr('l-id','e-lid','Número de empleado no encontrado'); return; }
+      email=s.docs[0].data().email;
+    }
+    await signInWithEmailAndPassword(auth,email,pw);
+  }catch(e){
+    const m={
+      'auth/invalid-credential':'Credenciales incorrectas. Verifica tu ID y contraseña.',
+      'auth/too-many-requests':'Demasiados intentos. Espera unos minutos.',
+      'auth/user-not-found':'Usuario no encontrado.',
+      'auth/wrong-password':'Contraseña incorrecta.',
+      'auth/network-request-failed':'Error de conexión. Verifica tu internet.',
+    };
+    msg('msg-login','er','❌ '+(m[e.code]||'Error: '+e.code));
+  }finally{ btnLd('btn-login',false); }
+};
+
+/* auto-registro eliminado — solo admin puede crear empleados */
+
+/* ─── CREAR EMPLEADO (SOLO GERENTE/SUPERVISOR) ── */
+window.crearEmpAdmin = async function(){
+  const nom=el('n-nom').value.trim(),ape=el('n-ape').value.trim();
+  const email=el('n-email').value.trim(),tel=el('n-tel').value.replace(/\D/g,'');
+  const psto=el('n-puesto').value,pw=el('n-pw').value;
+  const rol=el('n-rol').value||'empleado';
+  const sal=parseFloat(el('n-sal').value)||0;
+  let ok=true;
+  [['n-nom','e-nnom',nom.length>=2,'Mínimo 2 caracteres'],
+   ['n-ape','e-nape',ape.length>=2,'Mínimo 2 caracteres'],
+   ['n-email','e-nemail',/\S+@\S+\.\S+/.test(email),'Correo inválido'],
+   ['n-tel','e-ntel',tel.length===10,'10 dígitos exactos'],
+   ['n-puesto','e-npuesto',!!psto,'Selecciona un puesto'],
+   ['n-pw','e-npw',pw.length>=8,'Mínimo 8 caracteres']
+  ].forEach(([id,eid,cond,m])=>{ if(!cond){ fErr(id,eid,m); ok=false; } else fOk(id); });
+  if(!ok) return;
+  btnLd('btn-new',true);
+  try{
+    const cred=await createUserWithEmailAndPassword(auth,email,pw);
+    const empId=genId();
+    await setDoc(doc(db,'empleados',cred.user.uid),{
+      uid:cred.user.uid,empleadoId:empId,nombre:nom,apellido:ape,
+      email,telefono:tel,puesto:psto,rol,salarioHora:sal,
+      estado:'activo',creado:serverTimestamp(),turnoActivo:false
+    });
+    await updateProfile(cred.user,{displayName:`${nom} ${ape}`});
+    await signOut(auth);
+    msg('msg-new','ok',`✅ Empleado creado. ID: <strong>${empId}</strong> · Rol: ${ROLES[rol].ico} ${ROLES[rol].label}`);
+    ['n-nom','n-ape','n-email','n-tel','n-puesto','n-pw','n-sal'].forEach(i=>{ const e=el(i); if(e)e.value=''; });
+    cargarListaEmps(); poblarSelects();
+  }catch(e){
+    const m={'auth/email-already-in-use':'Ese correo ya está registrado.'};
+    msg('msg-new','er','❌ '+(m[e.code]||e.message));
+  }finally{ btnLd('btn-new',false); }
+};
+
+/* ─── LISTA DE EMPLEADOS (ADMIN) ──────────────── */
+async function cargarListaEmps(){
+  const s=await getDocs(query(collection(db,'empleados'),orderBy('nombre')));
+  allEmps=[]; s.forEach(d=>allEmps.push({...d.data(),uid:d.id}));
+  el('emp-cnt').textContent=allEmps.length;
+  renderEmps(allEmps);
+}
+
+function renderEmps(list){
+  const g=el('emp-grid');
+  if(!list.length){ g.innerHTML='<div class="no-emp"><div class="ico">🔍</div><p>Sin resultados.</p></div>'; return; }
+  g.innerHTML=list.map(e=>{
+    const R=ROLES[e.rol||'empleado'];
+    const estadoTurno = e.estadoTurno||'off';
+    const chipTurno = estadoTurno==='activo'?'<div class="chip ch-on">🟢 En turno</div>':
+                      estadoTurno==='descanso'?'<div class="chip ch-rest">☕ Descanso</div>':
+                      `<div class="chip ch-off">${e.estado==='inactivo'?'🚫 Inactivo':'fuera'}</div>`;
+    return `<div class="ec" onclick="verDetalle('${e.uid}')">
+      <div class="av av-${R.css}">${(e.nombre[0]||'')+(e.apellido[0]||'')}</div>
+      <div class="ei"><h4>${e.nombre} ${e.apellido}</h4><p>${e.empleadoId} · ${e.puesto}</p></div>
+      <div class="echips"><div class="chip ch-${R.css}">${R.ico} ${R.label}</div>${chipTurno}</div>
+    </div>`;
+  }).join('');
+}
+
+window.filtrarEmp=function(){
+  const q=el('srch-emp').value.toLowerCase();
+  renderEmps(!q?allEmps:allEmps.filter(e=>
+    `${e.nombre} ${e.apellido} ${e.empleadoId} ${e.puesto}`.toLowerCase().includes(q)
+  ));
+};
+
+/* ─── DETALLE EMPLEADO ────────────────────────── */
+window.verDetalle = async function(uid){
+  aOv('ov-detail');
+  const s=await getDoc(doc(db,'empleados',uid));
+  if(!s.exists()){ el('detail-body').innerHTML='No encontrado.'; return; }
+  const e=s.data();
+  const R=ROLES[e.rol||'empleado'];
+  // Horas esta semana
+  const {l,d}=semRng(0);
+  const qt=query(collection(db,'turnos'),where('uid','==',uid),
+    where('entrada','>=',Timestamp.fromDate(l)),
+    where('entrada','<=',Timestamp.fromDate(d)));
+  const ts=await getDocs(qt);
+  let minSem=0,turnSem=0;
+  ts.forEach(dd=>{ const t=dd.data(); if(t.minTrabajados)minSem+=t.minTrabajados; turnSem++; });
+
+  el('detail-body').innerHTML=`
+    <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:.95rem;">
+      <div class="av av-${R.css}" style="width:52px;height:52px;font-size:1.25rem;">${(e.nombre[0]||'')+(e.apellido[0]||'')}</div>
+      <div><div style="font-size:1rem;font-weight:800;">${e.nombre} ${e.apellido}</div>
+      <div style="font-size:.73rem;color:var(--mu);">${e.empleadoId} · ${e.puesto}</div></div>
+    </div>
+    <div class="ir"><span class="ir-k">Rol</span><span class="ir-v"><span class="chip ch-${R.css}">${R.ico} ${R.label}</span></span></div>
+    <div class="ir"><span class="ir-k">Correo</span><span class="ir-v" style="font-size:.82rem;">${e.email}</span></div>
+    <div class="ir"><span class="ir-k">Teléfono</span><span class="ir-v">${e.telefono}</span></div>
+    <div class="ir"><span class="ir-k">Horas esta semana</span><span class="ir-v" style="color:var(--primary);font-size:1rem;">${mToH(minSem)} <span style="font-size:.75rem;font-weight:400;color:var(--mu);">(${turnSem} turnos)</span></span></div>
+    <div class="ir"><span class="ir-k">Estado</span><span class="ir-v"><span class="chip ${e.estado==='activo'?'ch-on':'ch-off'}">${e.estado}</span></span></div>
+    <div style="display:flex;flex-direction:column;gap:.48rem;margin-top:.95rem;">
+      <button class="btn bs bsm" onclick="abrirEditT('${uid}','${e.nombre} ${e.apellido}',null)">✏️ Agregar / corregir turno</button>
+      <button class="btn ${e.estado==='activo'?'bd':'bok'} bsm" onclick="toggleStatus('${uid}','${e.estado}')">
+        ${e.estado==='activo'?'🚫 Desactivar cuenta':'✅ Activar cuenta'}
+      </button>
+    </div>`;
+};
+
+window.toggleStatus = async function(uid, est){
+  await updateDoc(doc(db,'empleados',uid),{estado:est==='activo'?'inactivo':'activo'});
+  cOv('ov-detail'); cargarListaEmps();
+};
+
+/* ─── REPORTE ADMIN ───────────────────────────── */
+window.cambSemA = d=>{ semOffA+=d; if(semOffA>0)semOffA=0; cargarRep(); };
+async function poblarSelects(){
+  const s=await getDocs(query(collection(db,'empleados'),orderBy('nombre')));
+  const opts=s.docs.map(d=>`<option value="${d.id}">${d.data().nombre} ${d.data().apellido}</option>`).join('');
+  el('rep-sel').innerHTML='<option value="">— Todos los empleados —</option>'+opts;
+  el('priv-sel').innerHTML='<option value="">— Selecciona empleado —</option>'+opts;
+}
+
+window.cargarRep = async function(){
+  const {l,d}=semRng(semOffA);
+  el('wlbl-adm').textContent=semLbl(l,d);
+  const empF=el('rep-sel')?.value;
+  let c=[where('entrada','>=',Timestamp.fromDate(l)),where('entrada','<=',Timestamp.fromDate(d)),orderBy('entrada','desc')];
+  if(empF) c=[where('uid','==',empF),...c];
+  const s=await getDocs(query(collection(db,'turnos'),...c));
+  let mins=0,cnt=0,items=[];
+  s.forEach(d=>{ const t={...d.data(),id:d.id}; if(t.minTrabajados)mins+=t.minTrabajados; cnt++; items.push(t); });
+  el('rep-tot').textContent=mToH(mins);
+  el('rep-sh').textContent=cnt;
+  const list=el('hist-adm');
+  if(!items.length){ list.innerHTML='<div class="hi-empty">Sin turnos en este período.</div>'; return; }
+  list.innerHTML=items.map(t=>hiRow(t,true)).join('');
+};
+
+/* ─── ROLES ───────────────────────────────────── */
+window.cargarRolActual = async function(){
+  const uid=el('priv-sel').value;
+  const pb=el('priv-body');
+  if(!uid){ pb.style.display='none'; return; }
+  pb.style.display='block';
+  const s=await getDoc(doc(db,'empleados',uid));
+  if(!s.exists()) return;
+  const rol=s.data().rol||'empleado';
+  const R=ROLES[rol];
+  el('msg-rol-act').textContent=`Rol actual: ${R.ico} ${R.label}`;
+  rolSel=rol;
+  ['g','s','c','e'].forEach(k=>{ const o=el(`po-${k}`); if(o) o.className='po'; });
+  const mp={'gerente':'g','supervisor':'s','cajero':'c','empleado':'e'};
+  const po=el(`po-${mp[rol]}`); if(po) po.className=`po sel-${mp[rol]}`;
+  el('btn-save-rol').style.display='none';
+};
+
+window.selRol = function(rol){
+  rolSel=rol;
+  const mp={'gerente':'g','supervisor':'s','cajero':'c','empleado':'e'};
+  ['g','s','c','e'].forEach(k=>{ const o=el(`po-${k}`); if(o) o.className='po'; });
+  const po=el(`po-${mp[rol]}`); if(po) po.className=`po sel-${mp[rol]}`;
+  el('btn-save-rol').style.display='flex';
+};
+
+window.guardarRol = async function(){
+  const uid=el('priv-sel').value;
+  if(!uid||!rolSel) return;
+  // Supervisor necesita PIN para asignar rol gerente
+  if(nivelAdmin<4 && rolSel==='gerente'){
+    abrirGatePin(()=>_guardarRol(uid));
+    return;
+  }
+  await _guardarRol(uid);
+};
+
+async function _guardarRol(uid){
+  btnLd('btn-save-rol',true);
+  try{
+    await updateDoc(doc(db,'empleados',uid),{rol:rolSel});
+    msg('msg-priv','ok',`✅ Rol actualizado a ${ROLES[rolSel].ico} ${ROLES[rolSel].label}`);
+    el('btn-save-rol').style.display='none';
+    cargarListaEmps(); poblarSelects();
+    setTimeout(()=>cargarRolActual(),600);
+  }catch(e){ msg('msg-priv','er','❌ '+e.message); }
+  finally{ btnLd('btn-save-rol',false); }
+}
+
+/* ─── EDITAR TURNO ────────────────────────────── */
+window.abrirEditT = function(uid, nombre, tid){
+  editEUid=uid; editTId=tid;
+  el('edit-name').textContent=nombre;
+  el('et-nota').value='';
+  el('msg-edit').className='msg';
+  const hoy=new Date().toISOString().split('T')[0];
+  el('et-fecha').value=hoy;
+  ['et-in','et-out','et-rd','et-rv'].forEach(i=>{ const e=el(i); if(e)e.value=''; });
+  el('et-calc').style.display='none';
+  if(tid){
+    getDoc(doc(db,'turnos',tid)).then(s=>{
+      if(!s.exists()) return;
+      const t=s.data();
+      const getD=ts=>ts?.toDate?.() || (ts?.seconds ? new Date(ts.seconds*1000) : null);
+      const fe=getD(t.entrada), fs=getD(t.salida);
+      const fr=getD(t.inicioDescanso), fv=getD(t.finDescanso);
+      if(fe){ el('et-fecha').value=fe.toISOString().split('T')[0]; el('et-in').value=`${pad(fe.getHours())}:${pad(fe.getMinutes())}`; }
+      if(fs) el('et-out').value=`${pad(fs.getHours())}:${pad(fs.getMinutes())}`;
+      if(fr) el('et-rd').value=`${pad(fr.getHours())}:${pad(fr.getMinutes())}`;
+      if(fv) el('et-rv').value=`${pad(fv.getHours())}:${pad(fv.getMinutes())}`;
+      calcEditH();
+    });
+  }
+  aOv('ov-edit');
+};
+
+window.calcEditH = function(){
+  const ei=el('et-in').value, so=el('et-out').value;
+  if(!ei||!so){ el('et-calc').style.display='none'; return; }
+  const [eh,em]=ei.split(':').map(Number),[sh,sm]=so.split(':').map(Number);
+  let total=(sh*60+sm)-(eh*60+em); if(total<0)total+=1440;
+  const rd=el('et-rd').value, rv=el('et-rv').value;
+  let desc=0;
+  if(rd&&rv){ const [rh,rm]=rd.split(':').map(Number),[vh,vm]=rv.split(':').map(Number); desc=Math.max(0,(vh*60+vm)-(rh*60+rm)); }
+  const neto=Math.max(0,total-desc);
+  el('et-calc').style.display='block';
+  el('et-tot').textContent=`${mToH(neto)} netos (${mToH(total)} bruto − ${mToM(desc)} descanso)`;
+};
+
+window.guardarEditT = async function(){
+  const fecha=el('et-fecha').value, ei=el('et-in').value, so=el('et-out').value;
+  const nota=el('et-nota').value.trim();
+  if(!fecha||!ei){ msg('msg-edit','er','Fecha y hora de entrada son obligatorias.'); return; }
+  const mk=(h,m)=>{ const d=new Date(fecha); d.setHours(h,m,0,0); return d; };
+  const [eh,em]=ei.split(':').map(Number);
+  const tsE=mk(eh,em);
+  let tsS=null,mins=0,minDesc=0,tsRD=null,tsRV=null;
+  if(so){ const [sh,sm]=so.split(':').map(Number); tsS=mk(sh,sm); if(tsS<=tsE)tsS.setDate(tsS.getDate()+1); mins=Math.round((tsS-tsE)/60000); }
+  const rd=el('et-rd').value, rv=el('et-rv').value;
+  if(rd&&rv){ const [rh,rm]=rd.split(':').map(Number),[vh,vm]=rv.split(':').map(Number); tsRD=mk(rh,rm); tsRV=mk(vh,vm); minDesc=Math.max(0,Math.round((tsRV-tsRD)/60000)); }
+  const minNeto=Math.max(0,mins-minDesc);
+  if(tsS&&minNeto<1){ msg('msg-edit','er','El turno debe tener al menos 1 minuto neto trabajado.'); return; }
+  const es=await getDoc(doc(db,'empleados',editEUid));
+  const ed=es.exists()?es.data():{};
+  btnLd('btn-edit',true);
+  try{
+    const data={
+      uid:editEUid,empleadoId:ed.empleadoId||'',
+      nombre:ed.nombre||'',apellido:ed.apellido||'',
+      entrada:Timestamp.fromDate(tsE),
+      salida:tsS?Timestamp.fromDate(tsS):null,
+      inicioDescanso:tsRD?Timestamp.fromDate(tsRD):null,
+      finDescanso:tsRV?Timestamp.fromDate(tsRV):null,
+      minDescanso:minDesc, minTrabajados:tsS?minNeto:null,
+      horas:tsS?(minNeto/60).toFixed(2):null,
+      estado:tsS?'completo':'activo',
+      editado:true, nota:nota||'Corrección manual',
+      fechaISO:fecha, editadoPor:'admin', editadoEn:serverTimestamp()
+    };
+    if(editTId) await updateDoc(doc(db,'turnos',editTId),data);
+    else await addDoc(collection(db,'turnos'),data);
+    msg('msg-edit','ok','✅ Turno guardado correctamente.');
+    setTimeout(()=>{ cOv('ov-edit'); cargarRep(); },1500);
+  }catch(e){ msg('msg-edit','er','❌ '+e.message); }
+  finally{ btnLd('btn-edit',false); }
+};
+
+/* ════════════════════════════════════════════════
+   ACCESS GATE — CONTRASEÑA Y PIN
+   ════════════════════════════════════════════════ */
+window.abrirGatePass = function(tipo, cb){
+  gateCb=cb; gatePin=''; gateMode='pass';
+  const cfg={
+    gerente:   { ico:'👑', ttl:'Acceso Gerente',    desc:'Ingresa la contraseña del gerente.' },
+    supervisor:{ ico:'🛡️', ttl:'Acceso Supervisor',  desc:'Ingresa la contraseña del supervisor.' },
+    admin:     { ico:'🔐', ttl:'Acceso Privilegiado', desc:'Ingresa la contraseña de gerente o supervisor.' },
+  };
+  const c=cfg[tipo]||cfg.admin;
+  el('gate-ico').textContent=c.ico;
+  el('gate-sub').textContent=c.ttl;
+  el('gate-desc').textContent=c.desc;
+  el('gate-pin').style.display='none';
+  el('gate-pass').style.display='block';
+  el('gate-pw').value='';
+  el('msg-gpw').className='msg';
+  aOv('ov-gate');
+  setTimeout(()=>el('gate-pw')?.focus(),280);
+};
+
+window.abrirGatePin = function(cb){
+  gateCb=cb; gatePin=''; gateMode='pin';
+  el('gate-ico').textContent='🔢';
+  el('gate-sub').textContent='PIN de supervisor';
+  el('gate-desc').textContent='Ingresa el PIN de 4 dígitos.';
+  el('gate-pin').style.display='block';
+  el('gate-pass').style.display='none';
+  el('msg-pin').className='msg';
+  renderDots(); aOv('ov-gate');
+};
+
+window.pk = k=>{ if(gatePin.length>=4)return; gatePin+=k; renderDots(); if(gatePin.length===4)setTimeout(verifyPin,120); };
+window.pdel=()=>{ gatePin=gatePin.slice(0,-1); renderDots(); };
+window.pclr=()=>{ gatePin=''; renderDots(); };
+function renderDots(){ for(let i=0;i<4;i++){ const d=el('d'+i); if(d) d.className='dot'+(i<gatePin.length?' f':''); } }
+function verifyPin(){
+  if(gatePin===CREDS.PIN_ELEVACION){ cerrarGate(); if(gateCb)gateCb(); }
+  else{ msg('msg-pin','er','❌ PIN incorrecto'); gatePin=''; renderDots(); }
+}
+
+window.gateV = async function(){
+  const pw=el('gate-pw').value;
+  if(!pw){ msg('msg-gpw','er','Ingresa la contraseña'); return; }
+  btnLd('btn-gv',true);
+  await new Promise(r=>setTimeout(r,500));
+  let nivel=0;
+  if(pw===CREDS.PASS_GERENTE) nivel=4;
+  else if(pw===CREDS.PASS_SUPERVISOR) nivel=3;
+  if(nivel>0){ cerrarGate(); if(gateCb) gateCb(nivel); }
+  else{ msg('msg-gpw','er','❌ Contraseña incorrecta.'); el('gate-pw').value=''; }
+  btnLd('btn-gv',false);
+};
+
+window.cerrarGate = ()=>{ cOv('ov-gate'); gatePin=''; };
+
+function mostrarAdminDirecto(nivel=3){ mostrarAdmin(nivel); }
+
+/* ─── CERRAR SESIÓN ───────────────────────────── */
+window.cerrarSesion = async function(){
+  clearInterval(rlj);
+  if(user) await signOut(auth);
+  else{ showScreen('s-auth'); nivelAdmin=0; el('rchip').style.display='none'; el('hname').style.display='none'; el('btn-logout').style.display='none'; el('btn-back').style.display='none'; }
+};
+window.volverLogin = function(){ cerrarSesion(); };
+
+/* ─── UI HELPERS ──────────────────────────────── */
+const el  = id=> document.getElementById(id);
+const aOv = id=> el(id)?.classList.add('open');
+window.cOv = id=> el(id)?.classList.remove('open');
+function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); el(id)?.classList.add('on'); }
+function msg(id,tipo,html,auto=tipo==='ok'){ const e=el(id); if(!e)return; const m={ok:'m-ok',er:'m-er',wa:'m-wa',in:'m-in'}; e.className=`msg on ${m[tipo]||'m-in'}`; e.innerHTML=html; if(auto)setTimeout(()=>{ if(e){e.className='msg';e.innerHTML='';} },6000); }
+function clearMsg(id){ const e=el(id); if(e){e.className='msg';e.innerHTML='';} }
+function btnLd(id,v){ const b=el(id); if(!b)return; b.classList.toggle('ld',v); b.disabled=v; }
+function fErr(id,eid,m){ const e=el(id); if(e){e.classList.add('er');e.classList.remove('ok');} const er=el(eid); if(er)er.textContent=m; }
+function fOk(id){ const e=el(id); if(e){e.classList.remove('er');e.classList.add('ok');} }
+function genId(){ const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let id='EMP-'; for(let i=0;i<6;i++)id+=c[Math.floor(Math.random()*c.length)]; return id; }
+window.eye=function(id,btn){ const e=el(id); if(!e)return; e.type=e.type==='password'?'text':'password'; btn.textContent=e.type==='password'?'👁️':'🙈'; };
+
+/* ─── FORM VALIDATIONS ────────────────────────── */
+window.vc=id=>{ const e=el(id); if(e) e.value.trim().length>=2?fOk(id):e.classList.remove('ok','er'); };
+/* helpers de auto-registro eliminados */
+
+/* ─── TABS ────────────────────────────────────── */
+/* swAuth eliminado — pantalla de login única */
+window.swEmp=t=>{ ['clk','hist','prof'].forEach(x=>{ el(`et-${x}`)?.classList.toggle('on',x===t); el(`ep-${x}`)?.classList.toggle('on',x===t); }); };
+window.swAdmin=t=>{ ['emp','rep','priv','new'].forEach(x=>{ el(`at-${x}`)?.classList.toggle('on',x===t); el(`ap-${x}`)?.classList.toggle('on',x===t); }); };
+
+/* ─── CERRAR MODALES AL TOCAR OVERLAY ────────── */
+document.querySelectorAll('.ov').forEach(o=>{ o.addEventListener('click',e=>{ if(e.target===o)o.classList.remove('open'); }); });
+</script>
+</body>
+</html>
