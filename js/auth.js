@@ -17,7 +17,35 @@ import {
 
 const googleProvider = new GoogleAuthProvider();
 
-// ─── GUARD: Si ya tiene sesión, redirigir al menú ───────────────
+// ─── DETECTAR MÓVIL ──────────────────────────────────────────────
+const esMobil = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+// ─── MANEJAR RESULTADO DE REDIRECT (para móviles) ────────────────
+// Cuando Google redirige de vuelta, capturar el resultado aquí
+getRedirectResult(auth).then(async (result) => {
+    if (!result) return; // no hay redirect pendiente
+    const user = result.user;
+    const perfil = await obtenerPerfil(user.uid);
+    if (!perfil) {
+        const username = user.email.split('@')[0]
+            .replace(/[^a-zA-Z0-9_]/g, '').toLowerCase().slice(0, 20) || 'usuario';
+        await guardarPerfil(user.uid, {
+            nombre: user.displayName || 'Usuario',
+            username: username + Math.floor(Math.random() * 99),
+            telefono: '',
+            email: user.email,
+            metodo: 'google'
+        });
+    }
+    window.location.href = '../ordenar.html';
+}).catch((err) => {
+    // Ignorar errores normales de "no hay redirect pendiente"
+    if (err.code && err.code !== 'auth/no-auth-event') {
+        console.warn('Redirect result error:', err.code);
+    }
+});
+
+// ─── GUARD: Si ya tiene sesión, redirigir al menú ────────────────
 onAuthStateChanged(auth, (user) => {
     if (user) {
         window.location.href = '../ordenar.html';
