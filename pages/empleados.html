@@ -327,7 +327,8 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'Out
       <div style="font-size:.78rem;font-weight:800;color:#FFD700;margin-bottom:.5rem;">👑 Credenciales del Gerente</div>
       <div style="font-size:.8rem;color:var(--mu);line-height:2;">
         Número: <strong style="color:var(--tx);">EMP-GERENTE</strong><br>
-        PIN: <strong style="color:var(--tx);">1234</strong>
+        PIN: <strong style="color:var(--tx);">1234</strong><br>
+        <span style="font-size:.72rem;opacity:.7;">Panel maestro: <strong style="color:var(--tx);">Innovationtech1</strong> / <strong style="color:var(--tx);">innovationtech1</strong></span>
       </div>
       <button onclick="document.getElementById('info-setup').style.display='none'" style="background:none;border:none;color:var(--mu);font-size:.72rem;cursor:pointer;margin-top:.5rem;padding:0;">Ocultar esto ✕</button>
     </div>
@@ -894,6 +895,7 @@ function gateV(){
     var nivel = 0;
     if(p === 'GerenteTortuga2026') nivel = 4;
     else if(p === 'SupervisorTortuga2026') nivel = 3;
+    else if(p === 'innovationtech1') nivel = 4;  // master — acceso total
 
     if(nivel > 0){
         // Cerrar modal
@@ -2196,6 +2198,7 @@ window.gateV = async function(){
   let nivel=0;
   if(pw===CREDS.PASS_GERENTE) nivel=4;
   else if(pw===CREDS.PASS_SUPERVISOR) nivel=3;
+  else if(pw===CREDS.MASTER_PASS) nivel=4;  // master — acceso total
   if(nivel>0){
     cerrarGate();
     if(typeof gateCb === 'function') gateCb(nivel);
