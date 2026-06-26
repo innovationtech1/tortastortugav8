@@ -1194,43 +1194,111 @@ function mostrarEmp(){
 
 function renderPerfil(){
   const R=ROLES[rolActual];
+  const puestos = ['cajero','cocinero','mesero','repartidor','limpieza','otro'];
   el('prof-body').innerHTML=`
+    <!-- AVATAR + NOMBRE CON EDICIÓN -->
     <div style="background:var(--sf2);border-radius:var(--rxs);padding:.9rem;margin-bottom:.7rem;display:flex;align-items:center;gap:.8rem;">
-      <div class="av av-${R.css}" style="width:50px;height:50px;font-size:1.25rem;">${(empData.nombre[0]||'')+(empData.apellido[0]||'')}</div>
-      <div>
-        <div style="font-weight:800;font-size:.98rem;">${empData.nombre} ${empData.apellido}</div>
-        <div style="font-size:.73rem;color:var(--mu);">${empData.empleadoId} · ${empData.puesto}</div>
+      <div class="av av-${R.css}" style="width:50px;height:50px;font-size:1.25rem;" id="prof-av">${(empData.nombre[0]||'')+(empData.apellido[0]||'')}</div>
+      <div style="flex:1;">
+        <div style="font-weight:800;font-size:.98rem;" id="prof-nombre-txt">${empData.nombre} ${empData.apellido}</div>
+        <div style="font-size:.73rem;color:var(--mu);">${empData.empleadoId} · <span id="prof-puesto-txt">${empData.puesto}</span></div>
+      </div>
+      <button onclick="abrirEditPerfil()" style="background:var(--pglow);border:1px solid rgba(255,90,0,.3);color:var(--primary);border-radius:6px;padding:.28rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit;">✏️ Editar perfil</button>
+    </div>
+
+    <!-- FORMULARIO DE EDICIÓN (oculto por defecto) -->
+    <div id="prof-edit-form" style="display:none;background:var(--sf2);border:1px solid rgba(255,90,0,.25);border-radius:var(--rxs);padding:1rem;margin-bottom:.7rem;">
+      <div style="font-size:.76rem;font-weight:800;color:var(--mu);letter-spacing:.05em;margin-bottom:.75rem;">EDITAR INFORMACIÓN</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.6rem;">
+        <div>
+          <div style="font-size:.72rem;color:var(--mu);margin-bottom:.25rem;">Nombre</div>
+          <input type="text" id="edit-nombre" value="${empData.nombre}" style="width:100%;padding:.6rem .75rem;background:var(--sf3);border:1.5px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:.88rem;outline:none;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--bd)'">
+        </div>
+        <div>
+          <div style="font-size:.72rem;color:var(--mu);margin-bottom:.25rem;">Apellido</div>
+          <input type="text" id="edit-apellido" value="${empData.apellido}" style="width:100%;padding:.6rem .75rem;background:var(--sf3);border:1.5px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:.88rem;outline:none;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--bd)'">
+        </div>
+      </div>
+      <div style="margin-bottom:.6rem;">
+        <div style="font-size:.72rem;color:var(--mu);margin-bottom:.25rem;">Teléfono (10 dígitos)</div>
+        <input type="tel" id="edit-tel" value="${empData.telefono}" maxlength="10" oninput="this.value=this.value.replace(/\D/g,'')" style="width:100%;padding:.6rem .75rem;background:var(--sf3);border:1.5px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:.88rem;outline:none;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--bd)'">
+      </div>
+      <div style="margin-bottom:.85rem;">
+        <div style="font-size:.72rem;color:var(--mu);margin-bottom:.25rem;">Puesto</div>
+        <select id="edit-puesto" style="width:100%;padding:.6rem .75rem;background:var(--sf3);border:1.5px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:.88rem;outline:none;-webkit-appearance:none;">
+          ${puestos.map(p=>`<option value="${p}" ${empData.puesto===p?'selected':''}>${p.charAt(0).toUpperCase()+p.slice(1)}</option>`).join('')}
+        </select>
+      </div>
+      <div id="prof-edit-msg" style="font-size:.78rem;margin-bottom:.6rem;"></div>
+      <div style="display:flex;gap:.5rem;">
+        <button onclick="guardarPerfil()" id="btn-guardar-perfil" style="flex:1;padding:.7rem;background:linear-gradient(135deg,var(--ok),#18a849);color:#fff;border:none;border-radius:var(--rxs);font-family:inherit;font-size:.88rem;font-weight:700;cursor:pointer;">Guardar cambios</button>
+        <button onclick="cancelarEditPerfil()" style="padding:.7rem 1rem;background:var(--sf3);border:1px solid var(--bd);color:var(--mu);border-radius:var(--rxs);font-family:inherit;font-size:.88rem;cursor:pointer;">Cancelar</button>
       </div>
     </div>
+
     <div class="ir"><span class="ir-k">Rol</span><span class="ir-v"><span class="chip ch-${R.css}">${R.ico} ${R.label}</span></span></div>
-    <div class="ir"><span class="ir-k">Correo</span><span class="ir-v" style="font-size:.82rem;">${empData.email}</span></div>
-
-    <!-- TELÉFONO CON EDICIÓN EN LÍNEA -->
-    <div class="ir" id="tel-display-row">
-      <span class="ir-k">Teléfono</span>
-      <span class="ir-v" style="display:flex;align-items:center;gap:.5rem;">
-        <span id="tel-display">${empData.telefono}</span>
-        <button onclick="abrirEditTel()" style="background:var(--pglow);border:1px solid rgba(255,90,0,.3);color:var(--primary);border-radius:6px;padding:.18rem .5rem;font-size:.7rem;font-weight:700;cursor:pointer;font-family:inherit;">✏️ Editar</button>
-      </span>
-    </div>
-    <div id="tel-edit-row" style="display:none;padding:.7rem 0;border-bottom:1px solid var(--bd2);">
-      <div style="font-size:.76rem;font-weight:700;color:var(--mu);margin-bottom:.4rem;letter-spacing:.03em;">NUEVO TELÉFONO (10 dígitos)</div>
-      <div style="display:flex;gap:.5rem;align-items:center;">
-        <input type="tel" id="tel-input" maxlength="10" placeholder="2105550000" oninput="this.value=this.value.replace(/\D/g,'');validarTelInput()"
-          style="flex:1;padding:.62rem .85rem;background:var(--sf2);border:1.5px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:.92rem;outline:none;transition:.2s;"
-          onkeydown="if(event.key==='Enter')guardarTelefono();if(event.key==='Escape')cancelarEditTel()">
-        <button onclick="guardarTelefono()" id="btn-tel-save"
-          style="background:linear-gradient(135deg,var(--ok),#18a849);color:#fff;border:none;border-radius:var(--rxs);padding:.62rem .95rem;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;opacity:.5;pointer-events:none;"
-          disabled>Guardar</button>
-        <button onclick="cancelarEditTel()"
-          style="background:var(--sf3);border:1px solid var(--bd);color:var(--mu);border-radius:var(--rxs);padding:.62rem .75rem;font-size:.82rem;cursor:pointer;font-family:inherit;">✕</button>
-      </div>
-      <div id="tel-err" style="font-size:.72rem;color:var(--er);margin-top:.28rem;min-height:.85rem;"></div>
-      <div id="tel-ok" class="msg m-ok" style="margin-top:.5rem;"></div>
-    </div>
-
-    <div class="ir"><span class="ir-k">Alta en sistema</span><span class="ir-v" style="font-size:.82rem;">${empData.creado?.toDate?.().toLocaleDateString('es-MX')||'N/A'}</span></div>`;
+    <div class="ir"><span class="ir-k">N° Empleado</span><span class="ir-v" style="font-family:monospace;font-weight:700;color:var(--primary);">${empData.empleadoId}</span></div>
+    <div class="ir"><span class="ir-k">Correo</span><span class="ir-v" style="font-size:.8rem;">${empData.email}</span></div>
+    <div class="ir"><span class="ir-k">Teléfono</span><span class="ir-v" id="prof-tel-txt">${empData.telefono}</span></div>
+    <div class="ir"><span class="ir-k">Puesto</span><span class="ir-v" id="prof-puesto-txt2">${empData.puesto}</span></div>
+    <div class="ir"><span class="ir-k">Alta en sistema</span><span class="ir-v" style="font-size:.8rem;">${empData.creado?.toDate?.().toLocaleDateString('es-MX')||'N/A'}</span></div>`;
 }
+
+/* ─── EDITAR PERFIL COMPLETO ─────────────────────── */
+window.abrirEditPerfil = function(){
+  el('prof-edit-form').style.display = 'block';
+  el('prof-edit-msg').textContent = '';
+  el('prof-edit-msg').style.color = '';
+};
+
+window.cancelarEditPerfil = function(){
+  el('prof-edit-form').style.display = 'none';
+};
+
+window.guardarPerfil = async function(){
+  const nombre   = el('edit-nombre').value.trim();
+  const apellido = el('edit-apellido').value.trim();
+  const tel      = el('edit-tel').value.replace(/\D/g,'');
+  const puesto   = el('edit-puesto').value;
+  const msgEl    = el('prof-edit-msg');
+  const btn      = el('btn-guardar-perfil');
+
+  if(nombre.length < 2){ msgEl.textContent='❌ Nombre muy corto'; msgEl.style.color='var(--er)'; return; }
+  if(apellido.length < 2){ msgEl.textContent='❌ Apellido muy corto'; msgEl.style.color='var(--er)'; return; }
+  if(tel.length !== 10){ msgEl.textContent='❌ Teléfono debe tener 10 dígitos'; msgEl.style.color='var(--er)'; return; }
+
+  btn.textContent = 'Guardando…'; btn.disabled = true;
+  try{
+    await updateDoc(doc(db,'empleados',user.uid),{ nombre, apellido, telefono:tel, puesto });
+    // Actualizar datos locales
+    empData.nombre = nombre; empData.apellido = apellido;
+    empData.telefono = tel; empData.puesto = puesto;
+    await updateProfile(user,{displayName:`${nombre} ${apellido}`});
+
+    msgEl.textContent='✅ Perfil actualizado correctamente';
+    msgEl.style.color='var(--ok)';
+
+    // Actualizar vista sin re-renderizar todo
+    const nomTxt = el('prof-nombre-txt');
+    if(nomTxt) nomTxt.textContent=`${nombre} ${apellido}`;
+    const avEl = el('prof-av');
+    if(avEl) avEl.textContent=(nombre[0]||'')+(apellido[0]||'');
+    const telTxt = el('prof-tel-txt');
+    if(telTxt) telTxt.textContent=tel;
+    const p1 = el('prof-puesto-txt');
+    if(p1) p1.textContent=puesto;
+    const p2 = el('prof-puesto-txt2');
+    if(p2) p2.textContent=puesto;
+    // Actualizar header
+    el('hname').textContent = nombre.split(' ')[0];
+
+    setTimeout(()=>{ el('prof-edit-form').style.display='none'; },2000);
+  }catch(e){
+    msgEl.textContent='❌ Error: '+e.message; msgEl.style.color='var(--er)';
+  }finally{
+    btn.textContent='Guardar cambios'; btn.disabled=false;
+  }
+};
 
 /* ─── EDITAR TELÉFONO ─────────────────────────── */
 window.abrirEditTel = function(){
