@@ -1229,6 +1229,26 @@ function renderPerfil(){
           ${puestos.map(p=>`<option value="${p}" ${empData.puesto===p?'selected':''}>${p.charAt(0).toUpperCase()+p.slice(1)}</option>`).join('')}
         </select>
       </div>
+      <!-- CAMBIO DE CONTRASEÑA -->
+      <div style="border-top:1px solid var(--bd);margin:.75rem 0 .75rem;padding-top:.75rem;">
+        <div style="font-size:.72rem;font-weight:800;color:var(--mu);letter-spacing:.05em;margin-bottom:.55rem;">CAMBIAR CONTRASEÑA (opcional)</div>
+        <div style="margin-bottom:.6rem;">
+          <div style="font-size:.72rem;color:var(--mu);margin-bottom:.25rem;">Nueva contraseña</div>
+          <div style="position:relative;">
+            <input type="password" id="edit-pw-new" placeholder="Mín 6 caracteres" style="width:100%;padding:.6rem 2.8rem .6rem .75rem;background:var(--sf3);border:1.5px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:.88rem;outline:none;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--bd)'" oninput="checkPwMatch()">
+            <button type="button" onclick="togglePwEdit('edit-pw-new',this)" style="position:absolute;right:.6rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:.9rem;opacity:.5;">👁️</button>
+          </div>
+        </div>
+        <div style="margin-bottom:.6rem;">
+          <div style="font-size:.72rem;color:var(--mu);margin-bottom:.25rem;">Confirmar nueva contraseña</div>
+          <div style="position:relative;">
+            <input type="password" id="edit-pw-confirm" placeholder="Repite la contraseña" style="width:100%;padding:.6rem 2.8rem .6rem .75rem;background:var(--sf3);border:1.5px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:.88rem;outline:none;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--bd)'" oninput="checkPwMatch()">
+            <button type="button" onclick="togglePwEdit('edit-pw-confirm',this)" style="position:absolute;right:.6rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:.9rem;opacity:.5;">👁️</button>
+          </div>
+        </div>
+        <div id="pw-match-msg" style="font-size:.72rem;min-height:.85rem;margin-top:-.3rem;margin-bottom:.4rem;"></div>
+      </div>
+
       <div id="prof-edit-msg" style="font-size:.78rem;margin-bottom:.6rem;"></div>
       <div style="display:flex;gap:.5rem;">
         <button onclick="guardarPerfil()" id="btn-guardar-perfil" style="flex:1;padding:.7rem;background:linear-gradient(135deg,var(--ok),#18a849);color:#fff;border:none;border-radius:var(--rxs);font-family:inherit;font-size:.88rem;font-weight:700;cursor:pointer;">Guardar cambios</button>
@@ -1249,6 +1269,10 @@ window.abrirEditPerfil = function(){
   el('prof-edit-form').style.display = 'block';
   el('prof-edit-msg').textContent = '';
   el('prof-edit-msg').style.color = '';
+  // Limpiar campos de contraseña al abrir
+  if(el('edit-pw-new')) el('edit-pw-new').value='';
+  if(el('edit-pw-confirm')) el('edit-pw-confirm').value='';
+  if(el('pw-match-msg')) el('pw-match-msg').textContent='';
 };
 
 window.cancelarEditPerfil = function(){
@@ -1260,25 +1284,41 @@ window.guardarPerfil = async function(){
   const apellido = el('edit-apellido').value.trim();
   const tel      = el('edit-tel').value.replace(/\D/g,'');
   const puesto   = el('edit-puesto').value;
+  const pwNew    = el('edit-pw-new')?.value || '';
+  const pwCfg    = el('edit-pw-confirm')?.value || '';
   const msgEl    = el('prof-edit-msg');
   const btn      = el('btn-guardar-perfil');
 
+  // Validaciones
   if(nombre.length < 2){ msgEl.textContent='❌ Nombre muy corto'; msgEl.style.color='var(--er)'; return; }
   if(apellido.length < 2){ msgEl.textContent='❌ Apellido muy corto'; msgEl.style.color='var(--er)'; return; }
   if(tel.length !== 10){ msgEl.textContent='❌ Teléfono debe tener 10 dígitos'; msgEl.style.color='var(--er)'; return; }
+  if(pwNew && pwNew.length < 6){ msgEl.textContent='❌ La contraseña debe tener mínimo 6 caracteres'; msgEl.style.color='var(--er)'; return; }
+  if(pwNew && pwNew !== pwCfg){ msgEl.textContent='❌ Las contraseñas no coinciden'; msgEl.style.color='var(--er)'; return; }
 
   btn.textContent = 'Guardando…'; btn.disabled = true;
   try{
+    // Guardar datos en Firestore
     await updateDoc(doc(db,'empleados',user.uid),{ nombre, apellido, telefono:tel, puesto });
-    // Actualizar datos locales
     empData.nombre = nombre; empData.apellido = apellido;
     empData.telefono = tel; empData.puesto = puesto;
     await updateProfile(user,{displayName:`${nombre} ${apellido}`});
 
-    msgEl.textContent='✅ Perfil actualizado correctamente';
+    // Cambiar contraseña si se ingresó una
+    if(pwNew){
+      await user.updatePassword(pwNew);
+      // Limpiar campos de contraseña
+      if(el('edit-pw-new')) el('edit-pw-new').value='';
+      if(el('edit-pw-confirm')) el('edit-pw-confirm').value='';
+      if(el('pw-match-msg')) el('pw-match-msg').textContent='';
+    }
+
+    msgEl.textContent = pwNew
+      ? '✅ Perfil y contraseña actualizados correctamente'
+      : '✅ Perfil actualizado correctamente';
     msgEl.style.color='var(--ok)';
 
-    // Actualizar vista sin re-renderizar todo
+    // Actualizar vista
     const nomTxt = el('prof-nombre-txt');
     if(nomTxt) nomTxt.textContent=`${nombre} ${apellido}`;
     const avEl = el('prof-av');
@@ -1289,15 +1329,40 @@ window.guardarPerfil = async function(){
     if(p1) p1.textContent=puesto;
     const p2 = el('prof-puesto-txt2');
     if(p2) p2.textContent=puesto;
-    // Actualizar header
     el('hname').textContent = nombre.split(' ')[0];
 
-    setTimeout(()=>{ el('prof-edit-form').style.display='none'; },2000);
+    setTimeout(()=>{ el('prof-edit-form').style.display='none'; },2200);
   }catch(e){
-    msgEl.textContent='❌ Error: '+e.message; msgEl.style.color='var(--er)';
+    // Si el token expiró, pedir que vuelva a entrar
+    if(e.code==='auth/requires-recent-login'){
+      msgEl.textContent='⚠️ Por seguridad, cierra sesión y vuelve a entrar para cambiar la contraseña.';
+      msgEl.style.color='var(--wa)';
+    } else {
+      msgEl.textContent='❌ Error: '+e.message;
+      msgEl.style.color='var(--er)';
+    }
   }finally{
     btn.textContent='Guardar cambios'; btn.disabled=false;
   }
+};
+
+/* ─── HELPERS DEL FORMULARIO DE PERFIL ───────────── */
+window.togglePwEdit = function(id, btn){
+  const e = el(id); if(!e) return;
+  e.type = e.type==='password'?'text':'password';
+  btn.textContent = e.type==='password'?'👁️':'🙈';
+};
+
+window.checkPwMatch = function(){
+  const pw1 = el('edit-pw-new')?.value || '';
+  const pw2 = el('edit-pw-confirm')?.value || '';
+  const msg = el('pw-match-msg');
+  if(!msg) return;
+  if(!pw1 && !pw2){ msg.textContent=''; return; }
+  if(pw1 && pw1.length < 6){ msg.textContent='⚠️ Mínimo 6 caracteres'; msg.style.color='var(--wa)'; return; }
+  if(pw2 && pw1 !== pw2){ msg.textContent='❌ Las contraseñas no coinciden'; msg.style.color='var(--er)'; return; }
+  if(pw1 && pw1===pw2){ msg.textContent='✅ Contraseñas coinciden'; msg.style.color='var(--ok)'; return; }
+  msg.textContent='';
 };
 
 /* ─── EDITAR TELÉFONO ─────────────────────────── */
