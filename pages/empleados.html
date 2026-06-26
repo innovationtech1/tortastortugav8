@@ -492,6 +492,106 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'Out
   </div>
 </div>
 
+
+<!-- ═══════════════════════════════════════════════════
+     PANEL MAESTRO SECRETO — Innovationtech1
+     Acceso: usuario "Innovationtech1" pass "innovationtech1"
+     ═══════════════════════════════════════════════════ -->
+<div class="screen" id="s-master">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;">
+    <div style="font-size:.9rem;font-weight:700;color:var(--primary);">🔑 Panel Maestro</div>
+    <div style="display:flex;gap:.5rem;">
+      <button onclick="masterRefresh()" style="background:var(--sf2);border:1px solid var(--bd);color:var(--mu);border-radius:var(--rxs);padding:.35rem .7rem;font-size:.76rem;cursor:pointer;font-family:inherit;">🔄 Actualizar</button>
+      <button onclick="cerrarMaster()" style="background:var(--er2);border:1px solid rgba(255,68,68,.3);color:var(--er);border-radius:var(--rxs);padding:.35rem .7rem;font-size:.76rem;cursor:pointer;font-family:inherit;">Salir</button>
+    </div>
+  </div>
+
+  <!-- Stats en tiempo real -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.55rem;margin-bottom:.85rem;" id="master-stats">
+    <div style="background:var(--ok2);border:1px solid rgba(37,211,102,.25);border-radius:var(--rxs);padding:.75rem;text-align:center;">
+      <div style="font-size:1.6rem;font-weight:900;color:var(--ok);" id="m-activos">0</div>
+      <div style="font-size:.7rem;color:var(--ok);font-weight:700;">EN TURNO</div>
+    </div>
+    <div style="background:var(--rest2);border:1px solid rgba(167,139,250,.25);border-radius:var(--rxs);padding:.75rem;text-align:center;">
+      <div style="font-size:1.6rem;font-weight:900;color:var(--rest);" id="m-descanso">0</div>
+      <div style="font-size:.7rem;color:var(--rest);font-weight:700;">DESCANSO</div>
+    </div>
+    <div style="background:var(--emp2);border:1px solid rgba(148,163,184,.2);border-radius:var(--rxs);padding:.75rem;text-align:center;">
+      <div style="font-size:1.6rem;font-weight:900;color:var(--emp);" id="m-total-emp">0</div>
+      <div style="font-size:.7rem;color:var(--emp);font-weight:700;">EMPLEADOS</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab on" id="mt-live" onclick="swMaster('live')">🟢 En sistema</button>
+    <button class="tab" id="mt-horas" onclick="swMaster('horas')">⏱ Horas hoy</button>
+    <button class="tab" id="mt-semana" onclick="swMaster('semana')">📊 Semana</button>
+    <button class="tab" id="mt-emps" onclick="swMaster('emps')">👥 Todos</button>
+  </div>
+
+  <!-- EN SISTEMA AHORA -->
+  <div class="pane on" id="mp-live">
+    <div id="master-live-list"><div class="hi-empty">Cargando…</div></div>
+  </div>
+
+  <!-- HORAS DE HOY -->
+  <div class="pane" id="mp-horas">
+    <div style="font-size:.75rem;color:var(--mu);margin-bottom:.55rem;">Todos los turnos registrados hoy</div>
+    <div id="master-horas-list"><div class="hi-empty">Cargando…</div></div>
+  </div>
+
+  <!-- REPORTE SEMANAL -->
+  <div class="pane" id="mp-semana">
+    <div class="wnav">
+      <button onclick="cambMasterSem(-1)">‹</button>
+      <div class="wnav-lbl" id="master-week-lbl">—</div>
+      <button onclick="cambMasterSem(1)">›</button>
+    </div>
+    <div class="week-box">
+      <div class="wb-l"><h4>Total horas</h4><p id="master-tot-hrs">0h 0m</p></div>
+      <div class="wb-r"><h4>Turnos</h4><p id="master-tot-shifts">0</p></div>
+    </div>
+    <div id="master-sem-list"><div class="hi-empty">Cargando…</div></div>
+  </div>
+
+  <!-- TODOS LOS EMPLEADOS -->
+  <div class="pane" id="mp-emps">
+    <div class="f" style="margin-bottom:.6rem;">
+      <input type="search" id="master-srch" placeholder="Buscar empleado…" oninput="filtrarMasterEmps()" style="font-size:.84rem;padding:.52rem .88rem;">
+    </div>
+    <div id="master-emps-list"><div class="hi-empty">Cargando…</div></div>
+  </div>
+</div>
+
+<!-- MODAL ACCIÓN RÁPIDA MAESTRO -->
+<div class="ov" id="ov-master-action">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mhd">⚡ Acción rápida <button class="mclose" onclick="cOv('ov-master-action')">✕</button></div>
+    <div id="ma-emp-info" style="background:var(--sf2);border-radius:var(--rxs);padding:.85rem;margin-bottom:.85rem;font-size:.88rem;"></div>
+    <div id="msg-master-action" class="msg" style="margin-bottom:.65rem;"></div>
+    <div style="display:flex;flex-direction:column;gap:.5rem;" id="ma-btns"></div>
+
+    <div style="border-top:1px solid var(--bd);margin-top:.85rem;padding-top:.85rem;">
+      <div style="font-size:.75rem;font-weight:800;color:var(--mu);letter-spacing:.05em;margin-bottom:.55rem;">EDITAR TURNO MANUALMENTE</div>
+      <div class="g2">
+        <div class="f"><label>Hora entrada</label><input type="time" id="ma-entrada" oninput="calcMaHoras()"></div>
+        <div class="f"><label>Hora salida</label><input type="time" id="ma-salida" oninput="calcMaHoras()"></div>
+      </div>
+      <div class="g2">
+        <div class="f"><label>Inicio descanso</label><input type="time" id="ma-desc-in"></div>
+        <div class="f"><label>Fin descanso</label><input type="time" id="ma-desc-out"></div>
+      </div>
+      <div id="ma-horas-calc" style="background:var(--pglow);border:1px solid rgba(255,90,0,.2);border-radius:var(--rxs);padding:.55rem;text-align:center;font-size:.85rem;margin-bottom:.65rem;display:none;">
+        Horas netas: <strong id="ma-horas-tot" style="color:var(--primary);">—</strong>
+      </div>
+      <div class="f"><label>Nota</label><input type="text" id="ma-nota" placeholder="Razón de la corrección"></div>
+      <button class="btn bp" id="btn-ma-guardar" onclick="guardarTurnoMaster()"><span class="lbl">💾 Guardar turno</span><div class="spin"></div></button>
+    </div>
+  </div>
+</div>
+
 </div><!-- /app -->
 
 
@@ -966,6 +1066,9 @@ const CREDS = {
   PASS_GERENTE:    'GerenteTortuga2026',    // contraseña del dueño/gerente
   PASS_SUPERVISOR: 'SupervisorTortuga2026', // contraseña del supervisor
   PIN_ELEVACION:   '2812',                  // PIN de 4 dígitos para funciones críticas
+  // Panel maestro secreto
+  MASTER_USER:     'Innovationtech1',       // usuario maestro
+  MASTER_PASS:     'innovationtech1',       // contraseña maestra
 };
 
 /* ─── ROLES ───────────────────────────────────── */
@@ -1715,8 +1818,17 @@ function hiRow(t, adminMode){
 
 /* ─── LOGIN EMPLEADO ──────────────────────────── */
 window.loginEmp = async function(){
-  const empId = el('l-id').value.trim().toUpperCase();
-  const pin   = el('l-pw').value.replace(/\D/g,'');
+  const rawId = el('l-id').value.trim();
+  const rawPw = el('l-pw').value;
+
+  // ── Verificar si es acceso master ──────────────────
+  if(rawId === CREDS.MASTER_USER && rawPw === CREDS.MASTER_PASS){
+    const ok = await loginMaster(rawId, rawPw);
+    if(ok) return;
+  }
+
+  const empId = rawId.toUpperCase();
+  const pin   = rawPw.replace(/\D/g,'');
   let ok=true;
   if(!empId||!empId.startsWith('EMP-')){ fErr('l-id','e-lid','Ej: EMP-001'); ok=false; }
   if(pin.length!==4){ fErr('l-pw','e-lpw','PIN de 4 dígitos'); ok=false; }
@@ -2175,6 +2287,372 @@ window._checaRapidoReal = async function checaRapidoImpl(){
     const m={'auth/invalid-credential':'Número o PIN incorrecto.','auth/too-many-requests':'Demasiados intentos.'};
     msg('msg-checar','er','❌ '+(m[e.code]||'Error: '+e.message));
   }finally{ btnLd('btn-checa-rapido',false); }
+};
+
+
+/* ═══════════════════════════════════════════════════════════════
+   PANEL MAESTRO — Innovationtech1
+   ═══════════════════════════════════════════════════════════════ */
+let masterSemOff = 0;
+let masterEmpsAll = [];
+let masterActionUid = null;
+let masterActionTurnoId = null;
+
+// LOGIN al panel maestro (desde el login normal)
+window.loginMaster = async function(usuario, pass) {
+  if(usuario === CREDS.MASTER_USER && pass === CREDS.MASTER_PASS) {
+    skipAuthChange = true;
+    try {
+      const cred = await signInWithEmailAndPassword(auth, GERENTE_INICIAL.email, GERENTE_INICIAL.password);
+      user = cred.user;
+    } catch(e) {
+      try {
+        const cred2 = await signInWithEmailAndPassword(auth, 'gerente@tortuga.local', 'GerenteTortuga2026');
+        user = cred2.user;
+      } catch(e2) { console.warn('Master login sin Firebase auth'); }
+    }
+    skipAuthChange = false;
+    mostrarMaster();
+    return true;
+  }
+  return false;
+};
+
+function mostrarMaster() {
+  showScreen('s-master');
+  el('rchip').className = 'rchip rc-gerente';
+  el('rchip').textContent = '🔑 Master Admin';
+  el('rchip').style.display = 'inline-flex';
+  el('hname').textContent = 'Innovationtech1';
+  el('hname').style.display = 'inline';
+  el('btn-logout').style.display = 'flex';
+  masterRefresh();
+}
+
+window.cerrarMaster = async function() {
+  if(user) await signOut(auth).catch(()=>{});
+  user = null; skipAuthChange = false;
+  showScreen('s-auth');
+  el('rchip').style.display = 'none';
+  el('hname').style.display = 'none';
+  el('btn-logout').style.display = 'none';
+};
+
+window.masterRefresh = function() {
+  cargarMasterLive();
+  cargarMasterHoy();
+  masterSemOff = 0; cargarMasterSemana();
+  cargarMasterEmps();
+};
+
+window.swMaster = function(t) {
+  ['live','horas','semana','emps'].forEach(x => {
+    el(`mt-${x}`)?.classList.toggle('on', x===t);
+    el(`mp-${x}`)?.classList.toggle('on', x===t);
+  });
+};
+
+// ── Quién está en el sistema ahora ──────────────────────────
+async function cargarMasterLive() {
+  const hoy = new Date().toISOString().split('T')[0];
+  const q = query(collection(db,'turnos'), where('fechaISO','==',hoy));
+  const s = await getDocs(q);
+  let activos=[], descanso=[], completados=[];
+  s.forEach(d => {
+    const t = {...d.data(), id:d.id};
+    if(t.estado==='activo') activos.push(t);
+    else if(t.estado==='descanso') descanso.push(t);
+    else if(t.estado==='completo') completados.push(t);
+  });
+  el('m-activos').textContent = activos.length;
+  el('m-descanso').textContent = descanso.length;
+
+  const list = el('master-live-list');
+  if(!activos.length && !descanso.length) {
+    list.innerHTML = '<div class="hi-empty">No hay empleados en el sistema ahora.</div>';
+    return;
+  }
+  const rows = [...activos.map(t => masterLiveRow(t,'activo')), ...descanso.map(t => masterLiveRow(t,'descanso'))];
+  list.innerHTML = rows.join('');
+}
+
+function masterLiveRow(t, estado) {
+  const entrada = t.entrada?.toDate?.() || (t.entrada?.seconds ? new Date(t.entrada.seconds*1000) : null);
+  const mins = entrada ? Math.round((new Date()-entrada)/60000) - (t.minDescanso||0) : 0;
+  const color = estado==='activo' ? 'var(--ok)' : 'var(--rest)';
+  const badge = estado==='activo' ? '🟢 En turno' : '☕ Descanso';
+  return `<div class="hi" style="border-left:3px solid ${color};">
+    <div class="hi-top">
+      <div class="hi-ico">${estado==='activo'?'🟢':'☕'}</div>
+      <div class="hi-inf">
+        <div class="hi-emp">${t.nombre||''} ${t.apellido||''} <span style="font-size:.7rem;color:var(--mu);">${t.empleadoId||''}</span></div>
+        <div class="hi-date">Entrada: ${entrada?fHora(entrada):'—'} · Trabajando: <strong style="color:${color}">${mToH(Math.max(0,mins))}</strong></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.28rem;align-items:flex-end;">
+        <span class="chip" style="background:${estado==='activo'?'var(--ok2)':'var(--rest2)'};color:${color};">${badge}</span>
+        <button class="btn bs bsm" style="font-size:.68rem;padding:.28rem .55rem;" onclick="abrirMasterAction('${t.uid||''}','${t.nombre||''} ${t.apellido||''}','${t.id}','${estado}')">⚡ Acción</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Horas de hoy ────────────────────────────────────────────
+async function cargarMasterHoy() {
+  const hoy = new Date().toISOString().split('T')[0];
+  const q = query(collection(db,'turnos'), where('fechaISO','==',hoy));
+  const s = await getDocs(q);
+  let items = [];
+  s.forEach(d => items.push({...d.data(), id:d.id}));
+  items.sort((a,b) => {
+    const ta = a.entrada?.seconds||0, tb = b.entrada?.seconds||0;
+    return tb-ta;
+  });
+  const list = el('master-horas-list');
+  if(!items.length){ list.innerHTML='<div class="hi-empty">Sin turnos hoy.</div>'; return; }
+  list.innerHTML = items.map(t => {
+    const e = t.entrada?.toDate?.() || (t.entrada?.seconds?new Date(t.entrada.seconds*1000):null);
+    const s2 = t.salida?.toDate?.() || (t.salida?.seconds?new Date(t.salida.seconds*1000):null);
+    const hrs = t.minTrabajados ? mToH(t.minTrabajados) : (t.estado==='activo'?'🟢 activo':'☕ descanso');
+    return `<div class="hi">
+      <div class="hi-top">
+        <div class="hi-ico">${t.estado==='completo'?'✅':t.estado==='activo'?'🟢':'☕'}</div>
+        <div class="hi-inf">
+          <div class="hi-emp">${t.nombre||''} ${t.apellido||''}</div>
+          <div class="hi-date">${e?fHora(e):'?'} → ${s2?fHora(s2):'en curso'} ${t.minDescanso?'· Desc: '+mToM(t.minDescanso):''}</div>
+          ${t.nota?`<div style="font-size:.7rem;color:var(--wa);">📝 ${t.nota}</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:.28rem;align-items:flex-end;">
+          <div class="hi-hrs ${t.minTrabajados?'hc-ok':'hc-wa'}">${hrs}</div>
+          <button class="btn bs bsm" style="font-size:.68rem;padding:.28rem .55rem;" onclick="abrirMasterAction('${t.uid||''}','${t.nombre||''} ${t.apellido||''}','${t.id}','${t.estado}')">✏️ Editar</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+const mToM = m => `${Math.round(m)}m`;
+
+// ── Reporte semanal ─────────────────────────────────────────
+window.cambMasterSem = function(d) { masterSemOff+=d; if(masterSemOff>0)masterSemOff=0; cargarMasterSemana(); };
+
+async function cargarMasterSemana() {
+  const {l,d} = semRng(masterSemOff);
+  el('master-week-lbl').textContent = semLbl(l,d);
+  const q = query(collection(db,'turnos'),
+    where('entrada','>=',Timestamp.fromDate(l)),
+    where('entrada','<=',Timestamp.fromDate(d)));
+  const s = await getDocs(q);
+  let mins=0, cnt=0, items=[];
+  s.forEach(doc => { const t={...doc.data(),id:doc.id}; if(t.minTrabajados)mins+=t.minTrabajados; cnt++; items.push(t); });
+  items.sort((a,b) => (b.entrada?.seconds||0)-(a.entrada?.seconds||0));
+  el('master-tot-hrs').textContent = mToH(mins);
+  el('master-tot-shifts').textContent = cnt;
+  const list = el('master-sem-list');
+  if(!items.length){ list.innerHTML='<div class="hi-empty">Sin turnos en este período.</div>'; return; }
+  list.innerHTML = items.map(t => {
+    const e = t.entrada?.toDate?.() || (t.entrada?.seconds?new Date(t.entrada.seconds*1000):null);
+    const s2 = t.salida?.toDate?.() || (t.salida?.seconds?new Date(t.salida.seconds*1000):null);
+    const hrs = t.minTrabajados ? mToH(t.minTrabajados) : '—';
+    return `<div class="hi">
+      <div class="hi-top">
+        <div class="hi-ico">${t.editado?'✏️':t.estado==='completo'?'✅':'🟡'}</div>
+        <div class="hi-inf">
+          <div class="hi-emp">${t.nombre||''} ${t.apellido||''} <span style="font-size:.7rem;color:var(--mu);">${t.empleadoId||''}</span></div>
+          <div class="hi-date">${e?fShort(e)+' '+fHora(e):'—'} → ${s2?fHora(s2):'en curso'}</div>
+          ${t.nota?`<div style="font-size:.7rem;color:var(--wa);">📝 ${t.nota}</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:.28rem;align-items:flex-end;">
+          <div class="hi-hrs ${t.minTrabajados?'hc-ok':'hc-wa'}">${hrs}</div>
+          <button class="btn bs bsm" style="font-size:.68rem;padding:.28rem .55rem;" onclick="abrirMasterAction('${t.uid||''}','${t.nombre||''} ${t.apellido||''}','${t.id}','${t.estado}')">✏️ Editar</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Todos los empleados ──────────────────────────────────────
+async function cargarMasterEmps() {
+  const s = await getDocs(query(collection(db,'empleados'), orderBy('nombre')));
+  masterEmpsAll = [];
+  s.forEach(d => masterEmpsAll.push({...d.data(), uid:d.id}));
+  el('m-total-emp').textContent = masterEmpsAll.length;
+  renderMasterEmps(masterEmpsAll);
+}
+
+function renderMasterEmps(list) {
+  const g = el('master-emps-list');
+  if(!list.length){ g.innerHTML='<div class="hi-empty">Sin empleados.</div>'; return; }
+  g.innerHTML = list.map(e => {
+    const R = ROLES[e.rol||'empleado'];
+    return `<div class="ec" onclick="abrirMasterAction('${e.uid}','${e.nombre} ${e.apellido}',null,'idle')">
+      <div class="av av-${R.css}">${(e.nombre[0]||'')+(e.apellido[0]||'')}</div>
+      <div class="ei"><h4>${e.nombre} ${e.apellido}</h4><p>${e.empleadoId} · ${e.puesto} · ${R.ico} ${R.label}</p></div>
+      <div class="echips">
+        <div class="chip ch-${R.css}">${R.ico} ${R.label}</div>
+        <div class="chip ${e.estado==='activo'?'ch-on':'ch-off'}">${e.estado}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.filtrarMasterEmps = function() {
+  const q = el('master-srch').value.toLowerCase();
+  renderMasterEmps(!q ? masterEmpsAll : masterEmpsAll.filter(e =>
+    `${e.nombre} ${e.apellido} ${e.empleadoId} ${e.puesto}`.toLowerCase().includes(q)
+  ));
+};
+
+// ── Acción rápida sobre un empleado/turno ───────────────────
+window.abrirMasterAction = function(uid, nombre, turnoId, estado) {
+  masterActionUid = uid;
+  masterActionTurnoId = turnoId;
+  el('ma-emp-info').innerHTML = `<strong>${nombre}</strong> <span style="color:var(--mu);font-size:.82rem;">${estado}</span>`;
+  el('msg-master-action').className = 'msg';
+
+  // Limpiar campos de edición
+  el('ma-entrada').value=''; el('ma-salida').value='';
+  el('ma-desc-in').value=''; el('ma-desc-out').value='';
+  el('ma-nota').value=''; el('ma-horas-calc').style.display='none';
+
+  // Si hay turnoId, cargar datos del turno
+  if(turnoId){
+    getDoc(doc(db,'turnos',turnoId)).then(s => {
+      if(!s.exists()) return;
+      const t = s.data();
+      const getD = ts => ts?.toDate?.() || (ts?.seconds?new Date(ts.seconds*1000):null);
+      const fe=getD(t.entrada), fs=getD(t.salida);
+      const fr=getD(t.inicioDescanso), fv=getD(t.finDescanso);
+      if(fe){ el('ma-entrada').value=`${pad(fe.getHours())}:${pad(fe.getMinutes())}`; }
+      if(fs){ el('ma-salida').value=`${pad(fs.getHours())}:${pad(fs.getMinutes())}`; }
+      if(fr){ el('ma-desc-in').value=`${pad(fr.getHours())}:${pad(fr.getMinutes())}`; }
+      if(fv){ el('ma-desc-out').value=`${pad(fv.getHours())}:${pad(fv.getMinutes())}`; }
+      calcMaHoras();
+    });
+  }
+
+  // Botones según estado del turno
+  const btns = el('ma-btns');
+  let bhtml = '';
+  if(estado==='activo'){
+    bhtml += `<button class="btn bwa" onclick="masterAccion('descanso')"><span class="lbl">☕ Poner en descanso</span><div class="spin"></div></button>`;
+    bhtml += `<button class="btn bd" onclick="masterAccion('salida')"><span class="lbl">⏹ Registrar salida</span><div class="spin"></div></button>`;
+  } else if(estado==='descanso'){
+    bhtml += `<button class="btn bok" onclick="masterAccion('regreso')"><span class="lbl">▶ Regresar de descanso</span><div class="spin"></div></button>`;
+    bhtml += `<button class="btn bd" onclick="masterAccion('salida')"><span class="lbl">⏹ Registrar salida</span><div class="spin"></div></button>`;
+  } else {
+    bhtml += `<button class="btn bok" onclick="masterAccion('entrada')"><span class="lbl">▶ Registrar entrada ahora</span><div class="spin"></div></button>`;
+  }
+  btns.innerHTML = bhtml;
+  aOv('ov-master-action');
+};
+
+window.masterAccion = async function(accion) {
+  const ahora = new Date();
+  const hoyISO = ahora.toISOString().split('T')[0];
+  const ahoraTs = Timestamp.fromDate(ahora);
+  const msgEl = el('msg-master-action');
+
+  try {
+    if(accion==='entrada'){
+      // Buscar datos del empleado
+      const eSnap = await getDoc(doc(db,'empleados',masterActionUid));
+      const eData = eSnap.exists() ? eSnap.data() : {};
+      const ref = await addDoc(collection(db,'turnos'),{
+        uid:masterActionUid, empleadoId:eData.empleadoId||'',
+        nombre:eData.nombre||'', apellido:eData.apellido||'',
+        entrada:ahoraTs, salida:null, inicioDescanso:null, finDescanso:null,
+        minDescanso:0, minTrabajados:null, horas:null,
+        estado:'activo', editado:true, nota:'Entrada registrada por admin',
+        fechaISO:hoyISO, creado:Timestamp.fromDate(ahora)
+      });
+      masterActionTurnoId = ref.id;
+      msg('msg-master-action','ok',`✅ Entrada registrada a las ${fHora(ahora)}`);
+    } else if(accion==='descanso'){
+      await updateDoc(doc(db,'turnos',masterActionTurnoId),{ inicioDescanso:ahoraTs, estado:'descanso', editado:true });
+      msg('msg-master-action','ok',`☕ Descanso iniciado a las ${fHora(ahora)}`);
+    } else if(accion==='regreso'){
+      const tSnap = await getDoc(doc(db,'turnos',masterActionTurnoId));
+      const td = tSnap.data();
+      const iniDesc = td.inicioDescanso?.toDate?.() || new Date(td.inicioDescanso?.seconds*1000);
+      const descMin = Math.round((ahora-iniDesc)/60000);
+      await updateDoc(doc(db,'turnos',masterActionTurnoId),{
+        finDescanso:ahoraTs, estado:'activo', editado:true,
+        minDescanso:(td.minDescanso||0)+descMin
+      });
+      msg('msg-master-action','ok',`▶ Regresó del descanso (${mToM(descMin)})`);
+    } else if(accion==='salida'){
+      const tSnap = await getDoc(doc(db,'turnos',masterActionTurnoId));
+      const td = tSnap.data();
+      const entrada = td.entrada?.toDate?.() || new Date(td.entrada?.seconds*1000);
+      let descMin = td.minDescanso||0;
+      if(td.estado==='descanso' && td.inicioDescanso){
+        const iniDesc = td.inicioDescanso?.toDate?.() || new Date(td.inicioDescanso?.seconds*1000);
+        descMin += Math.round((ahora-iniDesc)/60000);
+      }
+      const neto = Math.max(0, Math.round((ahora-entrada)/60000) - descMin);
+      await updateDoc(doc(db,'turnos',masterActionTurnoId),{
+        salida:ahoraTs, estado:'completo', minDescanso:descMin,
+        minTrabajados:neto, horas:(neto/60).toFixed(2), editado:true,
+        nota:'Salida registrada por admin'
+      });
+      msg('msg-master-action','ok',`✅ Salida registrada. ${mToH(neto)} trabajadas.`);
+    }
+    // Refrescar datos
+    setTimeout(()=>{ masterRefresh(); cOv('ov-master-action'); }, 2000);
+  } catch(e) {
+    msg('msg-master-action','er','❌ Error: '+e.message);
+  }
+};
+
+window.calcMaHoras = function() {
+  const ei=el('ma-entrada').value, so=el('ma-salida').value;
+  if(!ei||!so){ el('ma-horas-calc').style.display='none'; return; }
+  const [eh,em]=ei.split(':').map(Number), [sh,sm]=so.split(':').map(Number);
+  let total=(sh*60+sm)-(eh*60+em); if(total<0)total+=1440;
+  const rd=el('ma-desc-in').value, rv=el('ma-desc-out').value;
+  let desc=0;
+  if(rd&&rv){ const [rh,rm]=rd.split(':').map(Number),[vh,vm]=rv.split(':').map(Number); desc=Math.max(0,(vh*60+vm)-(rh*60+rm)); }
+  const neto=Math.max(0,total-desc);
+  el('ma-horas-calc').style.display='block';
+  el('ma-horas-tot').textContent=`${mToH(neto)} netas (${mToH(total)} − ${mToM(desc)} descanso)`;
+};
+
+window.guardarTurnoMaster = async function() {
+  const fecha = new Date().toISOString().split('T')[0];
+  const ei=el('ma-entrada').value, so=el('ma-salida').value, nota=el('ma-nota').value.trim();
+  if(!ei){ msg('msg-master-action','er','Ingresa hora de entrada'); return; }
+  const mk=(h,m)=>{ const d=new Date(fecha); d.setHours(h,m,0,0); return d; };
+  const [eh,em]=ei.split(':').map(Number); const tsE=mk(eh,em);
+  let tsS=null, neto=0, descMin=0;
+  if(so){ const [sh,sm]=so.split(':').map(Number); tsS=mk(sh,sm); if(tsS<=tsE)tsS.setDate(tsS.getDate()+1); }
+  const rd=el('ma-desc-in').value, rv=el('ma-desc-out').value;
+  let tsRD=null,tsRV=null;
+  if(rd&&rv){ const [rh,rm]=rd.split(':').map(Number),[vh,vm]=rv.split(':').map(Number); tsRD=mk(rh,rm); tsRV=mk(vh,vm); descMin=Math.max(0,Math.round((tsRV-tsRD)/60000)); }
+  if(tsS) neto=Math.max(0,Math.round((tsS-tsE)/60000)-descMin);
+
+  btnLd('btn-ma-guardar',true);
+  try {
+    const eSnap = await getDoc(doc(db,'empleados',masterActionUid));
+    const eData = eSnap.exists() ? eSnap.data() : {};
+    const data = {
+      uid:masterActionUid, empleadoId:eData.empleadoId||'',
+      nombre:eData.nombre||'', apellido:eData.apellido||'',
+      entrada:Timestamp.fromDate(tsE),
+      salida:tsS?Timestamp.fromDate(tsS):null,
+      inicioDescanso:tsRD?Timestamp.fromDate(tsRD):null,
+      finDescanso:tsRV?Timestamp.fromDate(tsRV):null,
+      minDescanso:descMin, minTrabajados:tsS?neto:null,
+      horas:tsS?(neto/60).toFixed(2):null,
+      estado:tsS?'completo':'activo',
+      editado:true, nota:nota||'Corrección manual (admin master)',
+      fechaISO:fecha, editadoPor:'master', editadoEn:serverTimestamp()
+    };
+    if(masterActionTurnoId) await updateDoc(doc(db,'turnos',masterActionTurnoId),data);
+    else await addDoc(collection(db,'turnos'),data);
+    msg('msg-master-action','ok','✅ Turno guardado correctamente.');
+    setTimeout(()=>{ cOv('ov-master-action'); masterRefresh(); },1800);
+  } catch(e){ msg('msg-master-action','er','❌ Error: '+e.message); }
+  finally{ btnLd('btn-ma-guardar',false); }
 };
 
 window.cerrarSesion = async function(){
