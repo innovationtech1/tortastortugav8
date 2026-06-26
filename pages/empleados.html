@@ -1009,6 +1009,7 @@ let rolActual  = 'empleado';
 let nivelActual= 1;
 let turnoId    = null;
 let turnoData  = null;
+let skipAuthChange = false;  // evita que onAuthStateChanged interrumpa el panel admin
 let semOff     = 0;
 let semOffA    = 0;
 let rlj        = null;
@@ -1129,6 +1130,8 @@ setTimeout(setupInicial, 500);
 
 /* ─── AUTH STATE ──────────────────────────────── */
 onAuthStateChanged(auth, async u=>{
+  // Si estamos en modo admin silencioso, ignorar este cambio
+  if(skipAuthChange){ return; }
   if(u){
     user=u;
     const s=await getDoc(doc(db,'empleados',u.uid));
@@ -1304,15 +1307,26 @@ async function mostrarAdmin(nivel){
   el('hname').textContent=nivel>=4?'Gerente':'Supervisor';
   el('hname').style.display='inline';
 
-  // Si no hay sesión activa, hacer login silencioso con la cuenta del gerente
-  // para que Firestore acepte las lecturas con las reglas de seguridad
+  // Login silencioso para poder leer Firestore (no dispara pantalla de empleado)
   if(!user){
     try{
+      skipAuthChange = true;  // bloquear onAuthStateChanged
       const cred = await signInWithEmailAndPassword(auth,
-        GERENTE_INICIAL.email, GERENTE_INICIAL.password);  // emp-gerente@tortuga.local + EMP-GERENTE1234
+        GERENTE_INICIAL.email, GERENTE_INICIAL.password);
       user = cred.user;
+      skipAuthChange = false;
     } catch(e){
-      console.warn('Login silencioso admin:', e.message);
+      skipAuthChange = false;
+      // Intentar cuenta legacy
+      try{
+        skipAuthChange = true;
+        const cred2 = await signInWithEmailAndPassword(auth,'gerente@tortuga.local','GerenteTortuga2026');
+        user = cred2.user;
+        skipAuthChange = false;
+      } catch(e2){
+        skipAuthChange = false;
+        console.warn('Login silencioso admin falló:', e2.message);
+      }
     }
   }
 
@@ -2031,6 +2045,7 @@ window._checaRapidoReal = async function checaRapidoImpl(){
 };
 
 window.cerrarSesion = async function(){
+  skipAuthChange = false;  // reset flag al salir
   clearInterval(rlj);
   if(user) await signOut(auth);
   else{ showScreen('s-auth'); nivelAdmin=0; el('rchip').style.display='none'; el('hname').style.display='none'; el('btn-logout').style.display='none'; el('btn-back').style.display='none'; }
