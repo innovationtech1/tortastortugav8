@@ -4,6 +4,8 @@ import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult,
     GoogleAuthProvider,
     sendPasswordResetEmail,
     sendEmailVerification,
@@ -186,13 +188,16 @@ document.getElementById('reg-username')?.addEventListener('input', (e) => {
 // ─── GOOGLE SIGN-IN (LOGIN Y REGISTRO) ───────────────────────────
 async function loginConGoogle() {
     try {
+        if (esMobil) {
+            // En móvil usar redirect (más confiable en Safari/Chrome iOS)
+            await signInWithRedirect(auth, googleProvider);
+            return; // la página recarga — getRedirectResult() lo maneja
+        }
+        // En escritorio usar popup
         const result = await signInWithPopup(auth, googleProvider);
         const user = result.user;
-
-        // Verificar si ya tiene perfil
         const perfil = await obtenerPerfil(user.uid);
         if (!perfil) {
-            // Nuevo usuario con Google → crear perfil básico
             const username = user.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '').toLowerCase().slice(0, 20) || 'usuario';
             await guardarPerfil(user.uid, {
                 nombre: user.displayName || 'Usuario',
@@ -204,11 +209,19 @@ async function loginConGoogle() {
         }
         window.location.href = '../ordenar.html';
     } catch (err) {
-        console.error(err);
-        const msg = err.code === 'auth/popup-closed-by-user'
-            ? 'Cerraste el popup antes de completar el login.'
+        if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
+            // Popup bloqueado — intentar con redirect como fallback
+            try {
+                await signInWithRedirect(auth, googleProvider);
+            } catch(e2) {
+                showMsg('msg-login', '⚠️ No se pudo abrir Google. Verifica que los popups no estén bloqueados.');
+            }
+            return;
+        }
+        const msgTxt = err.code === 'auth/popup-closed-by-user'
+            ? 'Cerraste la ventana de Google antes de completar el login.'
             : 'Error con Google Sign-In. Intenta de nuevo.';
-        showMsg('msg-login', '⚠️ ' + msg);
+        showMsg('msg-login', '⚠️ ' + msgTxt);
     }
 }
 
