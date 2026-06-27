@@ -278,6 +278,31 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'Out
   </div>
 </div>
 
+<script>
+/* Funciones globales disponibles inmediatamente */
+function el(id){ return document.getElementById(id); }
+function showSection(id){
+  ['loading-section','login-section','perfil-section'].forEach(function(s){
+    var e=document.getElementById(s);
+    if(e) e.style.display = s===id ? (id==='loading-section'?'block':'block') : 'none';
+  });
+}
+window.cerrarOv = function(id){ var e=el(id); if(e)e.classList.remove('open'); };
+
+/* Mostrar loading inmediatamente mientras Firebase inicializa */
+document.addEventListener('DOMContentLoaded', function(){
+  showSection('loading-section');
+});
+
+/* Timeout de seguridad: si el modulo tarda mas de 8s mostrar login */
+setTimeout(function(){
+  var load = el('loading-section');
+  if(load && load.style.display !== 'none'){
+    showSection('login-section');
+  }
+}, 8000);
+</script>
+
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult,
@@ -376,26 +401,44 @@ setTimeout(() => {
 }, 6000);
 
 onAuthStateChanged(auth, async user => {
-  // Ocultar loading
-  const loadEl = el('loading-section');
-  if(loadEl) loadEl.style.display = 'none';
-
   if(user){
     currentUser = user;
-    await cargarPerfil();
-    el('login-section').style.display = 'none';
-    el('perfil-section').style.display = 'block';
+    try {
+      await cargarPerfil();
+      window.showSection('perfil-section');
+    } catch(e) {
+      console.error('Error en cargarPerfil:', e);
+      // Mostrar perfil básico con datos de Google
+      userData = {
+        nombre: user.displayName || 'Cliente',
+        email: user.email,
+        foto: user.photoURL || null,
+        puntos: 0, puntosGanados: 0, totalPedidos: 0, totalGastado: 0
+      };
+      ptsActuales = 0;
+      renderPerfil();
+      window.showSection('perfil-section');
+    }
   } else {
     currentUser = null;
-    el('login-section').style.display = 'block';
-    el('perfil-section').style.display = 'none';
+    window.showSection('login-section');
   }
 });
 
 window.loginGoogle = async function(){
-  if(esMobil){ await signInWithRedirect(auth, gProvider); return; }
-  try{ await signInWithPopup(auth, gProvider); }
-  catch(e){ if(e.code==='auth/popup-blocked') await signInWithRedirect(auth, gProvider); }
+  try {
+    if(esMobil){
+      await signInWithRedirect(auth, gProvider);
+      return;
+    }
+    await signInWithPopup(auth, gProvider);
+  } catch(e){
+    if(e.code==='auth/popup-blocked' || e.code==='auth/cancelled-popup-request'){
+      await signInWithRedirect(auth, gProvider);
+    } else {
+      console.error('Login error:', e.code);
+    }
+  }
 };
 
 window.cerrarSesion = async function(){
