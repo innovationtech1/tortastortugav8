@@ -1926,6 +1926,10 @@ window.loginEmp = async function(){
         throw e1;
       }
     }
+    // ✅ Login exitoso — guardar sesión por 20 minutos
+    sessionStorage.setItem('tt_emp_id', empId);
+    sessionStorage.setItem('tt_emp_pin', pin);
+    sessionStorage.setItem('tt_emp_ts', Date.now().toString());
   }catch(e){
     const m={
       'auth/invalid-credential':'Número o PIN incorrecto.',
