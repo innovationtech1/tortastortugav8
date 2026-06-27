@@ -1028,7 +1028,7 @@ function renderEmpsBasico(list){
         var ico = ROLES_ICO[e.rol||'empleado']||'👤';
         var lbl = ROLES_LBL[e.rol||'empleado']||'Empleado';
         var ini = (e.nombre?e.nombre[0]:'')+(e.apellido?e.apellido[0]:'');
-        return '<div class="ec" onclick="verDetalle(''+e.uid+'')">'
+        return '<div class="ec" onclick="verDetalle(\\"'+e.uid+'\\")">'
             +'<div class="av av-'+css+'">'+ini+'</div>'
             +'<div class="ei"><h4>'+e.nombre+' '+e.apellido+'</h4>'
             +'<p>'+e.empleadoId+' · '+e.puesto+'</p></div>'
@@ -2464,8 +2464,6 @@ async function cargarMasterHoy() {
     </div>`;
   }).join('');
 }
-
-const mToM = m => `${Math.round(m)}m`;
 
 // ── Reporte semanal ─────────────────────────────────────────
 window.cambMasterSem = function(d) { masterSemOff+=d; if(masterSemOff>0)masterSemOff=0; cargarMasterSemana(); };
