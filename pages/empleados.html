@@ -1002,11 +1002,41 @@ async function cargarListaEmpsREST(){
         allEmps.sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
         var cnt = el('emp-cnt');
         if(cnt) cnt.textContent = allEmps.length;
-        renderEmps(allEmps);
+        // Llamar renderEmps si ya está disponible, si no renderizar inline
+        if(typeof window.renderEmpsGlobal === 'function') {
+            window.renderEmpsGlobal(allEmps);
+        } else {
+            renderEmpsBasico(allEmps);
+        }
     } catch(e){
         console.error('cargarListaEmpsREST:', e);
         grid.innerHTML='<div class="no-emp"><div class="ico">❌</div><p>Error: '+e.message+'</p></div>';
     }
+}
+
+function renderEmpsBasico(list){
+    var ROLES_CSS = {gerente:'g', supervisor:'s', cajero:'c', empleado:'e'};
+    var ROLES_ICO = {gerente:'👑', supervisor:'🛡️', cajero:'💼', empleado:'👤'};
+    var ROLES_LBL = {gerente:'Gerente', supervisor:'Supervisor', cajero:'Cajero', empleado:'Empleado'};
+    var g = el('emp-grid');
+    if(!g) return;
+    if(!list || !list.length){
+        g.innerHTML='<div class="no-emp"><div class="ico">🔍</div><p>Sin empleados.</p></div>'; return;
+    }
+    g.innerHTML = list.map(function(e){
+        var css = ROLES_CSS[e.rol||'empleado']||'e';
+        var ico = ROLES_ICO[e.rol||'empleado']||'👤';
+        var lbl = ROLES_LBL[e.rol||'empleado']||'Empleado';
+        var ini = (e.nombre?e.nombre[0]:'')+(e.apellido?e.apellido[0]:'');
+        return '<div class="ec" onclick="verDetalle(''+e.uid+'')">'
+            +'<div class="av av-'+css+'">'+ini+'</div>'
+            +'<div class="ei"><h4>'+e.nombre+' '+e.apellido+'</h4>'
+            +'<p>'+e.empleadoId+' · '+e.puesto+'</p></div>'
+            +'<div class="echips">'
+            +'<div class="chip ch-'+css+'">'+ico+' '+lbl+'</div>'
+            +'<div class="chip ch-off">'+e.estado+'</div>'
+            +'</div></div>';
+    }).join('');
 }
 
 async function poblarSelectsREST(){
@@ -1944,9 +1974,11 @@ function renderEmps(list){
 
 window.filtrarEmp=function(){
   const q=el('srch-emp').value.toLowerCase();
-  renderEmps(!q?allEmps:allEmps.filter(e=>
+  const list=!q?allEmps:allEmps.filter(e=>
     `${e.nombre} ${e.apellido} ${e.empleadoId} ${e.puesto}`.toLowerCase().includes(q)
-  ));
+  );
+  if(typeof renderEmps==='function') renderEmps(list);
+  else renderEmpsBasico(list);
 };
 
 /* ─── DETALLE EMPLEADO ────────────────────────── */
@@ -2707,6 +2739,8 @@ window.swAdmin=t=>{ ['emp','rep','priv','new'].forEach(x=>{ el(`at-${x}`)?.class
 document.querySelectorAll('.ov').forEach(o=>{ o.addEventListener('click',e=>{ if(e.target===o)o.classList.remove('open'); }); });
 // Registrar funciones reales para los proxies
 window.checaRapido = window._checaRapidoReal;
+// Registrar renderEmps como global para que script 1 pueda llamarla
+window.renderEmpsGlobal = renderEmps;
 console.log('✅ Portal empleados Tortas Tortuga — módulo cargado correctamente');
 // Si hay nivel admin pendiente (entró con contraseña antes de que cargara el módulo)
 if(window._adminNivel && window._mostrarAdminReal){
