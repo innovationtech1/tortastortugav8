@@ -2905,14 +2905,14 @@ window.cargarNomina = async function(){
       const hrsStr   = mToH(e.minutos);
       const pagoStr  = e._pago > 0 ? '$' + e._pago.toFixed(2) : '—';
       const sinSal   = !e.salarioHora || e.salarioHora === 0;
-      return \`<div class="card" style="padding:.9rem;margin-bottom:.6rem;">
+      return `<div class="card" style="padding:.9rem;margin-bottom:.6rem;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.65rem;">
           <div>
-            <div style="font-weight:800;font-size:.92rem;">\${e.nombre} \${e.apellido}</div>
-            <div style="font-size:.72rem;color:var(--mu);">\${e.empleadoId} · \${e.puesto||''}</div>
+            <div style="font-weight:800;font-size:.92rem;">${e.nombre} ${e.apellido}</div>
+            <div style="font-size:.72rem;color:var(--mu);">${e.empleadoId} · ${e.puesto||''}</div>
           </div>
           <div style="text-align:right;">
-            <div style="font-size:1.1rem;font-weight:900;color:var(--ok);">\${hrsStr}</div>
+            <div style="font-size:1.1rem;font-weight:900;color:var(--ok);">${hrsStr}</div>
             <div style="font-size:.72rem;color:var(--mu);">trabajadas</div>
           </div>
         </div>
@@ -2921,10 +2921,10 @@ window.cargarNomina = async function(){
           <div style="font-size:.78rem;color:var(--mu);flex:1;">Salario por hora</div>
           <div style="display:flex;align-items:center;gap:.4rem;">
             <span style="color:var(--mu);font-size:.88rem;">$</span>
-            <input type="number" step="0.25" min="0" value="\${e.salarioHora||''}"
+            <input type="number" step="0.25" min="0" value="${e.salarioHora||''}"
               placeholder="0.00"
-              id="sal-\${e.uid}"
-              onchange="actualizarSalario('\${e.uid}',this.value,'nom-pago-\${e.uid}')"
+              id="sal-${e.uid}"
+              onchange="actualizarSalario('${e.uid}',this.value,'nom-pago-${e.uid}')"
               style="width:75px;padding:.35rem .5rem;background:var(--sf3);border:1.5px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:.88rem;outline:none;text-align:right;"
               onfocus="this.style.borderColor='var(--primary)'"
               onblur="this.style.borderColor='var(--bd)'">
@@ -2932,17 +2932,17 @@ window.cargarNomina = async function(){
           </div>
         </div>
         <!-- Pago calculado -->
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:.55rem .85rem;background:\${sinSal?'var(--wa2)':'var(--ok2)'};border-radius:var(--rxs);border:1px solid \${sinSal?'rgba(245,158,11,.25)':'rgba(37,211,102,.25)'};">
-          <div style="font-size:.8rem;font-weight:700;color:\${sinSal?'var(--wa)':'var(--ok)'};">
-            \${sinSal ? '⚠️ Sin salario configurado' : '✅ Pago del día'}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.55rem .85rem;background:${sinSal?'var(--wa2)':'var(--ok2)'};border-radius:var(--rxs);border:1px solid ${sinSal?'rgba(245,158,11,.25)':'rgba(37,211,102,.25)'};">
+          <div style="font-size:.8rem;font-weight:700;color:${sinSal?'var(--wa)':'var(--ok)'};">
+            ${sinSal ? '⚠️ Sin salario configurado' : '✅ Pago del día'}
           </div>
-          <div style="font-size:1rem;font-weight:900;color:\${sinSal?'var(--wa)':'var(--ok)'};" id="nom-pago-\${e.uid}">
-            \${sinSal ? '—' : pagoStr}
+          <div style="font-size:1rem;font-weight:900;color:${sinSal?'var(--wa)':'var(--ok)'};" id="nom-pago-${e.uid}">
+            ${sinSal ? '—' : pagoStr}
           </div>
         </div>
         <!-- Detalle de turnos -->
-        \${e.turnos.length > 1 ? \`<div style="margin-top:.5rem;font-size:.72rem;color:var(--mu);">\${e.turnos.length} turnos registrados este día</div>\` : ''}
-      </div>\`;
+        ${e.turnos.length > 1 ? `<div style="margin-top:.5rem;font-size:.72rem;color:var(--mu);">${e.turnos.length} turnos registrados este día</div>` : ''}
+      </div>`;
     }).join('');
 
   } catch(err){
