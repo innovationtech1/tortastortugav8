@@ -1,7 +1,8 @@
 // app.js v6 — Tortas Tortuga: Carrito + Firebase + POS
 import { db, auth } from './firebase-config.js';
 import {
-    collection, addDoc, serverTimestamp, query, where, getDocs, orderBy
+    collection, addDoc, serverTimestamp, query, where, getDocs, orderBy,
+    doc, updateDoc, increment
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ─── CONFIG ─────────────────────────────────────────────────────
