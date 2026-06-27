@@ -509,59 +509,70 @@ async function cargarPerfil(){
 
 /* ── RENDER ───────────────────────────────────────────────── */
 function renderPerfil(){
-  // Avatar
-  const aw = el('avatar-wrap');
-  if(userData.foto || currentUser.photoURL){
-    aw.innerHTML = `<img class="avatar" src="${userData.foto||currentUser.photoURL}" alt="avatar">`;
-  } else {
-    const ini = (userData.nombre||'?')[0].toUpperCase();
-    aw.innerHTML = `<div class="avatar-fallback">${ini}</div>`;
+  // Verificar que la sección del perfil esté visible antes de renderizar
+  const sec = el('perfil-section');
+  if(!sec || sec.style.display === 'none') {
+    // Reintentar cuando la sección sea visible
+    setTimeout(renderPerfil, 300);
+    return;
   }
 
-  el('p-nombre').textContent  = userData.nombre || currentUser.displayName || 'Cliente';
-  el('p-email').textContent   = userData.email  || currentUser.email || '';
+  // Avatar
+  const aw = el('avatar-wrap');
+  if(aw){
+    if(userData.foto || currentUser.photoURL){
+      aw.innerHTML = `<img class="avatar" src="${userData.foto||currentUser.photoURL}" alt="avatar">`;
+    } else {
+      const ini = (userData.nombre||'?')[0].toUpperCase();
+      aw.innerHTML = `<div class="avatar-fallback">${ini}</div>`;
+    }
+  }
+
+  const set = (id, prop, val) => { const e=el(id); if(e) e[prop]=val; };
+  set('p-nombre', 'textContent', userData.nombre || currentUser.displayName || 'Cliente');
+  set('p-email',  'textContent', userData.email  || currentUser.email || '');
 
   const creado = userData.creado?.toDate?.();
-  if(creado) el('p-member').textContent = 'Cliente desde ' + creado.toLocaleDateString('es-MX',{month:'long',year:'numeric'});
+  if(creado) set('p-member', 'textContent', 'Cliente desde ' + creado.toLocaleDateString('es-MX',{month:'long',year:'numeric'}));
 
   // Nivel
   const nivel = getNivel(ptsActuales);
   const clsMap = {bronze:'nb-bronze',silver:'nb-silver',gold:'nb-gold',plat:'nb-platino'};
-  el('nivel-badge-wrap').innerHTML = `<div class="nivel-badge ${clsMap[nivel.id]||'nb-bronze'}">${nivel.ico} ${nivel.nombre}</div>`;
+  set('nivel-badge-wrap', 'innerHTML', `<div class="nivel-badge ${clsMap[nivel.id]||'nb-bronze'}">${nivel.ico} ${nivel.nombre}</div>`);
 
   // Puntos
-  el('pts-total').textContent = ptsActuales.toLocaleString();
+  set('pts-total', 'textContent', ptsActuales.toLocaleString());
   const descDisp = Math.floor(ptsActuales / 100) * 5;
-  el('pts-equiv').textContent = ptsActuales >= 100
+  set('pts-equiv', 'textContent', ptsActuales >= 100
     ? `Puedes canjear hasta $${descDisp} de descuento`
-    : `Te faltan ${100 - (ptsActuales % 100)} pts para tu primer descuento`;
+    : `Te faltan ${100 - (ptsActuales % 100)} pts para tu primer descuento`);
 
   // Barra de progreso al siguiente nivel
   const nivIdx = NIVELES.findIndex(n=>n.id===nivel.id);
   const sigNivel = NIVELES[nivIdx+1];
   if(sigNivel){
     const pct = Math.min(100,((ptsActuales - nivel.min)/(sigNivel.min - nivel.min))*100);
-    el('pts-bar').style.width = pct + '%';
-    el('pts-nivel-actual').textContent = nivel.min + ' pts';
-    el('pts-nivel-sig').textContent = sigNivel.ico + ' ' + sigNivel.nombre + ': ' + sigNivel.min + ' pts';
+    set('pts-bar', 'style', null); const barEl=el('pts-bar'); if(barEl) barEl.style.width=pct+'%';
+    set('pts-nivel-actual', 'textContent', nivel.min + ' pts');
+    set('pts-nivel-sig', 'textContent', sigNivel.ico + ' ' + sigNivel.nombre + ': ' + sigNivel.min + ' pts');
   } else {
-    el('pts-bar').style.width = '100%';
-    el('pts-nivel-actual').textContent = '💎 Nivel máximo';
-    el('pts-nivel-sig').textContent = ptsActuales + ' pts totales';
+    const barEl=el('pts-bar'); if(barEl) barEl.style.width='100%';
+    set('pts-nivel-actual', 'textContent', '💎 Nivel máximo');
+    set('pts-nivel-sig', 'textContent', ptsActuales + ' pts totales');
   }
 
   // Grid de niveles
-  el('niveles-grid').innerHTML = NIVELES.map(n => {
+  set('niveles-grid', 'innerHTML', NIVELES.map(n => {
     const esActual = n.id === nivel.id;
     return `<div class="nv-card ${esActual?'activo '+n.id:''}">
       <div class="nv-ico">${n.ico}</div>
       <div class="nv-nm" style="color:${esActual?n.color:'var(--mu)'}">${n.nombre}</div>
       <div class="nv-pts">${n.min}+ pts</div>
     </div>`;
-  }).join('');
+  }).join(''));
 
   // Canjes disponibles
-  el('canjes-list').innerHTML = CANJES.map(c => {
+  set('canjes-list', 'innerHTML', CANJES.map(c => {
     const puedeC = ptsActuales >= c.pts;
     return `<div class="canje-card ${puedeC?'':'canje-disabled'}" onclick="${puedeC?`abrirCanje('${c.id}')`:''}" >
       <div class="canje-ico">🎁</div>
@@ -571,15 +582,15 @@ function renderPerfil(){
       </div>
       <div class="canje-pts">${c.pts} pts</div>
     </div>`;
-  }).join('');
+  }).join(''));
 
   // Info
-  el('edit-nombre').value = userData.nombre || '';
-  el('edit-tel').value    = userData.telefono || '';
-  el('edit-dir').value    = userData.direccion || '';
-  el('p-clienteid').textContent  = userData.clienteId || currentUser.uid.slice(0,8).toUpperCase();
-  el('p-totped').textContent     = (userData.totalPedidos||0) + ' pedidos';
-  el('p-totgasto').textContent   = '$' + (userData.totalGastado||0).toFixed(2);
+  const enombre=el('edit-nombre'); if(enombre) enombre.value=userData.nombre||'';
+  const etel=el('edit-tel'); if(etel) etel.value=userData.telefono||'';
+  const edir=el('edit-dir'); if(edir) edir.value=userData.direccion||'';
+  set('p-clienteid', 'textContent', userData.clienteId || currentUser.uid.slice(0,8).toUpperCase());
+  set('p-totped',    'textContent', (userData.totalPedidos||0) + ' pedidos');
+  set('p-totgasto',  'textContent', '$' + (userData.totalGastado||0).toFixed(2));
 }
 
 /* ── HISTORIAL DE PEDIDOS ─────────────────────────────────── */
