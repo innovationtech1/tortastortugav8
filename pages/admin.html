@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/x-icon" href="../favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin — Tortas Tortuga</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
@@ -103,7 +104,7 @@
 <!-- LOGIN -->
 <div id="login-screen">
     <div class="login-box">
-        <div class="login-logo">🐢</div>
+        <div class="login-logo"><img src="../icons/icon-192.png" alt="Tortas Tortuga" style="width:72px;height:72px;border-radius:50%;object-fit:cover;"></div>
         <h2>Panel Admin Vivo</h2>
         <p>Tortas Tortuga — Pedidos en Tiempo Real</p>
         <input type="password" id="password-input" class="login-input" placeholder="Contraseña" onkeydown="if(event.key==='Enter')entrarAdmin()">
@@ -116,7 +117,7 @@
 <!-- DASHBOARD -->
 <div id="dashboard">
     <div class="top-bar">
-        <div class="top-bar-logo">🐢 <span>Tortas Tortuga</span></div>
+        <div class="top-bar-logo"><img src="../icons/icon-192.png" alt="" style="width:26px;height:26px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px;"> <span>Tortas Tortuga</span></div>
         <div class="top-bar-actions" style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; overflow-x:auto; -webkit-overflow-scrolling:touch;">
             <button class="filter-btn" onclick="abrirCorteCaja()" style="border-color:var(--green); color:var(--green);">💰 Corte de Caja</button>
             <button class="filter-btn" onclick="abrirProductos()" style="border-color:var(--primary); color:var(--primary);">📦 Productos</button>
