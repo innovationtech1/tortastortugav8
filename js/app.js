@@ -13,6 +13,13 @@ const APPS_SCRIPT_URL = 'TU_APPS_SCRIPT_URL';
 
 // ─── ESTADO ─────────────────────────────────────────────────────
 let cart = JSON.parse(localStorage.getItem('tt_cart') || '[]');
+
+// ─── SPLIT SYSTEM ─────────────────────────────────────────────
+let splitMode = false;
+let cuentas = [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }];
+let cuentaActiva = 1;
+let cuentaCounter = 1;
+const SPLIT_COLORES = ['#FF5A00','#25D366','#3B82F6','#A78BFA','#F59E0B','#EC4899'];
 let pendingItem = null;
 let clientLocation = null;
 let currentPaymentMethod = null;
@@ -37,7 +44,7 @@ cartModal.addEventListener('click', e => { if (e.target === cartModal) cartModal
 window.addToCart = function(id, nombre) {
     const sel = document.getElementById(`select-${id}`);
     const precio = parseFloat(sel.value);
-    pendingItem = { id, nombre, precio, modificaciones: [] };
+    pendingItem = { id, nombre, precio, modificaciones: [], _splitMode: splitMode };
     // Resetear chips
     document.querySelectorAll('.mod-chip input').forEach(c => c.checked = false);
     document.querySelectorAll('.mod-chip').forEach(c => c.classList.remove('selected'));
@@ -49,7 +56,17 @@ window.addToCart = function(id, nombre) {
 // ─── AGREGAR BEBIDA DIRECTA ──────────────────────────────────────
 window.addDrink = function(nombre, precio, detalle = '') {
     const modificaciones = detalle ? [detalle] : [];
-    cart.push({ nombre, precio, modificaciones });
+    const item = { nombre, precio, modificaciones };
+    if (splitMode) {
+        const cActiva = cuentas.find(c => c.id === cuentaActiva);
+        if (cActiva) cActiva.items.push(item);
+        renderSplit();
+        document.getElementById('split-panel').classList.add('open');
+        document.getElementById('split-overlay').style.opacity = '1';
+        document.getElementById('split-overlay').style.pointerEvents = 'all';
+        return;
+    }
+    cart.push(item);
     updateCart();
     cartIcon.style.transform = 'scale(1.3)';
     setTimeout(() => cartIcon.style.transform = 'scale(1)', 250);
@@ -83,13 +100,25 @@ function confirmarMods(conMods) {
         pendingItem.modificaciones = mods;
         pendingItem.precio += extra;
     }
-    cart.push(pendingItem);
-    pendingItem = null;
-    modsModal.classList.remove('active');
-    updateCart();
-    cartIcon.style.transform = 'scale(1.3)';
-    setTimeout(() => cartIcon.style.transform = 'scale(1)', 250);
-    cartModal.classList.add('active');
+    if (splitMode) {
+        // En modo split → agregar a cuenta activa
+        const cActiva = cuentas.find(c => c.id === cuentaActiva);
+        if (cActiva) cActiva.items.push(pendingItem);
+        pendingItem = null;
+        modsModal.classList.remove('active');
+        renderSplit();
+        document.getElementById('split-panel').classList.add('open');
+        document.getElementById('split-overlay').style.opacity = '1';
+        document.getElementById('split-overlay').style.pointerEvents = 'all';
+    } else {
+        cart.push(pendingItem);
+        pendingItem = null;
+        modsModal.classList.remove('active');
+        updateCart();
+        cartIcon.style.transform = 'scale(1.3)';
+        setTimeout(() => cartIcon.style.transform = 'scale(1)', 250);
+        cartModal.classList.add('active');
+    }
 }
 
 document.getElementById('mods-skip').addEventListener('click', () => confirmarMods(false));
@@ -474,3 +503,313 @@ document.getElementById('ticket-search-btn')?.addEventListener('click', window.b
 document.getElementById('ticket-search-input')?.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') window.buscarTicket();
 });
+
+
+// ═══════════════════════════════════════════════════════════════
+// SISTEMA DE SPLIT DE CUENTAS — Tortas Tortuga
+// ═══════════════════════════════════════════════════════════════
+
+// Estado del split
+let splitMode = false;
+let cuentas = [
+    { id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }
+];
+let cuentaActiva = 1;
+let cuentaCounter = 1;
+
+const COLORES = ['#FF5A00','#25D366','#3B82F6','#A78BFA','#F59E0B','#EC4899'];
+
+// ── ABRIR PANEL SPLIT ──────────────────────────────────────────
+window.abrirSplit = function() {
+    // Si hay items en el carrito normal, moverlos a Cuenta 1
+    if (!splitMode && cart.length > 0) {
+        cuentas[0].items = [...cart];
+        cart = [];
+        updateCart();
+    }
+    splitMode = true;
+    renderSplit();
+    document.getElementById('split-panel').classList.add('open');
+};
+
+window.cerrarSplit = function() {
+    document.getElementById('split-panel').classList.remove('open');
+};
+
+// ── NUEVA CUENTA ───────────────────────────────────────────────
+window.nuevaCuenta = function() {
+    cuentaCounter++;
+    const color = COLORES[(cuentas.length) % COLORES.length];
+    cuentas.push({
+        id: cuentaCounter,
+        nombre: 'Cuenta ' + cuentaCounter,
+        items: [],
+        color: color
+    });
+    cuentaActiva = cuentaCounter;
+    renderSplit();
+    // Enfocar el nombre de la nueva cuenta
+    setTimeout(() => {
+        const inp = document.querySelector(`[data-cid="${cuentaCounter}"] .cuenta-nombre-input`);
+        if (inp) { inp.focus(); inp.select(); }
+    }, 100);
+};
+
+// ── ELIMINAR CUENTA ────────────────────────────────────────────
+window.eliminarCuenta = function(cid) {
+    if (cuentas.length <= 1) return;
+    const idx = cuentas.findIndex(c => c.id === cid);
+    // Mover items de la cuenta eliminada a la primera
+    if (cuentas[idx].items.length > 0) {
+        cuentas[0].items.push(...cuentas[idx].items);
+    }
+    cuentas.splice(idx, 1);
+    if (cuentaActiva === cid) cuentaActiva = cuentas[0].id;
+    renderSplit();
+};
+
+// ── ACTIVAR CUENTA ─────────────────────────────────────────────
+window.activarCuenta = function(cid) {
+    cuentaActiva = cid;
+    renderSplit();
+};
+
+// ── EDITAR NOMBRE DE CUENTA ────────────────────────────────────
+window.editarNombreCuenta = function(cid, valor) {
+    const c = cuentas.find(c => c.id === cid);
+    if (c) c.nombre = valor || ('Cuenta ' + cid);
+};
+
+// ── MOVER ITEM ENTRE CUENTAS ───────────────────────────────────
+window.moverItem = function(fromCid, itemIdx, toCid) {
+    const from = cuentas.find(c => c.id === fromCid);
+    const to   = cuentas.find(c => c.id === toCid);
+    if (!from || !to) return;
+    const [item] = from.items.splice(itemIdx, 1);
+    to.items.push(item);
+    renderSplit();
+};
+
+// ── ELIMINAR ITEM DE CUENTA ────────────────────────────────────
+window.eliminarItemCuenta = function(cid, itemIdx) {
+    const c = cuentas.find(c => c.id === cid);
+    if (c) c.splice ? null : c.items.splice(itemIdx, 1);
+    renderSplit();
+};
+
+// ── DIVIDIR ITEM ENTRE TODAS LAS CUENTAS ──────────────────────
+window.dividirItem = function(fromCid, itemIdx) {
+    const from = cuentas.find(c => c.id === fromCid);
+    if (!from || cuentas.length < 2) return;
+    const item = from.items[itemIdx];
+    const precioPorCuenta = item.precio / cuentas.length;
+    // Crear item dividido en cada cuenta
+    cuentas.forEach(c => {
+        c.items.push({
+            ...item,
+            nombre: item.nombre + ' (split)',
+            precio: parseFloat(precioPorCuenta.toFixed(2))
+        });
+    });
+    // Eliminar el original
+    from.items.splice(itemIdx, 1);
+    renderSplit();
+};
+
+// ── RENDER PRINCIPAL DEL SPLIT ─────────────────────────────────
+function renderSplit() {
+    const panel = document.getElementById('split-content');
+    if (!panel) return;
+
+    const totalGeneral = cuentas.reduce((s, c) =>
+        s + c.items.reduce((ss, i) => ss + i.precio, 0), 0);
+
+    // Tabs de cuentas
+    let tabsHTML = '<div class="split-tabs">';
+    cuentas.forEach(c => {
+        const tot = c.items.reduce((s, i) => s + i.precio, 0);
+        const active = c.id === cuentaActiva ? 'active' : '';
+        tabsHTML += `
+        <div class="split-tab ${active}" onclick="activarCuenta(${c.id})" style="border-color:${c.color}">
+            <input class="cuenta-nombre-input" value="${c.nombre}"
+                onclick="event.stopPropagation()"
+                onchange="editarNombreCuenta(${c.id}, this.value)"
+                style="color:${c.color}">
+            <div class="split-tab-total">$${tot.toFixed(2)}</div>
+            ${cuentas.length > 1 ? `<button class="split-tab-del" onclick="event.stopPropagation();eliminarCuenta(${c.id})">✕</button>` : ''}
+        </div>`;
+    });
+    tabsHTML += `<button class="split-add-btn" onclick="nuevaCuenta()">+ Cuenta</button>`;
+    tabsHTML += '</div>';
+
+    // Items de la cuenta activa
+    const cuenta = cuentas.find(c => c.id === cuentaActiva);
+    let itemsHTML = '';
+    if (!cuenta || cuenta.items.length === 0) {
+        itemsHTML = '<div class="split-empty">Agrega productos al pedido y aparecerán aquí</div>';
+    } else {
+        cuenta.items.forEach((item, idx) => {
+            // Opciones de mover a otras cuentas
+            const moveOpts = cuentas.filter(c => c.id !== cuentaActiva)
+                .map(c => `<button class="split-move-btn" style="background:${c.color}22;color:${c.color};border-color:${c.color}44" onclick="moverItem(${cuentaActiva},${idx},${c.id})">→ ${c.nombre}</button>`)
+                .join('');
+
+            itemsHTML += `
+            <div class="split-item">
+                <div class="split-item-top">
+                    <div class="split-item-info">
+                        <div class="split-item-name">${item.nombre}</div>
+                        ${item.modificaciones?.length ? `<div class="split-item-mods">${item.modificaciones.join(' · ')}</div>` : ''}
+                    </div>
+                    <div class="split-item-precio">$${item.precio.toFixed(2)}</div>
+                    <button class="split-item-del" onclick="eliminarItemSplit(${cuentaActiva},${idx})">✕</button>
+                </div>
+                <div class="split-item-actions">
+                    ${moveOpts}
+                    ${cuentas.length > 1 ? `<button class="split-divide-btn" onclick="dividirItem(${cuentaActiva},${idx})">÷ Dividir</button>` : ''}
+                </div>
+            </div>`;
+        });
+    }
+
+    // Resumen global
+    let resumenHTML = '<div class="split-resumen">';
+    cuentas.forEach(c => {
+        const tot = c.items.reduce((s, i) => s + i.precio, 0);
+        resumenHTML += `
+        <div class="split-resumen-row">
+            <div class="split-resumen-dot" style="background:${c.color}"></div>
+            <div class="split-resumen-nom">${c.nombre}</div>
+            <div class="split-resumen-items">${c.items.length} producto${c.items.length !== 1 ? 's' : ''}</div>
+            <div class="split-resumen-tot" style="color:${c.color}">$${tot.toFixed(2)}</div>
+            <button class="split-orden-btn" onclick="ordenarCuenta(${c.id})"
+                ${tot === 0 ? 'disabled' : ''}>Ordenar</button>
+        </div>`;
+    });
+    resumenHTML += `
+        <div class="split-total-row">
+            <span>Total general</span>
+            <span style="color:var(--primary);font-weight:800">$${totalGeneral.toFixed(2)}</span>
+        </div>
+        <button class="split-all-btn" onclick="ordenarTodas()">
+            📱 Enviar todas las cuentas
+        </button>
+    </div>`;
+
+    panel.innerHTML = tabsHTML + '<div class="split-items">' + itemsHTML + '</div>' + resumenHTML;
+}
+
+// ── ELIMINAR ITEM DE CUENTA (window) ──────────────────────────
+window.eliminarItemSplit = function(cid, idx) {
+    const c = cuentas.find(c => c.id === cid);
+    if (c) c.items.splice(idx, 1);
+    renderSplit();
+};
+
+// ── ORDENAR UNA CUENTA ─────────────────────────────────────────
+window.ordenarCuenta = function(cid) {
+    const c = cuentas.find(c => c.id === cid);
+    if (!c || c.items.length === 0) return;
+
+    const nombre    = document.getElementById('customer-name')?.value || c.nombre;
+    const telefono  = document.getElementById('customer-phone')?.value || '';
+    const total     = c.items.reduce((s, i) => s + i.precio, 0);
+    const tipo      = document.querySelector('input[name="order-type"]:checked')?.value || 'pickup';
+
+    let msg = `🐢 *TORTAS TORTUGA*\n`;
+    msg += `📋 *${c.nombre}* — Pedido\n`;
+    msg += `👤 ${nombre}`;
+    if (telefono) msg += ` · 📞 ${telefono}`;
+    msg += `\n${tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Delivery'}\n\n`;
+
+    c.items.forEach((item, i) => {
+        msg += `${i + 1}. ${item.nombre}`;
+        if (item.modificaciones?.length) msg += `\n   └ ${item.modificaciones.join(', ')}`;
+        msg += ` — $${item.precio.toFixed(2)}\n`;
+    });
+
+    msg += `\n💰 *Total ${c.nombre}: $${total.toFixed(2)}*\n`;
+    msg += `_Powered by TortasTortuga.app_`;
+
+    const encoded = encodeURIComponent(msg);
+    window.open(`https://wa.me/12108678210?text=${encoded}`, '_blank');
+};
+
+// ── ORDENAR TODAS ─────────────────────────────────────────────
+window.ordenarTodas = function() {
+    const nombre   = document.getElementById('customer-name')?.value || 'Mesa';
+    const telefono = document.getElementById('customer-phone')?.value || '';
+    const tipo     = document.querySelector('input[name="order-type"]:checked')?.value || 'pickup';
+    const total    = cuentas.reduce((s, c) => s + c.items.reduce((ss, i) => ss + i.precio, 0), 0);
+
+    let msg = `🐢 *TORTAS TORTUGA — PEDIDO SPLIT*\n`;
+    msg += `👤 ${nombre}`;
+    if (telefono) msg += ` · 📞 ${telefono}`;
+    msg += `\n${tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Delivery'}\n\n`;
+
+    cuentas.forEach(c => {
+        if (c.items.length === 0) return;
+        const tot = c.items.reduce((s, i) => s + i.precio, 0);
+        msg += `━━ *${c.nombre}* ($${tot.toFixed(2)}) ━━\n`;
+        c.items.forEach((item, i) => {
+            msg += `${i + 1}. ${item.nombre}`;
+            if (item.modificaciones?.length) msg += `\n   └ ${item.modificaciones.join(', ')}`;
+            msg += ` — $${item.precio.toFixed(2)}\n`;
+        });
+        msg += '\n';
+    });
+
+    msg += `💰 *TOTAL GENERAL: $${total.toFixed(2)}*\n`;
+    msg += `_Powered by TortasTortuga.app_`;
+
+    const encoded = encodeURIComponent(msg);
+    window.open(`https://wa.me/12108678210?text=${encoded}`, '_blank');
+};
+
+// ── SINCRONIZAR CARRITO CON SPLIT ─────────────────────────────
+// Cuando se agrega al carrito en modo split, va a la cuenta activa
+const _origUpdateCart = window._updateCartOriginal || function() {};
+
+function addToActiveCuenta(item) {
+    if (!splitMode) return false;
+    const c = cuentas.find(c => c.id === cuentaActiva);
+    if (c) { c.items.push(item); renderSplit(); }
+    return true;
+}
+
+window._addToActiveCuenta = addToActiveCuenta;
+
+
+
+window.resetSplit = function() {
+    if (!confirm('¿Limpiar todas las cuentas?')) return;
+    splitMode = false;
+    cuentas = [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }];
+    cuentaActiva = 1;
+    cuentaCounter = 1;
+    renderSplit();
+};
+
+window.abrirSplit = function() {
+    if (!splitMode) {
+        splitMode = true;
+        // Mover items existentes del carrito a Cuenta 1
+        if (cart.length > 0) {
+            cuentas[0].items = [...cart];
+            cart = [];
+            updateCart();
+        }
+    }
+    renderSplit();
+    document.getElementById('split-panel').classList.add('open');
+    document.getElementById('split-overlay').style.opacity = '1';
+    document.getElementById('split-overlay').style.pointerEvents = 'all';
+};
+
+window.cerrarSplit = function() {
+    document.getElementById('split-panel').classList.remove('open');
+    setTimeout(() => {
+        document.getElementById('split-overlay').style.opacity = '0';
+        document.getElementById('split-overlay').style.pointerEvents = 'none';
+    }, 300);
+};
