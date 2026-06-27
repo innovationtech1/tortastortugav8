@@ -282,6 +282,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'Out
 <script>
 /* Funciones globales disponibles inmediatamente */
 function el(id){ return document.getElementById(id); }
+function elSet(id, prop, val){ const e=document.getElementById(id); if(e) e[prop]=val; }
 function showSection(id){
   ['loading-section','login-section','perfil-section'].forEach(function(s){
     var e=document.getElementById(s);
@@ -531,7 +532,7 @@ function renderPerfil(){
   // Puntos
   el('pts-total').textContent = ptsActuales.toLocaleString();
   const descDisp = Math.floor(ptsActuales / 100) * 5;
-  el('pts-sub').textContent = ptsActuales >= 100
+  el('pts-equiv').textContent = ptsActuales >= 100
     ? `Puedes canjear hasta $${descDisp} de descuento`
     : `Te faltan ${100 - (ptsActuales % 100)} pts para tu primer descuento`;
 
