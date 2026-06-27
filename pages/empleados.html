@@ -1789,25 +1789,38 @@ async function cargarHistEmp(){
   if(!user) return;
   const {l,d}=semRng(semOff);
   el('wlbl-emp').textContent=semLbl(l,d);
-  // Sin orderBy para evitar índice compuesto — ordenamos en JS
-  const q=query(collection(db,'turnos'),
-    where('uid','==',user.uid),
-    where('entrada','>=',Timestamp.fromDate(l)),
-    where('entrada','<=',Timestamp.fromDate(d)));
-  const s=await getDocs(q);
-  let mins=0,cnt=0,items=[];
-  s.forEach(d=>{ const t={...d.data(),id:d.id}; if(t.minTrabajados)mins+=t.minTrabajados; cnt++; items.push(t); });
-  // Ordenar por fecha descendente en JS
-  items.sort((a,b)=>{
-    const ta=a.entrada?.toDate?.().getTime()||(a.entrada?.seconds*1000)||0;
-    const tb=b.entrada?.toDate?.().getTime()||(b.entrada?.seconds*1000)||0;
-    return tb-ta;
-  });
-  el('wtot-emp').textContent=mToH(mins);
-  el('wshift-emp').textContent=cnt;
-  const list=el('hist-emp');
-  if(!items.length){ list.innerHTML='<div class="hi-empty">Sin turnos esta semana.</div>'; return; }
-  list.innerHTML=items.map(t=>hiRow(t,false)).join('');
+  try{
+    // Solo filtrar por uid — sin rango de fechas para evitar índice compuesto
+    const q=query(collection(db,'turnos'), where('uid','==',user.uid));
+    const s=await getDocs(q);
+    let mins=0,cnt=0,items=[];
+    s.forEach(doc=>{
+      const t={...doc.data(),id:doc.id};
+      // Filtrar por semana en JavaScript
+      const entrada = t.entrada?.toDate?.() || (t.entrada?.seconds ? new Date(t.entrada.seconds*1000) : null);
+      if(!entrada) return;
+      if(entrada >= l && entrada <= d){
+        if(t.minTrabajados) mins+=t.minTrabajados;
+        cnt++;
+        items.push(t);
+      }
+    });
+    // Ordenar por fecha descendente
+    items.sort((a,b)=>{
+      const ta=a.entrada?.toDate?.().getTime()||(a.entrada?.seconds*1000)||0;
+      const tb=b.entrada?.toDate?.().getTime()||(b.entrada?.seconds*1000)||0;
+      return tb-ta;
+    });
+    el('wtot-emp').textContent=mToH(mins);
+    el('wshift-emp').textContent=cnt;
+    const list=el('hist-emp');
+    if(!items.length){ list.innerHTML='<div class="hi-empty">Sin turnos esta semana.</div>'; return; }
+    list.innerHTML=items.map(t=>hiRow(t,false)).join('');
+  } catch(e){
+    console.error('cargarHistEmp error:', e);
+    const list=el('hist-emp');
+    if(list) list.innerHTML='<div class="hi-empty">Error cargando historial: '+e.message+'</div>';
+  }
 }
 
 /* ─── FILA DE HISTORIAL ───────────────────────── */
@@ -2034,13 +2047,20 @@ window.cargarRep = async function(){
   const {l,d}=semRng(semOffA);
   el('wlbl-adm').textContent=semLbl(l,d);
   const empF=el('rep-sel')?.value;
-  // Sin orderBy para evitar índice compuesto — ordenamos en JS
-  let c=[where('entrada','>=',Timestamp.fromDate(l)),where('entrada','<=',Timestamp.fromDate(d))];
-  if(empF) c=[where('uid','==',empF),...c];
-  const s=await getDocs(query(collection(db,'turnos'),...c));
+  // Filtrar solo por uid si hay filtro, luego filtrar fechas en JS
+  let baseQuery = empF
+    ? query(collection(db,'turnos'), where('uid','==',empF))
+    : query(collection(db,'turnos'));
+  const s=await getDocs(baseQuery);
   let mins=0,cnt=0,items=[];
-  s.forEach(d=>{ const t={...d.data(),id:d.id}; if(t.minTrabajados)mins+=t.minTrabajados; cnt++; items.push(t); });
-  // Ordenar en JS
+  s.forEach(doc=>{
+    const t={...doc.data(),id:doc.id};
+    const entrada = t.entrada?.toDate?.() || (t.entrada?.seconds ? new Date(t.entrada.seconds*1000) : null);
+    if(!entrada) return;
+    if(entrada >= l && entrada <= d){
+      if(t.minTrabajados) mins+=t.minTrabajados; cnt++; items.push(t);
+    }
+  });
   items.sort((a,b)=>{
     const ta=a.entrada?.toDate?.().getTime()||(a.entrada?.seconds*1000)||0;
     const tb=b.entrada?.toDate?.().getTime()||(b.entrada?.seconds*1000)||0;
