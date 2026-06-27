@@ -428,19 +428,9 @@ onAuthStateChanged(auth, async user => {
 });
 
 window.loginGoogle = async function(){
-  try {
-    if(esMobil){
-      await signInWithRedirect(auth, gProvider);
-      return;
-    }
-    await signInWithPopup(auth, gProvider);
-  } catch(e){
-    if(e.code==='auth/popup-blocked' || e.code==='auth/cancelled-popup-request'){
-      await signInWithRedirect(auth, gProvider);
-    } else {
-      console.error('Login error:', e.code);
-    }
-  }
+  // Siempre usar redirect — evita el error Cross-Origin-Opener-Policy
+  // que ocurre con popup en GitHub Pages
+  await signInWithRedirect(auth, gProvider);
 };
 
 window.cerrarSesion = async function(){
