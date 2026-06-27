@@ -1591,3 +1591,60 @@ h1 {
         max-width: 100vw !important;
     }
 }
+
+/* ── SELECTOR DE CANTIDAD EN TARJETAS ─────────────────────── */
+.qty-add-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.qty-selector {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: rgba(255,255,255,0.06);
+    border: 1.5px solid rgba(255,90,0,0.35);
+    border-radius: 10px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.qty-btn {
+    background: none;
+    border: none;
+    color: var(--primary, #FF5A00);
+    font-size: 1.2rem;
+    font-weight: 700;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.qty-btn:hover { background: rgba(255,90,0,0.15); }
+.qty-btn:active { background: rgba(255,90,0,0.28); }
+
+.qty-num {
+    min-width: 28px;
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #fff;
+    transition: transform 0.15s;
+    display: inline-block;
+}
+
+.qty-add-row .add-to-cart {
+    flex: 1;
+    margin: 0;
+    padding: 0.6rem 0.5rem;
+    font-size: 0.88rem;
+    transition: background 0.2s, color 0.2s;
+}
