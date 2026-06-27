@@ -167,6 +167,12 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'Out
 
 <div class="wrap">
 
+  <!-- CARGANDO (mientras Firebase inicializa) -->
+  <div id="loading-section" style="text-align:center;padding:4rem 1rem;">
+    <div style="font-size:3rem;animation:bob 1s ease-in-out infinite alternate;">🐢</div>
+    <div style="font-size:.9rem;color:var(--mu);margin-top:.75rem;">Cargando tu perfil…</div>
+  </div>
+
   <!-- LOGIN PROMPT (si no está autenticado) -->
   <div id="login-section" style="display:none;">
     <div class="login-prompt">
@@ -358,7 +364,22 @@ getRedirectResult(auth).then(async result => {
   await procesarLoginGoogle(result.user);
 }).catch(e => { if(e.code !== 'auth/no-auth-event') console.warn(e.code); });
 
+// Timeout de seguridad — si Firebase tarda más de 6s, mostrar login
+setTimeout(() => {
+  const loadEl = el('loading-section');
+  if(loadEl && loadEl.style.display !== 'none'){
+    loadEl.style.display = 'none';
+    if(!currentUser){
+      el('login-section').style.display = 'block';
+    }
+  }
+}, 6000);
+
 onAuthStateChanged(auth, async user => {
+  // Ocultar loading
+  const loadEl = el('loading-section');
+  if(loadEl) loadEl.style.display = 'none';
+
   if(user){
     currentUser = user;
     await cargarPerfil();
@@ -405,16 +426,40 @@ async function procesarLoginGoogle(user){
 
 /* ── CARGAR PERFIL ────────────────────────────────────────── */
 async function cargarPerfil(){
-  const snap = await getDoc(doc(db,'usuarios',currentUser.uid));
-  if(snap.exists()) userData = snap.data();
-  else {
-    await procesarLoginGoogle(currentUser);
-    const snap2 = await getDoc(doc(db,'usuarios',currentUser.uid));
-    userData = snap2.data();
+  try{
+    const snap = await getDoc(doc(db,'usuarios',currentUser.uid));
+    if(snap.exists()){
+      userData = snap.data();
+    } else {
+      // Crear perfil nuevo con datos de Google
+      await procesarLoginGoogle(currentUser);
+      const snap2 = await getDoc(doc(db,'usuarios',currentUser.uid));
+      userData = snap2.exists() ? snap2.data() : {
+        uid: currentUser.uid,
+        nombre: currentUser.displayName || 'Cliente',
+        email: currentUser.email,
+        foto: currentUser.photoURL || null,
+        puntos: 0, puntosGanados: 0, puntosCanje: 0,
+        totalPedidos: 0, totalGastado: 0
+      };
+    }
+    ptsActuales = userData.puntos || 0;
+    renderPerfil();
+    cargarHistorial();
+  } catch(e){
+    console.error('Error cargando perfil:', e);
+    // Mostrar perfil básico con datos de Google aunque Firestore falle
+    userData = {
+      uid: currentUser.uid,
+      nombre: currentUser.displayName || 'Cliente',
+      email: currentUser.email,
+      foto: currentUser.photoURL || null,
+      puntos: 0, puntosGanados: 0, puntosCanje: 0,
+      totalPedidos: 0, totalGastado: 0
+    };
+    ptsActuales = 0;
+    renderPerfil();
   }
-  ptsActuales = userData.puntos || 0;
-  renderPerfil();
-  cargarHistorial();
 }
 
 /* ── RENDER ───────────────────────────────────────────────── */
