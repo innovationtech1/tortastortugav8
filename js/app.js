@@ -170,10 +170,30 @@ async function guardarPedidoFirebase(data, metodoPago) {
             creado: serverTimestamp()
         });
         
-        // El ticket son los últimos 4 caracteres del ID de Firebase
         const ticketId = ref.id.slice(-4).toUpperCase();
-        
         console.log('✅ Pedido guardado:', ref.id);
+
+        // ── SUMAR PUNTOS AL CLIENTE REGISTRADO ──────────────
+        const uid = window._firebaseUser?.uid;
+        if(uid && uid !== 'anonimo' && data.totalNum > 0){
+            try{
+                // Regla de puntos: <$25=15pts, $25-$39.99=30pts, $40+=50pts
+                let pts = 15;
+                if(data.totalNum >= 40)   pts = 50;
+                else if(data.totalNum >= 25) pts = 30;
+
+                await updateDoc(doc(db, 'usuarios', uid), {
+                    puntos:        increment(pts),
+                    puntosGanados: increment(pts),
+                    totalPedidos:  increment(1),
+                    totalGastado:  increment(data.totalNum)
+                });
+                console.log(`⭐ +${pts} puntos para cliente ${uid}`);
+                // Guardar en sesión para mostrar en confirmación
+                window._ultimosPuntos = pts;
+            } catch(e){ console.warn('Puntos no actualizados:', e.message); }
+        }
+
         return { id: ref.id, ticket: ticketId };
     } catch(e) {
         console.warn('Firebase save error:', e);
