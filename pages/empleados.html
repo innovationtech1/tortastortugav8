@@ -1299,6 +1299,36 @@ onAuthStateChanged(auth, async u=>{
     nivelActual = ROLES[rolActual]?.nivel || 1;
     mostrarEmp();
   } else {
+    // Verificar si hay sesión guardada para auto-login
+    if(window._autoLoginEmp){
+      const {empId, pin} = window._autoLoginEmp;
+      window._autoLoginEmp = null;
+      console.log('🔄 Auto-login con sesión guardada:', empId);
+      try{
+        const emailInterno = `${empId.toLowerCase()}@tortuga.local`;
+        const pwAuto = `${empId}${pin}`;
+        try{
+          skipAuthChange = true;
+          await signInWithEmailAndPassword(auth, emailInterno, pwAuto);
+          skipAuthChange = false;
+        } catch(e1){
+          if(empId==='EMP-GERENTE'){
+            skipAuthChange = true;
+            await signInWithEmailAndPassword(auth,'gerente@tortuga.local','GerenteTortuga2026');
+            skipAuthChange = false;
+          } else { throw e1; }
+        }
+        // Actualizar timestamp de sesión
+        sessionStorage.setItem('tt_emp_ts', Date.now().toString());
+        return; // onAuthStateChanged volverá a correr con el usuario
+      } catch(e){
+        console.warn('Auto-login falló:', e.message);
+        // Limpiar sesión inválida
+        sessionStorage.removeItem('tt_emp_id');
+        sessionStorage.removeItem('tt_emp_pin');
+        sessionStorage.removeItem('tt_emp_ts');
+      }
+    }
     user=null; empData=null; rolActual='empleado'; nivelActual=1; turnoId=null; turnoData=null;
     clearInterval(rlj);
     showScreen('s-auth');
@@ -1670,6 +1700,10 @@ function renderEstadoTurno(){
 
 window.accionTurno = async function(accion){
   if(!user) return;
+  // Renovar sesión al hacer cualquier acción de turno
+  if(sessionStorage.getItem('tt_emp_id')){
+    sessionStorage.setItem('tt_emp_ts', Date.now().toString());
+  }
   const ahora = new Date();
   const ahoraTs = Timestamp.fromDate(ahora);
   const hoyISO = ahora.toISOString().split('T')[0];
@@ -2710,6 +2744,10 @@ window.guardarTurnoMaster = async function() {
 
 window.cerrarSesion = async function(){
   skipAuthChange = false;  // reset flag al salir
+  // Limpiar sesión guardada
+  sessionStorage.removeItem('tt_emp_id');
+  sessionStorage.removeItem('tt_emp_pin');
+  sessionStorage.removeItem('tt_emp_ts');
   clearInterval(rlj);
   if(user) await signOut(auth);
   else{ showScreen('s-auth'); nivelAdmin=0; el('rchip').style.display='none'; el('hname').style.display='none'; el('btn-logout').style.display='none'; el('btn-back').style.display='none'; }
