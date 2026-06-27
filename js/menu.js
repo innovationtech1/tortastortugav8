@@ -289,6 +289,8 @@ function crearCard(p) {
     }
 
     const isTorta = p.tipo === 'torta';
+    const pid = p.productId;
+
     html += `<div class="card-body">
         <h3 class="product-title">${p.nombre}</h3>`;
     if (p.descripcion) {
@@ -298,29 +300,76 @@ function crearCard(p) {
         html += `<div class="product-includes">${p.incluye}</div>`;
     }
     if (p.variantes && p.variantes.length) {
-        html += `<select class="size-selector" id="select-${p.productId}">`;
+        html += `<select class="size-selector" id="select-${pid}">`;
         p.variantes.forEach(v => {
             html += `<option value="${v.precio}">${escapeAttr(v.label)}</option>`;
         });
         html += `</select>`;
     }
-    html += `<button class="add-to-cart">${isTorta ? '➕ Agregar al Pedido' : '➕ Agregar'}</button>
+
+    // Selector de cantidad + botón agregar
+    html += `
+    <div class="qty-add-row">
+        <div class="qty-selector">
+            <button class="qty-btn qty-minus" data-pid="${pid}" type="button">−</button>
+            <span class="qty-num" id="qty-${pid}">1</span>
+            <button class="qty-btn qty-plus" data-pid="${pid}" type="button">+</button>
+        </div>
+        <button class="add-to-cart">${isTorta ? '🛒 Agregar al Pedido' : '🛒 Agregar'}</button>
+    </div>
     </div>`;
 
     card.innerHTML = html;
 
+    // Botones − y +
+    const minusBtn = card.querySelector('.qty-minus');
+    const plusBtn  = card.querySelector('.qty-plus');
+    const qtyEl   = card.querySelector(`#qty-${pid}`);
+
+    if (minusBtn && plusBtn && qtyEl) {
+        minusBtn.addEventListener('click', () => {
+            const cur = parseInt(qtyEl.textContent) || 1;
+            if (cur > 1) qtyEl.textContent = cur - 1;
+            qtyEl.style.transform = 'scale(1.3)';
+            setTimeout(() => qtyEl.style.transform = '', 150);
+        });
+        plusBtn.addEventListener('click', () => {
+            const cur = parseInt(qtyEl.textContent) || 1;
+            if (cur < 20) qtyEl.textContent = cur + 1;
+            qtyEl.style.transform = 'scale(1.3)';
+            setTimeout(() => qtyEl.style.transform = '', 150);
+        });
+    }
+
+    // Botón agregar — respeta la cantidad
     const btn = card.querySelector('.add-to-cart');
     if (btn) {
         btn.addEventListener('click', () => {
             if (!p.variantes || !p.variantes.length) return;
-            const sel = document.getElementById(`select-${p.productId}`);
+            const sel   = document.getElementById(`select-${pid}`);
             const precio = parseFloat(sel.value);
-            if (isTorta) {
-                window.addToCart(p.productId, p.nombre, precio);
-            } else {
-                const label = sel.options[sel.selectedIndex].text;
-                window.addDrink(p.nombre, precio, label);
+            const qty   = parseInt(qtyEl ? qtyEl.textContent : 1) || 1;
+            const label = sel.options[sel.selectedIndex].text;
+
+            for (let i = 0; i < qty; i++) {
+                if (isTorta) {
+                    window.addToCart(pid, p.nombre, precio);
+                } else {
+                    window.addDrink(p.nombre, precio, label);
+                }
             }
+
+            // Feedback visual en el botón
+            const orig = btn.textContent;
+            btn.textContent = qty > 1 ? `✅ ${qty} agregados` : '✅ Agregado';
+            btn.style.background = 'var(--success, #25D366)';
+            btn.disabled = true;
+            setTimeout(() => {
+                btn.textContent = orig;
+                btn.style.background = '';
+                btn.disabled = false;
+                if (qtyEl) qtyEl.textContent = '1'; // reset cantidad
+            }, 1500);
         });
     }
 
