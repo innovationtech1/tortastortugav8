@@ -1846,13 +1846,25 @@ async function cargarHistEmp(){
     const q=query(collection(db,'turnos'), where('uid','==',user.uid));
     const s=await getDocs(q);
     let mins=0,cnt=0,items=[];
+    const ahora = new Date();
     s.forEach(doc=>{
       const t={...doc.data(),id:doc.id};
       // Filtrar por semana en JavaScript
       const entrada = t.entrada?.toDate?.() || (t.entrada?.seconds ? new Date(t.entrada.seconds*1000) : null);
       if(!entrada) return;
       if(entrada >= l && entrada <= d){
-        if(t.minTrabajados) mins+=t.minTrabajados;
+        if(t.minTrabajados){
+          // Turno completado — usar minTrabajados guardado
+          mins += t.minTrabajados;
+        } else if(t.estado === 'activo' || t.estado === 'descanso'){
+          // Turno en curso — calcular en tiempo real
+          const descMin = t.minDescanso || 0;
+          const bruto = Math.round((ahora - entrada) / 60000);
+          const neto = Math.max(0, bruto - descMin);
+          mins += neto;
+          // Guardar calculado para mostrarlo en la fila
+          t._minCalculados = neto;
+        }
         cnt++;
         items.push(t);
       }
@@ -1880,7 +1892,9 @@ function hiRow(t, adminMode){
   const e = t.entrada?.toDate?.() || (t.entrada?.seconds ? new Date(t.entrada.seconds*1000) : null);
   const s = t.salida?.toDate?.()  || (t.salida?.seconds  ? new Date(t.salida.seconds*1000)  : null);
   const inc = !s || t.estado==='activo' || t.estado==='descanso';
-  const hrs = t.minTrabajados ? mToH(t.minTrabajados) : '—';
+  // Usar minTrabajados si está completado, o _minCalculados si está activo
+  const hrsMin = t.minTrabajados || t._minCalculados || 0;
+  const hrs = hrsMin > 0 ? mToH(hrsMin) : (inc ? t.estado : '—');
 
   // segmentos de detalle
   let segs = '';
@@ -1904,7 +1918,7 @@ function hiRow(t, adminMode){
         <div class="hi-date">${e?fShort(e):'—'}${t.editado?' · corregido':''}</div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.25rem;">
-        <div class="hi-hrs ${inc?'hc-wa':'hc-ok'}">${inc?t.estado||'activo':hrs}</div>
+        <div class="hi-hrs ${hrsMin>0?'hc-ok':inc?'hc-wa':'hc-rest'}">${hrsMin>0?hrs:(inc?t.estado||'activo':'—')}</div>
         ${adminMode?`<button class="btn bs bsm" style="font-size:.68rem;padding:.28rem .5rem;" onclick="abrirEditT('${t.uid}','${t.nombre||''} ${t.apellido||''}','${t.id}')">✏️ Editar</button>`:''}
       </div>
     </div>
