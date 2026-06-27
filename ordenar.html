@@ -46,7 +46,15 @@
 </head>
 <body>
 <header class="app-header">
-        <a href="index.html" class="app-logo" style="text-decoration:none;"> <img src="/tortastortugav8/icons/icon-192.png" alt="Tortas Tortuga" style="width:28px;height:28px;border-radius:50%;object-fit:cover;vertical-align:middle;"> Tortas Tortuga</a>
+        <a href="index.html" class="app-logo" style="text-decoration:none;display:flex;align-items:center;gap:.6rem;">
+          <img src="/tortastortugav8/icons/icon-192.png" alt="Tortas Tortuga"
+            style="width:46px;height:46px;border-radius:50%;object-fit:cover;
+                   box-shadow:0 0 0 2px rgba(255,90,0,.4);flex-shrink:0;">
+          <span style="display:flex;flex-direction:column;line-height:1.1;">
+            <span style="font-size:1rem;font-weight:900;color:#FF5A00;letter-spacing:.02em;">TORTAS</span>
+            <span style="font-size:1rem;font-weight:900;color:#fff;letter-spacing:.02em;">TORTUGA</span>
+          </span>
+        </a>
     <div class="header-actions">
         <button class="clear-cart-btn" id="clear-cart-btn" onclick="limpiarCarrito()" style="display:none;">Vaciar</button>
         <button class="signout-btn" onclick="window.location.href='index.html'" title="Ir al inicio"> Inicio</button>
