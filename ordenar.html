@@ -852,7 +852,7 @@ function cerrarOrdenModal() {
                     </button>
 
                     <!-- Ordenar cuenta activa -->
-                    <button onclick="ordenarCuentaActiva()"
+                    <button onclick="ordenarCuentaActiva()" style="display:none;" disabled
                         style="width:100%;padding:.8rem;background:linear-gradient(135deg,#25D366,#18a849);
                                color:#fff;border:none;border-radius:12px;font-family:inherit;
                                font-size:.92rem;font-weight:700;cursor:pointer;
@@ -862,7 +862,7 @@ function cerrarOrdenModal() {
 
                     <!-- Ordenar todas las cuentas -->
                     <button onclick="ordenarTodasWhatsApp()"
-                        id="btn-todas-cuentas"
+                        id="btn-todas-cuentas" style="display:none!important;" disabled
                         style="width:100%;padding:.7rem;background:rgba(37,211,102,.1);
                                border:1.5px solid rgba(37,211,102,.35);color:#25D366;
                                border-radius:12px;font-family:inherit;font-size:.85rem;
@@ -1025,7 +1025,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782653545">
+<script type="module" src="js/app.js?v=1782653706">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
@@ -1383,11 +1383,11 @@ function enviarOrdenModal() {
     </div>
 
     <!-- Botones -->
-    <button onclick="enviarOrdenModal()"
+    <button onclick="enviarOrdenModal()" style="display:none;" disabled
       style="width:100%;padding:.85rem;background:linear-gradient(135deg,#25D366,#18a849);
              color:#fff;border:none;border-radius:12px;font-family:inherit;font-size:.95rem;
              font-weight:700;cursor:pointer;margin-bottom:.5rem;">
-      📱 Enviar por WhatsApp
+      <!-- 📱 Enviar por WhatsApp (desactivado) -->
     </button>
     <button onclick="cerrarOrdenModal()"
       style="width:100%;padding:.7rem;background:transparent;border:1px solid rgba(255,255,255,.12);
