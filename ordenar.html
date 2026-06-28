@@ -104,6 +104,50 @@ function limpiarCarrito() {
         }
     }
 }
+
+/* addToCart y addDrink — expuestas globalmente para menu.js */
+function addToCart(id, nombre, precio, qty) {
+    var pi = {
+        id: id,
+        nombre: nombre,
+        precio: precio || 0,
+        modificaciones: [],
+        _qty: qty || 1
+    };
+    window._pendingItem = pi;
+
+    /* Reset chips */
+    document.querySelectorAll('.mod-chip').forEach(function(c) {
+        c.classList.remove('selected');
+        var inp = c.querySelector('input');
+        if (inp) inp.checked = false;
+    });
+    var notes = document.getElementById('mods-notes');
+    if (notes) notes.value = '';
+
+    /* Título del modal */
+    var title = document.getElementById('mods-item-name');
+    if (title) title.textContent = (qty && qty > 1) ? nombre + ' ×' + qty : nombre;
+
+    /* Abrir modal */
+    var modal = document.getElementById('mods-modal');
+    if (modal) modal.classList.add('active');
+}
+
+function addDrink(nombre, precio, detalle) {
+    var item = { nombre: nombre, precio: precio || 0, modificaciones: detalle ? [detalle] : [] };
+    var CS = window._cuentasSys;
+    if (CS) {
+        var ca = CS.cuentas.find(function(c) { return c.id === CS.activa; });
+        if (ca) ca.items.push(item);
+        if (window.renderCuentasTabs) window.renderCuentasTabs();
+        if (window.renderCartItems) window.renderCartItems();
+    }
+    var ci = document.getElementById('cart-icon');
+    if (ci) { ci.style.transform = 'scale(1.3)'; setTimeout(function(){ ci.style.transform=''; }, 250); }
+    var cm = document.getElementById('cart-modal');
+    if (cm) cm.classList.add('active');
+}
 </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
