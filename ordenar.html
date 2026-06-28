@@ -142,8 +142,8 @@ function addToCart(id, nombre, precio, qty) {
 }
 
 /* Stubs que el módulo sobreescribe al cargar */
-window.renderCuentasTabs = window.renderCuentasTabs || function() {};
-window.renderCartItems = window.renderCartItems || function() {
+/* renderCuentasTabs definida abajo */
+window.renderCartItems = function() {
     var cs = window._cuentasSys;
     var el = document.getElementById('cart-items');
     var lbl = document.getElementById('cuenta-label-active');
@@ -174,8 +174,7 @@ window.renderCartItems = window.renderCartItems || function() {
     if (cntEl) cntEl.textContent = allTot;
 };
 
-/* Tab stubs */
-window.renderCuentasTabs = window.renderCuentasTabs || function() {
+window.renderCuentasTabs = function() {
     var tabs = document.getElementById('cuentas-tabs');
     if (!tabs) return;
     var cs = window._cuentasSys;
@@ -625,7 +624,110 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782627129"></script>
+<script type="module" src="js/app.js?v=1782644925">
+function editarItemCuenta(idx) {
+    var cs = window._cuentasSys;
+    var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
+    if (!c || !c.items[idx]) return;
+    var item = c.items[idx];
+    window._editingItem = { cuentaId: cs.activa, itemIdx: idx, precioBase: item.precio };
+
+    // Reset chips
+    document.querySelectorAll('.mod-chip').forEach(function(chip) {
+        chip.classList.remove('selected');
+        var inp = chip.querySelector('input');
+        if (inp) inp.checked = false;
+    });
+
+    // Pre-select current mods
+    var mods = item.modificaciones || [];
+    document.querySelectorAll('.mod-chip').forEach(function(chip) {
+        var inp = chip.querySelector('input');
+        if (inp && mods.some(function(m){ return m === inp.value; })) {
+            chip.classList.add('selected');
+            inp.checked = true;
+        }
+    });
+
+    // Set nota
+    var nota = mods.find(function(m){ return m.startsWith('📝 '); });
+    var notesEl = document.getElementById('mods-notes');
+    if (notesEl) notesEl.value = nota ? nota.replace('📝 ', '') : '';
+
+    // Set modal title
+    var titleEl = document.getElementById('mods-item-name');
+    if (titleEl) titleEl.textContent = '✏️ ' + item.nombre;
+
+    // Change button text
+    var confirmBtn = document.getElementById('mods-confirm');
+    if (confirmBtn) confirmBtn.textContent = '💾 Guardar cambios';
+
+    // Open modal
+    var modal = document.getElementById('mods-modal');
+    if (modal) modal.classList.add('active');
+}
+
+function abrirOrdenModal(cid) {
+    var cs = window._cuentasSys;
+    var c = cs ? cs.cuentas.find(function(x){ return x.id === cid; }) : null;
+    if (!c) return;
+    window._ordenCuentaId = cid;
+    var total = c.items.reduce(function(s,i){ return s+i.precio; }, 0);
+    var titulo = document.getElementById('orden-modal-titulo');
+    if (titulo) titulo.textContent = '📋 ' + c.nombre;
+    var items = document.getElementById('orden-modal-items');
+    if (items) items.textContent = c.items.length + ' producto' + (c.items.length !== 1 ? 's' : '');
+    var tot = document.getElementById('orden-modal-total');
+    if (tot) tot.textContent = '$' + total.toFixed(2);
+    var nom = document.getElementById('orden-nombre');
+    if (nom) nom.value = '';
+    var tel = document.getElementById('orden-telefono');
+    if (tel) tel.value = c._telefono || '';
+    var pickup = document.getElementById('orden-tipo-pickup');
+    if (pickup) pickup.checked = true;
+    var pl = document.getElementById('orden-tipo-pickup-lbl');
+    if (pl) pl.style.borderColor = '#FF5A00';
+    var dl = document.getElementById('orden-tipo-delivery-lbl');
+    if (dl) dl.style.borderColor = 'rgba(255,255,255,.12)';
+    var ov = document.getElementById('orden-cuenta-overlay');
+    var modal = document.getElementById('orden-cuenta-modal');
+    if (ov) { ov.style.opacity='1'; ov.style.pointerEvents='all'; }
+    if (modal) modal.style.transform = 'translateY(0)';
+}
+
+function enviarOrdenModal() {
+    var cid = window._ordenCuentaId;
+    var cs = window._cuentasSys;
+    var c = cs ? cs.cuentas.find(function(x){ return x.id === cid; }) : null;
+    if (!c) return;
+    var nombre = (document.getElementById('orden-nombre')?.value || '').trim() || c.nombre;
+    var telefono = (document.getElementById('orden-telefono')?.value || '').trim();
+    var tipo = document.querySelector('input[name="orden-tipo"]:checked')?.value || 'pickup';
+    var total = c.items.reduce(function(s,i){ return s+i.precio; }, 0);
+    c._telefono = telefono;
+    var lineas = [
+        '🐢 *TORTAS TORTUGA*',
+        '━━━━━━━━━━━━━━━━━━━━',
+        '📋 *' + c.nombre + '*',
+        '👤 ' + nombre + (telefono ? ' · 📞 ' + telefono : ''),
+        (tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Domicilio'),
+        ''
+    ];
+    c.items.forEach(function(item, i) {
+        var linea = (i+1) + '. *' + item.nombre + '*';
+        if (item.modificaciones && item.modificaciones.length) {
+            linea += ' · ' + item.modificaciones.join(', ');
+        }
+        linea += ' — $' + item.precio.toFixed(2);
+        lineas.push(linea);
+    });
+    lineas.push('');
+    lineas.push('💰 *Total: $' + total.toFixed(2) + '*');
+    cerrarOrdenModal();
+    window.open('https://wa.me/12108678210?text=' + encodeURIComponent(lineas.join('\n')), '_blank');
+}
+
+</script>
 <script type="module">
     import { seedProductos, renderMenu } from './js/menu.js?v=1782626990";
     (async () => {
