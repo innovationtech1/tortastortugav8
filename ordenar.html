@@ -362,6 +362,90 @@ async function _doEnvioAdmin() {
     }
 }
 
+function simularPago(metodo) {
+    var cs = window._cuentasSys;
+    var total = cs ? cs.cuentas.reduce(function(s,c){
+        return s + c.items.reduce(function(ss,i){ return ss+i.precio; },0);
+    }, 0) : 0;
+
+    var icono  = metodo === 'efectivo' ? '💵' : '💳';
+    var nombre = metodo === 'efectivo' ? 'Efectivo' : 'Tarjeta';
+
+    // Mostrar confirmación de pago simulado
+    var ov = document.getElementById('pago-confirm-overlay');
+    var ico = document.getElementById('pago-confirm-icon');
+    var tit = document.getElementById('pago-confirm-titulo');
+    var tot = document.getElementById('pago-confirm-total');
+    var met = document.getElementById('pago-confirm-metodo');
+
+    if (ico) ico.textContent = icono;
+    if (tit) tit.textContent = 'Confirmar Pago';
+    if (tot) tot.textContent = '$' + total.toFixed(2);
+    if (met) met.textContent = nombre;
+
+    // Guardar método para confirmar
+    window._metodoPagoActual = metodo;
+
+    // Cerrar POS, abrir confirmación
+    var posModal = document.getElementById('pos-modal');
+    if (posModal) posModal.classList.remove('active');
+    if (ov) ov.style.display = 'flex';
+}
+
+function cerrarPagoConfirm() {
+    var ov = document.getElementById('pago-confirm-overlay');
+    if (ov) ov.style.display = 'none';
+    // Regresar al POS
+    var posModal = document.getElementById('pos-modal');
+    if (posModal) posModal.classList.add('active');
+}
+
+async function confirmarPagoSimulado() {
+    var metodo = window._metodoPagoActual || 'efectivo';
+    var cs     = window._cuentasSys;
+
+    // Cerrar modal
+    var ov = document.getElementById('pago-confirm-overlay');
+    if (ov) ov.style.display = 'none';
+
+    // Actualizar estado del pedido en Firestore si existe
+    // (solo si hay pedidos recientes enviados)
+    try {
+        if (window._ultimosPedidosIds && window._ultimosPedidosIds.length > 0 && window._updatePedidoMetodoPago) {
+            for (var i = 0; i < window._ultimosPedidosIds.length; i++) {
+                await window._updatePedidoMetodoPago(window._ultimosPedidosIds[i], metodo);
+            }
+            window._ultimosPedidosIds = [];
+        }
+    } catch(e) { console.warn('No se pudo actualizar método de pago:', e); }
+
+    // Resetear cuentas sin cerrar sesión de Google
+    window._cuentasSys = {
+        cuentas: [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }],
+        activa: 1,
+        counter: 1
+    };
+    if (window.renderCuentasTabs) window.renderCuentasTabs();
+    if (window.renderCartItems)   window.renderCartItems();
+
+    // Cerrar carrito y POS
+    var cartModal = document.getElementById('cart-modal');
+    if (cartModal) cartModal.classList.remove('active');
+    var posModal = document.getElementById('pos-modal');
+    if (posModal) posModal.classList.remove('active');
+
+    // Toast de confirmación
+    var toast = document.getElementById('undo-toast');
+    var msg   = document.getElementById('undo-toast-msg');
+    if (toast && msg) {
+        var icono = metodo === 'efectivo' ? '💵' : '💳';
+        msg.textContent = icono + ' Pago con ' + (metodo === 'efectivo' ? 'efectivo' : 'tarjeta') + ' confirmado — listo para nuevo pedido';
+        toast.style.display = 'flex';
+        clearTimeout(window._undoTimer);
+        window._undoTimer = setTimeout(function(){ toast.style.display = 'none'; }, 5000);
+    }
+}
+
 function switchCuenta(cid) {
     var cs = window._cuentasSys;
     if (cs) { cs.activa = cid; window.renderCuentasTabs(); window.renderCartItems(); }
@@ -876,13 +960,23 @@ function cerrarOrdenModal() {
             <button class="close-btn" id="close-pos">x</button>
         </div>
         <div class="pos-body">
-            <button class="pos-method" id="pay-stripe" onclick="pagarConStripe()">
-                <span class="pos-method-icon"></span>
+            <!-- SIMULACIÓN: Efectivo -->
+            <button class="pos-method" onclick="simularPago('efectivo')" style="border:2px solid transparent;transition:.15s;" onmouseover="this.style.borderColor='#25D366'" onmouseout="this.style.borderColor='transparent'">
+                <span class="pos-method-icon" style="background:#25D366;font-size:1.2rem;">💵</span>
                 <div class="pos-method-info">
-                    <div class="pos-method-name">Tarjeta de Credito / Debito</div>
-                    <div class="pos-method-sub">Visa · Mastercard · Apple Pay · Google Pay</div>
+                    <div class="pos-method-name">Efectivo</div>
+                    <div class="pos-method-sub">Pago en caja</div>
                 </div>
-                <span class="pos-method-arrow">></span>
+                <span class="pos-method-arrow">›</span>
+            </button>
+            <!-- SIMULACIÓN: Tarjeta -->
+            <button class="pos-method" onclick="simularPago('tarjeta')" style="border:2px solid transparent;transition:.15s;" onmouseover="this.style.borderColor='#3B82F6'" onmouseout="this.style.borderColor='transparent'">
+                <span class="pos-method-icon" style="background:#3B82F6;font-size:1.2rem;">💳</span>
+                <div class="pos-method-info">
+                    <div class="pos-method-name">Tarjeta</div>
+                    <div class="pos-method-sub">Crédito / Débito</div>
+                </div>
+                <span class="pos-method-arrow">›</span>
             </button>
             <button class="pos-method" onclick="mostrarInfoPago('cashapp')">
                 <span class="pos-method-icon" style="background:#00D64F;">$</span>
@@ -928,7 +1022,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782651555">
+<script type="module" src="js/app.js?v=1782652146">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
@@ -1362,6 +1456,42 @@ function enviarOrdenModal() {
                border:1px solid rgba(255,255,255,.12);color:#888;
                border-radius:11px;font-family:inherit;font-size:.85rem;cursor:pointer;">
       Cancelar
+    </button>
+  </div>
+</div>
+
+
+<!-- MODAL CONFIRMACIÓN DE PAGO -->
+<div id="pago-confirm-overlay"
+     style="position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,.92);z-index:99999;
+            display:none;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:#1C1C1C;border:1px solid rgba(255,255,255,.12);
+              border-radius:20px;padding:1.75rem 1.4rem;width:100%;max-width:320px;text-align:center;">
+
+    <div id="pago-confirm-icon" style="font-size:3.5rem;margin-bottom:.5rem;">💵</div>
+    <div id="pago-confirm-titulo" style="font-size:1rem;font-weight:800;color:#fff;margin-bottom:.4rem;">Confirmar Pago</div>
+
+    <!-- Total -->
+    <div style="background:rgba(255,90,0,.1);border:1px solid rgba(255,90,0,.25);
+                border-radius:12px;padding:.85rem;margin:.85rem 0;">
+      <div style="font-size:.75rem;color:#888;margin-bottom:.2rem;">TOTAL A COBRAR</div>
+      <div id="pago-confirm-total" style="font-size:2rem;font-weight:900;color:#FF5A00;">$0.00</div>
+      <div style="font-size:.78rem;color:#888;margin-top:.2rem;">Método: <span id="pago-confirm-metodo" style="color:#fff;font-weight:700;">Efectivo</span></div>
+    </div>
+
+    <!-- Botones -->
+    <button onclick="confirmarPagoSimulado()"
+        style="width:100%;padding:.85rem;background:linear-gradient(135deg,#25D366,#18a849);
+               color:#fff;border:none;border-radius:12px;font-family:inherit;
+               font-size:.95rem;font-weight:800;cursor:pointer;margin-bottom:.5rem;">
+      ✅ Confirmar Pago
+    </button>
+    <button onclick="cerrarPagoConfirm()"
+        style="width:100%;padding:.7rem;background:transparent;
+               border:1px solid rgba(255,255,255,.12);color:#888;
+               border-radius:12px;font-family:inherit;font-size:.88rem;cursor:pointer;">
+      ← Cambiar método
     </button>
   </div>
 </div>
