@@ -46,7 +46,11 @@ const posModal      = document.getElementById('pos-modal');
 const clearCartBtn  = document.getElementById('clear-cart-btn');
 
 // ─── ABRIR CARRITO ───────────────────────────────────────────────
-cartIcon.addEventListener('click', () => cartModal.classList.add('active'));
+cartIcon.addEventListener('click', () => {
+    cartModal.classList.add('active');
+    if (window.renderCuentasTabs) window.renderCuentasTabs();
+    if (window.renderCartItems) window.renderCartItems();
+});
 document.getElementById('close-cart').addEventListener('click', () => cartModal.classList.remove('active'));
 cartModal.addEventListener('click', e => { if (e.target === cartModal) cartModal.classList.remove('active'); });
 
@@ -145,6 +149,13 @@ window._confirmarMods = window.confirmarMods = function confirmarMods(conMods) {
     if (window._editingItem) {
         const { cuentaId, itemIdx, precioBase } = window._editingItem;
         const CS = window._cuentasSys;
+
+// Inicializar vista del carrito cuando DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.renderCuentasTabs) window.renderCuentasTabs();
+    if (window.renderCartItems) window.renderCartItems();
+});
+
         const c = CS ? CS.cuentas.find(c => c.id === cuentaId) : null;
         if (c && c.items[itemIdx] !== undefined && conMods) {
             const { mods, extra } = getMods();
@@ -200,7 +211,8 @@ window._confirmarMods = window.confirmarMods = function confirmarMods(conMods) {
 
 // ─── ACTUALIZAR CARRITO ──────────────────────────────────────────
 function updateCart() {
-    // Use new cuenta system if available
+    // Always use cuenta system
+    if (window.renderCuentasTabs) window.renderCuentasTabs();
     if (window.renderCartItems) {
         window.renderCartItems();
         return;
@@ -948,7 +960,11 @@ window.renderCartItems = function() {
     const items = cActiva.items;
 
     if (items.length === 0) {
-        cartItemsEl.innerHTML = '<p class="empty-cart">Esta cuenta está vacía 🥺</p>';
+        cartItemsEl.innerHTML = `<p class="empty-cart">
+            <span style="font-size:1.5rem">🛒</span><br>
+            <strong style="color:#fff">${cActiva.nombre}</strong> está vacía<br>
+            <span style="font-size:.8rem;color:#555">Agrega productos desde el menú</span>
+        </p>`;
     } else {
         cartItemsEl.innerHTML = items.map((item, idx) => {
             const otherCuentas = CS.cuentas.filter(c => c.id !== CS.activa);
