@@ -205,8 +205,11 @@
     </div>
 </div>
 
-<script type="module" src="../js/auth.js">
-    // ── LOGIN CAJERO ──────────────────────────────────────────
+<script type="module" src="../js/auth.js"></script>
+
+<script>
+/* Cajero login — plain script */
+// ── LOGIN CAJERO ──────────────────────────────────────────
     const btnCajero = document.getElementById('btn-cajero');
     const cajeroIdInp  = document.getElementById('cajero-id');
     const cajeroPin    = document.getElementById('cajero-pin');
@@ -303,6 +306,22 @@
         }
     }
 
+/* switchTab con soporte cajero */
+function switchTab(tab) {
+    var forms = document.querySelectorAll('.auth-form');
+    var tabs  = document.querySelectorAll('.auth-tab');
+    forms.forEach(function(f) { f.classList.remove('active'); f.style.display='none'; });
+    tabs.forEach(function(t)  { t.classList.remove('active'); });
+
+    var targetForm = document.getElementById('form-' + tab);
+    var targetTab  = document.getElementById('tab-' + tab);
+    if (targetForm) { targetForm.classList.add('active'); targetForm.style.display='block'; }
+    if (targetTab)  targetTab.classList.add('active');
+
+    // Focus first input
+    if (tab === 'cajero') setTimeout(function(){ document.getElementById('cajero-id')?.focus(); }, 100);
+    if (tab === 'login')  setTimeout(function(){ document.getElementById('login-email')?.focus(); }, 100);
+}
 </script>
 </body>
 </html>
