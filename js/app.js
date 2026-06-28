@@ -353,8 +353,11 @@ window.generarWhatsApp = async function() {
 };
 
 // ─── BOTONES PRINCIPALES ─────────────────────────────────────────
-document.getElementById('checkout-btn').addEventListener('click', () => window.generarWhatsApp());
-document.getElementById('pay-now-btn').addEventListener('click', () => {
+// checkout-btn y pay-now-btn ahora son por cuenta (modal de orden)
+const _checkoutBtn = document.getElementById('checkout-btn');
+if (_checkoutBtn) _checkoutBtn.addEventListener('click', () => window.generarWhatsApp());
+const _payNowBtn = document.getElementById('pay-now-btn');
+if (_payNowBtn) _payNowBtn.addEventListener('click', () => {
     if (!validarFormulario()) return;
     cartModal.classList.remove('active');
     posModal.classList.add('active');
