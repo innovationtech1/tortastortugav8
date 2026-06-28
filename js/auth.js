@@ -9,7 +9,8 @@ import {
     GoogleAuthProvider,
     sendPasswordResetEmail,
     sendEmailVerification,
-    onAuthStateChanged
+    onAuthStateChanged,
+    signOut
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import {
     doc, setDoc, getDoc, collection, query, where, getDocs, serverTimestamp
