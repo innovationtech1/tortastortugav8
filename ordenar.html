@@ -215,6 +215,78 @@ function addDrink(nombre, precio, detalle) {
 }
 
 /* Funciones de cuenta como globales inmediatas */
+function enviarOrdenAdmin() {
+    var cs = window._cuentasSys;
+    if (!cs) return;
+    var con = cs.cuentas.filter(function(c){ return c.items.length > 0; });
+    if (con.length === 0) { alert('No hay productos en ninguna cuenta.'); return; }
+    var ov = document.getElementById('enviar-admin-overlay');
+    var res = document.getElementById('enviar-admin-resumen');
+    if (res) {
+        var h = ''; var tot = 0;
+        con.forEach(function(c) {
+            var ct = c.items.reduce(function(s,i){ return s+i.precio; },0); tot += ct;
+            h += '<div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:.83rem;">'
+               + '<span style="color:#fff;font-weight:600;">' + c.nombre + '</span>'
+               + '<span style="color:#FF5A00;font-weight:700;">$' + ct.toFixed(2) + ' - ' + c.items.length + ' prod.</span>'
+               + '</div>';
+        });
+        h += '<div style="display:flex;justify-content:space-between;padding:.5rem 0 0;font-weight:800;">'
+           + '<span style="color:#ccc;">Total</span><span style="color:#FF5A00;">$' + tot.toFixed(2) + '</span></div>';
+        res.innerHTML = h;
+    }
+    if (ov) ov.style.display = 'flex';
+}
+
+function cerrarEnviarAdminModal() {
+    var ov = document.getElementById('enviar-admin-overlay');
+    if (ov) ov.style.display = 'none';
+}
+
+async function confirmarEnvioAdmin() {
+    var cs = window._cuentasSys;
+    if (!cs) return;
+    var btn = document.getElementById('btn-confirmar-envio');
+    if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+    try {
+        var con = cs.cuentas.filter(function(c){ return c.items.length > 0; });
+        var ts = Date.now(); var env = 0;
+        for (var i = 0; i < con.length; i++) {
+            var c = con[i];
+            var tot = c.items.reduce(function(s,it){ return s+it.precio; },0);
+            var pedido = {
+                ticketId: 'TT-' + ts + '-' + (i+1),
+                cliente: c.nombre,
+                items: c.items.map(function(it){
+                    return it.nombre + (it.modificaciones&&it.modificaciones.length?' ('+it.modificaciones.join(', ')+')'  :'') + ' - $'+it.precio.toFixed(2);
+                }).join(' | '),
+                itemsData: c.items,
+                total: tot,
+                estado: 'Nuevo',
+                tipo: 'local',
+                metodoPago: 'pendiente',
+                cuentaColor: c.color,
+                telefono: c._telefono || ''
+            };
+            if (window._addPedidoToFirestore) await window._addPedidoToFirestore(pedido);
+            env++;
+        }
+        cerrarEnviarAdminModal();
+        var toast = document.getElementById('undo-toast');
+        var msg = document.getElementById('undo-toast-msg');
+        if (toast && msg) {
+            msg.textContent = env + ' orden(es) enviadas al admin';
+            toast.style.display = 'flex';
+            clearTimeout(window._undoTimer);
+            window._undoTimer = setTimeout(function(){ toast.style.display='none'; },4000);
+        }
+        if (btn) { btn.disabled = false; btn.textContent = 'Confirmar y Enviar'; }
+    } catch(e) {
+        alert('Error: ' + e.message);
+        if (btn) { btn.disabled = false; btn.textContent = 'Confirmar y Enviar'; }
+    }
+}
+
 function switchCuenta(cid) {
     var cs = window._cuentasSys;
     if (cs) { cs.activa = cid; window.renderCuentasTabs(); window.renderCartItems(); }
@@ -608,6 +680,15 @@ function cerrarOrdenModal() {
                 <!-- Botones de acción -->
                 <div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.75rem;">
 
+                    <!-- ENVIAR AL ADMIN -->
+                    <button onclick="enviarOrdenAdmin()"
+                        style="width:100%;padding:.85rem;background:linear-gradient(135deg,#FF5A00,#FF8800);
+                               color:#fff;border:none;border-radius:12px;font-family:inherit;
+                               font-size:.95rem;font-weight:800;cursor:pointer;
+                               box-shadow:0 4px 16px rgba(255,90,0,.3);">
+                        &#128640; Enviar Orden al Admin
+                    </button>
+
                     <!-- Ordenar cuenta activa -->
                     <button onclick="ordenarCuentaActiva()"
                         style="width:100%;padding:.8rem;background:linear-gradient(135deg,#25D366,#18a849);
@@ -772,7 +853,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782648857">
+<script type="module" src="js/app.js?v=1782649179">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
