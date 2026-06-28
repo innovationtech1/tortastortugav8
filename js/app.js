@@ -531,14 +531,7 @@ document.getElementById('ticket-search-input')?.addEventListener('keypress', (e)
 // SISTEMA DE SPLIT DE CUENTAS — Tortas Tortuga
 // ═══════════════════════════════════════════════════════════════
 
-// Estado del split
-let splitMode = false;
-let cuentas = [
-    { id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }
-];
-let cuentaActiva = 1;
-let cuentaCounter = 1;
-
+// Estado del split (vars declaradas al inicio del archivo)
 const COLORES = ['#FF5A00','#25D366','#3B82F6','#A78BFA','#F59E0B','#EC4899'];
 
 // ── ABRIR PANEL SPLIT ──────────────────────────────────────────
@@ -812,21 +805,7 @@ window.resetSplit = function() {
     renderSplit();
 };
 
-window.abrirSplit = function() {
-    if (!splitMode) {
-        splitMode = true;
-        // Mover items existentes del carrito a Cuenta 1
-        if (cart.length > 0) {
-            cuentas[0].items = [...cart];
-            cart = [];
-            updateCart();
-        }
-    }
-    renderSplit();
-    document.getElementById('split-panel').classList.add('open');
-    document.getElementById('split-overlay').style.opacity = '1';
-    document.getElementById('split-overlay').style.pointerEvents = 'all';
-};
+
 
 window.cerrarSplit = function() {
     document.getElementById('split-panel').classList.remove('open');
