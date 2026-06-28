@@ -1336,3 +1336,12 @@ window.editarItemCuenta = function(itemIdx) {
 };
 
 // edit mode handled in original confirmarMods
+
+
+// ── Guardar pedido en Firestore (llamado desde script global) ──
+window._addPedidoToFirestore = async function(pedido) {
+    pedido.creado = serverTimestamp();
+    const ref = await addDoc(collection(db, 'pedidos'), pedido);
+    console.log('Pedido guardado:', ref.id);
+    return ref.id;
+};
