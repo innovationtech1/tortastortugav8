@@ -322,7 +322,13 @@ async function confirmarEnvioAdmin() {
                 cuentaColor: c.color,
                 telefono: c._telefono || ''
             };
-            if (window._addPedidoToFirestore) await window._addPedidoToFirestore(pedido);
+            console.log('Enviando pedido:', pedido);
+            if (window._addPedidoToFirestore) {
+                var id = await window._addPedidoToFirestore(pedido);
+                console.log('Pedido guardado con ID:', id);
+            } else {
+                throw new Error('_addPedidoToFirestore no esta disponible - app.js no cargo correctamente');
+            }
             env++;
         }
         cerrarEnviarAdminModal();
@@ -336,7 +342,8 @@ async function confirmarEnvioAdmin() {
         }
         if (btn) { btn.disabled = false; btn.textContent = 'Confirmar y Enviar'; }
     } catch(e) {
-        alert('Error: ' + e.message);
+        console.error('ERROR enviando al admin:', e);
+        alert('Error al enviar: ' + e.message + '\n\nRevisa la consola para mas detalles.');
         if (btn) { btn.disabled = false; btn.textContent = 'Confirmar y Enviar'; }
     }
 }
@@ -907,7 +914,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782650641">
+<script type="module" src="js/app.js?v=1782650795">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
