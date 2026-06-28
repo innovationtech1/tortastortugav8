@@ -312,10 +312,12 @@ function crearCard(p) {
     <div class="qty-add-row">
         <div class="qty-selector">
             <button class="qty-btn qty-minus" data-pid="${pid}" type="button">−</button>
-            <span class="qty-num" id="qty-${pid}">1</span>
+            <span class="qty-num" id="qty-${pid}">0</span>
             <button class="qty-btn qty-plus" data-pid="${pid}" type="button">+</button>
         </div>
-        <button class="add-to-cart">${isTorta ? '🛒 Agregar al Pedido' : '🛒 Agregar'}</button>
+        <button class="add-to-cart" id="btn-add-${pid}" style="display:none;">
+            ${isTorta ? '🛒 Agregar' : '🛒 Agregar'}
+        </button>
     </div>
     </div>`;
 
@@ -327,17 +329,25 @@ function crearCard(p) {
     const qtyEl   = card.querySelector(`#qty-${pid}`);
 
     if (minusBtn && plusBtn && qtyEl) {
+        const updateAddBtn = () => {
+            const cur = parseInt(qtyEl.textContent) || 0;
+            const addBtn = card.querySelector('.add-to-cart');
+            if (addBtn) addBtn.style.display = cur > 0 ? 'flex' : 'none';
+            actualizarBotonAgregarTodo();
+        };
         minusBtn.addEventListener('click', () => {
-            const cur = parseInt(qtyEl.textContent) || 1;
-            if (cur > 1) qtyEl.textContent = cur - 1;
+            const cur = parseInt(qtyEl.textContent) || 0;
+            if (cur > 0) qtyEl.textContent = cur - 1;
             qtyEl.style.transform = 'scale(1.3)';
             setTimeout(() => qtyEl.style.transform = '', 150);
+            updateAddBtn();
         });
         plusBtn.addEventListener('click', () => {
-            const cur = parseInt(qtyEl.textContent) || 1;
+            const cur = parseInt(qtyEl.textContent) || 0;
             if (cur < 20) qtyEl.textContent = cur + 1;
             qtyEl.style.transform = 'scale(1.3)';
             setTimeout(() => qtyEl.style.transform = '', 150);
+            updateAddBtn();
         });
     }
 
@@ -382,3 +392,87 @@ function crearCard(p) {
 
     return card;
 }
+
+
+// ── BOTÓN FLOTANTE: AGREGAR TODO AL CARRITO ──────────────────
+export function actualizarBotonAgregarTodo() {
+    let totalItems = 0;
+    let totalProductos = 0;
+    document.querySelectorAll('.qty-num').forEach(el => {
+        const q = parseInt(el.textContent) || 0;
+        if (q > 0) { totalItems += q; totalProductos++; }
+    });
+    const fab = document.getElementById('fab-agregar-todo');
+    const fabCount = document.getElementById('fab-count');
+    if (!fab) return;
+    if (totalItems > 0) {
+        fab.style.display = 'flex';
+        if (fabCount) fabCount.textContent = totalItems + ' producto' + (totalItems > 1 ? 's' : '');
+    } else {
+        fab.style.display = 'none';
+    }
+}
+
+window.agregarTodoAlCarrito = function() {
+    const items = [];
+    document.querySelectorAll('.product-card').forEach(card => {
+        const qtyEl = card.querySelector('.qty-num');
+        const qty   = parseInt(qtyEl?.textContent) || 0;
+        if (qty === 0) return;
+
+        const pid    = card.dataset.pid;
+        const nombre = card.dataset.nombre;
+        const tipo   = card.dataset.tipo;
+        const sel    = pid ? document.getElementById(`select-${pid}`) : null;
+        const precio = sel ? (parseFloat(sel.value) || 0) : 0;
+        const label  = sel ? (sel.options[sel.selectedIndex]?.text || '') : '';
+
+        items.push({ pid, nombre, tipo, precio, qty, label });
+    });
+
+    if (items.length === 0) return;
+
+    // Agregar todos al carrito
+    items.forEach(item => {
+        if (item.tipo === 'torta') {
+            // Agregar tortas sin modal (van directo al carrito activo)
+            const cs = window._cuentasSys;
+            if (cs) {
+                const c = cs.cuentas.find(x => x.id === cs.activa);
+                if (c) {
+                    for (let i = 0; i < item.qty; i++) {
+                        c.items.push({
+                            id: item.pid,
+                            nombre: item.nombre,
+                            precio: item.precio,
+                            modificaciones: []
+                        });
+                    }
+                }
+            }
+        } else {
+            // Bebidas/botanas
+            for (let i = 0; i < item.qty; i++) {
+                window.addDrink(item.nombre, item.precio, item.label);
+            }
+        }
+    });
+
+    // Render y abrir carrito
+    if (window.renderCuentasTabs) window.renderCuentasTabs();
+    if (window.renderCartItems)   window.renderCartItems();
+    const cm = document.getElementById('cart-modal');
+    if (cm) cm.classList.add('active');
+
+    // Reset todas las cantidades a 0
+    document.querySelectorAll('.qty-num').forEach(el => { el.textContent = '0'; });
+    document.querySelectorAll('.add-to-cart').forEach(b => { b.style.display = 'none'; });
+    actualizarBotonAgregarTodo();
+
+    // Feedback en el FAB
+    const fab = document.getElementById('fab-agregar-todo');
+    if (fab) {
+        fab.style.background = '#25D366';
+        setTimeout(() => { fab.style.background = ''; }, 800);
+    }
+};
