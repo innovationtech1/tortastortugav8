@@ -232,11 +232,14 @@ function agregarNuevaCuenta() {
     mostrarNombreCuenta();
 }
 function eliminarCuenta(cid) {
+    console.log('eliminarCuenta cid=', cid, 'tipo=', typeof cid);
     var cs = window._cuentasSys;
-    if (!cs || cs.cuentas.length <= 1) return;
+    console.log('cs=', cs, 'length=', cs ? cs.cuentas.length : 'NULL');
+    if (!cs || cs.cuentas.length <= 1) { console.log('RETURN: solo 1 cuenta'); return; }
 
     var c = cs.cuentas.find(function(x){ return x.id === cid; });
-    if (!c) return;
+    console.log('cuenta encontrada=', c, 'ids disponibles=', cs.cuentas.map(function(x){return x.id;}));
+    if (!c) { console.log('RETURN: cuenta no encontrada'); return; }
 
     // Guardar copia para deshacer
     var backup = JSON.parse(JSON.stringify(cs.cuentas));
@@ -768,7 +771,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782647408">
+<script type="module" src="js/app.js?v=1782647417">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
