@@ -109,59 +109,63 @@ document.querySelectorAll('.mod-chip').forEach(chip => {
     });
 });
 
-function confirmarMods(conMods) {
-    // ── MODO EDICIÓN: guardar cambios en item existente ──────────
-    if (window._editingItem) {
-        const { cuentaId, itemIdx, precioBase } = window._editingItem;
-        const c = window._cuentasSys?.cuentas.find(c => c.id === cuentaId);
-        if (c && c.items[itemIdx]) {
-            if (conMods) {
-                const mods = [];
-                let extra = 0;
-                document.querySelectorAll('.mod-chip input:checked').forEach(cb => {
-                    mods.push(cb.value);
-                    extra += parseFloat(cb.getAttribute('data-price') || 0);
-                });
-                const nota = document.getElementById('mods-notes').value.trim();
-                if (nota) mods.push(`📝 ${nota}`);
-                c.items[itemIdx].modificaciones = mods;
-                c.items[itemIdx].precio = precioBase + extra;
-            }
-        }
-        // Reset modal
+window.confirmarMods = function confirmarMods(conMods) {
+    // Recolectar modificaciones seleccionadas
+    function getMods() {
+        const mods = [];
+        let extra = 0;
+        document.querySelectorAll('.mod-chip.selected input').forEach(cb => {
+            if (cb.value) mods.push(cb.value);
+            extra += parseFloat(cb.getAttribute('data-price') || 0);
+        });
+        const nota = (document.getElementById('mods-notes')?.value || '').trim();
+        if (nota) mods.push('📝 ' + nota);
+        return { mods, extra };
+    }
+
+    function cerrarModal() {
+        document.getElementById('mods-modal')?.classList.remove('active');
         const confirmBtn = document.getElementById('mods-confirm');
-        if (confirmBtn) { confirmBtn.textContent = 'Agregar al Pedido'; delete confirmBtn.dataset.editMode; }
+        if (confirmBtn) confirmBtn.textContent = 'Agregar al Pedido';
         const skipBtn = document.getElementById('mods-skip');
         if (skipBtn) skipBtn.textContent = 'Sin cambios';
+    }
+
+    // ── MODO EDICIÓN ─────────────────────────────────────────────
+    if (window._editingItem) {
+        const { cuentaId, itemIdx, precioBase } = window._editingItem;
+        const CS = window._cuentasSys;
+        const c = CS ? CS.cuentas.find(c => c.id === cuentaId) : null;
+        if (c && c.items[itemIdx] !== undefined && conMods) {
+            const { mods, extra } = getMods();
+            c.items[itemIdx].modificaciones = mods;
+            c.items[itemIdx].precio = precioBase + extra;
+        }
         window._editingItem = null;
-        document.getElementById('mods-modal')?.classList.remove('active');
+        cerrarModal();
         if (window.renderCuentasTabs) window.renderCuentasTabs();
         if (window.renderCartItems) window.renderCartItems();
         return;
     }
 
-    // ── MODO NORMAL: agregar nuevo item ──────────────────────────
-    if (!pendingItem) return;
+    // ── MODO AGREGAR ─────────────────────────────────────────────
+    if (!pendingItem) { cerrarModal(); return; }
+
     if (conMods) {
-        const mods = [];
-        let extra = 0;
-        document.querySelectorAll('.mod-chip input:checked').forEach(cb => {
-            mods.push(cb.value);
-            extra += parseFloat(cb.getAttribute('data-price') || 0);
-        });
-        const nota = document.getElementById('mods-notes').value.trim();
-        if (nota) mods.push(`📝 ${nota}`);
+        const { mods, extra } = getMods();
         pendingItem.modificaciones = mods;
         pendingItem.precio += extra;
     }
+
     const qty = pendingItem._qty || 1;
     const itemBase = { ...pendingItem };
     delete itemBase._qty;
     delete itemBase._splitMode;
 
-    // Agregar a cuenta activa del nuevo sistema
-    if (window._cuentasSys) {
-        const cActiva = window._cuentasSys.cuentas.find(c => c.id === window._cuentasSys.activa);
+    // Agregar a cuenta activa
+    const CS = window._cuentasSys;
+    if (CS) {
+        const cActiva = CS.cuentas.find(c => c.id === CS.activa);
         if (cActiva) {
             for (let i = 0; i < qty; i++) cActiva.items.push({...itemBase});
         }
@@ -170,9 +174,8 @@ function confirmarMods(conMods) {
     }
 
     pendingItem = null;
-    modsModal.classList.remove('active');
+    cerrarModal();
 
-    // Render y abrir carrito
     if (window.renderCuentasTabs) window.renderCuentasTabs();
     if (window.renderCartItems) window.renderCartItems();
 
