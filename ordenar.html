@@ -223,22 +223,72 @@ function enviarOrdenAdmin() {
     var ov = document.getElementById('enviar-admin-overlay');
     var res = document.getElementById('enviar-admin-resumen');
     if (res) {
-        var h = ''; var tot = 0;
-        con.forEach(function(c) {
-            var ct = c.items.reduce(function(s,i){ return s+i.precio; },0); tot += ct;
-            h += '<div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:.83rem;">'
-               + '<span style="color:#fff;font-weight:600;">' + c.nombre + '</span>'
-               + '<span style="color:#FF5A00;font-weight:700;">$' + ct.toFixed(2) + ' - ' + c.items.length + ' prod.</span>'
+        var h = ''; var totGen = 0;
+        con.forEach(function(c, ci) {
+            var ct = c.items.reduce(function(s,i){ return s+i.precio; },0);
+            totGen += ct;
+            // Header de cuenta con color
+            h += '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);'
+               + 'border-radius:10px;margin-bottom:.6rem;overflow:hidden;">';
+            // Nombre cuenta + total + botón editar
+            h += '<div style="display:flex;align-items:center;justify-content:space-between;'
+               + 'padding:.55rem .75rem;background:rgba(255,255,255,.05);">'
+               + '<div style="display:flex;align-items:center;gap:.4rem;">'
+               + '<span style="width:10px;height:10px;border-radius:50%;background:' + c.color + ';display:inline-block;flex-shrink:0;"></span>'
+               + '<span style="color:#fff;font-weight:700;font-size:.85rem;">' + c.nombre + '</span>'
+               + '</div>'
+               + '<div style="display:flex;align-items:center;gap:.5rem;">'
+               + '<span style="color:#FF5A00;font-weight:700;font-size:.82rem;">$' + ct.toFixed(2) + '</span>'
+               + '<button onclick="editarCuentaDesdeModal(' + ci + ')" '
+               + 'style="background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.35);'
+               + 'color:#A78BFA;border-radius:6px;padding:.18rem .45rem;font-size:.7rem;'
+               + 'font-weight:700;cursor:pointer;font-family:inherit;">✏️ Editar</button>'
+               + '</div>'
                + '</div>';
+            // Items de la cuenta
+            c.items.forEach(function(item, idx) {
+                h += '<div style="display:flex;align-items:flex-start;justify-content:space-between;'
+                   + 'padding:.45rem .75rem;border-top:1px solid rgba(255,255,255,.05);">'
+                   + '<div style="flex:1;min-width:0;">'
+                   + '<div style="font-size:.8rem;color:#ddd;">' + item.nombre + '</div>'
+                   + (item.modificaciones && item.modificaciones.length
+                       ? '<div style="font-size:.7rem;color:#888;margin-top:.1rem;">' + item.modificaciones.join(' · ') + '</div>'
+                       : '<div style="font-size:.7rem;color:#555;">Sin modificaciones</div>')
+                   + '</div>'
+                   + '<div style="font-size:.8rem;color:#25D366;font-weight:700;margin-left:.5rem;flex-shrink:0;">$' + item.precio.toFixed(2) + '</div>'
+                   + '</div>';
+            });
+            h += '</div>';
         });
-        h += '<div style="display:flex;justify-content:space-between;padding:.5rem 0 0;font-weight:800;">'
-           + '<span style="color:#ccc;">Total</span><span style="color:#FF5A00;">$' + tot.toFixed(2) + '</span></div>';
+        // Total general
+        h += '<div style="display:flex;justify-content:space-between;align-items:center;'
+           + 'padding:.6rem .5rem 0;border-top:1px solid rgba(255,255,255,.1);margin-top:.2rem;">'
+           + '<span style="color:#ccc;font-weight:700;font-size:.88rem;">Total general</span>'
+           + '<span style="color:#FF5A00;font-weight:900;font-size:1rem;">$' + totGen.toFixed(2) + '</span>'
+           + '</div>';
         res.innerHTML = h;
     }
     if (ov) {
-        ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;'
-            + 'background:rgba(0,0,0,.88);z-index:99999;display:flex;'
-            + 'align-items:center;justify-content:center;padding:1.5rem;';
+        ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;'
+            + 'background:rgba(0,0,0,.92);z-index:99999;display:flex;'
+            + 'align-items:flex-end;justify-content:center;padding:0;';
+    }
+}
+
+function editarCuentaDesdeModal(cuentaIndex) {
+    // Cerrar modal de envío
+    cerrarEnviarAdminModal();
+    // Ir a la cuenta seleccionada
+    var cs = window._cuentasSys;
+    if (!cs) return;
+    var conItems = cs.cuentas.filter(function(c){ return c.items.length > 0; });
+    if (conItems[cuentaIndex]) {
+        cs.activa = conItems[cuentaIndex].id;
+        // Abrir carrito
+        var cm = document.getElementById('cart-modal');
+        if (cm) cm.classList.add('active');
+        if (window.renderCuentasTabs) window.renderCuentasTabs();
+        if (window.renderCartItems) window.renderCartItems();
     }
 }
 
@@ -857,7 +907,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782649621">
+<script type="module" src="js/app.js?v=1782650336">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
@@ -1263,17 +1313,21 @@ function enviarOrdenModal() {
 <div id="enviar-admin-overlay"
      onclick="if(event.target===this)cerrarEnviarAdminModal()"
      style="position:fixed;top:0;left:0;width:100%;height:100%;
-            background:rgba(0,0,0,.88);z-index:99999;
-            display:none;align-items:center;justify-content:center;padding:1.5rem;">
-  <div style="background:#1C1C1C;border:1px solid rgba(255,90,0,.4);
-              border-radius:18px;padding:1.4rem;width:100%;max-width:360px;">
+            background:rgba(0,0,0,.92);z-index:99999;
+            display:none;align-items:flex-end;justify-content:center;">
+  <div style="background:#1C1C1C;border:1px solid rgba(255,255,255,.1);
+              border-radius:20px 20px 0 0;padding:1.2rem 1.1rem 2rem;
+              width:100%;max-width:560px;max-height:88vh;
+              display:flex;flex-direction:column;">
+  <div style="width:32px;height:4px;background:rgba(255,255,255,.15);
+              border-radius:4px;margin:0 auto .85rem;flex-shrink:0;"></div>
     <div style="font-size:1rem;font-weight:800;color:#FF5A00;margin-bottom:.4rem;">
       🚀 Enviar al Panel Admin
     </div>
     <div style="font-size:.78rem;color:#888;margin-bottom:1rem;">
       Se enviaran las siguientes cuentas al administrador:
     </div>
-    <div id="enviar-admin-resumen" style="margin-bottom:1.1rem;"></div>
+    <div id="enviar-admin-resumen" style="overflow-y:auto;flex:1;margin-bottom:.85rem;-webkit-overflow-scrolling:touch;"></div>
     <button id="btn-confirmar-envio" onclick="confirmarEnvioAdmin()"
         style="width:100%;padding:.82rem;
                background:linear-gradient(135deg,#FF5A00,#FF8800);
