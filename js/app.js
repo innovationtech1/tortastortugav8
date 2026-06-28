@@ -640,6 +640,11 @@ window.nuevaCuenta = function() {
 // ── ELIMINAR CUENTA ────────────────────────────────────────────
 window.eliminarCuenta = function(cid) {
     const cs = window._cuentasSys;
+    alert('eliminarCuenta\ncid=' + cid + ' tipo=' + typeof cid +
+          '\ncs=' + (cs ? 'OK' : 'NULL') +
+          '\ncuentas=' + (cs ? cs.cuentas.length : 0) +
+          '\nactiva=' + (cs ? cs.activa : 'N/A') +
+          '\nids=' + (cs ? cs.cuentas.map(function(x){return x.id;}).join(',') : ''));
     if (!cs || cs.cuentas.length <= 1) return;
 
     const c = cs.cuentas.find(x => x.id === cid);
