@@ -233,27 +233,60 @@ function agregarNuevaCuenta() {
 }
 function eliminarCuenta(cid) {
     var cs = window._cuentasSys;
-    if (!cs || cs.cuentas.length <= 1) return;
+    if (!cs) return;
+
+    // No eliminar si es la ultima cuenta
+    if (cs.cuentas.length <= 1) {
+        alert('Debe existir al menos una cuenta.');
+        return;
+    }
+
     var c = cs.cuentas.find(function(x){ return x.id === cid; });
     if (!c) return;
 
-    var msg = '¿Deseas eliminar la cuenta "' + c.nombre + '"?';
-    if (c.items.length > 0) {
-        msg += '\n\nTiene ' + c.items.length + ' producto(s). Se moverán a la primera cuenta.';
-    }
-    if (!confirm(msg)) return;
+    // Mostrar modal de confirmacion
+    var overlay = document.getElementById('confirm-eliminar-overlay');
+    var titulo  = document.getElementById('confirm-eliminar-titulo');
+    var subtxt  = document.getElementById('confirm-eliminar-subtxt');
+    var btnOk   = document.getElementById('confirm-eliminar-ok');
 
-    var idx = cs.cuentas.findIndex(function(x){ return x.id === cid; });
-    if (idx >= 0) {
-        if (cs.cuentas[idx].items.length) {
-            var destino = cs.cuentas[idx === 0 ? 1 : 0];
-            destino.items = destino.items.concat(cs.cuentas[idx].items);
-        }
-        cs.cuentas.splice(idx, 1);
+    if (!overlay) return;
+
+    titulo.textContent = 'Eliminar cuenta "' + c.nombre + '"';
+    if (c.items.length > 0) {
+        subtxt.textContent = 'Esta cuenta tiene ' + c.items.length + ' producto(s) por $' +
+            c.items.reduce(function(s,i){return s+i.precio;},0).toFixed(2) +
+            '. Sus productos se moverán a la primera cuenta.';
+        subtxt.style.color = '#F59E0B';
+    } else {
+        subtxt.textContent = 'Esta acción no se puede deshacer.';
+        subtxt.style.color = '#888';
     }
-    if (cs.activa === cid) cs.activa = cs.cuentas[0].id;
-    window.renderCuentasTabs();
-    window.renderCartItems();
+
+    // Limpiar listeners anteriores clonando el botón
+    var newBtn = btnOk.cloneNode(true);
+    btnOk.parentNode.replaceChild(newBtn, btnOk);
+    newBtn.addEventListener('click', function() {
+        overlay.classList.remove('open');
+        var idx = cs.cuentas.findIndex(function(x){ return x.id === cid; });
+        if (idx >= 0) {
+            if (cs.cuentas[idx].items.length) {
+                var destino = cs.cuentas[idx === 0 ? 1 : 0];
+                destino.items = destino.items.concat(cs.cuentas[idx].items);
+            }
+            cs.cuentas.splice(idx, 1);
+        }
+        if (cs.activa === cid) cs.activa = cs.cuentas[0].id;
+        window.renderCuentasTabs();
+        window.renderCartItems();
+    });
+
+    overlay.classList.add('open');
+}
+
+function cerrarConfirmEliminar() {
+    var overlay = document.getElementById('confirm-eliminar-overlay');
+    if (overlay) overlay.classList.remove('open');
 }
 function removeItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -737,7 +770,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782646066">
+<script type="module" src="js/app.js?v=1782646489">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
