@@ -172,6 +172,7 @@ window.renderCartItems = function() {
     var cntEl = document.getElementById('cart-count');
     var allTot = cs.cuentas.reduce(function(s,c){ return s+c.items.length; }, 0);
     if (cntEl) cntEl.textContent = allTot;
+    actualizarBotones();
 };
 
 window.renderCuentasTabs = function() {
@@ -282,6 +283,75 @@ function limpiarCuentaActual() {
         window.renderCartItems();
     }
 }
+function ordenarCuentaActiva() {
+    var cs = window._cuentasSys;
+    if (!cs) return;
+    var c = cs.cuentas.find(function(x){ return x.id === cs.activa; });
+    if (!c || c.items.length === 0) {
+        alert('La cuenta "' + (c ? c.nombre : '') + '" está vacía. Agrega productos primero.');
+        return;
+    }
+    abrirOrdenModal(cs.activa);
+}
+
+function ordenarTodasWhatsApp() {
+    var cs = window._cuentasSys;
+    if (!cs) return;
+    var totalItems = cs.cuentas.reduce(function(s,c){ return s + c.items.length; }, 0);
+    if (totalItems === 0) { alert('No hay productos en ninguna cuenta.'); return; }
+
+    var lineas = ['🐢 *TORTAS TORTUGA — ORDEN COMPLETA*', '━━━━━━━━━━━━━━━━━━━━', ''];
+    cs.cuentas.forEach(function(c) {
+        if (!c.items.length) return;
+        var tot = c.items.reduce(function(s,i){ return s+i.precio; }, 0);
+        lineas.push('━ *' + c.nombre + '* — $' + tot.toFixed(2) + ' ━');
+        c.items.forEach(function(item, i) {
+            var linea = (i+1) + '. ' + item.nombre;
+            if (item.modificaciones && item.modificaciones.length) {
+                linea += ' (' + item.modificaciones.join(', ') + ')';
+            }
+            linea += ' — $' + item.precio.toFixed(2);
+            lineas.push(linea);
+        });
+        lineas.push('');
+    });
+    var totalGen = cs.cuentas.reduce(function(s,c){
+        return s + c.items.reduce(function(ss,i){ return ss+i.precio; }, 0);
+    }, 0);
+    lineas.push('💰 *TOTAL GENERAL: $' + totalGen.toFixed(2) + '*');
+    window.open('https://wa.me/12108678210?text=' + encodeURIComponent(lineas.join('\n')), '_blank');
+}
+
+function abrirPago() {
+    var cs = window._cuentasSys;
+    if (!cs) return;
+    var c = cs.cuentas.find(function(x){ return x.id === cs.activa; });
+    if (!c || c.items.length === 0) {
+        alert('La cuenta está vacía.');
+        return;
+    }
+    // Por ahora mostrar info de pago — se puede expandir con Stripe/Square
+    var total = c.items.reduce(function(s,i){ return s+i.precio; }, 0);
+    var posModal = document.getElementById('pos-modal');
+    if (posModal) {
+        var totEl = document.getElementById('pos-total-amount');
+        if (totEl) totEl.textContent = '$' + total.toFixed(2);
+        posModal.classList.add('active');
+    }
+    // Cerrar carrito
+    var cartModal = document.getElementById('cart-modal');
+    if (cartModal) cartModal.classList.remove('active');
+}
+
+/* Mostrar botón "Enviar todas" cuando hay más de 1 cuenta con items */
+function actualizarBotones() {
+    var cs = window._cuentasSys;
+    if (!cs) return;
+    var cuentasConItems = cs.cuentas.filter(function(c){ return c.items.length > 0; }).length;
+    var btnTodas = document.getElementById('btn-todas-cuentas');
+    if (btnTodas) btnTodas.style.display = cuentasConItems > 1 ? 'flex' : 'none';
+}
+
 function cerrarOrdenModal() {
     var ov = document.getElementById('orden-cuenta-overlay');
     var m = document.getElementById('orden-cuenta-modal');
@@ -489,7 +559,40 @@ function cerrarOrdenModal() {
                     <span>Total:</span>
                     <span id="cart-total">$0.00</span>
                 </div>
-                
+
+                <!-- Botones de acción -->
+                <div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.75rem;">
+
+                    <!-- Ordenar cuenta activa -->
+                    <button onclick="ordenarCuentaActiva()"
+                        style="width:100%;padding:.8rem;background:linear-gradient(135deg,#25D366,#18a849);
+                               color:#fff;border:none;border-radius:12px;font-family:inherit;
+                               font-size:.92rem;font-weight:700;cursor:pointer;
+                               display:flex;align-items:center;justify-content:center;gap:.5rem;">
+                        📱 Ordenar cuenta activa por WhatsApp
+                    </button>
+
+                    <!-- Ordenar todas las cuentas -->
+                    <button onclick="ordenarTodasWhatsApp()"
+                        id="btn-todas-cuentas"
+                        style="width:100%;padding:.7rem;background:rgba(37,211,102,.1);
+                               border:1.5px solid rgba(37,211,102,.35);color:#25D366;
+                               border-radius:12px;font-family:inherit;font-size:.85rem;
+                               font-weight:700;cursor:pointer;display:none;
+                               align-items:center;justify-content:center;gap:.5rem;">
+                        📋 Enviar todas las cuentas
+                    </button>
+
+                    <!-- Pagar -->
+                    <button onclick="abrirPago()"
+                        style="width:100%;padding:.7rem;background:rgba(255,255,255,.06);
+                               border:1.5px solid rgba(255,255,255,.15);color:#ccc;
+                               border-radius:12px;font-family:inherit;font-size:.85rem;
+                               font-weight:700;cursor:pointer;
+                               display:flex;align-items:center;justify-content:center;gap:.5rem;">
+                        💳 Pagar ahora
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -624,7 +727,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782645071">
+<script type="module" src="js/app.js?v=1782645381">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
