@@ -917,27 +917,29 @@ window.renderCuentasTabs = function() {
 
     let html = '';
     CS.cuentas.forEach(c => {
-        const tot = c.items.reduce((s, i) => s + i.precio, 0);
+        const tot   = c.items.reduce((s, i) => s + i.precio, 0);
         const active = c.id === CS.activa ? 'active' : '';
-        const canDelete = CS.cuentas.length > 1;
-        html += `<div class="ctab ${active}" data-cid="${c.id}"
-            onclick="switchCuenta(${c.id})"
-            style="border-color:${active ? c.color : 'rgba(255,255,255,.12)'}">
-            <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:.4rem;">
-                <span class="ctab-nom" style="color:${active ? c.color : '#fff'}">${c.nombre}</span>
-                ${canDelete ? `<button
-                    onclick="event.stopPropagation();eliminarCuenta(${c.id})"
-                    style="background:none;border:none;color:rgba(255,68,68,.7);font-size:.75rem;
-                           cursor:pointer;padding:0 .1rem;line-height:1;flex-shrink:0;"
-                    title="Eliminar cuenta">✕</button>` : ''}
-            </div>
-            <span class="ctab-tot">$${tot.toFixed(2)}</span>
-        </div>`;
+        const canDel = CS.cuentas.length > 1;
+        html += '<div class="ctab ' + active + '" ' +
+            'onclick="switchCuenta(' + c.id + ')" ' +
+            'style="border-color:' + (active ? c.color : 'rgba(255,255,255,.12)') + ';position:relative;">' +
+            '<span class="ctab-nom" style="color:' + (active ? c.color : '#fff') + ';display:block;">' + c.nombre + '</span>' +
+            '<span class="ctab-tot" style="display:block;">$' + tot.toFixed(2) + '</span>' +
+            (canDel ?
+                '<button ' +
+                'onclick="event.stopImmediatePropagation();event.preventDefault();eliminarCuenta(' + c.id + ');return false;" ' +
+                'style="position:absolute;top:4px;right:4px;width:22px;height:22px;' +
+                'background:rgba(255,68,68,.15);border:1px solid rgba(255,68,68,.4);' +
+                'color:#FF4444;font-size:.75rem;border-radius:50%;cursor:pointer;' +
+                'display:flex;align-items:center;justify-content:center;line-height:1;' +
+                'touch-action:manipulation;-webkit-tap-highlight-color:transparent;"' +
+                '>✕</button>'
+            : '') +
+        '</div>';
     });
-    html += `<button onclick="agregarNuevaCuenta()" class="ctab-add">+ Nueva cuenta</button>`;
+    html += '<button onclick="agregarNuevaCuenta()" class="ctab-add">+ Nueva cuenta</button>';
     tabs.innerHTML = html;
 
-    // Update label
     const lbl = document.getElementById('cuenta-label-active');
     const cActiva = CS.cuentas.find(c => c.id === CS.activa);
     if (lbl && cActiva) {
