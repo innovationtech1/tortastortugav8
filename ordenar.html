@@ -255,7 +255,6 @@ function eliminarCuenta(cid) {
     window.renderCuentasTabs();
     window.renderCartItems();
 }
-}
 function removeItemCuenta(idx) {
     var cs = window._cuentasSys;
     if (!cs) return;
@@ -738,7 +737,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782645975">
+<script type="module" src="js/app.js?v=1782646066">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
