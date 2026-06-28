@@ -29,6 +29,7 @@
         <div class="auth-tabs">
             <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Iniciar Sesion</button>
             <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Crear Cuenta</button>
+            <button class="auth-tab" id="tab-cajero" onclick="switchTab('cajero')" style="background:rgba(255,90,0,.1);color:#FF5A00;">🏪 Cajero</button>
         </div>
 
         <form id="form-login" class="auth-form active" novalidate>
@@ -154,9 +155,154 @@
             </button>
         </form>
 
+
+        <!-- FORM CAJERO -->
+        <form id="form-cajero" class="auth-form" novalidate style="display:none;">
+            <div style="text-align:center;margin-bottom:1.25rem;">
+                <div style="font-size:2rem;margin-bottom:.3rem;">🏪</div>
+                <div style="font-weight:800;font-size:1rem;color:#fff;">Acceso Cajero</div>
+                <div style="font-size:.78rem;color:#888;margin-top:.2rem;">Ingresa con tu número de empleado y PIN</div>
+            </div>
+
+            <div class="field-wrap">
+                <label class="field-label">Número de Empleado</label>
+                <input type="text" id="cajero-id" class="field-input"
+                    placeholder="Ej: EMP-001 o EMP-GERENTE"
+                    autocomplete="off"
+                    oninput="this.value=this.value.toUpperCase()">
+                <span class="field-error" id="err-cajero-id"></span>
+            </div>
+
+            <div class="field-wrap">
+                <label class="field-label">PIN (4 dígitos)</label>
+                <div class="password-wrap">
+                    <input type="password" id="cajero-pin" class="field-input"
+                        placeholder="••••"
+                        maxlength="4"
+                        inputmode="numeric"
+                        pattern="[0-9]*"
+                        autocomplete="off">
+                    <button type="button" class="toggle-pass" onclick="togglePass('cajero-pin',this)">👁</button>
+                </div>
+                <span class="field-error" id="err-cajero-pin"></span>
+            </div>
+
+            <div class="auth-message" id="msg-cajero"></div>
+
+            <button type="submit" class="btn-primary" id="btn-cajero"
+                style="background:linear-gradient(135deg,#FF5A00,#FF8800);">
+                <span class="btn-text">🏪 Entrar como Cajero</span>
+                <span class="btn-spinner" style="display:none;"></span>
+            </button>
+
+            <div style="margin-top:1rem;padding:.75rem;background:rgba(255,90,0,.08);
+                        border:1px solid rgba(255,90,0,.2);border-radius:10px;
+                        font-size:.74rem;color:#888;text-align:center;">
+                Solo empleados registrados pueden acceder.<br>
+                Contacta a tu gerente si tienes problemas.
+            </div>
+        </form>
     </div>
 </div>
 
-<script type="module" src="../js/auth.js"></script>
+<script type="module" src="../js/auth.js">
+    // ── LOGIN CAJERO ──────────────────────────────────────────
+    const btnCajero = document.getElementById('btn-cajero');
+    const cajeroIdInp  = document.getElementById('cajero-id');
+    const cajeroPin    = document.getElementById('cajero-pin');
+    const msgCajero    = document.getElementById('msg-cajero');
+
+    function showCajeroMsg(msg, tipo) {
+        if (!msgCajero) return;
+        msgCajero.textContent = msg;
+        msgCajero.className = 'auth-message ' + (tipo === 'error' ? 'msg-error' : 'msg-success');
+        msgCajero.style.display = 'block';
+    }
+
+    document.getElementById('form-cajero')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await loginCajero();
+    });
+
+    btnCajero?.addEventListener('click', loginCajero);
+
+    async function loginCajero() {
+        const empId = (cajeroIdInp?.value || '').trim().toUpperCase();
+        const pin   = (cajeroPin?.value || '').replace(/\D/g, '');
+
+        // Validaciones básicas
+        const errId  = document.getElementById('err-cajero-id');
+        const errPin = document.getElementById('err-cajero-pin');
+        if (errId)  errId.textContent  = '';
+        if (errPin) errPin.textContent = '';
+
+        if (!empId || !empId.startsWith('EMP-')) {
+            if (errId) errId.textContent = 'Ingresa tu número (Ej: EMP-001)';
+            cajeroIdInp?.focus(); return;
+        }
+        if (pin.length !== 4) {
+            if (errPin) errPin.textContent = 'PIN debe ser de 4 dígitos';
+            cajeroPin?.focus(); return;
+        }
+
+        if (btnCajero) { btnCajero.disabled = true; btnCajero.querySelector('.btn-text').textContent = 'Verificando...'; }
+        showCajeroMsg('Verificando credenciales...', 'info');
+
+        try {
+            // Autenticar con Firebase usando EMP-ID + PIN
+            const emailInterno = empId.toLowerCase() + '@tortuga.local';
+            const pwAuto = empId + pin;
+
+            let userCred;
+            try {
+                userCred = await signInWithEmailAndPassword(auth, emailInterno, pwAuto);
+            } catch (e1) {
+                // Fallback gerente legacy
+                if (empId === 'EMP-GERENTE') {
+                    userCred = await signInWithEmailAndPassword(auth, 'gerente@tortuga.local', 'GerenteTortuga2026');
+                } else {
+                    throw e1;
+                }
+            }
+
+            // Verificar que el empleado está dado de alta en Firestore
+            const { collection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+            const q = query(collection(db, 'empleados'), where('empleadoId', '==', empId));
+            const snap = await getDocs(q);
+
+            if (snap.empty) {
+                await signOut(auth);
+                showCajeroMsg('Empleado no encontrado. Contacta a tu gerente.', 'error');
+                if (btnCajero) { btnCajero.disabled = false; btnCajero.querySelector('.btn-text').textContent = '🏪 Entrar como Cajero'; }
+                return;
+            }
+
+            const empData = snap.docs[0].data();
+            const rol = empData.rol || 'cajero';
+            const nombre = empData.nombre + ' ' + (empData.apellido || '');
+
+            // Guardar sesión de cajero
+            sessionStorage.setItem('tt_cajero_id',     empId);
+            sessionStorage.setItem('tt_cajero_nombre', nombre.trim());
+            sessionStorage.setItem('tt_cajero_rol',    rol);
+            sessionStorage.setItem('tt_cajero_ts',     Date.now().toString());
+
+            showCajeroMsg('✅ Bienvenido ' + nombre.trim() + '! Redirigiendo...', 'success');
+
+            // Redirigir al sistema de pedidos
+            setTimeout(() => {
+                window.location.href = '../ordenar.html?cajero=' + encodeURIComponent(empId);
+            }, 1000);
+
+        } catch (e) {
+            console.error('Login cajero error:', e);
+            let msg = 'Número de empleado o PIN incorrecto.';
+            if (e.code === 'auth/too-many-requests') msg = 'Demasiados intentos. Espera unos minutos.';
+            showCajeroMsg(msg, 'error');
+            if (btnCajero) { btnCajero.disabled = false; btnCajero.querySelector('.btn-text').textContent = '🏪 Entrar como Cajero'; }
+        }
+    }
+
+</script>
 </body>
 </html>
