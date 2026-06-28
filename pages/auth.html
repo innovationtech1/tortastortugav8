@@ -264,11 +264,17 @@ async function loginCajero() {
         const emailInterno = empId.toLowerCase() + '@tortuga.local';
         const pwAuto = empId + pin;
 
+        // Marcar que cajero está iniciando sesión ANTES de Firebase
+        // para que auth.js no redirija automáticamente
+        sessionStorage.setItem('tt_cajero_logging_in', 'true');
+
         let userCred;
         try {
             userCred = await signInWithEmailAndPassword(auth, emailInterno, pwAuto);
         } catch (e1) {
+            sessionStorage.removeItem('tt_cajero_logging_in');
             if (empId === 'EMP-GERENTE') {
+                sessionStorage.setItem('tt_cajero_logging_in', 'true');
                 userCred = await signInWithEmailAndPassword(auth, 'gerente@tortuga.local', 'GerenteTortuga2026');
             } else {
                 throw e1;
@@ -311,6 +317,7 @@ async function loginCajero() {
         if (e.code === 'auth/too-many-requests')  msg = 'Demasiados intentos. Espera unos minutos.';
         if (e.code === 'auth/invalid-credential') msg = 'Número o PIN incorrecto.';
         if (e.message?.includes('Firebase no disponible')) msg = e.message;
+        sessionStorage.removeItem('tt_cajero_logging_in');
         showMsg(msg, 'error');
         if (btnCajero) { btnCajero.disabled = false; btnCajero.querySelector('.btn-text').textContent = '🏪 Entrar como Cajero'; }
     }
