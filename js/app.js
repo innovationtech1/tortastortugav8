@@ -884,7 +884,6 @@ window.renderCartItems = function() {
         cartItemsEl.innerHTML = '<p class="empty-cart">Esta cuenta está vacía 🥺</p>';
     } else {
         cartItemsEl.innerHTML = items.map((item, idx) => {
-            // Botones para mover a otras cuentas
             const otherCuentas = CS.cuentas.filter(c => c.id !== CS.activa);
             const moveBtns = otherCuentas.map(c =>
                 `<button class="item-move-btn"
@@ -898,14 +897,22 @@ window.renderCartItems = function() {
                 ? `<button class="item-split-btn" onclick="splitItemEntreTodas(${idx})">÷ Split</button>`
                 : '';
 
-            return `<div class="cart-item">
+            // Solo mostrar botón editar si es torta (tiene id de producto)
+            const editBtn = item.id
+                ? `<button class="item-edit-btn" onclick="editarItemCuenta(${idx})">✏️ Editar</button>`
+                : '';
+
+            return `<div class="cart-item" id="cart-item-${idx}">
                 <div class="item-info">
                     <div class="item-name">${item.nombre}</div>
                     ${item.modificaciones?.length
                         ? `<div class="item-mods">${item.modificaciones.join(' · ')}</div>`
-                        : ''}
+                        : '<div class="item-mods" style="color:#555;font-size:.72rem;">Sin modificaciones</div>'}
                 </div>
-                <div class="item-price">$${item.precio.toFixed(2)}</div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.25rem;flex-shrink:0;">
+                    <div class="item-price">$${item.precio.toFixed(2)}</div>
+                    ${editBtn}
+                </div>
                 <button class="remove-item" onclick="removeItemCuenta(${idx})">✕</button>
                 ${(moveBtns || splitBtn)
                     ? `<div class="item-move-row">${moveBtns}${splitBtn}</div>`
@@ -1094,3 +1101,98 @@ window.enviarTodasLasCuentas = function() {
 // ── Patch addToCart confirmarMods → nueva cuenta ───────────────
 // Override confirmarMods to use new system
 const _origConfirmarMods = window.confirmarMods;
+
+
+/* ── EDITAR ITEM DE CUENTA ─────────────────────────────────── */
+window.editarItemCuenta = function(itemIdx) {
+    const cActiva = CS.cuentas.find(c => c.id === CS.activa);
+    if (!cActiva) return;
+    const item = cActiva.items[itemIdx];
+    if (!item) return;
+
+    // Guardar referencia al item que se está editando
+    window._editingItem = { cuentaId: CS.activa, itemIdx, precioBase: item.precio };
+
+    // Resetear modal de modificadores
+    document.querySelectorAll('.mod-chip input').forEach(c => c.checked = false);
+    document.querySelectorAll('.mod-chip').forEach(c => c.classList.remove('selected'));
+    document.getElementById('mods-notes').value = '';
+
+    // Pre-seleccionar modificaciones actuales
+    const modsActuales = item.modificaciones || [];
+    document.querySelectorAll('.mod-chip').forEach(chip => {
+        const input = chip.querySelector('input');
+        if (input && modsActuales.some(m => m.includes(input.value))) {
+            chip.classList.add('selected');
+            input.checked = true;
+        }
+    });
+
+    // Pre-llenar nota si existe
+    const nota = modsActuales.find(m => m.startsWith('📝 '));
+    if (nota) document.getElementById('mods-notes').value = nota.replace('📝 ', '');
+
+    // Cambiar título del modal
+    const titleEl = document.getElementById('mods-item-name');
+    if (titleEl) titleEl.textContent = `✏️ ${item.nombre}`;
+
+    // Cambiar botón de confirmar para que use guardado en lugar de agregar
+    const confirmBtn = document.getElementById('mods-confirm');
+    if (confirmBtn) {
+        confirmBtn.textContent = '💾 Guardar cambios';
+        confirmBtn.dataset.editMode = 'true';
+    }
+    const skipBtn = document.getElementById('mods-skip');
+    if (skipBtn) skipBtn.textContent = 'Sin cambios';
+
+    // Abrir modal
+    const modsModal = document.getElementById('mods-modal');
+    if (modsModal) modsModal.classList.add('active');
+};
+
+/* ── GUARDAR EDICIÓN DE ITEM ──────────────────────────────── */
+// Patch confirmarMods to handle edit mode
+const _origConfirmarModsV2 = window.confirmarMods ? window.confirmarMods.toString() : null;
+
+// Override confirmarMods to check edit mode
+const _baseConfirmarMods = window.confirmarMods;
+window.confirmarMods = function(conMods) {
+    const confirmBtn = document.getElementById('mods-confirm');
+    const isEditMode = confirmBtn && confirmBtn.dataset.editMode === 'true';
+
+    if (isEditMode && window._editingItem) {
+        const { cuentaId, itemIdx, precioBase } = window._editingItem;
+        const c = CS.cuentas.find(c => c.id === cuentaId);
+        if (c && c.items[itemIdx]) {
+            if (conMods) {
+                const mods = [];
+                let extra = 0;
+                document.querySelectorAll('.mod-chip input:checked').forEach(cb => {
+                    mods.push(cb.value);
+                    extra += parseFloat(cb.getAttribute('data-price') || 0);
+                });
+                const nota = document.getElementById('mods-notes').value.trim();
+                if (nota) mods.push(`📝 ${nota}`);
+                c.items[itemIdx].modificaciones = mods;
+                c.items[itemIdx].precio = precioBase + extra;
+            }
+            // Restaurar modal
+            if (confirmBtn) {
+                confirmBtn.textContent = 'Agregar al Pedido';
+                delete confirmBtn.dataset.editMode;
+            }
+            const skipBtn = document.getElementById('mods-skip');
+            if (skipBtn) skipBtn.textContent = 'Sin cambios';
+            window._editingItem = null;
+        }
+        // Cerrar modal y re-render
+        const modsModal = document.getElementById('mods-modal');
+        if (modsModal) modsModal.classList.remove('active');
+        renderCuentasTabs();
+        renderCartItems();
+        return;
+    }
+
+    // Comportamiento normal
+    if (_baseConfirmarMods) _baseConfirmarMods(conMods);
+};
