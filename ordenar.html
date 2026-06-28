@@ -43,6 +43,64 @@
             await signOut(auth); window.location.href = 'pages/auth.html';
         };
     </script>
+
+<style>
+/* ── ORDERS SCREEN TABS ─────────────────────────────────── */
+#cuentas-tabs { -webkit-overflow-scrolling:touch; }
+#cuentas-tabs::-webkit-scrollbar { display:none; }
+.ctab {
+    display:flex;flex-direction:column;align-items:flex-start;gap:.08rem;
+    background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);
+    border-radius:10px;padding:.42rem .72rem;min-width:88px;cursor:pointer;
+    flex-shrink:0;transition:.15s;
+}
+.ctab.active { background:rgba(255,90,0,.12); }
+.ctab-nom {
+    font-size:.78rem;font-weight:700;color:#fff;white-space:nowrap;
+    max-width:100px;overflow:hidden;text-overflow:ellipsis;
+}
+.ctab-tot { font-size:.68rem;color:#888; }
+.ctab-add {
+    background:rgba(255,90,0,.08);border:1.5px dashed rgba(255,90,0,.3);
+    color:#FF5A00;border-radius:10px;padding:.42rem .75rem;cursor:pointer;
+    font-family:inherit;font-size:.78rem;font-weight:700;white-space:nowrap;
+    flex-shrink:0;transition:.15s;align-self:center;
+}
+.ctab-add:hover { background:rgba(255,90,0,.18); }
+.cart-action-btn {
+    flex:1;padding:.38rem .5rem;background:transparent;
+    border:1px solid;border-radius:8px;cursor:pointer;font-family:inherit;
+    font-size:.72rem;font-weight:700;white-space:nowrap;transition:.15s;
+}
+.cart-action-btn:hover { opacity:.8; }
+/* Cart item move button */
+.item-move-row {
+    display:flex;gap:.3rem;margin-top:.35rem;flex-wrap:wrap;
+}
+.item-move-btn {
+    font-size:.68rem;font-weight:700;padding:.15rem .45rem;border-radius:6px;
+    border:1px solid;cursor:pointer;font-family:inherit;white-space:nowrap;
+    background:transparent;transition:.15s;
+}
+.item-move-btn:hover { opacity:.75; }
+.item-split-btn {
+    font-size:.68rem;font-weight:700;padding:.15rem .5rem;border-radius:6px;
+    background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);
+    color:#F59E0B;cursor:pointer;font-family:inherit;
+}
+/* Nombre modal */
+#nombre-modal-overlay {
+    position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:5000;
+    display:flex;align-items:center;justify-content:center;padding:1rem;
+    opacity:0;pointer-events:none;transition:opacity .2s;
+}
+#nombre-modal-overlay.open { opacity:1;pointer-events:all; }
+#nombre-modal {
+    background:#1A1A1A;border:1px solid rgba(255,255,255,.12);
+    border-radius:16px;padding:1.25rem;width:100%;max-width:340px;
+}
+</style>
+
 </head>
 <body>
 <header class="app-header">
@@ -93,12 +151,27 @@
 <!-- MODAL CARRITO -->
 <div class="modal-overlay" id="cart-modal">
     <div class="cart-container">
-        <div class="cart-header">
-            <h3>Tu Pedido</h3>
-            <div style="display:flex;align-items:center;gap:.5rem;">
-                <button onclick="abrirSplit()" style="background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.4);color:#A78BFA;border-radius:8px;padding:.32rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">⚡ Split</button>
-                <button id="close-cart" class="close-btn">x</button>
+        <!-- ORDERS SCREEN HEADER -->
+        <div class="cart-header" style="flex-direction:column;padding:0;gap:0;">
+          <!-- Top bar -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:.8rem 1rem .6rem;width:100%;">
+            <div style="font-size:1rem;font-weight:800;color:#FF5A00;">🐢 Orden</div>
+            <button id="close-cart" style="background:none;border:none;color:#888;font-size:1.3rem;cursor:pointer;padding:.2rem .4rem;">✕</button>
+          </div>
+          <!-- Cuenta tabs -->
+          <div id="cuentas-tabs" style="display:flex;gap:.4rem;padding:0 .85rem .6rem;overflow-x:auto;scrollbar-width:none;">
+            <div class="ctab active" data-cid="1" onclick="switchCuenta(1)" style="border-color:#FF5A00;">
+              <span class="ctab-nom">Cuenta 1</span>
+              <span class="ctab-tot" id="ctab-tot-1">$0.00</span>
             </div>
+            <button onclick="agregarNuevaCuenta()" class="ctab-add">+ Nueva cuenta</button>
+          </div>
+          <!-- Actions bar -->
+          <div style="display:flex;gap:.4rem;padding:0 .85rem .65rem;border-bottom:1px solid rgba(255,255,255,.08);">
+            <button onclick="mostrarNombreCuenta()" class="cart-action-btn" style="color:#A78BFA;border-color:rgba(167,139,250,.35);">✏️ Nombre</button>
+            <button onclick="dividirCuentaIgual()" class="cart-action-btn" style="color:#F59E0B;border-color:rgba(245,158,11,.35);">÷ Dividir igual</button>
+            <button onclick="limpiarCuentaActual()" class="cart-action-btn" style="color:#FF4444;border-color:rgba(255,68,68,.3);">🗑 Limpiar</button>
+          </div>
         </div>
         <div class="cart-body">
             <div class="tracker-section" style="margin-bottom: 1.5rem; padding: 1rem; background: var(--surface2); border-radius: 12px; border: 1px solid var(--border);">
@@ -110,6 +183,7 @@
                 <div id="ticket-search-result" style="margin-top:0.8rem; font-size:0.85rem; display:none; padding:0.8rem; border-radius:8px; background: rgba(0,0,0,0.3);"></div>
             </div>
 
+            <div style="padding:.5rem .85rem .3rem;font-size:.72rem;color:#888;font-weight:700;letter-spacing:.04em;" id="cuenta-label-active">CUENTA 1</div>
             <div class="cart-items" id="cart-items">
                 <p class="empty-cart">Tu carrito esta vacio </p>
             </div>
@@ -479,6 +553,28 @@
 }
 .split-all-btn:hover{ filter:brightness(1.08); }
 </style>
+
+
+<!-- MODAL NOMBRE DE CUENTA -->
+<div id="nombre-modal-overlay" onclick="if(event.target===this)cerrarNombreModal()">
+  <div id="nombre-modal">
+    <div style="font-weight:800;font-size:.95rem;margin-bottom:.85rem;color:#fff;">✏️ Nombre de la cuenta</div>
+    <input type="text" id="nombre-cuenta-input" placeholder="Ej: Juan, Mesa 5, Familia..."
+      style="width:100%;padding:.7rem .9rem;background:#222;border:1.5px solid rgba(255,255,255,.15);
+             border-radius:10px;color:#fff;font-family:inherit;font-size:.95rem;outline:none;margin-bottom:.85rem;"
+      onkeydown="if(event.key==='Enter')guardarNombreCuenta()">
+    <div style="display:flex;gap:.5rem;">
+      <button onclick="guardarNombreCuenta()" style="flex:1;padding:.7rem;background:linear-gradient(135deg,#FF5A00,#FF8800);
+        color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;">
+        Guardar
+      </button>
+      <button onclick="cerrarNombreModal()" style="padding:.7rem 1rem;background:#222;border:1px solid rgba(255,255,255,.15);
+        color:#888;border-radius:10px;font-family:inherit;cursor:pointer;">
+        Cancelar
+      </button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
