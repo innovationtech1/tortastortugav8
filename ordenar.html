@@ -494,29 +494,256 @@ async function confirmarPagoSimulado() {
 window.actualizarBotonAgregarTodo = window.actualizarBotonAgregarTodo || function(){};
 
 function mostrarPanelCajero() {
-    var cs     = window._cajeroActivo;
-    if (!cs) return;
-    var nombre = cs.nombre || 'Cajero';
-    var rol    = cs.rol    || 'cajero';
-    var empId  = cs.id     || '';
+    var ov = document.getElementById('cajero-panel-overlay');
+    if (!ov) return;
+    ov.style.display = 'flex';
+    cargarPanelCajero();
+}
 
-    // Mostrar info del cajero y opción de cerrar sesión
-    var msg = nombre + ' (' + rol + ')\n\n¿Deseas cerrar sesión de cajero?';
-    if (confirm(msg)) {
-        sessionStorage.removeItem('tt_cajero_id');
-        sessionStorage.removeItem('tt_cajero_nombre');
-        sessionStorage.removeItem('tt_cajero_rol');
-        sessionStorage.removeItem('tt_cajero_ts');
-        window._cajeroActivo = null;
-        // Ocultar banner y botón
-        var banner = document.getElementById('cajero-banner');
-        var btn    = document.getElementById('btn-cajero-header');
-        if (banner) banner.style.display = 'none';
-        if (btn)    btn.style.display    = 'none';
-        // Redirigir al login
-        window.location.href = 'pages/auth.html';
+function cerrarPanelCajero() {
+    var ov = document.getElementById('cajero-panel-overlay');
+    if (ov) ov.style.display = 'none';
+}
+
+function cerrarSesionCajero() {
+    if (!confirm('¿Cerrar sesión de cajero?')) return;
+    sessionStorage.removeItem('tt_cajero_id');
+    sessionStorage.removeItem('tt_cajero_nombre');
+    sessionStorage.removeItem('tt_cajero_rol');
+    sessionStorage.removeItem('tt_cajero_ts');
+    sessionStorage.removeItem('tt_turno_caja_id');
+    window._cajeroActivo = null;
+    var banner = document.getElementById('cajero-banner');
+    var btn    = document.getElementById('btn-cajero-header');
+    if (banner) banner.style.display = 'none';
+    if (btn)    btn.style.display    = 'none';
+    window.location.href = 'pages/auth.html';
+}
+
+async function cargarPanelCajero() {
+    var cs = window._cajeroActivo;
+    if (!cs) return;
+
+    // Tab activo
+    var tab = window._cajeroTabActivo || 'resumen';
+    document.querySelectorAll('.caj-tab').forEach(function(t) {
+        t.classList.toggle('active', t.dataset.tab === tab);
+    });
+    document.querySelectorAll('.caj-pane').forEach(function(p) {
+        p.style.display = p.dataset.pane === tab ? 'block' : 'none';
+    });
+
+    // Cargar datos del turno activo
+    var turnoId = sessionStorage.getItem('tt_turno_caja_id');
+    var turno   = null;
+    if (turnoId && window._getTurnoCaja) {
+        turno = await window._getTurnoCaja(turnoId);
+    }
+
+    renderResumenCajero(cs, turno);
+    if (tab === 'ordenes') await cargarOrdenesCajero(cs);
+}
+
+function switchCajeroTab(tab) {
+    window._cajeroTabActivo = tab;
+    cargarPanelCajero();
+}
+
+function renderResumenCajero(cs, turno) {
+    var r = document.getElementById('caj-resumen-content');
+    if (!r) return;
+
+    var fondoInicial = turno ? (turno.fondoInicial || 0) : 0;
+    var totalEfectivo = turno ? (turno.totalEfectivo || 0) : 0;
+    var totalTarjeta  = turno ? (turno.totalTarjeta  || 0) : 0;
+    var totalOrdenes  = turno ? (turno.totalOrdenes  || 0) : 0;
+    var totalCobrado  = totalEfectivo + totalTarjeta;
+    var balanceCaja   = fondoInicial + totalEfectivo;
+    var inicio        = turno ? new Date(turno.inicio?.seconds * 1000) : null;
+
+    r.innerHTML =
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.85rem;">' +
+            statCard('💵', 'Fondo inicial', '$' + fondoInicial.toFixed(2), '#25D366') +
+            statCard('🧾', 'Órdenes', totalOrdenes, '#3B82F6') +
+            statCard('💵', 'Cobrado efectivo', '$' + totalEfectivo.toFixed(2), '#25D366') +
+            statCard('💳', 'Cobrado tarjeta', '$' + totalTarjeta.toFixed(2), '#A78BFA') +
+            statCard('💰', 'Total cobrado', '$' + totalCobrado.toFixed(2), '#FF5A00') +
+            statCard('🏦', 'Balance en caja', '$' + balanceCaja.toFixed(2), '#F59E0B') +
+        '</div>' +
+        (inicio ? '<div style="font-size:.75rem;color:#888;text-align:center;margin-bottom:.75rem;">Turno iniciado: ' + inicio.toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'}) + '</div>' : '') +
+        (turno
+            ? '<button onclick="hacerCorteCaja()" style="width:100%;padding:.78rem;background:linear-gradient(135deg,#FF5A00,#FF8800);color:#fff;border:none;border-radius:11px;font-family:inherit;font-size:.9rem;font-weight:800;cursor:pointer;margin-bottom:.5rem;">🧾 Hacer Corte de Caja</button>'
+            : '<button onclick="abrirAsignarFondo()" style="width:100%;padding:.78rem;background:linear-gradient(135deg,#25D366,#18a849);color:#fff;border:none;border-radius:11px;font-family:inherit;font-size:.9rem;font-weight:800;cursor:pointer;margin-bottom:.5rem;">💵 Asignar Fondo e Iniciar Turno</button>'
+        ) +
+        '<button onclick="cerrarSesionCajero()" style="width:100%;padding:.65rem;background:transparent;border:1px solid rgba(255,68,68,.3);color:#FF4444;border-radius:11px;font-family:inherit;font-size:.85rem;cursor:pointer;">Cerrar sesión</button>';
+}
+
+function statCard(ico, label, val, color) {
+    return '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.75rem;text-align:center;">' +
+        '<div style="font-size:1.3rem;margin-bottom:.2rem;">' + ico + '</div>' +
+        '<div style="font-size:.68rem;color:#888;margin-bottom:.15rem;">' + label.toUpperCase() + '</div>' +
+        '<div style="font-size:1.1rem;font-weight:900;color:' + color + ';">' + val + '</div>' +
+    '</div>';
+}
+
+function abrirAsignarFondo() {
+    var ov = document.getElementById('fondo-overlay');
+    if (ov) {
+        ov.style.display = 'flex';
+        setTimeout(function(){ document.getElementById('fondo-input')?.focus(); }, 100);
     }
 }
+
+function cerrarAsignarFondo() {
+    var ov = document.getElementById('fondo-overlay');
+    if (ov) ov.style.display = 'none';
+}
+
+async function confirmarFondo() {
+    var inp = document.getElementById('fondo-input');
+    var fondo = parseFloat(inp?.value || 0);
+    if (isNaN(fondo) || fondo < 0) { alert('Ingresa un monto válido'); return; }
+
+    var cs = window._cajeroActivo;
+    var btn = document.getElementById('btn-confirmar-fondo');
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
+    try {
+        var turnoData = {
+            cajeroId:      cs.id,
+            cajeroNombre:  cs.nombre,
+            cajeroRol:     cs.rol,
+            fondoInicial:  fondo,
+            totalEfectivo: 0,
+            totalTarjeta:  0,
+            totalOrdenes:  0,
+            inicio:        new Date(),
+            estado:        'activo'
+        };
+
+        if (window._crearTurnoCaja) {
+            var id = await window._crearTurnoCaja(turnoData);
+            sessionStorage.setItem('tt_turno_caja_id', id);
+        }
+
+        cerrarAsignarFondo();
+        cargarPanelCajero();
+    } catch(e) {
+        alert('Error: ' + e.message);
+        if (btn) { btn.disabled = false; btn.textContent = 'Iniciar Turno'; }
+    }
+}
+
+async function hacerCorteCaja() {
+    var turnoId = sessionStorage.getItem('tt_turno_caja_id');
+    var cs = window._cajeroActivo;
+    if (!turnoId || !cs) { alert('No hay turno activo'); return; }
+
+    var turno = window._getTurnoCaja ? await window._getTurnoCaja(turnoId) : null;
+    if (!turno) return;
+
+    var fondoInicial  = turno.fondoInicial  || 0;
+    var totalEfectivo = turno.totalEfectivo || 0;
+    var totalTarjeta  = turno.totalTarjeta  || 0;
+    var totalCobrado  = totalEfectivo + totalTarjeta;
+    var balanceCaja   = fondoInicial + totalEfectivo;
+    var inicio = turno.inicio ? new Date(turno.inicio.seconds * 1000) : new Date();
+    var fin    = new Date();
+    var durMin = Math.round((fin - inicio) / 60000);
+
+    var reporte = [
+        '🧾 CORTE DE CAJA — TORTAS TORTUGA',
+        '═══════════════════════════════',
+        'Cajero: ' + cs.nombre + ' (' + cs.rol + ')',
+        'Inicio: ' + inicio.toLocaleString('es-MX'),
+        'Cierre: ' + fin.toLocaleString('es-MX'),
+        'Duración: ' + durMin + ' min',
+        '',
+        '─── RESUMEN ───────────────────',
+        'Órdenes tomadas: ' + (turno.totalOrdenes || 0),
+        'Fondo inicial:   $' + fondoInicial.toFixed(2),
+        'Cobrado efectivo: $' + totalEfectivo.toFixed(2),
+        'Cobrado tarjeta:  $' + totalTarjeta.toFixed(2),
+        'TOTAL COBRADO:    $' + totalCobrado.toFixed(2),
+        '─── BALANCE ───────────────────',
+        'Balance en caja: $' + balanceCaja.toFixed(2),
+        '═══════════════════════════════'
+    ].join('\n');
+
+    var ov = document.getElementById('corte-overlay');
+    var txt = document.getElementById('corte-texto');
+    if (ov && txt) {
+        txt.textContent = reporte;
+        ov.style.display = 'flex';
+    }
+
+    // Marcar turno como cerrado
+    if (window._cerrarTurnoCaja) {
+        await window._cerrarTurnoCaja(turnoId, { fin: fin, estado: 'cerrado', reporte: reporte });
+    }
+    sessionStorage.removeItem('tt_turno_caja_id');
+}
+
+function cerrarCorte() {
+    var ov = document.getElementById('corte-overlay');
+    if (ov) ov.style.display = 'none';
+    cargarPanelCajero();
+}
+
+function imprimirCorte() {
+    var txt = document.getElementById('corte-texto')?.textContent || '';
+    var win = window.open('', '_blank', 'width=400,height=600');
+    win.document.write('<pre style="font-family:monospace;font-size:14px;padding:20px;">' + txt + '</pre>');
+    win.document.close();
+    win.print();
+}
+
+async function cargarOrdenesCajero(cs) {
+    var cont = document.getElementById('caj-ordenes-content');
+    if (!cont) return;
+    cont.innerHTML = '<div style="text-align:center;color:#888;padding:1rem;">Cargando órdenes...</div>';
+
+    if (!window._getOrdenesCajero) {
+        cont.innerHTML = '<div style="text-align:center;color:#555;padding:1rem;">Conectando...</div>';
+        return;
+    }
+
+    try {
+        var ordenes = await window._getOrdenesCajero(cs.id);
+        if (!ordenes || ordenes.length === 0) {
+            cont.innerHTML = '<div style="text-align:center;color:#555;padding:1.5rem;">Sin órdenes en este turno</div>';
+            return;
+        }
+        cont.innerHTML = ordenes.map(function(p) {
+            var tot = parseFloat(p.total || 0);
+            var fecha = p.creado?.seconds ? new Date(p.creado.seconds*1000).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) : '';
+            return '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.65rem .85rem;margin-bottom:.4rem;">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                '<div><div style="font-size:.82rem;font-weight:700;color:#fff;">' + (p.cliente || p.nombre || 'Cliente') + '</div>' +
+                '<div style="font-size:.7rem;color:#888;">' + fecha + ' · ' + (p.metodoPago || 'pendiente') + '</div></div>' +
+                '<div style="font-size:.9rem;font-weight:800;color:#25D366;">$' + tot.toFixed(2) + '</div>' +
+                '</div></div>';
+        }).join('');
+    } catch(e) {
+        cont.innerHTML = '<div style="color:#FF4444;padding:1rem;">Error: ' + e.message + '</div>';
+    }
+}
+
+// Registrar pago cuando se confirma en POS
+var _origConfirmarPagoSimulado = window.confirmarPagoSimulado;
+window.confirmarPagoSimulado = async function() {
+    var metodo = window._metodoPagoActual || 'efectivo';
+    var cs     = window._cuentasSys;
+    var total  = cs ? cs.cuentas.reduce(function(s,c){ return s+c.items.reduce(function(ss,i){return ss+i.precio;},0);},0) : 0;
+    var turnoId = sessionStorage.getItem('tt_turno_caja_id');
+
+    // Registrar cobro en Firestore
+    if (turnoId && total > 0 && window._registrarCobro) {
+        await window._registrarCobro(turnoId, metodo, total);
+    }
+
+    if (_origConfirmarPagoSimulado) await _origConfirmarPagoSimulado();
+};
 
 function switchCuenta(cid) {
     var cs = window._cuentasSys;
@@ -1150,7 +1377,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782680324">
+<script type="module" src="js/app.js?v=1782680645">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
@@ -1643,6 +1870,123 @@ function enviarOrdenModal() {
         style="background:rgba(0,0,0,.2);border-radius:20px;
                padding:.15rem .55rem;font-size:.78rem;">0 productos</span>
 </div>
+
+
+<!-- ═══════════════════════════════════════════════════
+     PANEL CAJERO
+     ═══════════════════════════════════════════════════ -->
+<div id="cajero-panel-overlay"
+     onclick="if(event.target===this)cerrarPanelCajero()"
+     style="position:fixed;inset:0;background:rgba(0,0,0,.88);backdrop-filter:blur(6px);
+            z-index:9000;display:none;align-items:flex-end;justify-content:center;">
+  <div style="background:#1A1A1A;border:1px solid rgba(255,255,255,.1);border-radius:20px 20px 0 0;
+              width:100%;max-width:560px;max-height:88vh;display:flex;flex-direction:column;">
+
+    <!-- Handle -->
+    <div style="width:32px;height:4px;background:rgba(255,255,255,.15);border-radius:4px;margin:.85rem auto .5rem;flex-shrink:0;"></div>
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem .75rem;flex-shrink:0;">
+      <div>
+        <div style="font-size:.95rem;font-weight:800;color:#FF5A00;">🏪 Panel Cajero</div>
+        <div style="font-size:.72rem;color:#888;" id="caj-header-nombre"></div>
+      </div>
+      <button onclick="cerrarPanelCajero()"
+          style="background:none;border:1px solid rgba(255,255,255,.12);color:#888;
+                 border-radius:8px;padding:.3rem .65rem;cursor:pointer;font-size:.85rem;">✕</button>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:.4rem;padding:0 1rem .65rem;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.08);">
+      <button class="caj-tab active" data-tab="resumen" onclick="switchCajeroTab('resumen')"
+          style="flex:1;padding:.5rem;background:rgba(255,90,0,.12);border:1px solid rgba(255,90,0,.35);
+                 color:#FF5A00;border-radius:8px;font-family:inherit;font-size:.78rem;font-weight:700;cursor:pointer;">
+        📊 Resumen
+      </button>
+      <button class="caj-tab" data-tab="ordenes" onclick="switchCajeroTab('ordenes')"
+          style="flex:1;padding:.5rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+                 color:#888;border-radius:8px;font-family:inherit;font-size:.78rem;font-weight:700;cursor:pointer;">
+        📋 Mis Órdenes
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div style="flex:1;overflow-y:auto;padding:1rem;-webkit-overflow-scrolling:touch;">
+      <div class="caj-pane" data-pane="resumen">
+        <div id="caj-resumen-content"></div>
+      </div>
+      <div class="caj-pane" data-pane="ordenes" style="display:none;">
+        <div id="caj-ordenes-content"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ASIGNAR FONDO -->
+<div id="fondo-overlay" onclick="if(event.target===this)cerrarAsignarFondo()"
+     style="position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9500;
+            display:none;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:#1C1C1C;border:1px solid rgba(37,211,102,.3);border-radius:18px;
+              padding:1.5rem;width:100%;max-width:340px;text-align:center;">
+    <div style="font-size:2.5rem;margin-bottom:.5rem;">💵</div>
+    <div style="font-size:1rem;font-weight:800;color:#fff;margin-bottom:.3rem;">Fondo de Caja</div>
+    <div style="font-size:.78rem;color:#888;margin-bottom:1.1rem;">Ingresa el efectivo inicial de tu caja</div>
+    <div style="display:flex;align-items:center;gap:.4rem;background:#222;border:1.5px solid rgba(37,211,102,.4);
+                border-radius:12px;padding:.75rem 1rem;margin-bottom:1rem;">
+      <span style="font-size:1.1rem;color:#25D366;font-weight:700;">$</span>
+      <input id="fondo-input" type="number" min="0" step="0.01" placeholder="0.00"
+          style="flex:1;background:none;border:none;color:#fff;font-family:inherit;font-size:1.3rem;
+                 font-weight:700;outline:none;text-align:center;"
+          onkeydown="if(event.key==='Enter')confirmarFondo()">
+    </div>
+    <button id="btn-confirmar-fondo" onclick="confirmarFondo()"
+        style="width:100%;padding:.82rem;background:linear-gradient(135deg,#25D366,#18a849);
+               color:#fff;border:none;border-radius:11px;font-family:inherit;font-size:.92rem;
+               font-weight:800;cursor:pointer;margin-bottom:.4rem;">
+      💵 Iniciar Turno
+    </button>
+    <button onclick="cerrarAsignarFondo()"
+        style="width:100%;padding:.68rem;background:transparent;border:1px solid rgba(255,255,255,.12);
+               color:#888;border-radius:11px;font-family:inherit;font-size:.85rem;cursor:pointer;">
+      Cancelar
+    </button>
+  </div>
+</div>
+
+<!-- MODAL CORTE DE CAJA -->
+<div id="corte-overlay" onclick="if(event.target===this)cerrarCorte()"
+     style="position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9500;
+            display:none;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:#1C1C1C;border:1px solid rgba(255,90,0,.3);border-radius:18px;
+              padding:1.5rem;width:100%;max-width:400px;max-height:85vh;overflow-y:auto;">
+    <div style="text-align:center;margin-bottom:1rem;">
+      <div style="font-size:1rem;font-weight:800;color:#FF5A00;">🧾 Corte de Caja</div>
+    </div>
+    <pre id="corte-texto"
+        style="background:#111;border:1px solid rgba(255,255,255,.1);border-radius:10px;
+               padding:1rem;font-size:.75rem;color:#ccc;font-family:monospace;
+               white-space:pre-wrap;margin-bottom:1rem;"></pre>
+    <button onclick="imprimirCorte()"
+        style="width:100%;padding:.78rem;background:rgba(255,90,0,.15);border:1.5px solid rgba(255,90,0,.4);
+               color:#FF5A00;border-radius:11px;font-family:inherit;font-size:.88rem;font-weight:700;
+               cursor:pointer;margin-bottom:.4rem;">
+      🖨️ Imprimir / Guardar
+    </button>
+    <button onclick="cerrarCorte()"
+        style="width:100%;padding:.68rem;background:transparent;border:1px solid rgba(255,255,255,.12);
+               color:#888;border-radius:11px;font-family:inherit;font-size:.85rem;cursor:pointer;">
+      Cerrar
+    </button>
+  </div>
+</div>
+
+<style>
+.caj-tab.active {
+    background: rgba(255,90,0,.15) !important;
+    border-color: rgba(255,90,0,.5) !important;
+    color: #FF5A00 !important;
+}
+</style>
 
 </body>
 </html>
