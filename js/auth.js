@@ -109,11 +109,25 @@ async function obtenerPerfil(uid) {
 
 // ─── TABS ────────────────────────────────────────────────────────
 window.switchTab = function(tab) {
-    document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+    // Ocultar todos los forms
+    document.querySelectorAll('.auth-form').forEach(f => {
+        f.classList.remove('active');
+        f.style.display = 'none';
+    });
     document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-    document.getElementById(`form-${tab}`).classList.add('active');
+
+    // Mostrar el form seleccionado
+    const targetForm = document.getElementById(`form-${tab}`);
+    if (targetForm) {
+        targetForm.classList.add('active');
+        targetForm.style.display = 'block';
+    }
     if (tab !== 'forgot') document.getElementById(`tab-${tab}`)?.classList.add('active');
     clearMessages();
+
+    // Focus primer input
+    if (tab === 'cajero') setTimeout(() => document.getElementById('cajero-id')?.focus(), 100);
+    if (tab === 'login')  setTimeout(() => document.getElementById('login-email')?.focus(), 100);
 };
 
 function clearMessages() {
