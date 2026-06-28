@@ -639,15 +639,51 @@ window.nuevaCuenta = function() {
 
 // ── ELIMINAR CUENTA ────────────────────────────────────────────
 window.eliminarCuenta = function(cid) {
-    if (cuentas.length <= 1) return;
-    const idx = cuentas.findIndex(c => c.id === cid);
-    // Mover items de la cuenta eliminada a la primera
-    if (cuentas[idx].items.length > 0) {
-        cuentas[0].items.push(...cuentas[idx].items);
+    const cs = window._cuentasSys;
+    if (!cs || cs.cuentas.length <= 1) return;
+
+    const c = cs.cuentas.find(x => x.id === cid);
+    if (!c) return;
+
+    // Guardar backup para deshacer
+    const backup      = JSON.parse(JSON.stringify(cs.cuentas));
+    const backupActiva = cs.activa;
+
+    // Mover items a primera cuenta disponible
+    const idx = cs.cuentas.findIndex(x => x.id === cid);
+    if (idx >= 0) {
+        if (cs.cuentas[idx].items.length) {
+            const dest = idx === 0 ? cs.cuentas[1] : cs.cuentas[0];
+            dest.items = dest.items.concat(cs.cuentas[idx].items);
+        }
+        cs.cuentas.splice(idx, 1);
     }
-    cuentas.splice(idx, 1);
-    if (cuentaActiva === cid) cuentaActiva = cuentas[0].id;
-    renderSplit();
+    if (cs.activa === cid) cs.activa = cs.cuentas[0].id;
+
+    window.renderCuentasTabs();
+    window.renderCartItems();
+
+    // Toast de deshacer
+    const toast = document.getElementById('undo-toast');
+    const msg   = document.getElementById('undo-toast-msg');
+    if (toast && msg) {
+        msg.textContent = 'Cuenta "' + c.nombre + '" eliminada';
+        toast.style.display = 'flex';
+        clearTimeout(window._undoTimer);
+        const btn = document.getElementById('undo-toast-btn');
+        if (btn) {
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            newBtn.addEventListener('click', () => {
+                cs.cuentas = backup;
+                cs.activa  = backupActiva;
+                toast.style.display = 'none';
+                window.renderCuentasTabs();
+                window.renderCartItems();
+            });
+        }
+        window._undoTimer = setTimeout(() => { toast.style.display = 'none'; }, 4000);
+    }
 };
 
 // ── ACTIVAR CUENTA ─────────────────────────────────────────────
