@@ -230,6 +230,12 @@ function agregarNuevaCuenta() {
     window.renderCartItems();
     mostrarNombreCuenta();
 }
+function eliminarCuentaActiva() {
+    var cs = window._cuentasSys;
+    if (!cs) { alert('Error: sistema de cuentas no disponible'); return; }
+    eliminarCuenta(cs.activa);
+}
+
 function eliminarCuenta(cid) {
     var cs = window._cuentasSys;
     if (!cs || cs.cuentas.length <= 1) return;
@@ -582,7 +588,7 @@ function cerrarOrdenModal() {
           <!-- Actions bar -->
           <div style="display:flex;gap:.4rem;padding:0 .85rem .65rem;border-bottom:1px solid rgba(255,255,255,.08);">
             <button onclick="mostrarNombreCuenta()" class="cart-action-btn" style="color:#A78BFA;border-color:rgba(167,139,250,.35);">✏️ Nombre</button>
-            <button id="btn-eliminar-cuenta" onclick="eliminarCuenta(window._cuentasSys.activa)" class="cart-action-btn" style="color:#FF4444;border-color:rgba(255,68,68,.3);display:none;">✕ Eliminar</button>
+            <button id="btn-eliminar-cuenta" onclick="eliminarCuentaActiva()" class="cart-action-btn" style="color:#FF4444;border-color:rgba(255,68,68,.3);display:none;">✕ Eliminar cuenta</button>
             <button onclick="limpiarCuentaActual()" class="cart-action-btn" style="color:#FF6B00;border-color:rgba(255,107,0,.3);">🧹 Limpiar</button>
           </div>
         </div>
@@ -766,7 +772,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782647821">
+<script type="module" src="js/app.js?v=1782648068">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
