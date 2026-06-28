@@ -41,6 +41,12 @@ window._pendingItem = window._pendingItem || null;
             var nomEl  = document.getElementById('cajero-nombre-header');
             if (banner) banner.style.display = 'flex';
             if (nomEl)  nomEl.textContent = cajeroNombre + ' · ' + cajeroRol;
+            // Mostrar botón Cajero en el header
+            var btnCaj = document.getElementById('btn-cajero-header');
+            if (btnCaj) {
+                btnCaj.style.display = 'inline-flex';
+                btnCaj.title = cajeroNombre + ' (' + cajeroRol + ')';
+            }
         });
     } else if (cajeroId) {
         // Sesión expirada
@@ -481,6 +487,31 @@ async function confirmarPagoSimulado() {
 /* Stub — menu.js sobreescribe esta función */
 window.actualizarBotonAgregarTodo = window.actualizarBotonAgregarTodo || function(){};
 
+function mostrarPanelCajero() {
+    var cs     = window._cajeroActivo;
+    if (!cs) return;
+    var nombre = cs.nombre || 'Cajero';
+    var rol    = cs.rol    || 'cajero';
+    var empId  = cs.id     || '';
+
+    // Mostrar info del cajero y opción de cerrar sesión
+    var msg = nombre + ' (' + rol + ')\n\n¿Deseas cerrar sesión de cajero?';
+    if (confirm(msg)) {
+        sessionStorage.removeItem('tt_cajero_id');
+        sessionStorage.removeItem('tt_cajero_nombre');
+        sessionStorage.removeItem('tt_cajero_rol');
+        sessionStorage.removeItem('tt_cajero_ts');
+        window._cajeroActivo = null;
+        // Ocultar banner y botón
+        var banner = document.getElementById('cajero-banner');
+        var btn    = document.getElementById('btn-cajero-header');
+        if (banner) banner.style.display = 'none';
+        if (btn)    btn.style.display    = 'none';
+        // Redirigir al login
+        window.location.href = 'pages/auth.html';
+    }
+}
+
 function switchCuenta(cid) {
     var cs = window._cuentasSys;
     if (cs) { cs.activa = cid; window.renderCuentasTabs(); window.renderCartItems(); }
@@ -809,6 +840,12 @@ function cerrarOrdenModal() {
         <button class="signout-btn" onclick="window.location.href='index.html'" title="Ir al inicio"> Inicio</button>
         <button class="signout-btn" onclick="window.location.href='perfil.html'" title="Mi perfil y puntos" style="background:rgba(255,215,0,.15);border-color:rgba(255,215,0,.3);color:#FFD700;" id="btn-perfil">⭐ Mis Puntos</button>
         <button class="signout-btn" onclick="window.location.href='pages/admin.html'" title="Panel de Administrador"> Admin</button>
+        <button id="btn-cajero-header" onclick="mostrarPanelCajero()"
+            style="display:none;background:rgba(255,90,0,.15);border-color:rgba(255,90,0,.4);
+                   color:#FF5A00;font-weight:700;"
+            class="signout-btn">
+            🏪 Cajero
+        </button>
         <button class="signout-btn" onclick="cerrarSesion()" title="Cerrar sesion">Salir</button>
         <div class="cart-icon" id="cart-icon"> <span id="cart-count">0</span></div>
     </div>
@@ -1063,7 +1100,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782654929">
+<script type="module" src="js/app.js?v=1782675687">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
