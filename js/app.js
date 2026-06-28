@@ -59,24 +59,19 @@ window.addToCart = function(id, nombre, precioOverride, qty) {
     const sel = document.getElementById(`select-${id}`);
     const precio = precioOverride || parseFloat(sel?.value || 0);
     const cantidad = qty || 1;
-
-    // Si qty > 1, agregar directamente sin modal (solo primer item abre modal)
-    if (cantidad > 1) {
-        // Abrir modal una sola vez con nota de cantidad
-        pendingItem = { id, nombre, precio, modificaciones: [], _qty: cantidad, _splitMode: splitMode };
-        document.querySelectorAll('.mod-chip input').forEach(c => c.checked = false);
-        document.querySelectorAll('.mod-chip').forEach(c => c.classList.remove('selected'));
-        document.getElementById('mods-notes').value = '';
-        document.getElementById('mods-item-name').textContent = `${nombre} ×${cantidad}`;
-        modsModal.classList.add('active');
-    } else {
-        pendingItem = { id, nombre, precio, modificaciones: [], _qty: 1, _splitMode: splitMode };
-        document.querySelectorAll('.mod-chip input').forEach(c => c.checked = false);
-        document.querySelectorAll('.mod-chip').forEach(c => c.classList.remove('selected'));
-        document.getElementById('mods-notes').value = '';
-        document.getElementById('mods-item-name').textContent = nombre;
-        modsModal.classList.add('active');
-    }
+    pendingItem = { id, nombre, precio, modificaciones: [], _qty: cantidad };
+    // Sync with global _pendingItem for confirmarMods in global script
+    window._pendingItem = pendingItem;
+    document.querySelectorAll('.mod-chip').forEach(c => {
+        c.classList.remove('selected');
+        const inp = c.querySelector('input');
+        if (inp) inp.checked = false;
+    });
+    const notesEl = document.getElementById('mods-notes');
+    if (notesEl) notesEl.value = '';
+    const titleEl = document.getElementById('mods-item-name');
+    if (titleEl) titleEl.textContent = cantidad > 1 ? `${nombre} ×${cantidad}` : nombre;
+    modsModal.classList.add('active');
 };
 
 // ─── AGREGAR BEBIDA DIRECTA ──────────────────────────────────────
