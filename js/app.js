@@ -754,7 +754,7 @@ function renderSplit() {
             <div class="split-resumen-nom">${c.nombre}</div>
             <div class="split-resumen-items">${c.items.length} producto${c.items.length !== 1 ? 's' : ''}</div>
             <div class="split-resumen-tot" style="color:${c.color}">$${tot.toFixed(2)}</div>
-            <button class="split-orden-btn" onclick="ordenarCuenta(${c.id})"
+            <button class="split-orden-btn" onclick="abrirOrdenModal(${c.id})"
                 ${tot === 0 ? 'disabled' : ''}>Ordenar</button>
         </div>`;
     });
@@ -1112,27 +1112,97 @@ window.guardarNombreCuenta = function() {
 };
 
 // ── Enviar orden por WhatsApp (cuenta activa) ─────────────────
+window._ordenCuentaId = null;
+
 window.enviarCuentaActiva = function() {
     const c = CS.cuentas.find(c => c.id === CS.activa);
     if (!c || c.items.length === 0) { alert('Esta cuenta está vacía'); return; }
-    const nombre   = document.getElementById('customer-name')?.value || c.nombre;
-    const telefono = document.getElementById('customer-phone')?.value || '';
-    const tipo     = document.querySelector('input[name="order-type"]:checked')?.value || 'pickup';
+    abrirOrdenModal(c.id);
+};
+
+window.abrirOrdenModal = function(cid) {
+    const c = CS.cuentas.find(c => c.id === cid);
+    if (!c) return;
+    window._ordenCuentaId = cid;
+
+    // Llenar modal
+    document.getElementById('orden-modal-titulo').textContent = '📋 ' + c.nombre;
+    document.getElementById('orden-nombre').value = c.nombre !== ('Cuenta ' + c.id) ? c.nombre : '';
+    document.getElementById('orden-telefono').value = c._telefono || '';
+
+    // Resumen de items
+    const total = c.items.reduce((s, i) => s + i.precio, 0);
+    document.getElementById('orden-modal-total').textContent = '$' + total.toFixed(2);
+    document.getElementById('orden-modal-items').textContent =
+        c.items.length + ' producto' + (c.items.length !== 1 ? 's' : '');
+
+    // Reset tipo entrega
+    document.getElementById('orden-tipo-pickup').checked = true;
+    document.getElementById('orden-tipo-pickup-lbl').style.borderColor = '#FF5A00';
+    document.getElementById('orden-tipo-delivery-lbl').style.borderColor = 'rgba(255,255,255,.12)';
+
+    // Abrir overlay
+    const ov = document.getElementById('orden-cuenta-overlay');
+    const modal = document.getElementById('orden-cuenta-modal');
+    if (ov && modal) {
+        ov.style.opacity = '1';
+        ov.style.pointerEvents = 'all';
+        modal.style.transform = 'translateY(0)';
+    }
+    setTimeout(() => document.getElementById('orden-nombre').focus(), 300);
+};
+
+window.cerrarOrdenModal = function() {
+    const ov = document.getElementById('orden-cuenta-overlay');
+    const modal = document.getElementById('orden-cuenta-modal');
+    if (ov && modal) {
+        ov.style.opacity = '0';
+        ov.style.pointerEvents = 'none';
+        modal.style.transform = 'translateY(100%)';
+    }
+    window._ordenCuentaId = null;
+};
+
+window.enviarOrdenModal = function() {
+    const cid = window._ordenCuentaId;
+    const c = CS.cuentas.find(c => c.id === cid);
+    if (!c) return;
+
+    const nombre   = document.getElementById('orden-nombre').value.trim() || c.nombre;
+    const telefono = document.getElementById('orden-telefono').value.trim();
+    const tipo     = document.querySelector('input[name="orden-tipo"]:checked')?.value || 'pickup';
     const total    = c.items.reduce((s, i) => s + i.precio, 0);
 
-    let msg = `🐢 *TORTAS TORTUGA*\n`;
-    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
-    msg += `📋 *${c.nombre}*\n`;
-    msg += `👤 ${nombre}`;
-    if (telefono) msg += ` · 📞 ${telefono}`;
-    msg += `\n${tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Domicilio'}\n\n`;
+    // Guardar teléfono en la cuenta para referencia futura
+    c._telefono = telefono;
+
+    let msg = '🐢 *TORTAS TORTUGA*
+';
+    msg += '━━━━━━━━━━━━━━━━━━━━
+';
+    msg += '📋 *' + c.nombre + '*
+';
+    msg += '👤 ' + nombre;
+    if (telefono) msg += ' · 📞 ' + telefono;
+    msg += '
+' + (tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Domicilio') + '
+
+';
+
     c.items.forEach((item, i) => {
-        msg += `${i+1}. *${item.nombre}*`;
-        if (item.modificaciones?.length) msg += `\n   _${item.modificaciones.join(', ')}_`;
-        msg += ` — $${item.precio.toFixed(2)}\n`;
+        msg += (i+1) + '. *' + item.nombre + '*';
+        if (item.modificaciones && item.modificaciones.length) {
+            msg += '
+   _' + item.modificaciones.join(', ') + '_';
+        }
+        msg += ' — $' + item.precio.toFixed(2) + '
+';
     });
-    msg += `\n💰 *Total: $${total.toFixed(2)}*`;
-    window.open(`https://wa.me/12108678210?text=${encodeURIComponent(msg)}`, '_blank');
+    msg += '
+💰 *Total: $' + total.toFixed(2) + '*';
+
+    cerrarOrdenModal();
+    window.open('https://wa.me/12108678210?text=' + encodeURIComponent(msg), '_blank');
 };
 
 window.enviarTodasLasCuentas = function() {
