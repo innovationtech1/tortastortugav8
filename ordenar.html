@@ -297,9 +297,12 @@ function cerrarEnviarAdminModal() {
     if (ov) { ov.style.display = 'none'; ov.style.zIndex = '-1'; }
 }
 
-async function confirmarEnvioAdmin() {
+function confirmarEnvioAdmin() { _doEnvioAdmin(); }
+async function _doEnvioAdmin() {
+    console.log('_doEnvioAdmin iniciado');
     var cs = window._cuentasSys;
-    if (!cs) return;
+    console.log('cs:', cs ? 'OK cuentas='+cs.cuentas.length : 'NULL');
+    if (!cs) { alert('Error: _cuentasSys no disponible'); return; }
     var btn = document.getElementById('btn-confirmar-envio');
     if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
     try {
@@ -914,7 +917,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782650795">
+<script type="module" src="js/app.js?v=1782651030">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
