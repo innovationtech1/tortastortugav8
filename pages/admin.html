@@ -415,7 +415,7 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
         if (searchText) {
             filtrados = filtrados.filter(p => {
                 const ticket = p.id.slice(-4).toLowerCase();
-                const nombre = (p.nombre || '').toLowerCase();
+                const nombre = (p.cliente || p.nombre || '').toLowerCase();
                 const tel = (p.telefono || '').toLowerCase();
                 const items = (p.items || '').toLowerCase();
                 const pago = (p.metodoPagoReal || p.metodoPago || '').toLowerCase();
@@ -464,7 +464,7 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
             if (isPaid) { pagoHTML = `<div class="pagado-badge">✅ Pagado (${p.metodoPagoReal || 'Caja'})<br><strong style="color:white">${p.total}</strong></div>`; }
             else { pagoHTML = `<button class="btn-cobrar-grid" onclick="abrirCaja('${p.id}', '${ticketId}', '${p.total}')">🔴 Cobrar ${p.total}</button><br><span class="pay-badge" style="margin-top:4px;display:inline-block">Pide: ${p.metodoPago || '?'}</span>`; }
             const searchText = (document.getElementById('admin-search')?.value || '').trim();
-            let displayTicket = ticketId, displayNombre = p.nombre || '—', displayTel = p.telefono || 'En tienda', displayItems = p.items || '—', displayTipo = tipo;
+            let displayTicket = ticketId, displayNombre = p.cliente || p.nombre || '—', displayTel = p.telefono || 'En tienda', displayItems = p.items || '—', displayTipo = tipo;
             if (searchText) { displayTicket = resaltar(displayTicket, searchText); displayNombre = resaltar(displayNombre, searchText); displayTel = resaltar(displayTel, searchText); displayItems = resaltar(displayItems, searchText); displayTipo = resaltar(displayTipo, searchText); }
             displayItems = displayItems.replace(/\n/g, '<br>');
             return `<tr>
