@@ -180,21 +180,37 @@ window.renderCuentasTabs = function() {
     if (!tabs) return;
     var cs = window._cuentasSys;
     if (!cs) return;
-    var html = '';
+    var h = '';
     cs.cuentas.forEach(function(c) {
         var tot = c.items.reduce(function(s,i){ return s+i.precio; }, 0);
         var active = c.id === cs.activa ? 'active' : '';
-        html += '<div class="ctab ' + active + '" onclick="switchCuenta(' + c.id + ')" ' +
-            'style="border-color:' + (active ? c.color : 'rgba(255,255,255,.12)') + '">' +
-            '<div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:.4rem;">' +
-            '<span class="ctab-nom" style="color:' + (active ? c.color : '#fff') + '">' + c.nombre + '</span>' +
-            (cs.cuentas.length > 1 ? '<button onclick="event.stopPropagation();eliminarCuenta(' + c.id + ')" style="background:none;border:none;color:rgba(255,68,68,.7);font-size:.75rem;cursor:pointer;">✕</button>' : '') +
-            '</div>' +
-            '<span class="ctab-tot">$' + tot.toFixed(2) + '</span>' +
-            '</div>';
+        var canDel = cs.cuentas.length > 1;
+        h += '<div class="ctab ' + active + '" data-cid="' + c.id + '" ' +
+            'style="border-color:' + (active ? c.color : 'rgba(255,255,255,.12)') + ';position:relative;cursor:pointer;">' +
+            '<span class="ctab-nom" style="color:' + (active ? c.color : '#fff') + ';display:block;pointer-events:none;">' + c.nombre + '</span>' +
+            '<span class="ctab-tot" style="display:block;pointer-events:none;">$' + tot.toFixed(2) + '</span>' +
+            (canDel ? '<span class="del-cuenta-btn" data-delcid="' + c.id + '" ' +
+                'style="position:absolute;top:3px;right:3px;width:20px;height:20px;' +
+                'background:rgba(255,68,68,.2);border:1px solid rgba(255,68,68,.5);' +
+                'color:#FF4444;font-size:.65rem;border-radius:50%;' +
+                'display:flex;align-items:center;justify-content:center;font-weight:700;z-index:10;">✕</span>' : '') +
+        '</div>';
     });
-    html += '<button onclick="agregarNuevaCuenta()" class="ctab-add">+ Nueva cuenta</button>';
-    tabs.innerHTML = html;
+    h += '<button onclick="agregarNuevaCuenta()" class="ctab-add">+ Nueva cuenta</button>';
+    tabs.innerHTML = h;
+    tabs.onclick = function(e) {
+        var delBtn = e.target.closest ? e.target.closest('[data-delcid]') : null;
+        if (!delBtn && e.target.getAttribute) delBtn = e.target.getAttribute('data-delcid') ? e.target : null;
+        if (delBtn) {
+            e.stopPropagation();
+            var cid = parseInt(delBtn.getAttribute('data-delcid'));
+            eliminarCuenta(cid);
+            return;
+        }
+        var tab = e.target.closest ? e.target.closest('[data-cid]') : null;
+        if (!tab && e.target.getAttribute) tab = e.target.getAttribute('data-cid') ? e.target : null;
+        if (tab) switchCuenta(parseInt(tab.getAttribute('data-cid')));
+    };
     var lbl = document.getElementById('cuenta-label-active');
     var cActiva = cs.cuentas.find(function(x){ return x.id === cs.activa; });
     if (lbl && cActiva) { lbl.textContent = cActiva.nombre.toUpperCase(); lbl.style.color = cActiva.color; }
@@ -232,14 +248,10 @@ function agregarNuevaCuenta() {
     mostrarNombreCuenta();
 }
 function eliminarCuenta(cid) {
-    console.log('eliminarCuenta cid=', cid, 'tipo=', typeof cid);
     var cs = window._cuentasSys;
-    console.log('cs=', cs, 'length=', cs ? cs.cuentas.length : 'NULL');
-    if (!cs || cs.cuentas.length <= 1) { console.log('RETURN: solo 1 cuenta'); return; }
-
+    if (!cs || cs.cuentas.length <= 1) return;
     var c = cs.cuentas.find(function(x){ return x.id === cid; });
-    console.log('cuenta encontrada=', c, 'ids disponibles=', cs.cuentas.map(function(x){return x.id;}));
-    if (!c) { console.log('RETURN: cuenta no encontrada'); return; }
+    if (!c) return;
 
     // Guardar copia para deshacer
     var backup = JSON.parse(JSON.stringify(cs.cuentas));
@@ -771,7 +783,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782647417">
+<script type="module" src="js/app.js?v=1782647650">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
