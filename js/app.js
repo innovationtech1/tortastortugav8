@@ -99,6 +99,37 @@ document.querySelectorAll('.mod-chip').forEach(chip => {
 });
 
 function confirmarMods(conMods) {
+    // ── MODO EDICIÓN: guardar cambios en item existente ──────────
+    if (window._editingItem) {
+        const { cuentaId, itemIdx, precioBase } = window._editingItem;
+        const c = window._cuentasSys?.cuentas.find(c => c.id === cuentaId);
+        if (c && c.items[itemIdx]) {
+            if (conMods) {
+                const mods = [];
+                let extra = 0;
+                document.querySelectorAll('.mod-chip input:checked').forEach(cb => {
+                    mods.push(cb.value);
+                    extra += parseFloat(cb.getAttribute('data-price') || 0);
+                });
+                const nota = document.getElementById('mods-notes').value.trim();
+                if (nota) mods.push(`📝 ${nota}`);
+                c.items[itemIdx].modificaciones = mods;
+                c.items[itemIdx].precio = precioBase + extra;
+            }
+        }
+        // Reset modal
+        const confirmBtn = document.getElementById('mods-confirm');
+        if (confirmBtn) { confirmBtn.textContent = 'Agregar al Pedido'; delete confirmBtn.dataset.editMode; }
+        const skipBtn = document.getElementById('mods-skip');
+        if (skipBtn) skipBtn.textContent = 'Sin cambios';
+        window._editingItem = null;
+        document.getElementById('mods-modal')?.classList.remove('active');
+        if (window.renderCuentasTabs) window.renderCuentasTabs();
+        if (window.renderCartItems) window.renderCartItems();
+        return;
+    }
+
+    // ── MODO NORMAL: agregar nuevo item ──────────────────────────
     if (!pendingItem) return;
     if (conMods) {
         const mods = [];
@@ -1150,49 +1181,4 @@ window.editarItemCuenta = function(itemIdx) {
     if (modsModal) modsModal.classList.add('active');
 };
 
-/* ── GUARDAR EDICIÓN DE ITEM ──────────────────────────────── */
-// Patch confirmarMods to handle edit mode
-const _origConfirmarModsV2 = window.confirmarMods ? window.confirmarMods.toString() : null;
-
-// Override confirmarMods to check edit mode
-const _baseConfirmarMods = window.confirmarMods;
-window.confirmarMods = function(conMods) {
-    const confirmBtn = document.getElementById('mods-confirm');
-    const isEditMode = confirmBtn && confirmBtn.dataset.editMode === 'true';
-
-    if (isEditMode && window._editingItem) {
-        const { cuentaId, itemIdx, precioBase } = window._editingItem;
-        const c = CS.cuentas.find(c => c.id === cuentaId);
-        if (c && c.items[itemIdx]) {
-            if (conMods) {
-                const mods = [];
-                let extra = 0;
-                document.querySelectorAll('.mod-chip input:checked').forEach(cb => {
-                    mods.push(cb.value);
-                    extra += parseFloat(cb.getAttribute('data-price') || 0);
-                });
-                const nota = document.getElementById('mods-notes').value.trim();
-                if (nota) mods.push(`📝 ${nota}`);
-                c.items[itemIdx].modificaciones = mods;
-                c.items[itemIdx].precio = precioBase + extra;
-            }
-            // Restaurar modal
-            if (confirmBtn) {
-                confirmBtn.textContent = 'Agregar al Pedido';
-                delete confirmBtn.dataset.editMode;
-            }
-            const skipBtn = document.getElementById('mods-skip');
-            if (skipBtn) skipBtn.textContent = 'Sin cambios';
-            window._editingItem = null;
-        }
-        // Cerrar modal y re-render
-        const modsModal = document.getElementById('mods-modal');
-        if (modsModal) modsModal.classList.remove('active');
-        renderCuentasTabs();
-        renderCartItems();
-        return;
-    }
-
-    // Comportamiento normal
-    if (_baseConfirmarMods) _baseConfirmarMods(conMods);
-};
+// edit mode handled in original confirmarMods
