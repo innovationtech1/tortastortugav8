@@ -33,21 +33,27 @@ window._pendingItem = window._pendingItem || null;
 
     if (cajeroId && cajeroNombre && (Date.now() - cajeroTs < VEINTE_MIN)) {
         window._cajeroActivo = { id: cajeroId, nombre: cajeroNombre, rol: cajeroRol };
-        // Renovar timestamp
         sessionStorage.setItem('tt_cajero_ts', Date.now().toString());
-        // Mostrar banner
-        document.addEventListener('DOMContentLoaded', function() {
+
+        // Mostrar UI cajero — funciona con DOM ya cargado o pendiente
+        function mostrarUICajero() {
             var banner = document.getElementById('cajero-banner');
             var nomEl  = document.getElementById('cajero-nombre-header');
+            var btnCaj = document.getElementById('btn-cajero-header');
             if (banner) banner.style.display = 'flex';
             if (nomEl)  nomEl.textContent = cajeroNombre + ' · ' + cajeroRol;
-            // Mostrar botón Cajero en el header
-            var btnCaj = document.getElementById('btn-cajero-header');
             if (btnCaj) {
                 btnCaj.style.display = 'inline-flex';
                 btnCaj.title = cajeroNombre + ' (' + cajeroRol + ')';
             }
-        });
+        }
+
+        // Si DOM ya está listo, ejecutar ahora; si no, esperar
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', mostrarUICajero);
+        } else {
+            mostrarUICajero();
+        }
     } else if (cajeroId) {
         // Sesión expirada
         sessionStorage.removeItem('tt_cajero_id');
@@ -1100,7 +1106,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782675687">
+<script type="module" src="js/app.js?v=1782676167">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
