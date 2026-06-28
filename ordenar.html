@@ -855,20 +855,44 @@ function cerrarOrdenModal() {
         <script>
         /* Mostrar botón cajero si hay sesión activa */
         (function() {
+            // Leer datos desde URL params (vienen del login cajero)
+            var params = new URLSearchParams(window.location.search);
+            var urlId  = params.get('cj_id');
+            var urlNom = params.get('cj_nom');
+            var urlRol = params.get('cj_rol');
+            var urlTs  = params.get('cj_ts');
+
+            // Si vienen por URL, guardar en sessionStorage
+            if (urlId && urlNom) {
+                sessionStorage.setItem('tt_cajero_id',     urlId);
+                sessionStorage.setItem('tt_cajero_nombre', urlNom);
+                sessionStorage.setItem('tt_cajero_rol',    urlRol || 'cajero');
+                sessionStorage.setItem('tt_cajero_ts',     urlTs || Date.now().toString());
+                // Limpiar URL sin recargar
+                window.history.replaceState({}, '', window.location.pathname);
+            }
+
+            // Leer de sessionStorage
             var id  = sessionStorage.getItem('tt_cajero_id');
             var nom = sessionStorage.getItem('tt_cajero_nombre');
             var rol = sessionStorage.getItem('tt_cajero_rol');
             var ts  = parseInt(sessionStorage.getItem('tt_cajero_ts') || '0');
-            alert('Cajero check: id=' + id + ' nom=' + nom + ' ts=' + ts + ' diff=' + (Date.now()-ts));
+
             if (id && nom && (Date.now() - ts < 20 * 60 * 1000)) {
-                var btn = document.getElementById('btn-cajero-header');
-                alert('btn found: ' + (btn ? 'YES' : 'NO'));
+                window._cajeroActivo = { id: id, nombre: nom, rol: rol };
+                sessionStorage.setItem('tt_cajero_ts', Date.now().toString());
+
+                var btn    = document.getElementById('btn-cajero-header');
+                var banner = document.getElementById('cajero-banner');
+                var nomEl  = document.getElementById('cajero-nombre-header');
+
                 if (btn) {
                     btn.style.display = 'inline-flex';
-                    btn.title = nom + ' (' + rol + ')';
+                    btn.title   = nom + ' (' + rol + ')';
                     btn.innerHTML = '🏪 ' + nom.split(' ')[0];
                 }
-                window._cajeroActivo = { id: id, nombre: nom, rol: rol };
+                if (banner) banner.style.display = 'flex';
+                if (nomEl)  nomEl.textContent = nom + ' · ' + rol;
             }
         })();
         </script>
@@ -1126,7 +1150,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782676374">
+<script type="module" src="js/app.js?v=1782680324">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
