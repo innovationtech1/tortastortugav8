@@ -414,20 +414,13 @@ export function actualizarBotonAgregarTodo() {
 }
 
 window.agregarTodoAlCarrito = function() {
-    console.log('agregarTodoAlCarrito llamado');
     const cs = window._cuentasSys;
-    console.log('cs:', cs ? 'OK activa='+cs.activa : 'NULL');
     if (!cs) return;
     const cActiva = cs.cuentas.find(x => x.id === cs.activa);
-    console.log('cActiva:', cActiva ? cActiva.nombre : 'NULL');
     if (!cActiva) return;
 
     let totalAgregados = 0;
-    const allQty = document.querySelectorAll('.qty-num');
-    console.log('qty-num elements found:', allQty.length);
-    allQty.forEach(el => console.log(' -', el.id, '=', el.textContent));
 
-    // Buscar todos los qty-num con qty > 0 usando su id (formato: qty-{pid})
     document.querySelectorAll('.qty-num').forEach(qtyEl => {
         const qty = parseInt(qtyEl.textContent) || 0;
         if (qty === 0) return;
