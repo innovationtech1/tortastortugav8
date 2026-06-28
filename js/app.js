@@ -109,7 +109,7 @@ document.querySelectorAll('.mod-chip').forEach(chip => {
     });
 });
 
-window.confirmarMods = function confirmarMods(conMods) {
+window._confirmarMods = window.confirmarMods = function confirmarMods(conMods) {
     // Recolectar modificaciones seleccionadas
     function getMods() {
         const mods = [];
@@ -220,7 +220,7 @@ function updateCart() {
 }
 
 window.removeItem = function(i) { cart.splice(i, 1); updateCart(); };
-window.limpiarCarrito = function() {
+window._limpiarCarrito = window.limpiarCarrito = function() {
     if (!cart.length) return;
     if (confirm(`¿Vaciar el carrito? (${cart.length} artículo${cart.length > 1 ? 's' : ''})`)) {
         cart = []; updateCart(); location.reload();
