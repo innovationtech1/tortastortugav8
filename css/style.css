@@ -1321,56 +1321,31 @@ h1 {
 .mod-chip {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.42rem 0.9rem;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
     border-radius: 20px;
-    border: 1.5px solid rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.04);
-    color: rgba(255,255,255,0.55);
-    font-size: 0.83rem;
+    border: 1.5px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.6);
+    font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
     user-select: none;
-    position: relative;
 }
 
 .mod-chip input[type="checkbox"] { display: none; }
 
-.mod-chip::before {
-    content: '';
-    width: 14px;
-    height: 14px;
-    border: 1.5px solid rgba(255,255,255,.2);
-    border-radius: 4px;
-    flex-shrink: 0;
-    transition: all .15s;
-    background: transparent;
+.mod-chip:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
 }
 
 .mod-chip.selected {
-    background: rgba(255, 90, 0, 0.15);
-    border-color: var(--primary);
-    color: #fff;
+    background: #FF5A00 !important;
+    border-color: #FF5A00 !important;
+    color: #fff !important;
     font-weight: 700;
-}
-
-.mod-chip.selected::before {
-    background: var(--primary);
-    border-color: var(--primary);
-    content: '✓';
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 9px;
-    color: #fff;
-    font-weight: 900;
-}
-
-.mod-chip:hover:not(.selected) {
-    background: rgba(255,255,255,.08);
-    border-color: rgba(255,255,255,.25);
-    color: #fff;
 }
 
 .mod-chip:hover:not(.selected) {
