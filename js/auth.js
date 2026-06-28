@@ -17,6 +17,12 @@ import {
 
 const googleProvider = new GoogleAuthProvider();
 
+// ── Exponer para script no-módulo (cajero login) ──────────────
+window._authInstance = auth;
+window._dbInstance   = db;
+window._signInWithEmailAndPassword = signInWithEmailAndPassword;
+window._signOut = signOut;
+
 // ─── DETECTAR MÓVIL ──────────────────────────────────────────────
 const esMobil = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
