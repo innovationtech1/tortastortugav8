@@ -100,6 +100,7 @@ document.querySelectorAll('.mod-chip').forEach(chip => {
 
 function confirmarMods(conMods) {
     // ── MODO EDICIÓN: guardar cambios en item existente ──────────
+    console.log('confirmarMods called, editingItem:', window._editingItem, 'conMods:', conMods);
     if (window._editingItem) {
         const { cuentaId, itemIdx, precioBase } = window._editingItem;
         const c = window._cuentasSys?.cuentas.find(c => c.id === cuentaId);
@@ -172,6 +173,23 @@ function confirmarMods(conMods) {
 
 document.getElementById('mods-skip').addEventListener('click', () => confirmarMods(false));
 document.getElementById('mods-confirm').addEventListener('click', () => confirmarMods(true));
+
+// ── Patch botones para modo edición ──────────────────────────
+// Re-wire buttons to use wrapper that checks edit mode
+(function() {
+    const skipBtn    = document.getElementById('mods-skip');
+    const confirmBtn = document.getElementById('mods-confirm');
+    if (!skipBtn || !confirmBtn) return;
+
+    // Remove old listeners by cloning
+    const newSkip    = skipBtn.cloneNode(true);
+    const newConfirm = confirmBtn.cloneNode(true);
+    skipBtn.parentNode.replaceChild(newSkip, skipBtn);
+    confirmBtn.parentNode.replaceChild(newConfirm, confirmBtn);
+
+    newSkip.addEventListener('click', () => confirmarMods(false));
+    newConfirm.addEventListener('click', () => confirmarMods(true));
+})();
 
 // ─── ACTUALIZAR CARRITO ──────────────────────────────────────────
 function updateCart() {
