@@ -628,5 +628,85 @@ function limpiarCarrito() {
   </div>
 </div>
 
+
+<!-- MODAL ORDEN POR CUENTA -->
+<div id="orden-cuenta-overlay" onclick="if(event.target===this)cerrarOrdenModal()"
+  style="position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);
+         z-index:4000;display:flex;align-items:flex-end;justify-content:center;
+         opacity:0;pointer-events:none;transition:opacity .25s;">
+  <div id="orden-cuenta-modal"
+    style="background:#1A1A1A;border:1px solid rgba(255,255,255,.12);border-radius:20px 20px 0 0;
+           width:100%;max-width:560px;padding:1.35rem 1.2rem 2rem;
+           transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);">
+    <div style="width:32px;height:4px;background:rgba(255,255,255,.15);border-radius:4px;margin:0 auto .9rem;"></div>
+    <div style="font-size:1rem;font-weight:800;color:#FF5A00;margin-bottom:.15rem;" id="orden-modal-titulo">📋 Orden</div>
+    <div style="font-size:.78rem;color:#888;margin-bottom:1rem;" id="orden-modal-items"></div>
+
+    <!-- Datos del cliente -->
+    <div style="margin-bottom:.7rem;">
+      <label style="display:block;font-size:.72rem;font-weight:700;color:#888;letter-spacing:.04em;margin-bottom:.3rem;">NOMBRE</label>
+      <input type="text" id="orden-nombre"
+        placeholder="Nombre del cliente"
+        style="width:100%;padding:.68rem .88rem;background:#222;border:1.5px solid rgba(255,255,255,.12);
+               border-radius:10px;color:#fff;font-family:inherit;font-size:.92rem;outline:none;"
+        onfocus="this.style.borderColor='#FF5A00'" onblur="this.style.borderColor='rgba(255,255,255,.12)'">
+    </div>
+    <div style="margin-bottom:.7rem;">
+      <label style="display:block;font-size:.72rem;font-weight:700;color:#888;letter-spacing:.04em;margin-bottom:.3rem;">TELÉFONO (opcional)</label>
+      <input type="tel" id="orden-telefono"
+        placeholder="210-000-0000"
+        maxlength="10"
+        oninput="this.value=this.value.replace(/\D/g,'')"
+        style="width:100%;padding:.68rem .88rem;background:#222;border:1.5px solid rgba(255,255,255,.12);
+               border-radius:10px;color:#fff;font-family:inherit;font-size:.92rem;outline:none;"
+        onfocus="this.style.borderColor='#FF5A00'" onblur="this.style.borderColor='rgba(255,255,255,.12)'">
+    </div>
+
+    <!-- Tipo de entrega -->
+    <div style="margin-bottom:1rem;">
+      <label style="display:block;font-size:.72rem;font-weight:700;color:#888;letter-spacing:.04em;margin-bottom:.5rem;">TIPO DE ENTREGA</label>
+      <div style="display:flex;gap:.5rem;">
+        <label style="flex:1;display:flex;align-items:center;gap:.4rem;background:#222;border:1.5px solid rgba(255,255,255,.12);
+               border-radius:10px;padding:.6rem .85rem;cursor:pointer;font-size:.88rem;color:#fff;"
+               id="orden-tipo-pickup-lbl">
+          <input type="radio" name="orden-tipo" value="pickup" id="orden-tipo-pickup" checked
+            onchange="document.getElementById('orden-tipo-pickup-lbl').style.borderColor='#FF5A00';
+                      document.getElementById('orden-tipo-delivery-lbl').style.borderColor='rgba(255,255,255,.12)'">
+          🏪 Recoger
+        </label>
+        <label style="flex:1;display:flex;align-items:center;gap:.4rem;background:#222;border:1.5px solid rgba(255,255,255,.12);
+               border-radius:10px;padding:.6rem .85rem;cursor:pointer;font-size:.88rem;color:#fff;"
+               id="orden-tipo-delivery-lbl">
+          <input type="radio" name="orden-tipo" value="delivery" id="orden-tipo-delivery"
+            onchange="document.getElementById('orden-tipo-delivery-lbl').style.borderColor='#FF5A00';
+                      document.getElementById('orden-tipo-pickup-lbl').style.borderColor='rgba(255,255,255,.12)'">
+          🚗 Domicilio
+        </label>
+      </div>
+    </div>
+
+    <!-- Total -->
+    <div style="display:flex;justify-content:space-between;align-items:center;
+                padding:.75rem .9rem;background:rgba(255,90,0,.1);border:1px solid rgba(255,90,0,.25);
+                border-radius:10px;margin-bottom:1rem;">
+      <span style="font-size:.88rem;color:#888;">Total</span>
+      <span style="font-size:1.1rem;font-weight:900;color:#FF5A00;" id="orden-modal-total">$0.00</span>
+    </div>
+
+    <!-- Botones -->
+    <button onclick="enviarOrdenModal()"
+      style="width:100%;padding:.85rem;background:linear-gradient(135deg,#25D366,#18a849);
+             color:#fff;border:none;border-radius:12px;font-family:inherit;font-size:.95rem;
+             font-weight:700;cursor:pointer;margin-bottom:.5rem;">
+      📱 Enviar por WhatsApp
+    </button>
+    <button onclick="cerrarOrdenModal()"
+      style="width:100%;padding:.7rem;background:transparent;border:1px solid rgba(255,255,255,.12);
+             color:#888;border-radius:12px;font-family:inherit;font-size:.88rem;cursor:pointer;">
+      Cancelar
+    </button>
+  </div>
+</div>
+
 </body>
 </html>
