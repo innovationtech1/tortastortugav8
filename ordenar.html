@@ -304,67 +304,7 @@ function limpiarCarrito() {
                     <span>Total:</span>
                     <span id="cart-total">$0.00</span>
                 </div>
-                <div class="checkout-form">
-                    <div class="form-section-label"> Datos del Cliente</div>
-                    <input type="text" id="customer-name" class="form-input" placeholder="Nombre completo" required>
-                    <div class="phone-field-wrap">
-                        <span class="phone-flag"></span>
-                        <input type="tel" id="customer-phone" class="form-input phone-input" placeholder="Telefono · OBLIGATORIO" inputmode="numeric" required>
-                        <button type="button" id="locate-by-phone-btn" class="locate-phone-btn" title="GPS"></button>
-                    </div>
-                    <p class="phone-hint" id="phone-hint"> Requerido para identificar tu pedido.</p>
-                    <label class="no-phone-check" id="no-phone-label">
-                        <input type="checkbox" id="no-phone-checkbox">
-                        <span> Estoy en la tienda / sin telefono</span>
-                    </label>
-
-                    <div class="form-section-label" style="margin-top:1rem;"> Tipo de Entrega</div>
-                    <div class="delivery-options">
-                        <label class="delivery-label"><input type="radio" name="order-type" value="pickup" checked><span> Recoger</span></label>
-                        <label class="delivery-label"><input type="radio" name="order-type" value="delivery"><span> Domicilio</span></label>
-                    </div>
-
-                    <div class="store-location-card">
-                        <div class="store-loc-header">
-                            <span class="store-loc-icon"></span>
-                            <div>
-                                <div class="store-loc-title">Tortas Tortuga — Tienda</div>
-                                <div class="store-loc-addr">San Antonio, TX 78201</div>
-                            </div>
-                            <a href="https://maps.google.com/?q=29.4241,-98.4936" target="_blank" class="store-map-btn">Ver mapa </a>
-                        </div>
-                        <iframe src="https://www.openstreetmap.org/export/embed.html?bbox=-98.5086,29.4091,-98.4786,29.4391&layer=mapnik&marker=29.4241,-98.4936"
-                            title="Ubicacion tienda" class="store-map-iframe" loading="lazy"></iframe>
-                    </div>
-
-                    <div id="location-section" style="display:none; margin-bottom:1rem;">
-                        <div class="form-section-label"> Tu Ubicacion</div>
-                        <div class="location-tabs">
-                            <button class="loc-tab active" id="tab-gps" type="button"> GPS</button>
-                            <button class="loc-tab" id="tab-address" type="button"> Direccion</button>
-                        </div>
-                        <div id="panel-gps" class="loc-panel">
-                            <button type="button" id="get-location-btn" class="location-btn"> Obtener ubicacion</button>
-                            <p class="live-location-hint"> Comparte tu <strong>ubicacion en vivo</strong> por WhatsApp al repartidor.</p>
-                            <div id="location-status"></div>
-                        </div>
-                        <div id="panel-address" class="loc-panel" style="display:none;">
-                            <input type="text" id="addr-street" class="addr-input" placeholder=" Calle y numero">
-                            <input type="text" id="addr-apt" class="addr-input" placeholder="Apt / Suite (opcional)">
-                            <div class="addr-row">
-                                <input type="text" id="addr-city" class="addr-input" placeholder="Ciudad" value="San Antonio">
-                                <input type="text" id="addr-zip" class="addr-input addr-zip" placeholder="ZIP">
-                            </div>
-                            <button type="button" id="search-address-btn" class="location-btn"> Buscar Direccion</button>
-                            <div id="address-status"></div>
-                        </div>
-                    </div>
-
-                    <div class="wait-time-estimate" id="wait-time-display"> Tiempo estimado: <strong>20 minutos</strong></div>
-
-                    <button id="checkout-btn" class="whatsapp-btn"> Enviar Orden por WhatsApp</button>
-                    <button id="pay-now-btn" class="pay-now-btn"> Pagar Ahora</button>
-                </div>
+                
             </div>
         </div>
     </div>
