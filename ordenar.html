@@ -16,7 +16,14 @@
     <meta http-equiv="Expires" content="0">
     <link rel="apple-touch-icon" href="icons/icon-apple.png">
 <script>
-/* Funciones globales — accesibles desde onclick ANTES de que cargue el módulo */
+/* ── INICIALIZAR ESTADO GLOBAL INMEDIATAMENTE ───────────────── */
+window._cuentasSys = window._cuentasSys || {
+    cuentas: [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }],
+    activa: 1,
+    counter: 1
+};
+window._pendingItem = window._pendingItem || null;
+window._editingItem = window._editingItem || null;
 
 function confirmarMods(conMods) {
     // Recolectar modificaciones seleccionadas (chips con clase .selected)
@@ -134,19 +141,154 @@ function addToCart(id, nombre, precio, qty) {
     if (modal) modal.classList.add('active');
 }
 
+/* Stubs que el módulo sobreescribe al cargar */
+window.renderCuentasTabs = window.renderCuentasTabs || function() {};
+window.renderCartItems = window.renderCartItems || function() {
+    var cs = window._cuentasSys;
+    var el = document.getElementById('cart-items');
+    var lbl = document.getElementById('cuenta-label-active');
+    if (!cs || !el) return;
+    var c = cs.cuentas.find(function(x){ return x.id === cs.activa; });
+    if (!c) return;
+    if (lbl) { lbl.textContent = c.nombre.toUpperCase(); lbl.style.color = c.color; }
+    if (c.items.length === 0) {
+        el.innerHTML = '<p class="empty-cart">Esta cuenta está vacía 🥺</p>';
+    } else {
+        el.innerHTML = c.items.map(function(item, idx) {
+            return '<div class="cart-item">' +
+                '<div class="item-info">' +
+                '<div class="item-name">' + item.nombre + '</div>' +
+                (item.modificaciones && item.modificaciones.length
+                    ? '<div class="item-mods">' + item.modificaciones.join(' · ') + '</div>' : '') +
+                '</div>' +
+                '<div class="item-price">$' + item.precio.toFixed(2) + '</div>' +
+                '<button class="remove-item" onclick="removeItemCuenta(' + idx + ')">✕</button>' +
+                '</div>';
+        }).join('');
+    }
+    var tot = c.items.reduce(function(s,i){ return s+i.precio; }, 0);
+    var totEl = document.getElementById('cart-total');
+    if (totEl) totEl.textContent = '$' + tot.toFixed(2);
+    var cntEl = document.getElementById('cart-count');
+    var allTot = cs.cuentas.reduce(function(s,c){ return s+c.items.length; }, 0);
+    if (cntEl) cntEl.textContent = allTot;
+};
+
+/* Tab stubs */
+window.renderCuentasTabs = window.renderCuentasTabs || function() {
+    var tabs = document.getElementById('cuentas-tabs');
+    if (!tabs) return;
+    var cs = window._cuentasSys;
+    if (!cs) return;
+    var html = '';
+    cs.cuentas.forEach(function(c) {
+        var tot = c.items.reduce(function(s,i){ return s+i.precio; }, 0);
+        var active = c.id === cs.activa ? 'active' : '';
+        html += '<div class="ctab ' + active + '" onclick="switchCuenta(' + c.id + ')" ' +
+            'style="border-color:' + (active ? c.color : 'rgba(255,255,255,.12)') + '">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:.4rem;">' +
+            '<span class="ctab-nom" style="color:' + (active ? c.color : '#fff') + '">' + c.nombre + '</span>' +
+            (cs.cuentas.length > 1 ? '<button onclick="event.stopPropagation();eliminarCuenta(' + c.id + ')" style="background:none;border:none;color:rgba(255,68,68,.7);font-size:.75rem;cursor:pointer;">✕</button>' : '') +
+            '</div>' +
+            '<span class="ctab-tot">$' + tot.toFixed(2) + '</span>' +
+            '</div>';
+    });
+    html += '<button onclick="agregarNuevaCuenta()" class="ctab-add">+ Nueva cuenta</button>';
+    tabs.innerHTML = html;
+    var lbl = document.getElementById('cuenta-label-active');
+    var cActiva = cs.cuentas.find(function(x){ return x.id === cs.activa; });
+    if (lbl && cActiva) { lbl.textContent = cActiva.nombre.toUpperCase(); lbl.style.color = cActiva.color; }
+};
+
 function addDrink(nombre, precio, detalle) {
     var item = { nombre: nombre, precio: precio || 0, modificaciones: detalle ? [detalle] : [] };
     var CS = window._cuentasSys;
     if (CS) {
         var ca = CS.cuentas.find(function(c) { return c.id === CS.activa; });
         if (ca) ca.items.push(item);
-        if (window.renderCuentasTabs) window.renderCuentasTabs();
-        if (window.renderCartItems) window.renderCartItems();
+        window.renderCuentasTabs();
+        window.renderCartItems();
     }
     var ci = document.getElementById('cart-icon');
     if (ci) { ci.style.transform = 'scale(1.3)'; setTimeout(function(){ ci.style.transform=''; }, 250); }
     var cm = document.getElementById('cart-modal');
     if (cm) cm.classList.add('active');
+}
+
+/* Funciones de cuenta como globales inmediatas */
+function switchCuenta(cid) {
+    var cs = window._cuentasSys;
+    if (cs) { cs.activa = cid; window.renderCuentasTabs(); window.renderCartItems(); }
+}
+function agregarNuevaCuenta() {
+    var cs = window._cuentasSys;
+    if (!cs) return;
+    cs.counter = (cs.counter || 1) + 1;
+    var colors = ['#FF5A00','#25D366','#3B82F6','#A78BFA','#F59E0B','#EC4899'];
+    cs.cuentas.push({ id: cs.counter, nombre: 'Cuenta ' + cs.counter, items: [], color: colors[cs.cuentas.length % colors.length] });
+    cs.activa = cs.counter;
+    window.renderCuentasTabs();
+    window.renderCartItems();
+    mostrarNombreCuenta();
+}
+function eliminarCuenta(cid) {
+    var cs = window._cuentasSys;
+    if (!cs || cs.cuentas.length <= 1) return;
+    var c = cs.cuentas.find(function(x){ return x.id === cid; });
+    if (!confirm('¿Eliminar "' + (c ? c.nombre : 'cuenta') + '"?')) return;
+    var idx = cs.cuentas.findIndex(function(x){ return x.id === cid; });
+    if (idx >= 0) {
+        if (cs.cuentas[idx].items.length) cs.cuentas[0].items.push(...cs.cuentas[idx].items);
+        cs.cuentas.splice(idx, 1);
+    }
+    if (cs.activa === cid) cs.activa = cs.cuentas[0].id;
+    window.renderCuentasTabs();
+    window.renderCartItems();
+}
+function removeItemCuenta(idx) {
+    var cs = window._cuentasSys;
+    if (!cs) return;
+    var c = cs.cuentas.find(function(x){ return x.id === cs.activa; });
+    if (c) c.items.splice(idx, 1);
+    window.renderCuentasTabs();
+    window.renderCartItems();
+}
+function mostrarNombreCuenta() {
+    var cs = window._cuentasSys;
+    var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
+    var inp = document.getElementById('nombre-cuenta-input');
+    if (inp && c) { inp.value = c.nombre; setTimeout(function(){ inp.focus(); inp.select(); }, 100); }
+    var ov = document.getElementById('nombre-modal-overlay');
+    if (ov) ov.classList.add('open');
+}
+function cerrarNombreModal() {
+    var ov = document.getElementById('nombre-modal-overlay');
+    if (ov) ov.classList.remove('open');
+}
+function guardarNombreCuenta() {
+    var cs = window._cuentasSys;
+    var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
+    var inp = document.getElementById('nombre-cuenta-input');
+    if (c && inp && inp.value.trim()) c.nombre = inp.value.trim();
+    cerrarNombreModal();
+    window.renderCuentasTabs();
+    window.renderCartItems();
+}
+function limpiarCuentaActual() {
+    var cs = window._cuentasSys;
+    var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
+    if (c && confirm('¿Limpiar ' + c.nombre + '?')) {
+        c.items = [];
+        window.renderCuentasTabs();
+        window.renderCartItems();
+    }
+}
+function cerrarOrdenModal() {
+    var ov = document.getElementById('orden-cuenta-overlay');
+    var m = document.getElementById('orden-cuenta-modal');
+    if (ov) { ov.style.opacity='0'; ov.style.pointerEvents='none'; }
+    if (m) m.style.transform='translateY(100%)';
+    window._ordenCuentaId = null;
 }
 </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
@@ -483,7 +625,7 @@ function addDrink(nombre, precio, detalle) {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782626990"></script>
+<script type="module" src="js/app.js?v=1782627129"></script>
 <script type="module">
     import { seedProductos, renderMenu } from './js/menu.js?v=1782626990";
     (async () => {
