@@ -41,16 +41,28 @@ document.getElementById('close-cart').addEventListener('click', () => cartModal.
 cartModal.addEventListener('click', e => { if (e.target === cartModal) cartModal.classList.remove('active'); });
 
 // ─── AGREGAR TORTA ───────────────────────────────────────────────
-window.addToCart = function(id, nombre) {
+window.addToCart = function(id, nombre, precioOverride, qty) {
     const sel = document.getElementById(`select-${id}`);
-    const precio = parseFloat(sel.value);
-    pendingItem = { id, nombre, precio, modificaciones: [], _splitMode: splitMode };
-    // Resetear chips
-    document.querySelectorAll('.mod-chip input').forEach(c => c.checked = false);
-    document.querySelectorAll('.mod-chip').forEach(c => c.classList.remove('selected'));
-    document.getElementById('mods-notes').value = '';
-    document.getElementById('mods-item-name').textContent = nombre;
-    modsModal.classList.add('active');
+    const precio = precioOverride || parseFloat(sel?.value || 0);
+    const cantidad = qty || 1;
+
+    // Si qty > 1, agregar directamente sin modal (solo primer item abre modal)
+    if (cantidad > 1) {
+        // Abrir modal una sola vez con nota de cantidad
+        pendingItem = { id, nombre, precio, modificaciones: [], _qty: cantidad, _splitMode: splitMode };
+        document.querySelectorAll('.mod-chip input').forEach(c => c.checked = false);
+        document.querySelectorAll('.mod-chip').forEach(c => c.classList.remove('selected'));
+        document.getElementById('mods-notes').value = '';
+        document.getElementById('mods-item-name').textContent = `${nombre} ×${cantidad}`;
+        modsModal.classList.add('active');
+    } else {
+        pendingItem = { id, nombre, precio, modificaciones: [], _qty: 1, _splitMode: splitMode };
+        document.querySelectorAll('.mod-chip input').forEach(c => c.checked = false);
+        document.querySelectorAll('.mod-chip').forEach(c => c.classList.remove('selected'));
+        document.getElementById('mods-notes').value = '';
+        document.getElementById('mods-item-name').textContent = nombre;
+        modsModal.classList.add('active');
+    }
 };
 
 // ─── AGREGAR BEBIDA DIRECTA ──────────────────────────────────────
@@ -100,18 +112,28 @@ function confirmarMods(conMods) {
         pendingItem.modificaciones = mods;
         pendingItem.precio += extra;
     }
+    const qty = pendingItem._qty || 1;
+    const itemBase = { ...pendingItem };
+    delete itemBase._qty;
+    delete itemBase._splitMode;
+
     if (splitMode) {
         // En modo split → agregar a cuenta activa
         const cActiva = cuentas.find(c => c.id === cuentaActiva);
-        if (cActiva) cActiva.items.push(pendingItem);
+        if (cActiva) {
+            for (let i = 0; i < qty; i++) cActiva.items.push({...itemBase});
+        }
         pendingItem = null;
         modsModal.classList.remove('active');
         renderSplit();
-        document.getElementById('split-panel').classList.add('open');
-        document.getElementById('split-overlay').style.opacity = '1';
-        document.getElementById('split-overlay').style.pointerEvents = 'all';
+        // Abrir panel split automáticamente
+        if (window.abrirSplit) {
+            document.getElementById('split-panel').classList.add('open');
+            document.getElementById('split-overlay').style.opacity = '1';
+            document.getElementById('split-overlay').style.pointerEvents = 'all';
+        }
     } else {
-        cart.push(pendingItem);
+        for (let i = 0; i < qty; i++) cart.push({...itemBase});
         pendingItem = null;
         modsModal.classList.remove('active');
         updateCart();
