@@ -55,6 +55,8 @@ getRedirectResult(auth).then(async (result) => {
 // ─── GUARD: Si ya tiene sesión, redirigir al menú ────────────────
 onAuthStateChanged(auth, (user) => {
     if (user) {
+        // No redirigir si es un login de cajero — el módulo cajero maneja la redirección
+        if (sessionStorage.getItem('tt_cajero_logging_in') === 'true') return;
         window.location.href = '../ordenar.html';
     }
 });
