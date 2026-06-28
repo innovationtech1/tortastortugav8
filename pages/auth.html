@@ -207,138 +207,117 @@
 
 <script type="module" src="../js/auth.js"></script>
 
-<script>
-/* Cajero login — plain script */
-// ── LOGIN CAJERO ──────────────────────────────────────────
-    const btnCajero = document.getElementById('btn-cajero');
-    const cajeroIdInp  = document.getElementById('cajero-id');
-    const cajeroPin    = document.getElementById('cajero-pin');
-    const msgCajero    = document.getElementById('msg-cajero');
+<script type="module">
+/* Cajero login — módulo independiente */
+import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-    function showCajeroMsg(msg, tipo) {
-        if (!msgCajero) return;
-        msgCajero.textContent = msg;
-        msgCajero.className = 'auth-message ' + (tipo === 'error' ? 'msg-error' : 'msg-success');
-        msgCajero.style.display = 'block';
-    }
+const FB_CONFIG = {
+    apiKey: "AIzaSyC4nXCLjYMV7jrh5uB0XBJtX4Bwm4_4Hs",
+    authDomain: "tortas-tortuga.firebaseapp.com",
+    projectId: "tortas-tortuga",
+    storageBucket: "tortas-tortuga.appspot.com",
+    messagingSenderId: "902774447616",
+    appId: "1:902774447616:web:7d3c7d0f3c3a3a3a3a3a3a"
+};
 
-    document.getElementById('form-cajero')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await loginCajero();
-    });
+// Reusar app si ya existe
+const app  = getApps().length ? getApps()[0] : initializeApp(FB_CONFIG);
+const auth = getAuth(app);
+const db   = getFirestore(app);
 
-    btnCajero?.addEventListener('click', loginCajero);
+const btnCajero   = document.getElementById('btn-cajero');
+const cajeroIdInp = document.getElementById('cajero-id');
+const cajeroPin   = document.getElementById('cajero-pin');
+const msgCajero   = document.getElementById('msg-cajero');
 
-    async function loginCajero() {
-        const empId = (cajeroIdInp?.value || '').trim().toUpperCase();
-        const pin   = (cajeroPin?.value || '').replace(/\D/g, '');
-
-        const errId  = document.getElementById('err-cajero-id');
-        const errPin = document.getElementById('err-cajero-pin');
-        if (errId)  errId.textContent  = '';
-        if (errPin) errPin.textContent = '';
-
-        if (!empId || !empId.startsWith('EMP-')) {
-            if (errId) errId.textContent = 'Ingresa tu número (Ej: EMP-001)';
-            cajeroIdInp?.focus(); return;
-        }
-        if (pin.length !== 4) {
-            if (errPin) errPin.textContent = 'PIN debe ser de 4 dígitos';
-            cajeroPin?.focus(); return;
-        }
-
-        if (btnCajero) { btnCajero.disabled = true; btnCajero.querySelector('.btn-text').textContent = 'Verificando...'; }
-        showCajeroMsg('Verificando credenciales...', 'info');
-
-        try {
-            // Esperar a que auth.js exponga las funciones
-            let intentos = 0;
-            while (!window._signInWithEmailAndPassword && intentos < 20) {
-                await new Promise(r => setTimeout(r, 100));
-                intentos++;
-            }
-            if (!window._signInWithEmailAndPassword) throw new Error('Firebase no disponible. Recarga la página.');
-
-            const auth = window._authInstance;
-            const db   = window._dbInstance;
-            const signIn = window._signInWithEmailAndPassword;
-
-            const emailInterno = empId.toLowerCase() + '@tortuga.local';
-            const pwAuto = empId + pin;
-
-            let userCred;
-            try {
-                userCred = await signIn(auth, emailInterno, pwAuto);
-            } catch (e1) {
-                // Gerente con credenciales legacy
-                if (empId === 'EMP-GERENTE') {
-                    userCred = await signIn(auth, 'gerente@tortuga.local', 'GerenteTortuga2026');
-                } else {
-                    throw e1;
-                }
-            }
-
-            // Verificar empleado en Firestore
-            const { collection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-            const q = query(collection(db, 'empleados'), where('empleadoId', '==', empId));
-            const snap = await getDocs(q);
-
-            let empData, rol, nombre;
-
-            if (snap.empty) {
-                // Gerente puede entrar aunque no esté en 'empleados'
-                if (empId === 'EMP-GERENTE') {
-                    rol    = 'gerente';
-                    nombre = 'Gerente Principal';
-                } else {
-                    if (window._signOut) await window._signOut(auth);
-                    showCajeroMsg('Empleado no encontrado. Contacta a tu gerente.', 'error');
-                    if (btnCajero) { btnCajero.disabled = false; btnCajero.querySelector('.btn-text').textContent = '🏪 Entrar como Cajero'; }
-                    return;
-                }
-            } else {
-                empData = snap.docs[0].data();
-                rol     = empData.rol || 'cajero';
-                nombre  = (empData.nombre || '') + ' ' + (empData.apellido || '');
-            }
-
-            // Guardar sesión
-            sessionStorage.setItem('tt_cajero_id',     empId);
-            sessionStorage.setItem('tt_cajero_nombre', nombre.trim());
-            sessionStorage.setItem('tt_cajero_rol',    rol);
-            sessionStorage.setItem('tt_cajero_ts',     Date.now().toString());
-
-            showCajeroMsg('✅ Bienvenido ' + nombre.trim() + '!', 'success');
-            setTimeout(() => {
-                window.location.href = '../ordenar.html';
-            }, 800);
-
-        } catch (e) {
-            console.error('Login cajero error:', e);
-            let msg = 'Número de empleado o PIN incorrecto.';
-            if (e.code === 'auth/too-many-requests') msg = 'Demasiados intentos. Espera unos minutos.';
-            if (e.code === 'auth/invalid-credential') msg = 'Número o PIN incorrecto.';
-            showCajeroMsg(msg, 'error');
-            if (btnCajero) { btnCajero.disabled = false; btnCajero.querySelector('.btn-text').textContent = '🏪 Entrar como Cajero'; }
-        }
-    }
-
-/* switchTab con soporte cajero */
-function switchTab(tab) {
-    var forms = document.querySelectorAll('.auth-form');
-    var tabs  = document.querySelectorAll('.auth-tab');
-    forms.forEach(function(f) { f.classList.remove('active'); f.style.display='none'; });
-    tabs.forEach(function(t)  { t.classList.remove('active'); });
-
-    var targetForm = document.getElementById('form-' + tab);
-    var targetTab  = document.getElementById('tab-' + tab);
-    if (targetForm) { targetForm.classList.add('active'); targetForm.style.display='block'; }
-    if (targetTab)  targetTab.classList.add('active');
-
-    // Focus first input
-    if (tab === 'cajero') setTimeout(function(){ document.getElementById('cajero-id')?.focus(); }, 100);
-    if (tab === 'login')  setTimeout(function(){ document.getElementById('login-email')?.focus(); }, 100);
+function showMsg(msg, tipo) {
+    if (!msgCajero) return;
+    msgCajero.textContent = msg;
+    msgCajero.className = 'auth-message ' + (tipo === 'error' ? 'msg-error' : tipo === 'success' ? 'msg-success' : '');
+    msgCajero.style.display = 'block';
 }
+
+async function loginCajero() {
+    const empId = (cajeroIdInp?.value || '').trim().toUpperCase();
+    const pin   = (cajeroPin?.value || '').replace(/\D/g, '');
+
+    const errId  = document.getElementById('err-cajero-id');
+    const errPin = document.getElementById('err-cajero-pin');
+    if (errId)  errId.textContent = '';
+    if (errPin) errPin.textContent = '';
+
+    if (!empId || !empId.startsWith('EMP-')) {
+        if (errId) errId.textContent = 'Ingresa tu número (Ej: EMP-001)';
+        cajeroIdInp?.focus(); return;
+    }
+    if (pin.length !== 4) {
+        if (errPin) errPin.textContent = 'PIN debe ser de 4 dígitos';
+        cajeroPin?.focus(); return;
+    }
+
+    if (btnCajero) { btnCajero.disabled = true; btnCajero.querySelector('.btn-text').textContent = 'Verificando...'; }
+    showMsg('Verificando credenciales...', 'info');
+
+    try {
+        const emailInterno = empId.toLowerCase() + '@tortuga.local';
+        const pwAuto = empId + pin;
+
+        let userCred;
+        try {
+            userCred = await signInWithEmailAndPassword(auth, emailInterno, pwAuto);
+        } catch (e1) {
+            if (empId === 'EMP-GERENTE') {
+                userCred = await signInWithEmailAndPassword(auth, 'gerente@tortuga.local', 'GerenteTortuga2026');
+            } else {
+                throw e1;
+            }
+        }
+
+        // Buscar empleado en Firestore
+        const q    = query(collection(db, 'empleados'), where('empleadoId', '==', empId));
+        const snap = await getDocs(q);
+
+        let rol = 'cajero', nombre = '';
+
+        if (snap.empty) {
+            if (empId === 'EMP-GERENTE') {
+                rol    = 'gerente';
+                nombre = 'Gerente Principal';
+            } else {
+                showMsg('Empleado no registrado. Contacta a tu gerente.', 'error');
+                if (btnCajero) { btnCajero.disabled = false; btnCajero.querySelector('.btn-text').textContent = '🏪 Entrar como Cajero'; }
+                return;
+            }
+        } else {
+            const emp = snap.docs[0].data();
+            rol    = emp.rol || 'cajero';
+            nombre = (emp.nombre || '') + ' ' + (emp.apellido || '');
+        }
+
+        // Guardar sesión de cajero (20 min)
+        sessionStorage.setItem('tt_cajero_id',     empId);
+        sessionStorage.setItem('tt_cajero_nombre', nombre.trim());
+        sessionStorage.setItem('tt_cajero_rol',    rol);
+        sessionStorage.setItem('tt_cajero_ts',     Date.now().toString());
+
+        showMsg('✅ Bienvenido ' + nombre.trim() + '!', 'success');
+        setTimeout(() => { window.location.href = '../ordenar.html'; }, 800);
+
+    } catch (e) {
+        console.error('Cajero login error:', e.code, e.message);
+        let msg = 'Número de empleado o PIN incorrecto.';
+        if (e.code === 'auth/too-many-requests')  msg = 'Demasiados intentos. Espera unos minutos.';
+        if (e.code === 'auth/invalid-credential') msg = 'Número o PIN incorrecto.';
+        if (e.message?.includes('Firebase no disponible')) msg = e.message;
+        showMsg(msg, 'error');
+        if (btnCajero) { btnCajero.disabled = false; btnCajero.querySelector('.btn-text').textContent = '🏪 Entrar como Cajero'; }
+    }
+}
+
+document.getElementById('form-cajero')?.addEventListener('submit', e => { e.preventDefault(); loginCajero(); });
+btnCajero?.addEventListener('click', loginCajero);
 </script>
 </body>
 </html>
