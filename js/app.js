@@ -13,6 +13,11 @@ const APPS_SCRIPT_URL = 'TU_APPS_SCRIPT_URL';
 
 // ─── ESTADO ─────────────────────────────────────────────────────
 let cart = JSON.parse(localStorage.getItem('tt_cart') || '[]');
+// Exponer cart globalmente
+Object.defineProperty(window, '_cart', {
+    get: function() { return cart; },
+    set: function(v) { cart = v; }
+});
 
 // ─── SPLIT SYSTEM ─────────────────────────────────────────────
 let splitMode = false;
@@ -21,6 +26,11 @@ let cuentaActiva = 1;
 let cuentaCounter = 1;
 const SPLIT_COLORES = ['#FF5A00','#25D366','#3B82F6','#A78BFA','#F59E0B','#EC4899'];
 let pendingItem = null;
+// Exponer pendingItem globalmente para confirmarMods en script no-modulo
+Object.defineProperty(window, '_pendingItem', {
+    get: function() { return pendingItem; },
+    set: function(v) { pendingItem = v; }
+});
 let clientLocation = null;
 let currentPaymentMethod = null;
 let lastOrderId = null;
