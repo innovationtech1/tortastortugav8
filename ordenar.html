@@ -447,6 +447,9 @@ function cerrarPagoConfirm() {
 async function confirmarPagoSimulado() {
     var metodo = window._metodoPagoActual || 'efectivo';
     var cs     = window._cuentasSys;
+    var totalGen = cs ? cs.cuentas.reduce(function(s,c){
+        return s + c.items.reduce(function(ss,i){ return ss+i.precio; }, 0);
+    }, 0) : 0;
 
     // Cerrar modal
     var ov = document.getElementById('pago-confirm-overlay');
@@ -454,16 +457,23 @@ async function confirmarPagoSimulado() {
 
     // Actualizar estado del pedido en Firestore si existe
     // (solo si hay pedidos recientes enviados)
+    // Registrar cobro en turno de cajero
     try {
-        if (window._ultimosPedidosIds && window._ultimosPedidosIds.length > 0 && window._updatePedidoMetodoPago) {
-            for (var i = 0; i < window._ultimosPedidosIds.length; i++) {
-                await window._updatePedidoMetodoPago(window._ultimosPedidosIds[i], metodo);
-            }
-            window._ultimosPedidosIds = [];
+        var turnoId = sessionStorage.getItem('tt_turno_caja_id');
+        if (turnoId && totalGen > 0 && window._registrarCobro) {
+            await window._registrarCobro(turnoId, metodo, totalGen);
         }
-    } catch(e) { console.warn('No se pudo actualizar método de pago:', e); }
+    } catch(e) { console.warn('No se pudo registrar cobro:', e); }
 
-    // Resetear cuentas sin cerrar sesión de Google
+    // Cerrar modales
+    var pagoOv = document.getElementById('pago-confirm-overlay');
+    if (pagoOv) pagoOv.style.display = 'none';
+    var cartModal = document.getElementById('cart-modal');
+    if (cartModal) cartModal.classList.remove('active');
+    var posModal = document.getElementById('pos-modal');
+    if (posModal) posModal.classList.remove('active');
+
+    // Resetear TODAS las cuentas — listo para nuevo pedido
     window._cuentasSys = {
         cuentas: [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }],
         activa: 1,
@@ -472,18 +482,12 @@ async function confirmarPagoSimulado() {
     if (window.renderCuentasTabs) window.renderCuentasTabs();
     if (window.renderCartItems)   window.renderCartItems();
 
-    // Cerrar carrito y POS
-    var cartModal = document.getElementById('cart-modal');
-    if (cartModal) cartModal.classList.remove('active');
-    var posModal = document.getElementById('pos-modal');
-    if (posModal) posModal.classList.remove('active');
-
     // Toast de confirmación
     var toast = document.getElementById('undo-toast');
     var msg   = document.getElementById('undo-toast-msg');
     if (toast && msg) {
         var icono = metodo === 'efectivo' ? '💵' : '💳';
-        msg.textContent = icono + ' Pago con ' + (metodo === 'efectivo' ? 'efectivo' : 'tarjeta') + ' confirmado — listo para nuevo pedido';
+        msg.textContent = icono + ' $' + totalGen.toFixed(2) + ' — ' + (metodo === 'efectivo' ? 'Efectivo' : 'Tarjeta') + ' ✅ Listo para nuevo pedido';
         toast.style.display = 'flex';
         clearTimeout(window._undoTimer);
         window._undoTimer = setTimeout(function(){ toast.style.display = 'none'; }, 5000);
@@ -900,13 +904,18 @@ function ordenarTodasWhatsApp() {
 function abrirPago() {
     var cs = window._cuentasSys;
     if (!cs) return;
-    var c = cs.cuentas.find(function(x){ return x.id === cs.activa; });
-    if (!c || c.items.length === 0) {
-        alert('La cuenta está vacía.');
+
+    // Calcular total de TODAS las cuentas con items
+    var totalGen = cs.cuentas.reduce(function(s,c){
+        return s + c.items.reduce(function(ss,i){ return ss+i.precio; }, 0);
+    }, 0);
+
+    if (totalGen === 0) {
+        alert('No hay productos en ninguna cuenta.');
         return;
     }
-    // Por ahora mostrar info de pago — se puede expandir con Stripe/Square
-    var total = c.items.reduce(function(s,i){ return s+i.precio; }, 0);
+
+    var total = totalGen;
     var posModal = document.getElementById('pos-modal');
     if (posModal) {
         var totEl = document.getElementById('pos-total-amount');
@@ -1377,7 +1386,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782681935">
+<script type="module" src="js/app.js?v=1782682373">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
