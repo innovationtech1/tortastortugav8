@@ -309,7 +309,15 @@ async function loginCajero() {
         sessionStorage.setItem('tt_cajero_ts',     Date.now().toString());
 
         showMsg('✅ Bienvenido ' + nombre.trim() + '!', 'success');
-        setTimeout(() => { window.location.href = '../ordenar.html'; }, 800);
+        const cjParams = new URLSearchParams({
+            cj_id:  empId,
+            cj_nom: nombre.trim(),
+            cj_rol: rol,
+            cj_ts:  Date.now().toString()
+        });
+        setTimeout(() => {
+            window.location.href = '../ordenar.html?' + cjParams.toString();
+        }, 800);
 
     } catch (e) {
         console.error('Cajero login error:', e.code, e.message);
