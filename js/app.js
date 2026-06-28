@@ -1345,3 +1345,60 @@ window._addPedidoToFirestore = async function(pedido) {
     console.log('Pedido guardado:', ref.id);
     return ref.id;
 };
+
+
+// ═══════════════════════════════════════════════════════════
+// MÓDULO CAJERO — Firestore functions
+// ═══════════════════════════════════════════════════════════
+
+// Crear turno de caja
+window._crearTurnoCaja = async function(turnoData) {
+    const ref = await addDoc(collection(db, 'turnos_caja'), {
+        ...turnoData,
+        inicio: serverTimestamp()
+    });
+    return ref.id;
+};
+
+// Obtener turno de caja por ID
+window._getTurnoCaja = async function(turnoId) {
+    const { getDoc, doc: docFn } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    const snap = await getDoc(docFn(db, 'turnos_caja', turnoId));
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+};
+
+// Cerrar turno de caja
+window._cerrarTurnoCaja = async function(turnoId, data) {
+    await updateDoc(doc(db, 'turnos_caja', turnoId), {
+        ...data,
+        fin: serverTimestamp(),
+        estado: 'cerrado'
+    });
+};
+
+// Registrar cobro en turno (cuando se confirma un pago)
+window._registrarCobro = async function(turnoId, metodo, monto) {
+    const campo = metodo === 'efectivo' ? 'totalEfectivo' : 'totalTarjeta';
+    await updateDoc(doc(db, 'turnos_caja', turnoId), {
+        [campo]:      increment(monto),
+        totalOrdenes: increment(1)
+    });
+};
+
+// Obtener órdenes del cajero de hoy
+window._getOrdenesCajero = async function(cajeroId) {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const q = query(
+        collection(db, 'pedidos'),
+        where('cajeroId', '==', cajeroId),
+        orderBy('creado', 'desc')
+    );
+    const snap = await getDocs(q);
+    return snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(p => {
+            const ts = p.creado?.seconds ? new Date(p.creado.seconds * 1000) : null;
+            return ts && ts >= hoy;
+        });
+};
