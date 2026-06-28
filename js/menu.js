@@ -351,10 +351,11 @@ function crearCard(p) {
             const qty   = parseInt(qtyEl ? qtyEl.textContent : 1) || 1;
             const label = sel.options[sel.selectedIndex].text;
 
-            for (let i = 0; i < qty; i++) {
-                if (isTorta) {
-                    window.addToCart(pid, p.nombre, precio);
-                } else {
+            if (isTorta) {
+                // Pass qty so addToCart can loop inside (avoids multiple modal popups)
+                window.addToCart(pid, p.nombre, precio, qty);
+            } else {
+                for (let i = 0; i < qty; i++) {
                     window.addDrink(p.nombre, precio, label);
                 }
             }
