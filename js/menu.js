@@ -414,49 +414,44 @@ export function actualizarBotonAgregarTodo() {
 }
 
 window.agregarTodoAlCarrito = function() {
-    const items = [];
-    document.querySelectorAll('.product-card').forEach(card => {
-        const qtyEl = card.querySelector('.qty-num');
-        const qty   = parseInt(qtyEl?.textContent) || 0;
+    const cs = window._cuentasSys;
+    if (!cs) return;
+    const cActiva = cs.cuentas.find(x => x.id === cs.activa);
+    if (!cActiva) return;
+
+    let totalAgregados = 0;
+
+    // Buscar todos los qty-num con qty > 0 usando su id (formato: qty-{pid})
+    document.querySelectorAll('.qty-num').forEach(qtyEl => {
+        const qty = parseInt(qtyEl.textContent) || 0;
         if (qty === 0) return;
 
-        const pid    = card.dataset.pid;
-        const nombre = card.dataset.nombre;
-        const tipo   = card.dataset.tipo;
-        const sel    = pid ? document.getElementById(`select-${pid}`) : null;
+        // Extraer pid del id del elemento
+        const pid = qtyEl.id.replace('qty-', '');
+        if (!pid) return;
+
+        // Obtener select y precio
+        const sel    = document.getElementById('select-' + pid);
         const precio = sel ? (parseFloat(sel.value) || 0) : 0;
-        const label  = sel ? (sel.options[sel.selectedIndex]?.text || '') : '';
+        const label  = sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex].text : '';
 
-        items.push({ pid, nombre, tipo, precio, qty, label });
-    });
+        // Obtener nombre de la card padre
+        const card   = qtyEl.closest('.product-card');
+        const nombre = card ? (card.querySelector('.product-title')?.textContent || pid) : pid;
 
-    if (items.length === 0) return;
-
-    // Agregar todos al carrito
-    items.forEach(item => {
-        if (item.tipo === 'torta') {
-            // Agregar tortas sin modal (van directo al carrito activo)
-            const cs = window._cuentasSys;
-            if (cs) {
-                const c = cs.cuentas.find(x => x.id === cs.activa);
-                if (c) {
-                    for (let i = 0; i < item.qty; i++) {
-                        c.items.push({
-                            id: item.pid,
-                            nombre: item.nombre,
-                            precio: item.precio,
-                            modificaciones: []
-                        });
-                    }
-                }
-            }
-        } else {
-            // Bebidas/botanas
-            for (let i = 0; i < item.qty; i++) {
-                window.addDrink(item.nombre, item.precio, item.label);
-            }
+        // Agregar qty veces al carrito activo
+        for (let i = 0; i < qty; i++) {
+            cActiva.items.push({
+                id: pid,
+                nombre: nombre,
+                precio: precio,
+                modificaciones: label ? [label] : []
+            });
+            totalAgregados++;
         }
     });
+
+    if (totalAgregados === 0) return;
 
     // Render y abrir carrito
     if (window.renderCuentasTabs) window.renderCuentasTabs();
@@ -465,14 +460,15 @@ window.agregarTodoAlCarrito = function() {
     if (cm) cm.classList.add('active');
 
     // Reset todas las cantidades a 0
-    document.querySelectorAll('.qty-num').forEach(el => { el.textContent = '0'; });
-    document.querySelectorAll('.add-to-cart').forEach(b => { b.style.display = 'none'; });
+    document.querySelectorAll('.qty-num').forEach(el => el.textContent = '0');
+    document.querySelectorAll('.add-to-cart').forEach(b => b.style.display = 'none');
     actualizarBotonAgregarTodo();
 
-    // Feedback en el FAB
+    // Feedback FAB
     const fab = document.getElementById('fab-agregar-todo');
     if (fab) {
         fab.style.background = '#25D366';
-        setTimeout(() => { fab.style.background = ''; }, 800);
+        setTimeout(() => { fab.style.background = ''; }, 1000);
     }
+    console.log('✅ Agregados', totalAgregados, 'productos al carrito');
 };
