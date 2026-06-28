@@ -446,6 +446,9 @@ async function confirmarPagoSimulado() {
     }
 }
 
+/* Stub — menu.js sobreescribe esta función */
+window.actualizarBotonAgregarTodo = window.actualizarBotonAgregarTodo || function(){};
+
 function switchCuenta(cid) {
     var cs = window._cuentasSys;
     if (cs) { cs.activa = cid; window.renderCuentasTabs(); window.renderCartItems(); }
@@ -1022,7 +1025,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782652146">
+<script type="module" src="js/app.js?v=1782652968">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
@@ -1494,6 +1497,26 @@ function enviarOrdenModal() {
       ← Cambiar método
     </button>
   </div>
+</div>
+
+
+<!-- FAB: AGREGAR TODO AL CARRITO -->
+<div id="fab-agregar-todo"
+     onclick="window.agregarTodoAlCarrito()"
+     style="position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);
+            background:linear-gradient(135deg,#FF5A00,#FF8800);color:#fff;
+            border-radius:50px;padding:.8rem 1.5rem;
+            display:none;align-items:center;gap:.6rem;
+            z-index:8000;cursor:pointer;
+            box-shadow:0 8px 28px rgba(255,90,0,.5);
+            font-family:inherit;font-weight:800;font-size:.92rem;
+            transition:background .2s, transform .1s;
+            -webkit-tap-highlight-color:transparent;">
+  <span style="font-size:1.1rem;">🛒</span>
+  <span>Agregar al carrito</span>
+  <span id="fab-count"
+        style="background:rgba(0,0,0,.2);border-radius:20px;
+               padding:.15rem .55rem;font-size:.78rem;">0 productos</span>
 </div>
 
 </body>
