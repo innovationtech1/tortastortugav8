@@ -1339,6 +1339,11 @@ h1 {
     background: rgba(255, 90, 0, 0.18);
     border-color: var(--primary);
     color: var(--primary);
+    font-weight: 700;
+}
+.mod-chip.selected::before {
+    content: '✓ ';
+    font-weight: 900;
 }
 
 .mod-chip:hover:not(.selected) {
@@ -1648,3 +1653,26 @@ h1 {
     font-size: 0.88rem;
     transition: background 0.2s, color 0.2s;
 }
+
+/* ── MOD CHIPS MEJORADOS ─────────────────────────────────── */
+.mod-section-title {
+    font-size: .72rem;
+    font-weight: 800;
+    color: rgba(255,255,255,.4);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin: .85rem 0 .45rem;
+}
+.mod-chips-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+    margin-bottom: .2rem;
+}
+.mod-chip:active {
+    transform: scale(.96);
+}
+.mods-confirm-btn {
+    transition: background .2s, transform .1s;
+}
+.mods-confirm-btn:active { transform: scale(.97); }
