@@ -267,7 +267,7 @@ function eliminarCuenta(cid) {
     var newBtn = btnOk.cloneNode(true);
     btnOk.parentNode.replaceChild(newBtn, btnOk);
     newBtn.addEventListener('click', function() {
-        overlay.classList.remove('open');
+        overlay.style.display = 'none';
         var idx = cs.cuentas.findIndex(function(x){ return x.id === cid; });
         if (idx >= 0) {
             if (cs.cuentas[idx].items.length) {
@@ -281,12 +281,12 @@ function eliminarCuenta(cid) {
         window.renderCartItems();
     });
 
-    overlay.classList.add('open');
+    overlay.style.display = 'flex';
 }
 
 function cerrarConfirmEliminar() {
     var overlay = document.getElementById('confirm-eliminar-overlay');
-    if (overlay) overlay.classList.remove('open');
+    if (overlay) overlay.style.display = 'none';
 }
 function removeItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -770,7 +770,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782646489">
+<script type="module" src="js/app.js?v=1782646682">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
