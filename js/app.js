@@ -1190,18 +1190,13 @@ window.enviarOrdenModal = function() {
     // Guardar teléfono en la cuenta para referencia futura
     c._telefono = telefono;
 
-    let msg = '🐢 *TORTAS TORTUGA*
-';
-    msg += '━━━━━━━━━━━━━━━━━━━━
-';
-    msg += '📋 *' + c.nombre + '*
-';
+    let msg = '🐢 *TORTAS TORTUGA*\n';
+    msg += '━━━━━━━━━━━━━━━━━━━━\n';
+    msg += '📋 *' + c.nombre + '*\n';
     msg += '👤 ' + nombre;
     if (telefono) msg += ' · 📞 ' + telefono;
-    msg += '
-' + (tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Domicilio') + '
-
-';
+    msg += '\n' + (tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Domicilio') + '
+\n';
 
     c.items.forEach((item, i) => {
         msg += (i+1) + '. *' + item.nombre + '*';
@@ -1209,8 +1204,7 @@ window.enviarOrdenModal = function() {
             msg += '
    _' + item.modificaciones.join(', ') + '_';
         }
-        msg += ' — $' + item.precio.toFixed(2) + '
-';
+        msg += ' — $' + item.precio.toFixed(2) + '\n';
     });
     msg += '
 💰 *Total: $' + total.toFixed(2) + '*';
