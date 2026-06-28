@@ -761,7 +761,7 @@ function cerrarOrdenModal() {
                                color:#fff;border:none;border-radius:12px;font-family:inherit;
                                font-size:.95rem;font-weight:800;cursor:pointer;
                                box-shadow:0 4px 16px rgba(255,90,0,.3);">
-                        &#128640; Enviar Orden al Admin
+                        Enviar Orden
                     </button>
 
                     <!-- Ordenar cuenta activa -->
@@ -928,7 +928,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782651362">
+<script type="module" src="js/app.js?v=1782651555">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
@@ -1346,7 +1346,7 @@ function enviarOrdenModal() {
       🚀 Enviar al Panel Admin
     </div>
     <div style="font-size:.78rem;color:#888;margin-bottom:1rem;">
-      Se enviaran las siguientes cuentas al administrador:
+      ¿Está seguro que la orden es correcta?
     </div>
     <div id="enviar-admin-resumen" style="overflow-y:auto;flex:1;margin-bottom:.85rem;-webkit-overflow-scrolling:touch;"></div>
     <button id="btn-confirmar-envio" onclick="confirmarEnvioAdmin()"
