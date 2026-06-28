@@ -909,10 +909,18 @@ window.renderCuentasTabs = function() {
     CS.cuentas.forEach(c => {
         const tot = c.items.reduce((s, i) => s + i.precio, 0);
         const active = c.id === CS.activa ? 'active' : '';
+        const canDelete = CS.cuentas.length > 1;
         html += `<div class="ctab ${active}" data-cid="${c.id}"
             onclick="switchCuenta(${c.id})"
             style="border-color:${active ? c.color : 'rgba(255,255,255,.12)'}">
-            <span class="ctab-nom" style="color:${active ? c.color : '#fff'}">${c.nombre}</span>
+            <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:.4rem;">
+                <span class="ctab-nom" style="color:${active ? c.color : '#fff'}">${c.nombre}</span>
+                ${canDelete ? `<button
+                    onclick="event.stopPropagation();eliminarCuenta(${c.id})"
+                    style="background:none;border:none;color:rgba(255,68,68,.7);font-size:.75rem;
+                           cursor:pointer;padding:0 .1rem;line-height:1;flex-shrink:0;"
+                    title="Eliminar cuenta">✕</button>` : ''}
+            </div>
             <span class="ctab-tot">$${tot.toFixed(2)}</span>
         </div>`;
     });
