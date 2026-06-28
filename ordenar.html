@@ -859,17 +859,15 @@ function cerrarOrdenModal() {
             var nom = sessionStorage.getItem('tt_cajero_nombre');
             var rol = sessionStorage.getItem('tt_cajero_rol');
             var ts  = parseInt(sessionStorage.getItem('tt_cajero_ts') || '0');
+            alert('Cajero check: id=' + id + ' nom=' + nom + ' ts=' + ts + ' diff=' + (Date.now()-ts));
             if (id && nom && (Date.now() - ts < 20 * 60 * 1000)) {
                 var btn = document.getElementById('btn-cajero-header');
+                alert('btn found: ' + (btn ? 'YES' : 'NO'));
                 if (btn) {
                     btn.style.display = 'inline-flex';
                     btn.title = nom + ' (' + rol + ')';
                     btn.innerHTML = '🏪 ' + nom.split(' ')[0];
                 }
-                var banner = document.getElementById('cajero-banner');
-                var nomEl  = document.getElementById('cajero-nombre-header');
-                if (banner) banner.style.display = 'flex';
-                if (nomEl)  nomEl.textContent = nom + ' · ' + rol;
                 window._cajeroActivo = { id: id, nombre: nom, rol: rol };
             }
         })();
@@ -1128,7 +1126,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782676281">
+<script type="module" src="js/app.js?v=1782676374">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
