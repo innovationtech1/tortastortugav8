@@ -345,14 +345,20 @@ function crearCard(p) {
     const btn = card.querySelector('.add-to-cart');
     if (btn) {
         btn.addEventListener('click', () => {
-            if (!p.variantes || !p.variantes.length) return;
             const sel   = document.getElementById(`select-${pid}`);
-            const precio = parseFloat(sel.value);
-            const qty   = parseInt(qtyEl ? qtyEl.textContent : 1) || 1;
-            const label = sel.options[sel.selectedIndex].text;
+            // Get price from select if available, fallback to first variante or 0
+            let precio = 0;
+            let label  = '';
+            if (sel && sel.value) {
+                precio = parseFloat(sel.value) || 0;
+                label  = sel.options[sel.selectedIndex]?.text || '';
+            } else if (p.variantes && p.variantes.length) {
+                precio = parseFloat(p.variantes[0].precio) || 0;
+                label  = p.variantes[0].label || '';
+            }
+            const qty = parseInt(qtyEl ? qtyEl.textContent : 1) || 1;
 
             if (isTorta) {
-                // Pass qty so addToCart can loop inside (avoids multiple modal popups)
                 window.addToCart(pid, p.nombre, precio, qty);
             } else {
                 for (let i = 0; i < qty; i++) {
