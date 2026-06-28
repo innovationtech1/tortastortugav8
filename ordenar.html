@@ -22,8 +22,17 @@
         import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
         import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
         onAuthStateChanged(auth, async (user) => {
-            if (!user) { window.location.href = 'pages/auth.html'; return; }
-            window._firebaseUser = user;
+            // El menú es público — no redirigir si no hay sesión
+            window._firebaseUser = user || null;
+            if (!user) {
+                // Sin sesión: mostrar botón de login en header, ocultar puntos
+                const btnPerfil = document.getElementById('btn-perfil');
+                if (btnPerfil) {
+                    btnPerfil.textContent = '🔑 Iniciar sesión';
+                    btnPerfil.onclick = () => window.location.href = 'pages/auth.html';
+                }
+                return; // Permitir usar el menú sin login
+            }
             try {
                 const idx = await getDoc(doc(db, 'uid_index', user.uid));
                 if (idx.exists()) {
@@ -40,7 +49,7 @@
         });
         window.cerrarSesion = async () => {
             const { signOut } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
-            await signOut(auth); window.location.href = 'pages/auth.html';
+            await signOut(auth); window.location.reload();
         };
     </script>
 
