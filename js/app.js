@@ -1179,65 +1179,73 @@ window.cerrarOrdenModal = function() {
 
 window.enviarOrdenModal = function() {
     const cid = window._ordenCuentaId;
-    const c = CS.cuentas.find(c => c.id === cid);
+    const CS = window._cuentasSys;
+    const c = CS ? CS.cuentas.find(c => c.id === cid) : null;
     if (!c) return;
 
-    const nombre   = document.getElementById('orden-nombre').value.trim() || c.nombre;
-    const telefono = document.getElementById('orden-telefono').value.trim();
+    const nombre   = (document.getElementById('orden-nombre')?.value || '').trim() || c.nombre;
+    const telefono = (document.getElementById('orden-telefono')?.value || '').trim();
     const tipo     = document.querySelector('input[name="orden-tipo"]:checked')?.value || 'pickup';
     const total    = c.items.reduce((s, i) => s + i.precio, 0);
+    c._telefono    = telefono;
 
-    // Guardar teléfono en la cuenta para referencia futura
-    c._telefono = telefono;
-
-    let msg = '🐢 *TORTAS TORTUGA*\n';
-    msg += '━━━━━━━━━━━━━━━━━━━━\n';
-    msg += '📋 *' + c.nombre + '*\n';
-    msg += '👤 ' + nombre;
-    if (telefono) msg += ' · 📞 ' + telefono;
-    msg += '\n' + (tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Domicilio') + '
-\n';
-
+    let lineas = [
+        '🐢 *TORTAS TORTUGA*',
+        '━━━━━━━━━━━━━━━━━━━━',
+        '📋 *' + c.nombre + '*',
+        '👤 ' + nombre + (telefono ? ' · 📞 ' + telefono : ''),
+        (tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Domicilio'),
+        ''
+    ];
     c.items.forEach((item, i) => {
-        msg += (i+1) + '. *' + item.nombre + '*';
+        let linea = (i+1) + '. *' + item.nombre + '*';
         if (item.modificaciones && item.modificaciones.length) {
-            msg += '
-   _' + item.modificaciones.join(', ') + '_';
+            linea += ' · ' + item.modificaciones.join(', ');
         }
-        msg += ' — $' + item.precio.toFixed(2) + '\n';
+        linea += ' — $' + item.precio.toFixed(2);
+        lineas.push(linea);
     });
-    msg += '
-💰 *Total: $' + total.toFixed(2) + '*';
+    lineas.push('');
+    lineas.push('💰 *Total: $' + total.toFixed(2) + '*');
 
+    const msg = lineas.join('\n');
     cerrarOrdenModal();
     window.open('https://wa.me/12108678210?text=' + encodeURIComponent(msg), '_blank');
 };
 
 window.enviarTodasLasCuentas = function() {
-    const nombre   = document.getElementById('customer-name')?.value || 'Cliente';
-    const telefono = document.getElementById('customer-phone')?.value || '';
+    const nombre   = (document.getElementById('customer-name')?.value || '').trim() || 'Cliente';
+    const telefono = (document.getElementById('customer-phone')?.value || '').trim();
     const tipo     = document.querySelector('input[name="order-type"]:checked')?.value || 'pickup';
+    const CS       = window._cuentasSys;
+    if (!CS) return;
     const totalGen = CS.cuentas.reduce((s, c) => s + c.items.reduce((ss, i) => ss + i.precio, 0), 0);
 
-    let msg = `🐢 *TORTAS TORTUGA — ORDEN COMPLETA*\n`;
-    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
-    msg += `👤 ${nombre}`;
-    if (telefono) msg += ` · 📞 ${telefono}`;
-    msg += `\n${tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Domicilio'}\n\n`;
-
+    let lineas = [
+        '🐢 *TORTAS TORTUGA — ORDEN COMPLETA*',
+        '━━━━━━━━━━━━━━━━━━━━',
+        '👤 ' + nombre + (telefono ? ' · 📞 ' + telefono : ''),
+        (tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Domicilio'),
+        ''
+    ];
     CS.cuentas.forEach(c => {
         if (!c.items.length) return;
         const tot = c.items.reduce((s, i) => s + i.precio, 0);
-        msg += `━ *${c.nombre}* ($${tot.toFixed(2)}) ━\n`;
+        lineas.push('━ *' + c.nombre + '* ($' + tot.toFixed(2) + ') ━');
         c.items.forEach((item, i) => {
-            msg += `${i+1}. *${item.nombre}*`;
-            if (item.modificaciones?.length) msg += ` _${item.modificaciones.join(', ')}_`;
-            msg += ` — $${item.precio.toFixed(2)}\n`;
+            let linea = (i+1) + '. *' + item.nombre + '*';
+            if (item.modificaciones && item.modificaciones.length) {
+                linea += ' · ' + item.modificaciones.join(', ');
+            }
+            linea += ' — $' + item.precio.toFixed(2);
+            lineas.push(linea);
         });
-        msg += `\n`;
+        lineas.push('');
     });
-    msg += `💰 *TOTAL GENERAL: $${totalGen.toFixed(2)}*`;
-    window.open(`https://wa.me/12108678210?text=${encodeURIComponent(msg)}`, '_blank');
+    lineas.push('💰 *TOTAL GENERAL: $' + totalGen.toFixed(2) + '*');
+
+    const msg = lineas.join('\n');
+    window.open('https://wa.me/12108678210?text=' + encodeURIComponent(msg), '_blank');
 };
 
 // ── Patch addToCart confirmarMods → nueva cuenta ───────────────
