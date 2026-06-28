@@ -299,10 +299,8 @@ function cerrarEnviarAdminModal() {
 
 function confirmarEnvioAdmin() { _doEnvioAdmin(); }
 async function _doEnvioAdmin() {
-    console.log('_doEnvioAdmin iniciado');
     var cs = window._cuentasSys;
-    console.log('cs:', cs ? 'OK cuentas='+cs.cuentas.length : 'NULL');
-    if (!cs) { alert('Error: _cuentasSys no disponible'); return; }
+    if (!cs) return;
     var btn = document.getElementById('btn-confirmar-envio');
     if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
     try {
@@ -325,23 +323,36 @@ async function _doEnvioAdmin() {
                 cuentaColor: c.color,
                 telefono: c._telefono || ''
             };
-            console.log('Enviando pedido:', pedido);
             if (window._addPedidoToFirestore) {
                 var id = await window._addPedidoToFirestore(pedido);
-                console.log('Pedido guardado con ID:', id);
             } else {
                 throw new Error('_addPedidoToFirestore no esta disponible - app.js no cargo correctamente');
             }
             env++;
         }
         cerrarEnviarAdminModal();
+
+        // Resetear todas las cuentas para nuevo pedido
+        window._cuentasSys = {
+            cuentas: [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }],
+            activa: 1,
+            counter: 1
+        };
+        if (window.renderCuentasTabs) window.renderCuentasTabs();
+        if (window.renderCartItems) window.renderCartItems();
+
+        // Cerrar carrito
+        var cartModal = document.getElementById('cart-modal');
+        if (cartModal) cartModal.classList.remove('active');
+
+        // Toast de confirmación
         var toast = document.getElementById('undo-toast');
         var msg = document.getElementById('undo-toast-msg');
         if (toast && msg) {
-            msg.textContent = env + ' orden(es) enviadas al admin';
+            msg.textContent = '✅ ' + env + ' orden(es) enviadas — listo para nuevo pedido';
             toast.style.display = 'flex';
             clearTimeout(window._undoTimer);
-            window._undoTimer = setTimeout(function(){ toast.style.display='none'; },4000);
+            window._undoTimer = setTimeout(function(){ toast.style.display='none'; }, 5000);
         }
         if (btn) { btn.disabled = false; btn.textContent = 'Confirmar y Enviar'; }
     } catch(e) {
@@ -917,7 +928,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782651030">
+<script type="module" src="js/app.js?v=1782651362">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
