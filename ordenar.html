@@ -233,19 +233,16 @@ function agregarNuevaCuenta() {
 }
 function eliminarCuenta(cid) {
     var cs = window._cuentasSys;
-    if (!cs || cs.cuentas.length <= 1) {
-        alert('Debe existir al menos una cuenta.');
-        return;
-    }
+    if (!cs || cs.cuentas.length <= 1) return;
+
     var c = cs.cuentas.find(function(x){ return x.id === cid; });
     if (!c) return;
 
-    var msg = '\u00bfDeseas eliminar la cuenta "' + c.nombre + '"?';
-    if (c.items.length > 0) {
-        msg += '\n\nTiene ' + c.items.length + ' producto(s). Se moveran a la primera cuenta.';
-    }
-    if (!confirm(msg)) return;
+    // Guardar copia para deshacer
+    var backup = JSON.parse(JSON.stringify(cs.cuentas));
+    var backupActiva = cs.activa;
 
+    // Mover items a primera cuenta antes de eliminar
     var idx = cs.cuentas.findIndex(function(x){ return x.id === cid; });
     if (idx >= 0) {
         if (cs.cuentas[idx].items.length) {
@@ -255,8 +252,34 @@ function eliminarCuenta(cid) {
         cs.cuentas.splice(idx, 1);
     }
     if (cs.activa === cid) cs.activa = cs.cuentas[0].id;
+
     window.renderCuentasTabs();
     window.renderCartItems();
+
+    // Mostrar toast con opción de deshacer
+    var toast = document.getElementById('undo-toast');
+    var msg   = document.getElementById('undo-toast-msg');
+    if (toast && msg) {
+        msg.textContent = 'Cuenta "' + c.nombre + '" eliminada';
+        toast.style.display = 'flex';
+        clearTimeout(window._undoTimer);
+        // Botón deshacer
+        var btn = document.getElementById('undo-toast-btn');
+        if (btn) {
+            var newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            newBtn.addEventListener('click', function() {
+                cs.cuentas = backup;
+                cs.activa  = backupActiva;
+                toast.style.display = 'none';
+                window.renderCuentasTabs();
+                window.renderCartItems();
+            });
+        }
+        window._undoTimer = setTimeout(function() {
+            toast.style.display = 'none';
+        }, 4000);
+    }
 }
 
 function cerrarConfirmEliminar() {
@@ -745,7 +768,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782646830">
+<script type="module" src="js/app.js?v=1782647008">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
