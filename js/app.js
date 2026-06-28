@@ -1386,24 +1386,17 @@ window._registrarCobro = async function(turnoId, metodo, monto) {
 };
 
 // Obtener órdenes del cajero de hoy
-// Sin orderBy para evitar índice compuesto — ordenamos en JS
+// Sin where ni orderBy — todo se filtra en JS para evitar índices compuestos
 window._getOrdenesCajero = async function(cajeroId) {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    const q = query(
-        collection(db, 'pedidos'),
-        where('cajeroId', '==', cajeroId)
-    );
-    const snap = await getDocs(q);
+    // Solo traer pedidos — sin filtros de Firestore
+    const snap = await getDocs(collection(db, 'pedidos'));
     return snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
         .filter(p => {
             const ts = p.creado?.seconds ? new Date(p.creado.seconds * 1000) : null;
-            return ts && ts >= hoy;
+            return ts && ts >= hoy && p.cajeroId === cajeroId;
         })
-        .sort((a, b) => {
-            const ta = a.creado?.seconds || 0;
-            const tb = b.creado?.seconds || 0;
-            return tb - ta; // más reciente primero
-        });
+        .sort((a, b) => (b.creado?.seconds || 0) - (a.creado?.seconds || 0));
 };
