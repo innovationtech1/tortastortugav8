@@ -23,6 +23,34 @@ window._cuentasSys = window._cuentasSys || {
     counter: 1
 };
 window._pendingItem = window._pendingItem || null;
+/* ── SESIÓN DE CAJERO ──────────────────────────────────────── */
+(function() {
+    var cajeroId     = sessionStorage.getItem('tt_cajero_id');
+    var cajeroNombre = sessionStorage.getItem('tt_cajero_nombre');
+    var cajeroRol    = sessionStorage.getItem('tt_cajero_rol');
+    var cajeroTs     = parseInt(sessionStorage.getItem('tt_cajero_ts') || '0');
+    var VEINTE_MIN   = 20 * 60 * 1000;
+
+    if (cajeroId && cajeroNombre && (Date.now() - cajeroTs < VEINTE_MIN)) {
+        window._cajeroActivo = { id: cajeroId, nombre: cajeroNombre, rol: cajeroRol };
+        // Renovar timestamp
+        sessionStorage.setItem('tt_cajero_ts', Date.now().toString());
+        // Mostrar banner
+        document.addEventListener('DOMContentLoaded', function() {
+            var banner = document.getElementById('cajero-banner');
+            var nomEl  = document.getElementById('cajero-nombre-header');
+            if (banner) banner.style.display = 'flex';
+            if (nomEl)  nomEl.textContent = cajeroNombre + ' · ' + cajeroRol;
+        });
+    } else if (cajeroId) {
+        // Sesión expirada
+        sessionStorage.removeItem('tt_cajero_id');
+        sessionStorage.removeItem('tt_cajero_nombre');
+        sessionStorage.removeItem('tt_cajero_rol');
+        sessionStorage.removeItem('tt_cajero_ts');
+    }
+})();
+
 window._editingItem = window._editingItem || null;
 
 function confirmarMods(conMods) {
@@ -309,6 +337,7 @@ async function _doEnvioAdmin() {
         for (var i = 0; i < con.length; i++) {
             var c = con[i];
             var tot = c.items.reduce(function(s,it){ return s+it.precio; },0);
+            var cajero = window._cajeroActivo || null;
             var pedido = {
                 ticketId: 'TT-' + ts + '-' + (i+1),
                 cliente: c.nombre,
@@ -321,7 +350,10 @@ async function _doEnvioAdmin() {
                 tipo: 'local',
                 metodoPago: 'pendiente',
                 cuentaColor: c.color,
-                telefono: c._telefono || ''
+                telefono: c._telefono || '',
+                cajeroId:     cajero ? cajero.id : 'directo',
+                cajeroNombre: cajero ? cajero.nombre : 'Sistema',
+                cajeroRol:    cajero ? cajero.rol : ''
             };
             if (window._addPedidoToFirestore) {
                 var id = await window._addPedidoToFirestore(pedido);
@@ -766,6 +798,12 @@ function cerrarOrdenModal() {
             <span style="font-size:1rem;font-weight:900;color:#fff;letter-spacing:.02em;">TORTUGA</span>
           </span>
         </a>
+    <!-- Banner cajero (solo visible cuando hay sesión de cajero) -->
+    <div id="cajero-banner" style="display:none;background:rgba(255,90,0,.15);
+        border:1px solid rgba(255,90,0,.3);border-radius:8px;
+        padding:.3rem .65rem;font-size:.72rem;color:#FF5A00;font-weight:700;">
+        🏪 <span id="cajero-nombre-header"></span>
+    </div>
     <div class="header-actions">
         <button class="clear-cart-btn" id="clear-cart-btn" onclick="limpiarCarrito()" style="display:none;">Vaciar</button>
         <button class="signout-btn" onclick="window.location.href='index.html'" title="Ir al inicio"> Inicio</button>
@@ -1025,7 +1063,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782653706">
+<script type="module" src="js/app.js?v=1782654929">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
