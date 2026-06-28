@@ -469,7 +469,12 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
             displayItems = displayItems.replace(/\n/g, '<br>');
             return `<tr>
                 <td><span class="order-id" style="font-size:1.1rem;color:var(--yellow)">#${displayTicket}</span><br><small style="color:var(--muted)">${hora}</small>${timerHTML}<button class="print-btn" onclick="window.imprimirTicket('${ticketId}')" style="margin-top:6px; font-size:0.7rem; padding:2px 5px; background:var(--surface2); color:white; border:1px solid var(--border); border-radius:4px; cursor:pointer; width:100%;">🖨️ Imprimir</button></td>
-                <td><strong>${displayNombre}</strong><br><span style="color:var(--muted);font-size:0.85rem">📞 ${displayTel}</span><br><span class="tipo-badge ${tipoCls}" style="margin-top:4px">${displayTipo}</span></td>
+                <td>
+    <strong>${displayNombre}</strong><br>
+    <span style="color:var(--muted);font-size:0.85rem">📞 ${displayTel}</span><br>
+    <span class="tipo-badge ${tipoCls}" style="margin-top:4px">${displayTipo}</span>
+    ${p.cajeroNombre ? `<br><span style="color:rgba(255,90,0,.7);font-size:0.72rem;margin-top:3px;display:block;">🏪 ${p.cajeroNombre}</span>` : ''}
+</td>
                 <td><div class="order-items">${displayItems}</div></td>
                 <td>${pagoHTML}</td>
                 <td><select class="status-select ${estadoCls}" data-id="${p.id}" style="width:100%"><option ${p.estado?.includes('Nuevo') ? 'selected' : ''}>Nuevo 🆕</option><option ${p.estado?.includes('preparación') ? 'selected' : ''}>En preparación 🧑‍🍳</option><option ${p.estado?.includes('Listo') ? 'selected' : ''}>Listo ✅</option><option ${p.estado?.includes('Entregado') ? 'selected' : ''}>Entregado 🎉</option><option ${p.estado?.includes('Cancelado') ? 'selected' : ''}>Cancelado ❌</option></select></td>
