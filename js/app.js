@@ -117,30 +117,26 @@ function confirmarMods(conMods) {
     delete itemBase._qty;
     delete itemBase._splitMode;
 
-    if (splitMode) {
-        // En modo split → agregar a cuenta activa
-        const cActiva = cuentas.find(c => c.id === cuentaActiva);
+    // Agregar a cuenta activa del nuevo sistema
+    if (window._cuentasSys) {
+        const cActiva = window._cuentasSys.cuentas.find(c => c.id === window._cuentasSys.activa);
         if (cActiva) {
             for (let i = 0; i < qty; i++) cActiva.items.push({...itemBase});
         }
-        pendingItem = null;
-        modsModal.classList.remove('active');
-        renderSplit();
-        // Abrir panel split automáticamente
-        if (window.abrirSplit) {
-            document.getElementById('split-panel').classList.add('open');
-            document.getElementById('split-overlay').style.opacity = '1';
-            document.getElementById('split-overlay').style.pointerEvents = 'all';
-        }
     } else {
         for (let i = 0; i < qty; i++) cart.push({...itemBase});
-        pendingItem = null;
-        modsModal.classList.remove('active');
-        updateCart();
-        cartIcon.style.transform = 'scale(1.3)';
-        setTimeout(() => cartIcon.style.transform = 'scale(1)', 250);
-        cartModal.classList.add('active');
     }
+
+    pendingItem = null;
+    modsModal.classList.remove('active');
+
+    // Render y abrir carrito
+    if (window.renderCuentasTabs) window.renderCuentasTabs();
+    if (window.renderCartItems) window.renderCartItems();
+
+    cartIcon.style.transform = 'scale(1.3)';
+    setTimeout(() => cartIcon.style.transform = 'scale(1)', 250);
+    cartModal.classList.add('active');
 }
 
 document.getElementById('mods-skip').addEventListener('click', () => confirmarMods(false));
@@ -148,6 +144,11 @@ document.getElementById('mods-confirm').addEventListener('click', () => confirma
 
 // ─── ACTUALIZAR CARRITO ──────────────────────────────────────────
 function updateCart() {
+    // Use new cuenta system if available
+    if (window.renderCartItems) {
+        window.renderCartItems();
+        return;
+    }
     const total = cart.reduce((s, i) => s + i.precio, 0);
     cartCountEl.textContent = cart.length;
     cartTotalEl.textContent = `$${total.toFixed(2)}`;
@@ -814,3 +815,282 @@ window.cerrarSplit = function() {
         document.getElementById('split-overlay').style.pointerEvents = 'none';
     }, 300);
 };
+
+
+
+/* ═══════════════════════════════════════════════════════════════
+   SISTEMA DE CUENTAS (Orders Screen)
+   ═══════════════════════════════════════════════════════════════ */
+
+const CUENTA_COLORS = ['#FF5A00','#25D366','#3B82F6','#A78BFA','#F59E0B','#EC4899'];
+
+// Estado de cuentas
+if(!window._cuentasSys) {
+    window._cuentasSys = {
+        cuentas: [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }],
+        activa: 1,
+        counter: 1
+    };
+}
+const CS = window._cuentasSys;
+
+// ── Agregar item a cuenta activa ──────────────────────────────
+function addItemToCuentaActiva(item) {
+    const c = CS.cuentas.find(c => c.id === CS.activa);
+    if (c) {
+        c.items.push({...item});
+        renderCuentasTabs();
+        renderCartItems();
+    }
+}
+
+// ── Render tabs de cuentas ────────────────────────────────────
+window.renderCuentasTabs = function() {
+    const tabs = document.getElementById('cuentas-tabs');
+    if (!tabs) return;
+
+    let html = '';
+    CS.cuentas.forEach(c => {
+        const tot = c.items.reduce((s, i) => s + i.precio, 0);
+        const active = c.id === CS.activa ? 'active' : '';
+        html += `<div class="ctab ${active}" data-cid="${c.id}"
+            onclick="switchCuenta(${c.id})"
+            style="border-color:${active ? c.color : 'rgba(255,255,255,.12)'}">
+            <span class="ctab-nom" style="color:${active ? c.color : '#fff'}">${c.nombre}</span>
+            <span class="ctab-tot">$${tot.toFixed(2)}</span>
+        </div>`;
+    });
+    html += `<button onclick="agregarNuevaCuenta()" class="ctab-add">+ Nueva cuenta</button>`;
+    tabs.innerHTML = html;
+
+    // Update label
+    const lbl = document.getElementById('cuenta-label-active');
+    const cActiva = CS.cuentas.find(c => c.id === CS.activa);
+    if (lbl && cActiva) {
+        lbl.textContent = cActiva.nombre.toUpperCase();
+        lbl.style.color = cActiva.color;
+    }
+};
+
+// ── Render items de cuenta activa ─────────────────────────────
+window.renderCartItems = function() {
+    const cActiva = CS.cuentas.find(c => c.id === CS.activa);
+    const cartItemsEl = document.getElementById('cart-items');
+    if (!cartItemsEl || !cActiva) return;
+
+    const items = cActiva.items;
+
+    if (items.length === 0) {
+        cartItemsEl.innerHTML = '<p class="empty-cart">Esta cuenta está vacía 🥺</p>';
+    } else {
+        cartItemsEl.innerHTML = items.map((item, idx) => {
+            // Botones para mover a otras cuentas
+            const otherCuentas = CS.cuentas.filter(c => c.id !== CS.activa);
+            const moveBtns = otherCuentas.map(c =>
+                `<button class="item-move-btn"
+                    style="color:${c.color};border-color:${c.color}44"
+                    onclick="moverItemCuenta(${idx},${c.id})">
+                    → ${c.nombre}
+                </button>`
+            ).join('');
+
+            const splitBtn = CS.cuentas.length > 1
+                ? `<button class="item-split-btn" onclick="splitItemEntreTodas(${idx})">÷ Split</button>`
+                : '';
+
+            return `<div class="cart-item">
+                <div class="item-info">
+                    <div class="item-name">${item.nombre}</div>
+                    ${item.modificaciones?.length
+                        ? `<div class="item-mods">${item.modificaciones.join(' · ')}</div>`
+                        : ''}
+                </div>
+                <div class="item-price">$${item.precio.toFixed(2)}</div>
+                <button class="remove-item" onclick="removeItemCuenta(${idx})">✕</button>
+                ${(moveBtns || splitBtn)
+                    ? `<div class="item-move-row">${moveBtns}${splitBtn}</div>`
+                    : ''}
+            </div>`;
+        }).join('');
+    }
+
+    // Update totals
+    const total = items.reduce((s, i) => s + i.precio, 0);
+    const cartTotalEl = document.getElementById('cart-total');
+    if (cartTotalEl) cartTotalEl.textContent = `$${total.toFixed(2)}`;
+    const cartCountEl = document.getElementById('cart-count');
+    if (cartCountEl) {
+        const totalItems = CS.cuentas.reduce((s, c) => s + c.items.length, 0);
+        cartCountEl.textContent = totalItems;
+    }
+    const clearBtn = document.getElementById('clear-cart-btn');
+    if (clearBtn) clearBtn.style.display = total > 0 ? 'inline-flex' : 'none';
+
+    // Sync POS total
+    const posTotal = document.getElementById('pos-total-amount');
+    if (posTotal) {
+        const allTotal = CS.cuentas.reduce((s, c) =>
+            s + c.items.reduce((ss, i) => ss + i.precio, 0), 0);
+        posTotal.textContent = `$${allTotal.toFixed(2)}`;
+    }
+};
+
+// ── Acciones de cuenta ────────────────────────────────────────
+window.switchCuenta = function(cid) {
+    CS.activa = cid;
+    renderCuentasTabs();
+    renderCartItems();
+};
+
+window.agregarNuevaCuenta = function() {
+    CS.counter++;
+    const color = CUENTA_COLORS[(CS.cuentas.length) % CUENTA_COLORS.length];
+    CS.cuentas.push({ id: CS.counter, nombre: 'Cuenta ' + CS.counter, items: [], color });
+    CS.activa = CS.counter;
+    renderCuentasTabs();
+    renderCartItems();
+    // Abrir modal para poner nombre
+    setTimeout(() => mostrarNombreCuenta(), 200);
+};
+
+window.moverItemCuenta = function(itemIdx, toCid) {
+    const from = CS.cuentas.find(c => c.id === CS.activa);
+    const to   = CS.cuentas.find(c => c.id === toCid);
+    if (!from || !to) return;
+    const [item] = from.items.splice(itemIdx, 1);
+    to.items.push(item);
+    renderCuentasTabs();
+    renderCartItems();
+};
+
+window.removeItemCuenta = function(itemIdx) {
+    const c = CS.cuentas.find(c => c.id === CS.activa);
+    if (c) c.items.splice(itemIdx, 1);
+    renderCuentasTabs();
+    renderCartItems();
+};
+
+window.splitItemEntreTodas = function(itemIdx) {
+    const from = CS.cuentas.find(c => c.id === CS.activa);
+    if (!from || CS.cuentas.length < 2) return;
+    const item = from.items[itemIdx];
+    const precioCada = parseFloat((item.precio / CS.cuentas.length).toFixed(2));
+    CS.cuentas.forEach(c => {
+        c.items.push({...item, nombre: item.nombre + ' ÷' + CS.cuentas.length, precio: precioCada});
+    });
+    from.items.splice(itemIdx, 1);
+    renderCuentasTabs();
+    renderCartItems();
+};
+
+window.dividirCuentaIgual = function() {
+    const allItems = CS.cuentas.reduce((arr, c) => [...arr, ...c.items], []);
+    if (allItems.length === 0 || CS.cuentas.length < 2) return;
+    // Distribuir items equitativamente
+    CS.cuentas.forEach(c => c.items = []);
+    allItems.forEach((item, i) => {
+        CS.cuentas[i % CS.cuentas.length].items.push(item);
+    });
+    renderCuentasTabs();
+    renderCartItems();
+};
+
+window.limpiarCuentaActual = function() {
+    const c = CS.cuentas.find(c => c.id === CS.activa);
+    if (c && confirm(`¿Limpiar ${c.nombre}?`)) {
+        c.items = [];
+        renderCuentasTabs();
+        renderCartItems();
+    }
+};
+
+window.limpiarCarrito = function() {
+    if (confirm('¿Limpiar todas las cuentas?')) {
+        CS.cuentas = [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }];
+        CS.activa = 1; CS.counter = 1;
+        cart = [];
+        renderCuentasTabs();
+        renderCartItems();
+        updateCart();
+    }
+};
+
+// ── Modal nombre de cuenta ────────────────────────────────────
+window.mostrarNombreCuenta = function() {
+    const c = CS.cuentas.find(c => c.id === CS.activa);
+    const inp = document.getElementById('nombre-cuenta-input');
+    if (inp && c) { inp.value = c.nombre; inp.focus(); inp.select(); }
+    const ov = document.getElementById('nombre-modal-overlay');
+    if (ov) ov.classList.add('open');
+};
+
+window.cerrarNombreModal = function() {
+    const ov = document.getElementById('nombre-modal-overlay');
+    if (ov) ov.classList.remove('open');
+};
+
+window.guardarNombreCuenta = function() {
+    const c = CS.cuentas.find(c => c.id === CS.activa);
+    const inp = document.getElementById('nombre-cuenta-input');
+    if (c && inp && inp.value.trim()) {
+        c.nombre = inp.value.trim();
+        renderCuentasTabs();
+        renderCartItems();
+    }
+    cerrarNombreModal();
+};
+
+// ── Enviar orden por WhatsApp (cuenta activa) ─────────────────
+window.enviarCuentaActiva = function() {
+    const c = CS.cuentas.find(c => c.id === CS.activa);
+    if (!c || c.items.length === 0) { alert('Esta cuenta está vacía'); return; }
+    const nombre   = document.getElementById('customer-name')?.value || c.nombre;
+    const telefono = document.getElementById('customer-phone')?.value || '';
+    const tipo     = document.querySelector('input[name="order-type"]:checked')?.value || 'pickup';
+    const total    = c.items.reduce((s, i) => s + i.precio, 0);
+
+    let msg = `🐢 *TORTAS TORTUGA*\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `📋 *${c.nombre}*\n`;
+    msg += `👤 ${nombre}`;
+    if (telefono) msg += ` · 📞 ${telefono}`;
+    msg += `\n${tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Domicilio'}\n\n`;
+    c.items.forEach((item, i) => {
+        msg += `${i+1}. *${item.nombre}*`;
+        if (item.modificaciones?.length) msg += `\n   _${item.modificaciones.join(', ')}_`;
+        msg += ` — $${item.precio.toFixed(2)}\n`;
+    });
+    msg += `\n💰 *Total: $${total.toFixed(2)}*`;
+    window.open(`https://wa.me/12108678210?text=${encodeURIComponent(msg)}`, '_blank');
+};
+
+window.enviarTodasLasCuentas = function() {
+    const nombre   = document.getElementById('customer-name')?.value || 'Cliente';
+    const telefono = document.getElementById('customer-phone')?.value || '';
+    const tipo     = document.querySelector('input[name="order-type"]:checked')?.value || 'pickup';
+    const totalGen = CS.cuentas.reduce((s, c) => s + c.items.reduce((ss, i) => ss + i.precio, 0), 0);
+
+    let msg = `🐢 *TORTAS TORTUGA — ORDEN COMPLETA*\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `👤 ${nombre}`;
+    if (telefono) msg += ` · 📞 ${telefono}`;
+    msg += `\n${tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Domicilio'}\n\n`;
+
+    CS.cuentas.forEach(c => {
+        if (!c.items.length) return;
+        const tot = c.items.reduce((s, i) => s + i.precio, 0);
+        msg += `━ *${c.nombre}* ($${tot.toFixed(2)}) ━\n`;
+        c.items.forEach((item, i) => {
+            msg += `${i+1}. *${item.nombre}*`;
+            if (item.modificaciones?.length) msg += ` _${item.modificaciones.join(', ')}_`;
+            msg += ` — $${item.precio.toFixed(2)}\n`;
+        });
+        msg += `\n`;
+    });
+    msg += `💰 *TOTAL GENERAL: $${totalGen.toFixed(2)}*`;
+    window.open(`https://wa.me/12108678210?text=${encodeURIComponent(msg)}`, '_blank');
+};
+
+// ── Patch addToCart confirmarMods → nueva cuenta ───────────────
+// Override confirmarMods to use new system
+const _origConfirmarMods = window.confirmarMods;
