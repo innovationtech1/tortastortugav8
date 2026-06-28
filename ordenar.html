@@ -416,6 +416,12 @@
     </div>
 </div>
 
+<script>
+/* Proxy global para funciones de app.js (módulo ES6) */
+/* Los onclick del HTML llaman estas funciones que delegan al módulo */
+function confirmarMods(v){ if(window._confirmarMods) window._confirmarMods(v); }
+function limpiarCarrito(){ if(window._limpiarCarrito) window._limpiarCarrito(); }
+</script>
 <script type="module" src="js/app.js?v=1782622086"></script>
 <script type="module">
     import { seedProductos, renderMenu } from './js/menu.js';
