@@ -120,7 +120,7 @@ window.switchTab = function(tab) {
     const targetForm = document.getElementById(`form-${tab}`);
     if (targetForm) {
         targetForm.classList.add('active');
-        targetForm.style.display = 'block';
+        targetForm.style.display = 'flex';
     }
     if (tab !== 'forgot') document.getElementById(`tab-${tab}`)?.classList.add('active');
     clearMessages();
