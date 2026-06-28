@@ -91,12 +91,18 @@ document.getElementById('close-mods').addEventListener('click', () => {
 });
 modsModal.addEventListener('click', e => { if (e.target === modsModal) { modsModal.classList.remove('active'); pendingItem = null; } });
 
+// Chips son <label> — el click activa el checkbox automáticamente
+// Solo necesitamos sincronizar la clase .selected con el estado del checkbox
 document.querySelectorAll('.mod-chip').forEach(chip => {
-    chip.addEventListener('click', (e) => {
-        e.preventDefault();
-        const isSelected = chip.classList.toggle('selected');
-        const input = chip.querySelector('input');
-        if (input) input.checked = isSelected;
+    chip.addEventListener('click', function() {
+        // Usar setTimeout para leer el estado DESPUÉS de que el label
+        // haya activado/desactivado el checkbox interno
+        setTimeout(() => {
+            const input = chip.querySelector('input[type="checkbox"]');
+            if (input) {
+                chip.classList.toggle('selected', input.checked);
+            }
+        }, 0);
     });
 });
 
