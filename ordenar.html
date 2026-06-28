@@ -417,10 +417,94 @@
 </div>
 
 <script>
-/* Proxy global para funciones de app.js (módulo ES6) */
-/* Los onclick del HTML llaman estas funciones que delegan al módulo */
-function confirmarMods(v){ if(window._confirmarMods) window._confirmarMods(v); }
-function limpiarCarrito(){ if(window._limpiarCarrito) window._limpiarCarrito(); }
+/* Funciones globales — accesibles desde onclick ANTES de que cargue el módulo */
+
+function confirmarMods(conMods) {
+    // Recolectar modificaciones seleccionadas (chips con clase .selected)
+    function getMods() {
+        var mods = [], extra = 0;
+        document.querySelectorAll('.mod-chip.selected input').forEach(function(cb) {
+            if (cb.value) mods.push(cb.value);
+            extra += parseFloat(cb.getAttribute('data-price') || 0);
+        });
+        var nota = (document.getElementById('mods-notes') || {}).value || '';
+        nota = nota.trim();
+        if (nota) mods.push('📝 ' + nota);
+        return { mods: mods, extra: extra };
+    }
+
+    function cerrarModal() {
+        var m = document.getElementById('mods-modal');
+        if (m) m.classList.remove('active');
+        var cb = document.getElementById('mods-confirm');
+        if (cb) cb.textContent = 'Agregar al Pedido';
+    }
+
+    // MODO EDICIÓN
+    if (window._editingItem) {
+        var ei = window._editingItem;
+        var CS = window._cuentasSys;
+        var c = CS ? CS.cuentas.find(function(x){ return x.id === ei.cuentaId; }) : null;
+        if (c && c.items[ei.itemIdx] !== undefined && conMods) {
+            var r = getMods();
+            c.items[ei.itemIdx].modificaciones = r.mods;
+            c.items[ei.itemIdx].precio = ei.precioBase + r.extra;
+        }
+        window._editingItem = null;
+        cerrarModal();
+        if (window.renderCuentasTabs) window.renderCuentasTabs();
+        if (window.renderCartItems) window.renderCartItems();
+        return;
+    }
+
+    // MODO AGREGAR
+    var pi = window._pendingItem;
+    if (!pi) { cerrarModal(); return; }
+
+    if (conMods) {
+        var rr = getMods();
+        pi.modificaciones = rr.mods;
+        pi.precio += rr.extra;
+    }
+
+    var qty = pi._qty || 1;
+    var itemBase = Object.assign({}, pi);
+    delete itemBase._qty;
+    delete itemBase._splitMode;
+
+    var CS2 = window._cuentasSys;
+    if (CS2) {
+        var ca = CS2.cuentas.find(function(x){ return x.id === CS2.activa; });
+        if (ca) { for (var i = 0; i < qty; i++) ca.items.push(Object.assign({}, itemBase)); }
+    } else {
+        if (!window._cart) window._cart = [];
+        for (var j = 0; j < qty; j++) window._cart.push(Object.assign({}, itemBase));
+    }
+
+    window._pendingItem = null;
+    cerrarModal();
+
+    if (window.renderCuentasTabs) window.renderCuentasTabs();
+    if (window.renderCartItems) window.renderCartItems();
+
+    var ci = document.getElementById('cart-icon');
+    if (ci) { ci.style.transform = 'scale(1.3)'; setTimeout(function(){ ci.style.transform = ''; }, 250); }
+    var cm = document.getElementById('cart-modal');
+    if (cm) cm.classList.add('active');
+}
+
+function limpiarCarrito() {
+    if (window._limpiarCarrito) window._limpiarCarrito();
+    else {
+        var CS = window._cuentasSys;
+        if (CS) {
+            CS.cuentas = [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }];
+            CS.activa = 1; CS.counter = 1;
+            if (window.renderCuentasTabs) window.renderCuentasTabs();
+            if (window.renderCartItems) window.renderCartItems();
+        }
+    }
+}
 </script>
 <script type="module" src="js/app.js?v=1782622086"></script>
 <script type="module">
