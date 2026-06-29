@@ -376,14 +376,8 @@ async function _doEnvioAdmin() {
         }
         cerrarEnviarAdminModal();
 
-        // Resetear todas las cuentas para nuevo pedido
-        window._cuentasSys = {
-            cuentas: [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }],
-            activa: 1,
-            counter: 1
-        };
-        if (window.renderCuentasTabs) window.renderCuentasTabs();
-        if (window.renderCartItems) window.renderCartItems();
+        // Resetear cuentas mutando el objeto (no reemplazando)
+        resetCuentas();
 
         // Cerrar carrito
         var cartModal = document.getElementById('cart-modal');
@@ -477,13 +471,7 @@ async function confirmarPagoSimulado() {
     if (posModal) posModal.classList.remove('active');
 
     // Resetear TODAS las cuentas — listo para nuevo pedido
-    window._cuentasSys = {
-        cuentas: [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }],
-        activa: 1,
-        counter: 1
-    };
-    if (window.renderCuentasTabs) window.renderCuentasTabs();
-    if (window.renderCartItems)   window.renderCartItems();
+    resetCuentas();
 
     // Toast de confirmación
     var toast = document.getElementById('undo-toast');
@@ -820,6 +808,23 @@ function elegirMetodoPago(metodo) {
         if (sub) sub.textContent = 'Recibe el efectivo y confirma el cobro.';
         if (ov) ov.style.display = 'flex';
     }
+}
+
+function resetCuentas() {
+    var cs = window._cuentasSys;
+    if (cs) {
+        // Mutar el objeto existente — no reemplazar
+        // para que app.js (CS) vea los cambios
+        cs.cuentas.length = 0;
+        cs.cuentas.push({ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' });
+        cs.activa   = 1;
+        cs.counter  = 1;
+    }
+    if (window.renderCuentasTabs) window.renderCuentasTabs();
+    if (window.renderCartItems)   window.renderCartItems();
+    // Ocultar botón eliminar cuenta
+    var btnDel = document.getElementById('btn-eliminar-cuenta');
+    if (btnDel) btnDel.style.display = 'none';
 }
 
 function switchCuenta(cid) {
@@ -1459,7 +1464,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782696990">
+<script type="module" src="js/app.js?v=1782698095">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
