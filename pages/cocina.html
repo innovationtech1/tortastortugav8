@@ -200,6 +200,28 @@ const app = getApps().length ? getApps()[0] : initializeApp(FB_CONFIG);
 const db  = getFirestore(app);
 
 /* ── Estado global ─────────────────────────────────────────── */
+function _playBell(doble) {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        function beep(freq, start, dur) {
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.connect(g); g.connect(ctx.destination);
+            o.frequency.value = freq;
+            o.type = 'sine';
+            g.gain.setValueAtTime(0, ctx.currentTime + start);
+            g.gain.linearRampToValueAtTime(0.4, ctx.currentTime + start + 0.01);
+            g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+            o.start(ctx.currentTime + start);
+            o.stop(ctx.currentTime + start + dur);
+        }
+        beep(880, 0, 0.3);
+        beep(660, 0.15, 0.3);
+        beep(880, 0.3, 0.4);
+        if (doble) { beep(880, 0.9, 0.3); beep(660, 1.05, 0.3); beep(880, 1.2, 0.4); }
+    } catch(e) {}
+}
+
 let todos       = [];
 let tabActual   = 'activas';
 let soundOn     = true;
@@ -247,10 +269,7 @@ window.toggleSound = () => {
     document.getElementById('sound-btn').textContent = soundOn ? '🔊 ON' : '🔇 OFF';
 };
 function playBell(doble=false) {
-    if (!soundOn) return;
-    const a = new Audio('https://actions.google.com/sounds/v1/alarms/dinner_bell.ogg');
-    a.play().catch(()=>{});
-    if (doble) setTimeout(()=>{ const b=new Audio('https://actions.google.com/sounds/v1/alarms/dinner_bell.ogg'); b.play().catch(()=>{}); },900);
+    _playBell(doble);
 }
 
 /* ── Tabs ───────────────────────────────────────────────────── */
