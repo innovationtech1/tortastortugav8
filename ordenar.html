@@ -2114,5 +2114,160 @@ function enviarOrdenModal() {
   </div>
 </div>
 
+
+<!-- MODAL DELIVERY -->
+<div id="delivery-modal"
+     onclick="if(event.target===this)this.style.display='none'"
+     style="position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9998;
+            display:none;align-items:flex-end;justify-content:center;">
+  <div style="background:#1C1C1C;border:1px solid rgba(255,255,255,.1);
+              border-radius:20px 20px 0 0;padding:1.5rem;width:100%;max-width:480px;">
+    <div style="width:32px;height:4px;background:rgba(255,255,255,.15);
+                border-radius:4px;margin:0 auto .85rem;"></div>
+    <div style="font-size:.95rem;font-weight:800;color:#FF5A00;margin-bottom:1rem;">
+      🚀 Tipo de Orden
+    </div>
+
+    <!-- Pickup vs Delivery toggle -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1rem;">
+      <button id="btn-pickup" onclick="setTipoOrden('pickup')"
+        style="padding:.75rem;border-radius:12px;border:2px solid #FF5A00;
+               background:rgba(255,90,0,.15);color:#FF5A00;font-family:inherit;
+               font-size:.9rem;font-weight:800;cursor:pointer;">
+        🏪 Para Llevar
+      </button>
+      <button id="btn-delivery" onclick="setTipoOrden('delivery')"
+        style="padding:.75rem;border-radius:12px;border:2px solid rgba(255,255,255,.1);
+               background:transparent;color:#888;font-family:inherit;
+               font-size:.9rem;font-weight:800;cursor:pointer;">
+        🛵 Delivery
+      </button>
+    </div>
+
+    <!-- Delivery fields (hidden by default) -->
+    <div id="delivery-fields" style="display:none;">
+      <div style="margin-bottom:.65rem;">
+        <label style="font-size:.72rem;color:#888;font-weight:700;display:block;margin-bottom:.3rem;">
+          NOMBRE DEL CLIENTE
+        </label>
+        <input id="del-nombre" placeholder="Nombre completo"
+          style="width:100%;background:#111;border:1px solid rgba(255,255,255,.1);
+                 color:#fff;border-radius:8px;padding:.5rem .75rem;font-family:inherit;font-size:.88rem;">
+      </div>
+      <div style="margin-bottom:.65rem;">
+        <label style="font-size:.72rem;color:#888;font-weight:700;display:block;margin-bottom:.3rem;">
+          TELÉFONO
+        </label>
+        <input id="del-telefono" type="tel" placeholder="(210) 000-0000"
+          style="width:100%;background:#111;border:1px solid rgba(255,255,255,.1);
+                 color:#fff;border-radius:8px;padding:.5rem .75rem;font-family:inherit;font-size:.88rem;">
+      </div>
+      <div style="margin-bottom:.65rem;">
+        <label style="font-size:.72rem;color:#888;font-weight:700;display:block;margin-bottom:.3rem;">
+          DIRECCIÓN
+        </label>
+        <input id="del-direccion" placeholder="Calle, número, colonia"
+          style="width:100%;background:#111;border:1px solid rgba(255,255,255,.1);
+                 color:#fff;border-radius:8px;padding:.5rem .75rem;font-family:inherit;font-size:.88rem;">
+      </div>
+      <div style="margin-bottom:.65rem;">
+        <label style="font-size:.72rem;color:#888;font-weight:700;display:block;margin-bottom:.3rem;">
+          REFERENCIAS / NOTAS
+        </label>
+        <input id="del-notas" placeholder="Casa azul, entre calles X y Y..."
+          style="width:100%;background:#111;border:1px solid rgba(255,255,255,.1);
+                 color:#fff;border-radius:8px;padding:.5rem .75rem;font-family:inherit;font-size:.88rem;">
+      </div>
+    </div>
+
+    <!-- Pickup field -->
+    <div id="pickup-fields">
+      <div style="margin-bottom:.65rem;">
+        <label style="font-size:.72rem;color:#888;font-weight:700;display:block;margin-bottom:.3rem;">
+          NOMBRE (OPCIONAL)
+        </label>
+        <input id="del-nombre-pickup" placeholder="¿A nombre de quién?"
+          style="width:100%;background:#111;border:1px solid rgba(255,255,255,.1);
+                 color:#fff;border-radius:8px;padding:.5rem .75rem;font-family:inherit;font-size:.88rem;">
+      </div>
+      <div style="margin-bottom:.65rem;">
+        <label style="font-size:.72rem;color:#888;font-weight:700;display:block;margin-bottom:.3rem;">
+          TELÉFONO (OPCIONAL)
+        </label>
+        <input id="del-tel-pickup" type="tel" placeholder="(210) 000-0000"
+          style="width:100%;background:#111;border:1px solid rgba(255,255,255,.1);
+                 color:#fff;border-radius:8px;padding:.5rem .75rem;font-family:inherit;font-size:.88rem;">
+      </div>
+    </div>
+
+    <button onclick="confirmarTipoOrden()"
+      style="width:100%;padding:.85rem;background:linear-gradient(135deg,#FF5A00,#FF8800);
+             border:none;color:#fff;border-radius:12px;font-family:inherit;
+             font-size:.95rem;font-weight:800;cursor:pointer;margin-top:.5rem;">
+      Continuar con la Orden →
+    </button>
+  </div>
+</div>
+
+<script>
+
+/* ── DELIVERY / PICKUP ─────────────────────────── */
+window._tipoOrden = 'pickup';
+window._datosTipoOrden = {};
+
+window.setTipoOrden = function(tipo) {
+    window._tipoOrden = tipo;
+    var btnP = document.getElementById('btn-pickup');
+    var btnD = document.getElementById('btn-delivery');
+    var fieldsD = document.getElementById('delivery-fields');
+    var fieldsP = document.getElementById('pickup-fields');
+    if (tipo === 'delivery') {
+        btnD.style.borderColor = '#FF5A00';
+        btnD.style.background  = 'rgba(255,90,0,.15)';
+        btnD.style.color       = '#FF5A00';
+        btnP.style.borderColor = 'rgba(255,255,255,.1)';
+        btnP.style.background  = 'transparent';
+        btnP.style.color       = '#888';
+        if (fieldsD) fieldsD.style.display = 'block';
+        if (fieldsP) fieldsP.style.display = 'none';
+    } else {
+        btnP.style.borderColor = '#FF5A00';
+        btnP.style.background  = 'rgba(255,90,0,.15)';
+        btnP.style.color       = '#FF5A00';
+        btnD.style.borderColor = 'rgba(255,255,255,.1)';
+        btnD.style.background  = 'transparent';
+        btnD.style.color       = '#888';
+        if (fieldsD) fieldsD.style.display = 'none';
+        if (fieldsP) fieldsP.style.display = 'block';
+    }
+};
+
+window.confirmarTipoOrden = function() {
+    if (window._tipoOrden === 'delivery') {
+        var nombre   = document.getElementById('del-nombre')?.value.trim();
+        var telefono = document.getElementById('del-telefono')?.value.trim();
+        var dir      = document.getElementById('del-direccion')?.value.trim();
+        var notas    = document.getElementById('del-notas')?.value.trim();
+        if (!dir) { alert('Ingresa la dirección de entrega'); return; }
+        window._datosTipoOrden = { tipo:'delivery', nombre, telefono, direccion:dir, notas };
+    } else {
+        var nombreP = document.getElementById('del-nombre-pickup')?.value.trim();
+        var telP    = document.getElementById('del-tel-pickup')?.value.trim();
+        window._datosTipoOrden = { tipo:'pickup', nombre:nombreP, telefono:telP };
+    }
+    document.getElementById('delivery-modal').style.display = 'none';
+    // Proceder con el envío
+    _doEnvioAdmin();
+};
+
+window.abrirDeliveryModal = function() {
+    document.getElementById('delivery-modal').style.display = 'flex';
+    // Reset fields
+    var inputs = document.querySelectorAll('#delivery-modal input');
+    inputs.forEach(function(i){ i.value = ''; });
+    setTipoOrden('pickup');
+};
+
+</script>
 </body>
 </html>
