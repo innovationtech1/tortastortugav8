@@ -484,149 +484,149 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
         };
 
         window.generarCorteCompleto = async () => {
-            const fechaStr = document.getElementById('corte-fecha')?.value
-                || new Date().toISOString().split('T')[0];
+            const fechaEl  = document.getElementById('corte-fecha');
+            const fechaStr = fechaEl?.value || new Date().toISOString().split('T')[0];
+            if (fechaEl && !fechaEl.value) fechaEl.value = fechaStr;
+
             const [y, m, d] = fechaStr.split('-').map(Number);
             const inicio = new Date(y, m-1, d, 0, 0, 0);
-            const fin    = new Date(y, m-1, d, 23, 59, 59);
+            const fin    = new Date(y, m-1, d+1, 0, 0, 0); // próximo día
 
-            // ── Pedidos del día ──────────────────────────────
-            const pedidosHoy = pedidosDB.filter(p => {
-                const ts = p.creado?.seconds
-                    ? new Date(p.creado.seconds * 1000) : null;
-                return ts && ts >= inicio && ts <= fin;
+            // ── Pedidos: usar pedidosDB (ya cargado por onSnapshot) ────
+            // Si pedidosDB está vacío, intentar con todos sin filtrar fecha
+            let pedidosHoy = (pedidosDB || []).filter(p => {
+                if (!p.creado?.seconds) return true; // incluir sin fecha
+                const ts = new Date(p.creado.seconds * 1000);
+                return ts >= inicio && ts < fin;
             });
 
-            // ── Turnos_caja del día (de Firestore) ──────────
+            // Si no hay pedidos hoy, mostrar todos disponibles con aviso
+            const todosLosPedidos = pedidosDB || [];
+            const sinFiltro = pedidosHoy.length === 0 && todosLosPedidos.length > 0;
+            if (sinFiltro) pedidosHoy = todosLosPedidos;
+
+            // ── Turnos_caja desde Firestore ──────────────────────────
             let turnos = [];
             try {
-                const { collection, getDocs } = await import(
+                const firestoreModule = await import(
                     'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js'
                 );
-                const snap = await getDocs(collection(db, 'turnos_caja'));
-                turnos = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-                    .filter(t => {
-                        const ts = t.inicio?.seconds
-                            ? new Date(t.inicio.seconds * 1000) : null;
-                        return ts && ts >= inicio && ts <= fin;
-                    });
+                const snap = await firestoreModule.getDocs(
+                    firestoreModule.collection(db, 'turnos_caja')
+                );
+                const todosTurnos = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                turnos = todosTurnos.filter(t => {
+                    if (!t.inicio?.seconds) return true;
+                    const ts = new Date(t.inicio.seconds * 1000);
+                    return ts >= inicio && ts < fin;
+                });
+                if (turnos.length === 0) turnos = todosTurnos; // mostrar todos si no hay hoy
             } catch(e) { console.warn('Error cargando turnos_caja:', e); }
 
-            // ── Calcular totales ─────────────────────────────
-            let totalEfectivo = 0, totalTarjeta = 0, totalOrdenes = pedidosHoy.length;
+            // ── Totales ──────────────────────────────────────────────
+            let totalEfectivo = 0, totalTarjeta = 0;
 
-            // Sumar desde turnos_caja (fuente de verdad de cobros)
             turnos.forEach(t => {
                 totalEfectivo += t.totalEfectivo || 0;
                 totalTarjeta  += t.totalTarjeta  || 0;
             });
 
-            // Fallback: sumar desde pedidos si no hay turnos
+            // Si no hay turnos, calcular desde pedidos
             if (totalEfectivo + totalTarjeta === 0) {
                 pedidosHoy.forEach(p => {
-                    const m = (p.metodoPago || '').toLowerCase();
+                    const met = (p.metodoPago || '').toLowerCase();
                     const tot = parseFloat(p.total) || 0;
-                    if (m === 'efectivo') totalEfectivo += tot;
-                    else if (m === 'tarjeta') totalTarjeta += tot;
-                    else totalEfectivo += tot; // asumir efectivo
+                    if (met === 'tarjeta') totalTarjeta += tot;
+                    else totalEfectivo += tot;
                 });
             }
 
-            const totalCobrado = totalEfectivo + totalTarjeta;
+            const totalCobrado  = totalEfectivo + totalTarjeta;
+            const totalOrdenes  = pedidosHoy.length;
+            const ticketProm    = totalOrdenes > 0 ? totalCobrado / totalOrdenes : 0;
 
-            // ── Calcular por cajero ──────────────────────────
+            // ── Por cajero ───────────────────────────────────────────
             const porCajero = {};
             pedidosHoy.forEach(p => {
-                const caj = p.cajeroNombre || p.cajeroId || 'Sistema';
+                const caj = p.cajeroNombre || p.cajeroId || 'Sin cajero';
                 if (!porCajero[caj]) porCajero[caj] = { ordenes: 0, total: 0 };
                 porCajero[caj].ordenes++;
                 porCajero[caj].total += parseFloat(p.total) || 0;
             });
 
-            // ── Ticket promedio ──────────────────────────────
-            const ticketProm = totalOrdenes > 0 ? totalCobrado / totalOrdenes : 0;
-
-            // ── Actualizar UI ────────────────────────────────
-            // Resumen ejecutivo
+            // ── Actualizar DOM ───────────────────────────────────────
             const resEl = document.getElementById('corte-resumen-ejecutivo');
             if (resEl) {
-                resEl.innerHTML =
+                const aviso = sinFiltro
+                    ? '<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:.45rem .7rem;font-size:.75rem;color:#F59E0B;margin-bottom:.6rem;">⚠️ No hay pedidos para ' + fechaStr + ' — mostrando todos los disponibles</div>'
+                    : '';
+                resEl.innerHTML = aviso +
                     '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.5rem;">' +
-                    statBox('📦', 'Órdenes', totalOrdenes, 'var(--primary)') +
-                    statBox('💰', 'Total Cobrado', '$' + totalCobrado.toFixed(2), '#25D366') +
-                    statBox('🧾', 'Ticket Prom.', '$' + ticketProm.toFixed(2), '#F59E0B') +
+                    statBox('📦','Órdenes', totalOrdenes, 'var(--primary)') +
+                    statBox('💰','Total', '$'+totalCobrado.toFixed(2), '#25D366') +
+                    statBox('🧾','Prom.', '$'+ticketProm.toFixed(2), '#F59E0B') +
                     '</div>';
             }
 
-            // Métodos de pago
-            document.getElementById('corte-efectivo').textContent = '$' + totalEfectivo.toFixed(2);
-            document.getElementById('corte-tarjeta').textContent  = '$' + totalTarjeta.toFixed(2);
-            document.getElementById('corte-total-cobrado').textContent = '$' + totalCobrado.toFixed(2);
+            const setEl = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val; };
+            setEl('corte-efectivo',      '$' + totalEfectivo.toFixed(2));
+            setEl('corte-tarjeta',       '$' + totalTarjeta.toFixed(2));
+            setEl('corte-total-cobrado', '$' + totalCobrado.toFixed(2));
 
             // Por cajero
             const cajEl = document.getElementById('corte-por-cajero');
             if (cajEl) {
-                if (Object.keys(porCajero).length === 0) {
-                    cajEl.innerHTML = '<div style="color:var(--muted);font-size:.8rem;">Sin datos</div>';
-                } else {
-                    cajEl.innerHTML = Object.entries(porCajero).map(([nom, data]) =>
-                        '<div style="display:flex;justify-content:space-between;' +
-                        'padding:.4rem 0;border-bottom:1px solid var(--border);font-size:.83rem;">' +
+                cajEl.innerHTML = Object.keys(porCajero).length === 0
+                    ? '<div style="color:var(--muted);font-size:.8rem;">Sin datos de cajero en los pedidos</div>'
+                    : Object.entries(porCajero).map(([nom, data]) =>
+                        '<div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid var(--border);font-size:.83rem;">' +
                         '<span>🏪 ' + nom + ' <span style="color:var(--muted);">(' + data.ordenes + ' órd.)</span></span>' +
-                        '<strong style="color:var(--primary);">$' + data.total.toFixed(2) + '</strong>' +
-                        '</div>'
+                        '<strong style="color:var(--primary);">$' + data.total.toFixed(2) + '</strong></div>'
                     ).join('');
-                }
             }
 
             // Turnos
             const turnosEl = document.getElementById('corte-turnos-lista');
             if (turnosEl) {
-                if (turnos.length === 0) {
-                    turnosEl.innerHTML = '<div style="color:var(--muted);font-size:.8rem;">No hay turnos registrados hoy</div>';
-                } else {
-                    turnosEl.innerHTML = turnos.map(t => {
+                turnosEl.innerHTML = turnos.length === 0
+                    ? '<div style="color:var(--muted);font-size:.8rem;">Sin turnos registrados (¿se asignó fondo de caja?)</div>'
+                    : turnos.map(t => {
                         const ini = t.inicio?.seconds ? new Date(t.inicio.seconds*1000).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) : '--';
-                        const fin = t.fin?.seconds    ? new Date(t.fin.seconds*1000).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) : 'Activo';
-                        const tot = ((t.totalEfectivo||0) + (t.totalTarjeta||0));
+                        const fin2 = t.fin?.seconds ? new Date(t.fin.seconds*1000).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) : '🟢 Activo';
+                        const tot = (t.totalEfectivo||0)+(t.totalTarjeta||0);
                         return '<div style="background:var(--surface-2);border-radius:8px;padding:.65rem;margin-bottom:.4rem;">' +
                             '<div style="display:flex;justify-content:space-between;">' +
-                            '<strong style="font-size:.82rem;">' + (t.cajeroNombre||t.cajeroId) + '</strong>' +
-                            '<span style="color:' + (t.estado==='activo'?'#25D366':'var(--muted)') + ';font-size:.75rem;font-weight:700;">' +
-                            (t.estado==='activo'?'🟢 Activo':'⚫ Cerrado') + '</span>' +
+                            '<strong style="font-size:.82rem;">' + (t.cajeroNombre||t.cajeroId||'Cajero') + '</strong>' +
+                            '<span style="font-size:.75rem;font-weight:700;color:' + (t.estado==='activo'?'#25D366':'var(--muted)') + ';">' + fin2 + '</span>' +
                             '</div>' +
-                            '<div style="display:flex;justify-content:space-between;font-size:.76rem;color:var(--muted);margin-top:.25rem;">' +
-                            '<span>' + ini + ' — ' + fin + '</span>' +
-                            '<span>Fondo: $' + (t.fondoInicial||0).toFixed(2) + ' · Cobrado: $' + tot.toFixed(2) + '</span>' +
-                            '</div>' +
+                            '<div style="font-size:.75rem;color:var(--muted);margin-top:.2rem;">' +
+                            'Inicio: ' + ini + ' · Fondo: $' + (t.fondoInicial||0).toFixed(2) +
+                            ' · Efectivo: $' + (t.totalEfectivo||0).toFixed(2) +
+                            ' · Tarjeta: $' + (t.totalTarjeta||0).toFixed(2) + '</div>' +
                         '</div>';
                     }).join('');
-                }
             }
 
-            // Órdenes resumen
+            // Órdenes
             const ordEl = document.getElementById('corte-ordenes-resumen');
             if (ordEl) {
-                if (pedidosHoy.length === 0) {
-                    ordEl.innerHTML = '<div style="color:var(--muted);">Sin órdenes este día</div>';
-                } else {
-                    ordEl.innerHTML =
-                        '<div style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem;">' +
-                        pedidosHoy.length + ' orden(es) · $' + pedidosHoy.reduce((s,p)=>s+(parseFloat(p.total)||0),0).toFixed(2) + ' total' +
-                        '</div>' +
-                        pedidosHoy.slice(0,10).map(p =>
-                            '<div style="display:flex;justify-content:space-between;font-size:.78rem;padding:.3rem 0;border-bottom:1px solid var(--border);">' +
-                            '<span>' + (p.cliente||p.nombre||'Cliente') + ' <span style="color:var(--muted);">#' + (p.id||'').slice(-4) + '</span></span>' +
-                            '<span style="color:var(--primary);">$' + (parseFloat(p.total)||0).toFixed(2) + '</span>' +
-                            '</div>'
-                        ).join('') +
-                        (pedidosHoy.length > 10 ? '<div style="color:var(--muted);font-size:.75rem;margin-top:.4rem;">... y ' + (pedidosHoy.length-10) + ' más</div>' : '');
-                }
+                ordEl.innerHTML = pedidosHoy.length === 0
+                    ? '<div style="color:var(--muted);">Sin órdenes</div>'
+                    : '<div style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem;">' +
+                      pedidosHoy.length + ' orden(es) · $' + pedidosHoy.reduce((s,p)=>s+(parseFloat(p.total)||0),0).toFixed(2) +
+                      '</div>' +
+                      pedidosHoy.slice(0,15).map(p => {
+                          const hora = p.creado?.seconds ? new Date(p.creado.seconds*1000).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) : '';
+                          return '<div style="display:flex;justify-content:space-between;font-size:.78rem;padding:.3rem 0;border-bottom:1px solid var(--border);">' +
+                              '<span>' + (p.cliente||p.nombre||'Cliente') + ' <span style="color:var(--muted);">' + hora + '</span></span>' +
+                              '<span style="color:var(--primary);font-weight:700;">$' + (parseFloat(p.total)||0).toFixed(2) + '</span></div>';
+                      }).join('') +
+                      (pedidosHoy.length > 15 ? '<div style="color:var(--muted);font-size:.75rem;margin-top:.4rem;">... y ' + (pedidosHoy.length-15) + ' más</div>' : '');
             }
 
-            // Guardar para imprimir
             window._corteData = { fechaStr, totalOrdenes, totalEfectivo, totalTarjeta, totalCobrado, ticketProm, porCajero, turnos };
         };
+
 
         function statBox(ico, label, val, color) {
             return '<div style="background:var(--surface-2);border:1px solid var(--border);' +
