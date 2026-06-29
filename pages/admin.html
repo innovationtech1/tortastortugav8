@@ -370,6 +370,14 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
             }
         });
         setInterval(actualizarUI, 60000);
+
+        // Asegurar Todos activo al iniciar
+        filtroActual = 'todos';
+        const btnT = document.querySelector('[data-filter="todos"]');
+        if (btnT) { 
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btnT.classList.add('active'); 
+        }
     }
 
     function resaltar(texto, busqueda) {
@@ -488,14 +496,7 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
     };
 
     window.abrirCorteCaja = () => {
-            // Asegurar filtro en 'todos' antes de abrir corte
-            filtroActual = 'todos';
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            const btnTodos = document.querySelector('[data-filter="todos"]');
-            if (btnTodos) btnTodos.classList.add('active');
-            actualizarUI();
-
-            // Set today's date
+            // Solo abrir el modal — no tocar el filtro de la tabla
             const fechaEl = document.getElementById('corte-fecha');
             if (fechaEl && !fechaEl.value) {
                 fechaEl.value = new Date().toISOString().split('T')[0];
