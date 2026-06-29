@@ -473,7 +473,7 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
         }
         tbody.innerHTML = pedidos.map(p => {
             const estadoCls = p.estado?.includes('Nuevo') ? 'status-nuevo' : p.estado?.includes('preparación') ? 'status-prep' : p.estado?.includes('Listo') ? 'status-listo' : p.estado?.includes('Entregado') ? 'status-entregado' : 'status-cancelado';
-            const tipo = p.tipo === 'delivery' ? 'Delivery 🛵' : 'Pickup 🏪';
+            const tipo = p.tipo === 'delivery' ? '<span style="color:#FF5A00;font-weight:700;">🛵 Delivery</span>' : 'Pickup 🏪';
             const tipoCls = p.tipo === 'delivery' ? 'tipo-delivery' : 'tipo-pickup';
             let hora = '—'; let timerHTML = '';
             const creadoDate = p.creado?.toDate ? p.creado.toDate() : (p.creado?.seconds ? new Date(p.creado.seconds * 1000) : null);
