@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🧑‍🍳 Cocina — Tortas Tortuga</title>
+<link rel="icon" href="../favicon.ico">
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    background:#0D0D0D; color:#fff;
+    font-family:'Inter','Segoe UI',sans-serif;
+    min-height:100vh;
+  }
+
+  /* ── Header ── */
+  .kds-header {
+    background:#111; border-bottom:2px solid #FF5A00;
+    padding:.75rem 1.25rem;
+    display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:100;
+  }
+  .kds-logo { font-size:1.1rem; font-weight:900; color:#FF5A00; }
+  .kds-stats { display:flex; gap:1rem; font-size:.82rem; }
+  .kds-stat { text-align:center; }
+  .kds-stat-val { font-size:1.4rem; font-weight:900; }
+  .kds-stat-lbl { font-size:.65rem; color:#888; text-transform:uppercase; }
+  .kds-time { font-size:.8rem; color:#888; }
+
+  /* ── Alert banner ── */
+  #nueva-orden-banner {
+    display:none;
+    background:linear-gradient(135deg,#FF5A00,#FF8800);
+    color:#fff; text-align:center;
+    padding:.6rem; font-size:1rem; font-weight:800;
+    animation:pulse 1s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.7} }
+
+  /* ── Grid de órdenes ── */
+  .kds-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(300px,1fr));
+    gap:1rem; padding:1rem;
+  }
+
+  /* ── Tarjeta de orden ── */
+  .kds-card {
+    background:#1A1A1A;
+    border:2px solid #333;
+    border-radius:14px;
+    overflow:hidden;
+    transition:border-color .3s;
+    animation:slideIn .3s ease;
+  }
+  @keyframes slideIn { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+
+  .kds-card.nuevo    { border-color:#FF5A00; box-shadow:0 0 20px rgba(255,90,0,.3); }
+  .kds-card.prep     { border-color:#3B82F6; }
+  .kds-card.listo    { border-color:#25D366; }
+
+  .kds-card-header {
+    padding:.65rem 1rem;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .kds-card.nuevo .kds-card-header    { background:rgba(255,90,0,.2); }
+  .kds-card.prep  .kds-card-header    { background:rgba(59,130,246,.2); }
+  .kds-card.listo .kds-card-header    { background:rgba(37,211,102,.15); }
+
+  .kds-ticket { font-size:1rem; font-weight:900; color:#FBB724; }
+  .kds-cliente { font-size:.82rem; color:#fff; font-weight:700; }
+  .kds-timer {
+    font-size:.78rem; font-weight:700; padding:.2rem .5rem;
+    border-radius:20px; background:rgba(0,0,0,.3);
+  }
+  .kds-timer.ok     { color:#25D366; }
+  .kds-timer.warn   { color:#F59E0B; }
+  .kds-timer.urgent { color:#FF4444; animation:pulse .8s infinite; }
+
+  .kds-items {
+    padding:.75rem 1rem;
+    border-top:1px solid rgba(255,255,255,.06);
+  }
+  .kds-item {
+    padding:.4rem 0;
+    border-bottom:1px solid rgba(255,255,255,.05);
+    font-size:.85rem;
+  }
+  .kds-item:last-child { border-bottom:none; }
+  .kds-item-name { color:#fff; font-weight:600; }
+  .kds-item-mods { font-size:.75rem; color:#F59E0B; margin-top:.15rem; }
+
+  .kds-actions {
+    padding:.65rem 1rem;
+    display:flex; gap:.5rem;
+    border-top:1px solid rgba(255,255,255,.06);
+  }
+  .kds-btn {
+    flex:1; padding:.55rem;
+    border-radius:8px; border:none;
+    font-family:inherit; font-size:.8rem; font-weight:700;
+    cursor:pointer; transition:.15s;
+  }
+  .kds-btn-prep  { background:rgba(59,130,246,.2); border:1px solid rgba(59,130,246,.5); color:#3B82F6; }
+  .kds-btn-listo { background:rgba(37,211,102,.2); border:1px solid rgba(37,211,102,.5); color:#25D366; }
+  .kds-btn-entregado { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.15); color:#888; }
+
+  /* ── Empty state ── */
+  .kds-empty {
+    text-align:center; padding:4rem 2rem;
+    color:#333; font-size:3rem;
+    grid-column:1/-1;
+  }
+  .kds-empty-lbl { font-size:1rem; color:#444; margin-top:.5rem; }
+
+  /* ── Sound toggle ── */
+  #sound-btn {
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.1);
+    color:#888; border-radius:8px;
+    padding:.3rem .65rem; font-size:.78rem;
+    cursor:pointer; font-family:inherit;
+  }
+</style>
+</head>
+<body>
+
+<div id="nueva-orden-banner">🔔 ¡NUEVA ORDEN!</div>
+
+<div class="kds-header">
+  <div class="kds-logo">🐢 Cocina</div>
+  <div class="kds-stats">
+    <div class="kds-stat">
+      <div class="kds-stat-val" id="cnt-nuevas" style="color:#FF5A00;">0</div>
+      <div class="kds-stat-lbl">Nuevas</div>
+    </div>
+    <div class="kds-stat">
+      <div class="kds-stat-val" id="cnt-prep" style="color:#3B82F6;">0</div>
+      <div class="kds-stat-lbl">En cocina</div>
+    </div>
+    <div class="kds-stat">
+      <div class="kds-stat-val" id="cnt-listo" style="color:#25D366;">0</div>
+      <div class="kds-stat-lbl">Listos</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:.5rem;">
+    <button id="sound-btn" onclick="toggleSound()">🔊 Sonido ON</button>
+    <div class="kds-time" id="kds-clock"></div>
+  </div>
+</div>
+
+<div class="kds-grid" id="kds-grid">
+  <div class="kds-empty">
+    <div>🍳</div>
+    <div class="kds-empty-lbl">Sin órdenes pendientes</div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, onSnapshot, updateDoc, doc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const FB_CONFIG = {
+    apiKey: "AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k",
+    authDomain: "tortas-tortuga.firebaseapp.com",
+    projectId: "tortas-tortuga",
+    storageBucket: "tortas-tortuga.firebasestorage.app",
+    messagingSenderId: "828578668114",
+    appId: "1:828578668114:web:747331efe534341d97098b"
+};
+
+const app = getApps().length ? getApps()[0] : initializeApp(FB_CONFIG);
+const db  = getFirestore(app);
+
+let soundEnabled  = true;
+let pedidosActivos = [];
+let prevNuevas    = 0;
+
+window.toggleSound = () => {
+    soundEnabled = !soundEnabled;
+    document.getElementById('sound-btn').textContent = soundEnabled ? '🔊 Sonido ON' : '🔇 Sonido OFF';
+};
+
+// Reloj
+setInterval(() => {
+    document.getElementById('kds-clock').textContent =
+        new Date().toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}, 1000);
+
+// Actualizar timers cada 10s
+setInterval(renderGrid, 10000);
+
+function getTimerClass(segundos) {
+    const mins = segundos / 60;
+    if (mins < 10) return 'ok';
+    if (mins < 20) return 'warn';
+    return 'urgent';
+}
+
+function getTimerText(segundos) {
+    const m = Math.floor(segundos / 60);
+    const s = Math.floor(segundos % 60);
+    if (m < 1) return s + 's';
+    return m + 'm ' + (s < 10 ? '0' : '') + s + 's';
+}
+
+function parseItems(p) {
+    // Parse itemsData if available, otherwise parse items string
+    if (p.itemsData && Array.isArray(p.itemsData)) return p.itemsData;
+    if (!p.items) return [];
+    return p.items.split(' | ').map(s => {
+        const parts = s.split(' - $');
+        return { nombre: parts[0], precio: parseFloat(parts[1]) || 0, modificaciones: [] };
+    });
+}
+
+function renderCard(p) {
+    const ahora  = Date.now();
+    const creado = p.creado?.seconds ? p.creado.seconds * 1000 : ahora;
+    const segs   = (ahora - creado) / 1000;
+    const cls    = p.estado?.includes('preparación') ? 'prep' : p.estado?.includes('Listo') ? 'listo' : 'nuevo';
+    const tCls   = getTimerClass(segs);
+    const items  = parseItems(p);
+    const ticket = (p.id || '').slice(-4).toUpperCase();
+
+    return `<div class="kds-card ${cls}" id="card-${p.id}">
+        <div class="kds-card-header">
+            <div>
+                <div class="kds-ticket">#${ticket}</div>
+                <div class="kds-cliente">${p.cliente || p.nombre || 'Cliente'}</div>
+            </div>
+            <div class="kds-timer ${tCls}">${getTimerText(segs)}</div>
+        </div>
+        <div class="kds-items">
+            ${items.map(item => `
+                <div class="kds-item">
+                    <div class="kds-item-name">${item.nombre}</div>
+                    ${item.modificaciones && item.modificaciones.length
+                        ? `<div class="kds-item-mods">⚠️ ${item.modificaciones.join(' · ')}</div>`
+                        : ''}
+                </div>`).join('')}
+        </div>
+        <div class="kds-actions">
+            ${cls === 'nuevo'
+                ? `<button class="kds-btn kds-btn-prep" onclick="cambiarEstado('${p.id}','En preparación 🧑‍🍳')">🍳 En Cocina</button>`
+                : ''}
+            ${cls === 'prep'
+                ? `<button class="kds-btn kds-btn-listo" onclick="cambiarEstado('${p.id}','Listo ✅')">✅ Listo</button>`
+                : ''}
+            ${cls === 'listo'
+                ? `<button class="kds-btn kds-btn-entregado" onclick="cambiarEstado('${p.id}','Entregado 🎉')">🎉 Entregado</button>`
+                : ''}
+        </div>
+    </div>`;
+}
+
+function renderGrid() {
+    const grid   = document.getElementById('kds-grid');
+    const activos = pedidosActivos.filter(p =>
+        !p.estado?.includes('Entregado') && !p.estado?.includes('Cancelado')
+    );
+
+    if (activos.length === 0) {
+        grid.innerHTML = `<div class="kds-empty">
+            <div>🍳</div>
+            <div class="kds-empty-lbl">Sin órdenes pendientes — ¡Todo al día!</div>
+        </div>`;
+        return;
+    }
+
+    // Ordenar: Nuevas primero, luego En preparación, luego Listas
+    activos.sort((a, b) => {
+        const order = { 'Nuevo': 0, 'Nuevo 🆕': 0, 'En preparación 🧑‍🍳': 1, 'Listo ✅': 2 };
+        const oa = order[a.estado] ?? 0;
+        const ob = order[b.estado] ?? 0;
+        return oa - ob;
+    });
+
+    grid.innerHTML = activos.map(renderCard).join('');
+
+    // Contadores
+    document.getElementById('cnt-nuevas').textContent =
+        activos.filter(p => p.estado?.includes('Nuevo')).length;
+    document.getElementById('cnt-prep').textContent =
+        activos.filter(p => p.estado?.includes('preparación')).length;
+    document.getElementById('cnt-listo').textContent =
+        activos.filter(p => p.estado?.includes('Listo')).length;
+}
+
+window.cambiarEstado = async (id, nuevoEstado) => {
+    try {
+        await updateDoc(doc(db, 'pedidos', id), { estado: nuevoEstado });
+    } catch(e) {
+        alert('Error al actualizar: ' + e.message);
+    }
+};
+
+// Escuchar pedidos en tiempo real
+onSnapshot(collection(db, 'pedidos'), (snap) => {
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+
+    pedidosActivos = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(p => {
+            const ts = p.creado?.seconds ? new Date(p.creado.seconds * 1000) : null;
+            return ts && ts >= hoy;
+        });
+
+    const nuevas = pedidosActivos.filter(p =>
+        p.estado?.includes('Nuevo')
+    ).length;
+
+    // Alertar si hay nuevas órdenes
+    if (nuevas > prevNuevas) {
+        const diff = nuevas - prevNuevas;
+
+        // Sonido
+        if (soundEnabled) {
+            const audio = new Audio('https://actions.google.com/sounds/v1/alarms/dinner_bell.ogg');
+            audio.play().catch(()=>{});
+            // Segundo toque para urgencia
+            if (diff > 1) setTimeout(() => {
+                const a2 = new Audio('https://actions.google.com/sounds/v1/alarms/dinner_bell.ogg');
+                a2.play().catch(()=>{});
+            }, 800);
+        }
+
+        // Banner de alerta
+        const banner = document.getElementById('nueva-orden-banner');
+        banner.textContent = `🔔 ${diff} NUEVA${diff > 1 ? 'S' : ''} ORDEN${diff > 1 ? 'ES' : ''}`;
+        banner.style.display = 'block';
+        setTimeout(() => { banner.style.display = 'none'; }, 4000);
+
+        // Notificación del navegador
+        if (Notification.permission === 'granted') {
+            new Notification('🐢 Nueva Orden — Cocina', {
+                body: diff + ' nueva(s) orden(es) esperando',
+                icon: '../favicon.ico',
+                tag: 'cocina-nueva'
+            });
+        }
+
+        // Parpadeo del tab
+        document.title = `🔔 ${nuevas} NUEVA(S) — Cocina`;
+        setTimeout(() => { document.title = '🧑‍🍳 Cocina — Tortas Tortuga'; }, 5000);
+    }
+
+    prevNuevas = nuevas;
+    renderGrid();
+});
+
+// Pedir permiso de notificaciones al cargar
+if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+}
+</script>
+</body>
+</html>
