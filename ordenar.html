@@ -783,25 +783,46 @@ function elegirMetodoPago(metodo) {
     document.getElementById('pago-opciones-overlay').style.display = 'none';
 
     var total = window._totalPagoDirecto || 0;
-    var icono  = metodo === 'efectivo' ? '💵' : '💳';
-    var nombre = metodo === 'efectivo' ? 'Efectivo' : 'Tarjeta';
-
-    // Mostrar confirmación
-    var ov  = document.getElementById('pago-confirm-overlay');
-    var ico = document.getElementById('pago-confirm-icon');
-    var tit = document.getElementById('pago-confirm-titulo');
-    var tot = document.getElementById('pago-confirm-total');
-    var met = document.getElementById('pago-confirm-metodo');
-
-    if (ico) ico.textContent = icono;
-    if (tit) tit.textContent = 'Confirmar Pago';
-    if (tot) tot.textContent = '$' + total.toFixed(2);
-    if (met) met.textContent = nombre;
-
     window._metodoPagoActual = metodo;
     window._totalPagoActual  = total;
 
-    if (ov) ov.style.display = 'flex';
+    if (metodo === 'tarjeta') {
+        // Abrir Stripe Payment Link en nueva ventana
+        // El cajero confirma el pago manualmente cuando Stripe lo procese
+        var stripeUrl = 'https://buy.stripe.com/test_cNicN54Gs2Hyd9B3r96Ri00';
+        window.open(stripeUrl, '_blank');
+
+        // Mostrar confirmación manual para que el cajero confirme
+        var ov  = document.getElementById('pago-confirm-overlay');
+        var ico = document.getElementById('pago-confirm-icon');
+        var tit = document.getElementById('pago-confirm-titulo');
+        var tot = document.getElementById('pago-confirm-total');
+        var met = document.getElementById('pago-confirm-metodo');
+        var sub = document.getElementById('pago-confirm-subtxt');
+
+        if (ico) ico.textContent = '💳';
+        if (tit) tit.textContent = 'Pago con Tarjeta';
+        if (tot) tot.textContent = '$' + total.toFixed(2);
+        if (met) met.textContent = 'Stripe — Tarjeta';
+        if (sub) sub.textContent = 'Confirma aquí cuando Stripe complete el cobro.';
+        if (ov) ov.style.display = 'flex';
+
+    } else {
+        // Efectivo — mostrar confirmación directa
+        var ov  = document.getElementById('pago-confirm-overlay');
+        var ico = document.getElementById('pago-confirm-icon');
+        var tit = document.getElementById('pago-confirm-titulo');
+        var tot = document.getElementById('pago-confirm-total');
+        var met = document.getElementById('pago-confirm-metodo');
+        var sub = document.getElementById('pago-confirm-subtxt');
+
+        if (ico) ico.textContent = '💵';
+        if (tit) tit.textContent = 'Pago en Efectivo';
+        if (tot) tot.textContent = '$' + total.toFixed(2);
+        if (met) met.textContent = 'Efectivo';
+        if (sub) sub.textContent = 'Recibe el efectivo y confirma el cobro.';
+        if (ov) ov.style.display = 'flex';
+    }
 }
 
 function switchCuenta(cid) {
@@ -1441,7 +1462,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782694623">
+<script type="module" src="js/app.js?v=1782696653">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
