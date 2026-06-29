@@ -147,7 +147,7 @@
     </div>
 
     <div class="filters-bar">
-        <button class="filter-btn active" data-filter="todos">Todos</button>
+        <button class="filter-btn active" data-filter="todos" >Todos</button>
         <button class="filter-btn" data-filter="Nuevo">🆕 Nuevos</button>
         <button class="filter-btn" data-filter="preparación">🧑‍🍳 En preparación</button>
         <button class="filter-btn" data-filter="Listo">✅ Listos</button>
@@ -379,7 +379,6 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
     }
 
     function actualizarUI() {
-        console.log('actualizarUI: pedidosDB.length=', pedidosDB.length, 'filtroActual=', filtroActual);
         const searchInput = document.getElementById('admin-search');
         const searchText = (searchInput?.value || '').trim().toLowerCase();
         const clearBtn = document.getElementById('clear-search');
@@ -421,7 +420,6 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
     });
 
     function renderTabla(pedidos) {
-        console.log('renderTabla llamado con', pedidos.length, 'pedidos, filtroActual=', filtroActual);
         const tbody = document.getElementById('tabla-pedidos');
         if (!tbody) return;
         if (!pedidos || !pedidos.length) {
