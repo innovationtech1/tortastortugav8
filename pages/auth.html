@@ -423,9 +423,8 @@ window.loginConHuella = async function() {
     try {
         const supported = await checkBiometricSupport();
         if (!supported) {
-            setStatus('⚠️ Tu dispositivo o navegador no soporta biométrico. Usa Chrome/Safari en móvil.', '#F59E0B');
-            const btnEl2 = document.getElementById('btn-biometric');
-            if (btnEl2) btnEl2.disabled = false;
+            setStatus('⚠️ Biométrico no disponible en este dispositivo/navegador. Usa Chrome en Android o Safari en iPhone.', '#F59E0B');
+            if (btnEl) btnEl.disabled = false;
             return;
         }
 
@@ -433,12 +432,55 @@ window.loginConHuella = async function() {
         const bioUser = localStorage.getItem(BIOMETRIC_USER_KEY);
 
         if (!credId) {
-            // No hay credencial registrada — pedir usuario/PIN primero
-            setStatus('⚠️ Primero inicia sesión con tu número y PIN para registrar tu huella.', '#F59E0B');
-            setTimeout(() => {
-                document.getElementById('cajero-id')?.focus();
-                if (statusEl) statusEl.style.display = 'none';
-            }, 3000);
+            // No hay credencial — registrar ahora
+            setStatus('📝 Ingresa tu número de empleado para registrar tu huella...', '#F59E0B');
+            if (statusEl) statusEl.style.display = 'block';
+
+            // Leer empId del campo si ya lo escribió
+            const empIdInput = (document.getElementById('cajero-id')?.value || '').trim().toUpperCase();
+            const empIdReg   = empIdInput || prompt('Ingresa tu número de empleado (Ej: EMP-001):');
+            if (!empIdReg || !empIdReg.startsWith('EMP-')) {
+                setStatus('Número inválido.', '#FF4444');
+                if (btnEl) btnEl.disabled = false;
+                return;
+            }
+
+            try {
+                setStatus('👆 Toca el sensor para registrar tu huella...', '#A78BFA');
+                const userId = new TextEncoder().encode(empIdReg);
+                const cred   = await navigator.credentials.create({
+                    publicKey: {
+                        challenge: crypto.getRandomValues(new Uint8Array(32)),
+                        rp: { name: 'Tortas Tortuga', id: window.location.hostname },
+                        user: { id: userId, name: empIdReg, displayName: empIdReg },
+                        pubKeyCredParams: [
+                            { alg: -7,   type: 'public-key' },
+                            { alg: -257, type: 'public-key' }
+                        ],
+                        authenticatorSelection: {
+                            authenticatorAttachment: 'platform',
+                            userVerification: 'required'
+                        },
+                        timeout: 60000
+                    }
+                });
+
+                if (cred) {
+                    const credIdB64 = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
+                    localStorage.setItem(BIOMETRIC_KEY, credIdB64);
+                    localStorage.setItem(BIOMETRIC_USER_KEY, empIdReg);
+                    setStatus('✅ Huella registrada para ' + empIdReg + '. Presiona de nuevo para entrar.', '#25D366');
+                    const txtEl = document.getElementById('btn-biometric-text');
+                    if (txtEl) txtEl.textContent = '👆 Entrar como ' + empIdReg;
+                }
+            } catch(regErr) {
+                if (regErr.name === 'NotAllowedError') {
+                    setStatus('Registro cancelado.', '#888');
+                } else {
+                    setStatus('Error al registrar: ' + regErr.message, '#FF4444');
+                }
+            }
+            if (btnEl) btnEl.disabled = false;
             return;
         }
 
