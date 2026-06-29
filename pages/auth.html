@@ -329,6 +329,13 @@ async function loginCajero() {
         sessionStorage.setItem('tt_cajero_ts',     Date.now().toString());
 
         showMsg('✅ Bienvenido ' + nombre.trim() + '!', 'success');
+
+        // Ofrecer registro de huella si no está registrada
+        const yaTieneHuella = localStorage.getItem('tt_biometric_credId');
+        if (!yaTieneHuella && window._registrarHuellaTrasPIN) {
+            await window._registrarHuellaTrasPIN(empId, nombre.trim());
+        }
+
         const cjParams = new URLSearchParams({
             cj_id:  empId,
             cj_nom: nombre.trim(),
