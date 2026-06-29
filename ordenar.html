@@ -753,7 +753,6 @@ window.confirmarPagoSimulado = async function() {
 };
 
 function abrirPagoDirecto() {
-    // Calcular total
     var total = 0;
     var cs = window._cuentasSys;
     if (cs) {
@@ -769,40 +768,13 @@ function abrirPagoDirecto() {
 
     window._totalPagoDirecto = total;
 
-    // Actualizar total en modal
     var totEl = document.getElementById('pago-opciones-total');
     if (totEl) totEl.textContent = '$' + total.toFixed(2);
 
-    // Mostrar modal de opciones (sin cerrar carrito todavía)
     var ov = document.getElementById('pago-opciones-overlay');
-    if (ov) { ov.style.display = 'flex'; return; }
-
-    // Si el overlay no existe crearlo dinámicamente
-    var overlay = document.createElement('div');
-    overlay.id = 'pago-opciones-overlay';
-    overlay.setAttribute('onclick', "if(event.target===this)this.style.display='none'");
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
-    overlay.innerHTML =
-        '<div style="background:#1C1C1C;border:1px solid rgba(255,255,255,.1);border-radius:20px 20px 0 0;padding:1.5rem;width:100%;max-width:480px;">' +
-            '<div style="width:32px;height:4px;background:rgba(255,255,255,.15);border-radius:4px;margin:0 auto .85rem;"></div>' +
-            '<div style="text-align:center;margin-bottom:1.25rem;">' +
-                '<div style="font-size:.78rem;color:#888;margin-bottom:.3rem;">TOTAL A COBRAR</div>' +
-                '<div id="pago-opciones-total" style="font-size:2.2rem;font-weight:900;color:#FF5A00;">$' + total.toFixed(2) + '</div>' +
-            '</div>' +
-            '<div style="display:flex;flex-direction:column;gap:.6rem;">' +
-                '<button onclick="elegirMetodoPago('efectivo')" ' +
-                    'style="width:100%;padding:1rem;background:rgba(37,211,102,.12);border:1.5px solid rgba(37,211,102,.4);color:#25D366;border-radius:14px;font-family:inherit;font-size:1rem;font-weight:800;cursor:pointer;">'+
-                    '💵 Pagar con Efectivo</button>' +
-                '<button onclick="elegirMetodoPago('tarjeta')" ' +
-                    'style="width:100%;padding:1rem;background:rgba(59,130,246,.12);border:1.5px solid rgba(59,130,246,.4);color:#3B82F6;border-radius:14px;font-family:inherit;font-size:1rem;font-weight:800;cursor:pointer;">'+
-                    '💳 Pagar con Tarjeta</button>' +
-                '<button onclick="this.closest('#pago-opciones-overlay').style.display='none'" ' +
-                    'style="width:100%;padding:.7rem;background:transparent;border:1px solid rgba(255,255,255,.1);color:#666;border-radius:12px;font-family:inherit;font-size:.85rem;cursor:pointer;">'+
-                    'Cancelar</button>' +
-            '</div>' +
-        '</div>';
-    document.body.appendChild(overlay);
+    if (ov) ov.style.display = 'flex';
 }
+
 
 function elegirMetodoPago(metodo) {
     document.getElementById('pago-opciones-overlay').style.display = 'none';
@@ -1487,7 +1459,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782696894">
+<script type="module" src="js/app.js?v=1782696990">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
