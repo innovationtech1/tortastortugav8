@@ -379,6 +379,7 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
     }
 
     function actualizarUI() {
+        console.log('actualizarUI: pedidosDB.length=', pedidosDB.length, 'filtroActual=', filtroActual);
         const searchInput = document.getElementById('admin-search');
         const searchText = (searchInput?.value || '').trim().toLowerCase();
         const clearBtn = document.getElementById('clear-search');
@@ -420,17 +421,23 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
     });
 
     function renderTabla(pedidos) {
+        console.log('renderTabla llamado con', pedidos.length, 'pedidos, filtroActual=', filtroActual);
         const tbody = document.getElementById('tabla-pedidos');
-        if (!pedidos.length) { tbody.innerHTML = `<tr><td colspan="6"><div class="empty-msg">No hay pedidos para mostrar.</div></td></tr>`; return; }
+        if (!tbody) return;
+        if (!pedidos || !pedidos.length) {
+            tbody.innerHTML = '<tr><td colspan="6"><div class="empty-msg">No hay pedidos para mostrar.</div></td></tr>';
+            return;
+        }
         tbody.innerHTML = pedidos.map(p => {
             const estadoCls = p.estado?.includes('Nuevo') ? 'status-nuevo' : p.estado?.includes('preparación') ? 'status-prep' : p.estado?.includes('Listo') ? 'status-listo' : p.estado?.includes('Entregado') ? 'status-entregado' : 'status-cancelado';
             const tipo = p.tipo === 'delivery' ? 'Delivery 🛵' : 'Pickup 🏪';
             const tipoCls = p.tipo === 'delivery' ? 'tipo-delivery' : 'tipo-pickup';
             let hora = '—'; let timerHTML = '';
-            if (p.creado?.toDate) {
-                hora = p.creado.toDate().toLocaleTimeString('es-US', { hour: '2-digit', minute: '2-digit' });
+            const creadoDate = p.creado?.toDate ? p.creado.toDate() : (p.creado?.seconds ? new Date(p.creado.seconds * 1000) : null);
+            if (creadoDate) {
+                hora = creadoDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
                 if (!p.estado?.includes('Entregado') && !p.estado?.includes('Cancelado')) {
-                    const diffMs = new Date() - p.creado.toDate(); const diffMins = Math.floor(diffMs / 60000);
+                    const diffMs = new Date() - creadoDate; const diffMins = Math.floor(diffMs / 60000);
                     let color = 'var(--green)'; if (diffMins > 15) color = 'var(--yellow)'; if (diffMins > 25) color = '#F44336';
                     timerHTML = `<div style="color:${color}; font-weight:bold; font-size: 0.85rem; margin-top:2px;">⏱️ ${diffMins} min</div>`;
                 }
