@@ -1069,167 +1069,114 @@ window.guardarCambiosAdmin = async function() {
 };
 </script>
 
+
+<script>
+/* Editor de órdenes — Admin */
+window.abrirEditorAdmin = function(id) {
+    var db2 = window._adminPedidosDB;
+    if (!db2 || !db2.length) {
+        alert('Esperando datos... intenta en 2 segundos');
+        return;
+    }
+    var p = db2.find(function(x){ return x.id === id; });
+    if (!p) { alert('Orden no encontrada'); return; }
+    window._aep = JSON.parse(JSON.stringify(p));
+    window._aep._items = null;
+    document.getElementById('admin-edit-title').textContent = 'Editar Orden #' + id.slice(-4).toUpperCase();
+    _renderAE();
+    document.getElementById('admin-edit-overlay').style.display = 'flex';
+};
+window.cerrarEditorAdmin = function() {
+    document.getElementById('admin-edit-overlay').style.display = 'none';
+};
+function _getItems() {
+    var p = window._aep;
+    if (p._items) return p._items;
+    if (p.itemsData && p.itemsData.length) return JSON.parse(JSON.stringify(p.itemsData));
+    if (!p.items) return [];
+    return p.items.split(' | ').map(function(s) {
+        var i = s.lastIndexOf(' - $');
+        return { nombre: i>0?s.slice(0,i):s, precio: i>0?parseFloat(s.slice(i+4))||0:0, modificaciones:[] };
+    });
+}
+function _renderAE() {
+    var p = window._aep;
+    var items = _getItems();
+    var h = '';
+    h += '<div style="margin-bottom:.75rem"><label style="font-size:.72rem;color:#888;font-weight:700">CLIENTE</label>';
+    h += '<input id="ae-c" value="' + (p.cliente||p.nombre||'').replace(/"/g,'&quot;') + '" style="width:100%;background:#222;border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:8px;padding:.4rem .7rem;font-family:inherit;font-size:.85rem;margin-top:.25rem"></div>';
+    h += '<div style="margin-bottom:.75rem"><label style="font-size:.72rem;color:#888;font-weight:700">TELEFONO</label>';
+    h += '<input id="ae-t" value="' + (p.telefono||'') + '" placeholder="Teléfono" style="width:100%;background:#222;border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:8px;padding:.4rem .7rem;font-family:inherit;font-size:.85rem;margin-top:.25rem"></div>';
+    h += '<div style="font-size:.72rem;color:#888;font-weight:700;margin-bottom:.4rem">PRODUCTOS</div>';
+    items.forEach(function(item, idx) {
+        h += '<div style="background:#222;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:.6rem;margin-bottom:.35rem">';
+        h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem">';
+        h += '<span style="font-size:.83rem;font-weight:700;color:#fff">' + item.nombre + '</span>';
+        h += '<div style="display:flex;gap:.35rem;align-items:center">';
+        h += '<span style="color:#25D366;font-size:.8rem;font-weight:700">$' + (item.precio||0).toFixed(2) + '</span>';
+        h += '<button onclick="window._qAE(' + idx + ')" style="background:rgba(244,67,54,.15);border:1px solid rgba(244,67,54,.3);color:#F44336;border-radius:5px;padding:.15rem .4rem;font-size:.7rem;cursor:pointer;font-family:inherit">x</button>';
+        h += '</div></div>';
+        h += '<input id="ae-m-' + idx + '" value="' + (item.modificaciones||[]).join(', ').replace(/"/g,'&quot;') + '" placeholder="Modificaciones..." style="width:100%;background:#111;border:1px solid rgba(255,255,255,.08);color:#fff;border-radius:7px;padding:.32rem .55rem;font-family:inherit;font-size:.75rem">';
+        h += '</div>';
+    });
+    h += '<div style="background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);border-radius:10px;padding:.7rem;margin:.5rem 0">';
+    h += '<div style="font-size:.72rem;color:#A78BFA;font-weight:700;margin-bottom:.35rem">+ AGREGAR</div>';
+    h += '<div style="display:flex;gap:.35rem;margin-bottom:.3rem">';
+    h += '<input id="ae-an" placeholder="Producto" style="flex:1;background:#111;border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:7px;padding:.35rem .55rem;font-family:inherit;font-size:.78rem">';
+    h += '<input id="ae-ap" type="number" placeholder="$" style="width:65px;background:#111;border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:7px;padding:.35rem .5rem;font-family:inherit;font-size:.78rem">';
+    h += '</div>';
+    h += '<input id="ae-am" placeholder="Modificaciones" style="width:100%;background:#111;border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:7px;padding:.32rem .55rem;font-family:inherit;font-size:.75rem;margin-bottom:.35rem">';
+    h += '<button onclick="window._addAE()" style="width:100%;padding:.45rem;background:rgba(167,139,250,.2);border:1px solid rgba(167,139,250,.4);color:#A78BFA;border-radius:7px;font-family:inherit;font-size:.78rem;font-weight:700;cursor:pointer">+ Agregar</button>';
+    h += '</div>';
+    h += '<button onclick="window._saveAE()" style="width:100%;padding:.8rem;background:#FF5A00;border:none;color:#fff;border-radius:11px;font-family:inherit;font-size:.9rem;font-weight:800;cursor:pointer;margin-top:.5rem">Guardar Cambios</button>';
+    h += '<button onclick="cerrarEditorAdmin()" style="width:100%;padding:.65rem;background:transparent;border:1px solid rgba(255,255,255,.1);color:#888;border-radius:11px;font-family:inherit;font-size:.83rem;cursor:pointer;margin-top:.4rem">Cancelar</button>';
+    document.getElementById('admin-edit-body').innerHTML = h;
+}
+window._qAE = function(idx) {
+    var items = _getItems();
+    if (!confirm('Quitar: ' + (items[idx]?items[idx].nombre:'?'))) return;
+    items.splice(idx, 1);
+    window._aep._items = items;
+    _renderAE();
+};
+window._addAE = function() {
+    var n = document.getElementById('ae-an').value.trim();
+    var pr = parseFloat(document.getElementById('ae-ap').value)||0;
+    var m = document.getElementById('ae-am').value.trim();
+    if (!n) { alert('Ingresa el nombre'); return; }
+    var items = _getItems();
+    items.push({ nombre:n, precio:pr, modificaciones:m?[m]:[] });
+    window._aep._items = items;
+    _renderAE();
+};
+window._saveAE = async function() {
+    var p = window._aep;
+    if (!p || !window._adminUpdateDoc) return;
+    try {
+        var items = _getItems();
+        document.querySelectorAll('[id^="ae-m-"]').forEach(function(el, i) {
+            if (items[i]) {
+                var v = el.value.trim();
+                items[i].modificaciones = v ? v.split(',').map(function(s){return s.trim();}).filter(Boolean) : [];
+            }
+        });
+        var c = document.getElementById('ae-c').value.trim() || p.cliente;
+        var t = document.getElementById('ae-t').value.trim() || p.telefono;
+        var s = items.map(function(i){ return i.nombre+(i.modificaciones.length?' ('+i.modificaciones.join(', ')+')'  :'')+' - $'+(i.precio||0).toFixed(2); }).join(' | ');
+        var tot = items.reduce(function(a,i){return a+(i.precio||0);},0);
+        await window._adminUpdateDoc(p.id, {cliente:c,telefono:t,items:s,itemsData:items,total:tot});
+        cerrarEditorAdmin();
+        var toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#25D366;color:#fff;padding:.6rem 1.2rem;border-radius:12px;font-weight:700;z-index:99999;font-size:.88rem';
+        toast.textContent = 'Orden actualizada';
+        document.body.appendChild(toast);
+        setTimeout(function(){toast.remove();},2500);
+    } catch(e){ alert('Error: '+e.message); }
+};
+</script>
 </body></html>`);
     };
 
-    // ── EDITOR DE ORDEN (Admin) ────────────────────────────────
-    window.abrirEditorAdmin = (id) => {
-        const p = pedidosDB.find(x => x.id === id);
-        if (!p) return;
-        window._editAdminPedido = JSON.parse(JSON.stringify(p));
-        window._editAdminPedido._tempItems = null;
-
-        const ticket = id.slice(-4).toUpperCase();
-        document.getElementById('admin-edit-title').textContent = '✏️ Editar Orden #' + ticket;
-        renderAdminEditor();
-        document.getElementById('admin-edit-overlay').style.display = 'flex';
-    };
-
-    window.cerrarEditorAdmin = () => {
-        document.getElementById('admin-edit-overlay').style.display = 'none';
-        window._editAdminPedido = null;
-    };
-
-    function parseItemsAdmin(p) {
-        if (p._tempItems) return p._tempItems;
-        if (p.itemsData && Array.isArray(p.itemsData) && p.itemsData.length) return JSON.parse(JSON.stringify(p.itemsData));
-        if (!p.items) return [];
-        return p.items.split(' | ').map(s => {
-            const idx = s.lastIndexOf(' - $');
-            return {
-                nombre: idx>0 ? s.slice(0,idx) : s,
-                precio: idx>0 ? parseFloat(s.slice(idx+4))||0 : 0,
-                modificaciones: []
-            };
-        });
-    }
-
-    function renderAdminEditor() {
-        const p = window._editAdminPedido;
-        if (!p) return;
-        const items = parseItemsAdmin(p);
-
-        document.getElementById('admin-edit-body').innerHTML = `
-            <div style="margin-bottom:.85rem;">
-                <div style="font-size:.72rem;color:var(--muted);font-weight:700;margin-bottom:.35rem;">CLIENTE</div>
-                <input id="ae-cliente" value="${p.cliente||p.nombre||''}"
-                    style="width:100%;background:var(--surface2);border:1px solid var(--border);
-                           color:var(--text);border-radius:8px;padding:.45rem .75rem;
-                           font-family:inherit;font-size:.85rem;">
-            </div>
-            <div style="margin-bottom:.85rem;">
-                <div style="font-size:.72rem;color:var(--muted);font-weight:700;margin-bottom:.35rem;">TELÉFONO</div>
-                <input id="ae-telefono" value="${p.telefono||''}" placeholder="Teléfono del cliente"
-                    style="width:100%;background:var(--surface2);border:1px solid var(--border);
-                           color:var(--text);border-radius:8px;padding:.45rem .75rem;
-                           font-family:inherit;font-size:.85rem;">
-            </div>
-            <div style="font-size:.72rem;color:var(--muted);font-weight:700;margin-bottom:.4rem;">PRODUCTOS</div>
-            <div id="ae-items">
-                ${items.map((item,idx) => `
-                    <div style="background:var(--surface2);border:1px solid var(--border);
-                                border-radius:10px;padding:.65rem;margin-bottom:.4rem;">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem;">
-                            <span style="font-size:.83rem;font-weight:700;color:var(--text);">${item.nombre}</span>
-                            <div style="display:flex;align-items:center;gap:.4rem;">
-                                <span style="font-size:.82rem;color:var(--green);font-weight:700;">$${(item.precio||0).toFixed(2)}</span>
-                                <button onclick="quitarItemAdmin(${idx})"
-                                    style="background:rgba(244,67,54,.15);border:1px solid rgba(244,67,54,.3);
-                                           color:#F44336;border-radius:6px;padding:.18rem .45rem;
-                                           font-size:.72rem;cursor:pointer;font-family:inherit;">✕</button>
-                            </div>
-                        </div>
-                        <input id="ae-mods-${idx}" value="${(item.modificaciones||[]).join(', ')}"
-                            placeholder="Modificaciones..."
-                            style="width:100%;background:#111;border:1px solid var(--border);
-                                   color:var(--text);border-radius:7px;padding:.35rem .6rem;
-                                   font-family:inherit;font-size:.76rem;">
-                    </div>`).join('')}
-            </div>
-            <div style="background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);
-                        border-radius:10px;padding:.75rem;margin:.5rem 0;">
-                <div style="font-size:.72rem;color:#A78BFA;font-weight:700;margin-bottom:.4rem;">➕ AGREGAR PRODUCTO</div>
-                <div style="display:flex;gap:.4rem;margin-bottom:.35rem;">
-                    <input id="ae-add-nombre" placeholder="Nombre del producto"
-                        style="flex:1;background:#111;border:1px solid var(--border);color:var(--text);
-                               border-radius:8px;padding:.4rem .6rem;font-family:inherit;font-size:.78rem;">
-                    <input id="ae-add-precio" type="number" placeholder="$0" style="width:70px;
-                        background:#111;border:1px solid var(--border);color:var(--text);
-                        border-radius:8px;padding:.4rem .5rem;font-family:inherit;font-size:.78rem;">
-                </div>
-                <input id="ae-add-mods" placeholder="Modificaciones (opcional)"
-                    style="width:100%;background:#111;border:1px solid var(--border);color:var(--text);
-                           border-radius:8px;padding:.4rem .6rem;font-family:inherit;font-size:.78rem;margin-bottom:.4rem;">
-                <button onclick="agregarItemAdmin()"
-                    style="width:100%;padding:.5rem;background:rgba(167,139,250,.2);
-                           border:1px solid rgba(167,139,250,.4);color:#A78BFA;
-                           border-radius:8px;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;">
-                    ➕ Agregar
-                </button>
-            </div>
-            <button onclick="guardarCambiosAdmin()"
-                style="width:100%;padding:.82rem;background:var(--primary);border:none;color:#fff;
-                       border-radius:11px;font-family:inherit;font-size:.92rem;font-weight:800;
-                       cursor:pointer;margin-top:.5rem;">
-                💾 Guardar Cambios
-            </button>
-            <button onclick="cerrarEditorAdmin()"
-                style="width:100%;padding:.68rem;background:transparent;border:1px solid var(--border);
-                       color:var(--muted);border-radius:11px;font-family:inherit;font-size:.85rem;
-                       cursor:pointer;margin-top:.4rem;">
-                Cancelar
-            </button>
-        `;
-    }
-
-    window.quitarItemAdmin = (idx) => {
-        const p = window._editAdminPedido;
-        let items = parseItemsAdmin(p);
-        if (!confirm('¿Quitar "' + items[idx]?.nombre + '"?')) return;
-        items.splice(idx, 1);
-        p._tempItems = items;
-        renderAdminEditor();
-    };
-
-    window.agregarItemAdmin = () => {
-        const nombre = document.getElementById('ae-add-nombre')?.value.trim();
-        const precio = parseFloat(document.getElementById('ae-add-precio')?.value) || 0;
-        const mods   = document.getElementById('ae-add-mods')?.value.trim();
-        if (!nombre) { alert('Ingresa el nombre del producto'); return; }
-        const p = window._editAdminPedido;
-        let items = parseItemsAdmin(p);
-        items.push({ nombre, precio, modificaciones: mods ? [mods] : [] });
-        p._tempItems = items;
-        renderAdminEditor();
-    };
-
-    window.guardarCambiosAdmin = async () => {
-        const p = window._editAdminPedido;
-        if (!p) return;
-        try {
-            // Recoger modificaciones editadas
-            let items = parseItemsAdmin(p);
-            document.querySelectorAll('[id^="ae-mods-"]').forEach((inp, idx) => {
-                if (items[idx]) {
-                    const modsStr = inp.value.trim();
-                    items[idx].modificaciones = modsStr ? modsStr.split(',').map(s=>s.trim()).filter(Boolean) : [];
-                }
-            });
-
-            const cliente  = document.getElementById('ae-cliente')?.value.trim() || p.cliente;
-            const telefono = document.getElementById('ae-telefono')?.value.trim() || p.telefono;
-            const itemsStr = items.map(i =>
-                i.nombre + (i.modificaciones?.length ? ' (' + i.modificaciones.join(', ') + ')' : '') + ' - $' + (i.precio||0).toFixed(2)
-            ).join(' | ');
-            const total = items.reduce((s,i) => s + (i.precio||0), 0);
-
-            await updateDoc(doc(db, 'pedidos', p.id), {
-                cliente, telefono, items: itemsStr, itemsData: items, total
-            });
-
-            cerrarEditorAdmin();
-        } catch(e) { alert('Error al guardar: ' + e.message); }
-    };
 
 </script>
 </body>
