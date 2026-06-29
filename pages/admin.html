@@ -707,6 +707,126 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
             win.print();
         };
 
+    // ── EDITOR DE ORDEN (Admin) ──────────────────────────
+    window.abrirEditorAdmin = (id) => {
+        const p = pedidosDB.find(x => x.id === id);
+        if (!p) return;
+        window._editAdminPedido = { ...p, _tempItems: null };
+        const ticket = id.slice(-4).toUpperCase();
+        document.getElementById('admin-edit-title').textContent = 'Editar Orden #' + ticket;
+        renderAdminEditor();
+        document.getElementById('admin-edit-overlay').style.display = 'flex';
+    };
+
+    window.cerrarEditorAdmin = () => {
+        document.getElementById('admin-edit-overlay').style.display = 'none';
+        window._editAdminPedido = null;
+    };
+
+    function parseItemsAdmin(p) {
+        if (p._tempItems) return p._tempItems;
+        if (p.itemsData && Array.isArray(p.itemsData) && p.itemsData.length)
+            return JSON.parse(JSON.stringify(p.itemsData));
+        if (!p.items) return [];
+        return p.items.split(' | ').map(s => {
+            const idx = s.lastIndexOf(' - $');
+            return {
+                nombre: idx>0 ? s.slice(0,idx) : s,
+                precio: idx>0 ? parseFloat(s.slice(idx+4))||0 : 0,
+                modificaciones: []
+            };
+        });
+    }
+
+    function renderAdminEditor() {
+        const p = window._editAdminPedido;
+        if (!p) return;
+        const items = parseItemsAdmin(p);
+        let html = '';
+
+        html += '<div style="margin-bottom:.85rem;">';
+        html += '<div style="font-size:.72rem;color:var(--muted);font-weight:700;margin-bottom:.35rem;">CLIENTE</div>';
+        html += '<input id="ae-cliente" value="' + (p.cliente||p.nombre||'').replace(/"/g,'&quot;') + '" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.45rem .75rem;font-family:inherit;font-size:.85rem;">';
+        html += '</div>';
+
+        html += '<div style="margin-bottom:.85rem;">';
+        html += '<div style="font-size:.72rem;color:var(--muted);font-weight:700;margin-bottom:.35rem;">TELÉFONO</div>';
+        html += '<input id="ae-telefono" value="' + (p.telefono||'') + '" placeholder="Teléfono" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.45rem .75rem;font-family:inherit;font-size:.85rem;">';
+        html += '</div>';
+
+        html += '<div style="font-size:.72rem;color:var(--muted);font-weight:700;margin-bottom:.4rem;">PRODUCTOS</div>';
+        html += '<div id="ae-items">';
+        items.forEach(function(item, idx) {
+            html += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.65rem;margin-bottom:.4rem;">';
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem;">';
+            html += '<span style="font-size:.83rem;font-weight:700;color:var(--text);">' + item.nombre + '</span>';
+            html += '<div style="display:flex;align-items:center;gap:.4rem;">';
+            html += '<span style="font-size:.82rem;color:var(--green);font-weight:700;">$' + (item.precio||0).toFixed(2) + '</span>';
+            html += '<button onclick="quitarItemAdmin(' + idx + ')" style="background:rgba(244,67,54,.15);border:1px solid rgba(244,67,54,.3);color:#F44336;border-radius:6px;padding:.18rem .45rem;font-size:.72rem;cursor:pointer;font-family:inherit;">x Quitar</button>';
+            html += '</div></div>';
+            html += '<input id="ae-mods-' + idx + '" value="' + (item.modificaciones||[]).join(', ').replace(/"/g,'&quot;') + '" placeholder="Modificaciones..." style="width:100%;background:#111;border:1px solid var(--border);color:var(--text);border-radius:7px;padding:.35rem .6rem;font-family:inherit;font-size:.76rem;">';
+            html += '</div>';
+        });
+        html += '</div>';
+
+        html += '<div style="background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);border-radius:10px;padding:.75rem;margin:.5rem 0;">';
+        html += '<div style="font-size:.72rem;color:#A78BFA;font-weight:700;margin-bottom:.4rem;">+ AGREGAR PRODUCTO</div>';
+        html += '<div style="display:flex;gap:.4rem;margin-bottom:.35rem;">';
+        html += '<input id="ae-add-nombre" placeholder="Nombre del producto" style="flex:1;background:#111;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.4rem .6rem;font-family:inherit;font-size:.78rem;">';
+        html += '<input id="ae-add-precio" type="number" placeholder="$0" style="width:70px;background:#111;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.4rem .5rem;font-family:inherit;font-size:.78rem;">';
+        html += '</div>';
+        html += '<input id="ae-add-mods" placeholder="Modificaciones (opcional)" style="width:100%;background:#111;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.4rem .6rem;font-family:inherit;font-size:.78rem;margin-bottom:.4rem;">';
+        html += '<button onclick="agregarItemAdmin()" style="width:100%;padding:.5rem;background:rgba(167,139,250,.2);border:1px solid rgba(167,139,250,.4);color:#A78BFA;border-radius:8px;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;">+ Agregar</button>';
+        html += '</div>';
+
+        html += '<button onclick="guardarCambiosAdmin()" style="width:100%;padding:.82rem;background:var(--primary);border:none;color:#fff;border-radius:11px;font-family:inherit;font-size:.92rem;font-weight:800;cursor:pointer;margin-top:.5rem;">Guardar Cambios</button>';
+        html += '<button onclick="cerrarEditorAdmin()" style="width:100%;padding:.68rem;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:11px;font-family:inherit;font-size:.85rem;cursor:pointer;margin-top:.4rem;">Cancelar</button>';
+
+        document.getElementById('admin-edit-body').innerHTML = html;
+    }
+
+    window.quitarItemAdmin = (idx) => {
+        const p = window._editAdminPedido;
+        if (!p) return;
+        let items = parseItemsAdmin(p);
+        if (!confirm('Quitar: ' + items[idx]?.nombre)) return;
+        items.splice(idx, 1);
+        p._tempItems = items;
+        renderAdminEditor();
+    };
+
+    window.agregarItemAdmin = () => {
+        const nombre = document.getElementById('ae-add-nombre')?.value.trim();
+        const precio = parseFloat(document.getElementById('ae-add-precio')?.value) || 0;
+        const mods   = document.getElementById('ae-add-mods')?.value.trim();
+        if (!nombre) { alert('Ingresa el nombre del producto'); return; }
+        const p = window._editAdminPedido;
+        let items = parseItemsAdmin(p);
+        items.push({ nombre, precio, modificaciones: mods ? [mods] : [] });
+        p._tempItems = items;
+        renderAdminEditor();
+    };
+
+    window.guardarCambiosAdmin = async () => {
+        const p = window._editAdminPedido;
+        if (!p) return;
+        try {
+            let items = parseItemsAdmin(p);
+            document.querySelectorAll('[id^="ae-mods-"]').forEach((inp, idx) => {
+                if (items[idx]) {
+                    const modsStr = inp.value.trim();
+                    items[idx].modificaciones = modsStr ? modsStr.split(',').map(s=>s.trim()).filter(Boolean) : [];
+                }
+            });
+            const cliente  = document.getElementById('ae-cliente')?.value.trim() || p.cliente;
+            const telefono = document.getElementById('ae-telefono')?.value.trim() || p.telefono;
+            const itemsStr = items.map(i => i.nombre + (i.modificaciones?.length ? ' (' + i.modificaciones.join(', ') + ')' : '') + ' - $' + (i.precio||0).toFixed(2)).join(' | ');
+            const total    = items.reduce((s,i) => s+(i.precio||0), 0);
+            await updateDoc(doc(db,'pedidos',p.id), { cliente, telefono, items: itemsStr, itemsData: items, total });
+            cerrarEditorAdmin();
+        } catch(e) { alert('Error al guardar: ' + e.message); }
+    };
+
     window.nuevoProducto = () => {
         ['prod-edit-id','prod-edit-productid','prod-nombre','prod-descripcion','prod-imagen','prod-incluye','prod-badge-texto'].forEach(id => { const e = document.getElementById(id); if(e) e.value = ''; });
         document.getElementById('prod-categoria').value = 'tortas'; document.getElementById('prod-tipo').value = 'torta';
