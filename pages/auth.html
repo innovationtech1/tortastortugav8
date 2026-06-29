@@ -195,6 +195,26 @@
                 <span class="btn-spinner" style="display:none;"></span>
             </button>
 
+            <!-- Separador -->
+            <div style="display:flex;align-items:center;gap:.75rem;margin:.5rem 0;">
+                <div style="flex:1;height:1px;background:rgba(255,255,255,.1);"></div>
+                <span style="font-size:.72rem;color:#555;">o</span>
+                <div style="flex:1;height:1px;background:rgba(255,255,255,.1);"></div>
+            </div>
+
+            <!-- Botón Huella / Biométrico -->
+            <button type="button" id="btn-biometric"
+                onclick="loginConHuella()"
+                style="width:100%;padding:.78rem;background:rgba(167,139,250,.12);
+                       border:1.5px solid rgba(167,139,250,.35);color:#A78BFA;
+                       border-radius:11px;font-family:inherit;font-size:.9rem;
+                       font-weight:700;cursor:pointer;display:flex;
+                       align-items:center;justify-content:center;gap:.6rem;">
+                <span style="font-size:1.3rem;">👆</span>
+                <span id="btn-biometric-text">Ingresar con Huella / Face ID</span>
+            </button>
+            <div id="biometric-status" style="font-size:.72rem;text-align:center;margin-top:.3rem;display:none;"></div>
+
             <div style="margin-top:1rem;padding:.75rem;background:rgba(255,90,0,.08);
                         border:1px solid rgba(255,90,0,.2);border-radius:10px;
                         font-size:.74rem;color:#888;text-align:center;">
@@ -334,5 +354,198 @@ async function loginCajero() {
 document.getElementById('form-cajero')?.addEventListener('submit', e => { e.preventDefault(); loginCajero(); });
 btnCajero?.addEventListener('click', loginCajero);
 </script>
+
+<script type="module">
+/* ═══════════════════════════════════════════════════════════
+   AUTENTICACIÓN BIOMÉTRICA — WebAuthn
+   Flujo:
+   1. Primer uso: cajero ingresa con usuario+PIN → registra huella
+   2. Siguientes usos: solo toca el sensor
+   ═══════════════════════════════════════════════════════════ */
+
+import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const FB_CONFIG = {
+    apiKey: "AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k",
+    authDomain: "tortas-tortuga.firebaseapp.com",
+    projectId: "tortas-tortuga",
+    storageBucket: "tortas-tortuga.firebasestorage.app",
+    messagingSenderId: "828578668114",
+    appId: "1:828578668114:web:747331efe534341d97098b"
+};
+
+const app = getApps().length ? getApps()[0] : initializeApp(FB_CONFIG);
+const db  = getFirestore(app);
+
+// Clave de almacenamiento local del credential ID
+const BIOMETRIC_KEY = 'tt_biometric_credId';
+const BIOMETRIC_USER_KEY = 'tt_biometric_user';
+
+// Verificar soporte biométrico
+async function checkBiometricSupport() {
+    if (!window.PublicKeyCredential) return false;
+    try {
+        return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    } catch { return false; }
+}
+
+// Mostrar/ocultar botón según soporte
+(async () => {
+    const btn = document.getElementById('btn-biometric');
+    const supported = await checkBiometricSupport();
+    if (!supported && btn) {
+        btn.style.display = 'none';
+    }
+    // Si ya hay credencial guardada, cambiar texto del botón
+    const credId = localStorage.getItem(BIOMETRIC_KEY);
+    const bioUser = localStorage.getItem(BIOMETRIC_USER_KEY);
+    if (credId && bioUser && btn) {
+        const txtEl = document.getElementById('btn-biometric-text');
+        if (txtEl) txtEl.textContent = 'Huella / Face ID — ' + bioUser;
+    }
+})();
+
+// Función principal de login biométrico
+window.loginConHuella = async function() {
+    const statusEl = document.getElementById('biometric-status');
+    const btnEl    = document.getElementById('btn-biometric');
+
+    function setStatus(msg, color) {
+        if (statusEl) {
+            statusEl.textContent = msg;
+            statusEl.style.color = color || '#A78BFA';
+            statusEl.style.display = 'block';
+        }
+    }
+
+    try {
+        const supported = await checkBiometricSupport();
+        if (!supported) {
+            setStatus('Tu dispositivo no soporta autenticación biométrica.', '#FF4444');
+            return;
+        }
+
+        const credId = localStorage.getItem(BIOMETRIC_KEY);
+        const bioUser = localStorage.getItem(BIOMETRIC_USER_KEY);
+
+        if (!credId) {
+            // No hay credencial registrada — pedir usuario/PIN primero
+            setStatus('⚠️ Primero inicia sesión con tu número y PIN para registrar tu huella.', '#F59E0B');
+            setTimeout(() => {
+                document.getElementById('cajero-id')?.focus();
+                if (statusEl) statusEl.style.display = 'none';
+            }, 3000);
+            return;
+        }
+
+        if (btnEl) btnEl.disabled = true;
+        setStatus('👆 Toca el sensor o usa Face ID...', '#A78BFA');
+
+        // Convertir credId guardado a ArrayBuffer
+        const credIdBytes = Uint8Array.from(atob(credId), c => c.charCodeAt(0));
+
+        // Autenticar con biométrico
+        const assertion = await navigator.credentials.get({
+            publicKey: {
+                challenge:        crypto.getRandomValues(new Uint8Array(32)),
+                rpId:             window.location.hostname,
+                allowCredentials: [{ id: credIdBytes, type: 'public-key' }],
+                userVerification: 'required',
+                timeout:          60000
+            }
+        });
+
+        if (!assertion) { setStatus('Autenticación cancelada.', '#888'); return; }
+
+        setStatus('✅ Identidad verificada — cargando sesión...', '#25D366');
+
+        // Recuperar datos del usuario de Firestore
+        const empId = bioUser;
+        const q = query(collection(db, 'empleados'), where('empleadoId', '==', empId));
+        const snap = await getDocs(q);
+
+        let rol = 'cajero', nombre = '';
+        if (!snap.empty) {
+            const emp = snap.docs[0].data();
+            rol    = emp.rol || 'cajero';
+            nombre = (emp.nombre || '') + ' ' + (emp.apellido || '');
+        } else if (empId === 'EMP-GERENTE') {
+            rol = 'gerente'; nombre = 'Gerente Principal';
+        }
+
+        // Guardar sesión
+        sessionStorage.setItem('tt_cajero_id',     empId);
+        sessionStorage.setItem('tt_cajero_nombre', nombre.trim());
+        sessionStorage.setItem('tt_cajero_rol',    rol);
+        sessionStorage.setItem('tt_cajero_ts',     Date.now().toString());
+
+        // Pasar datos por URL
+        const params = new URLSearchParams({
+            cj_id:  empId,
+            cj_nom: nombre.trim(),
+            cj_rol: rol,
+            cj_ts:  Date.now().toString()
+        });
+        setTimeout(() => {
+            window.location.href = '../ordenar.html?' + params.toString();
+        }, 600);
+
+    } catch (e) {
+        console.error('Biometric error:', e);
+        if (e.name === 'NotAllowedError') {
+            setStatus('Autenticación cancelada o denegada.', '#888');
+        } else {
+            setStatus('Error biométrico: ' + e.message, '#FF4444');
+        }
+        const btnEl2 = document.getElementById('btn-biometric');
+        if (btnEl2) btnEl2.disabled = false;
+    }
+};
+
+// Registrar huella DESPUÉS de login exitoso con PIN
+// Esta función se llama desde el módulo cajero login
+window._registrarHuellaTrasPIN = async function(empId, nombre) {
+    try {
+        const supported = await checkBiometricSupport();
+        if (!supported) return;
+
+        // Preguntar si quiere registrar huella
+        if (!confirm('¿Deseas registrar tu huella o Face ID para acceder más rápido la próxima vez?')) return;
+
+        const userId = new TextEncoder().encode(empId);
+        const cred = await navigator.credentials.create({
+            publicKey: {
+                challenge: crypto.getRandomValues(new Uint8Array(32)),
+                rp: { name: 'Tortas Tortuga', id: window.location.hostname },
+                user: { id: userId, name: empId, displayName: nombre },
+                pubKeyCredParams: [
+                    { alg: -7,  type: 'public-key' },
+                    { alg: -257, type: 'public-key' }
+                ],
+                authenticatorSelection: {
+                    authenticatorAttachment: 'platform',
+                    userVerification: 'required',
+                    residentKey: 'preferred'
+                },
+                timeout: 60000
+            }
+        });
+
+        if (cred) {
+            // Guardar credencial localmente
+            const credIdB64 = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
+            localStorage.setItem(BIOMETRIC_KEY, credIdB64);
+            localStorage.setItem(BIOMETRIC_USER_KEY, empId);
+            alert('✅ Huella registrada. La próxima vez usa el botón de huella para entrar más rápido.');
+        }
+    } catch (e) {
+        if (e.name !== 'NotAllowedError') {
+            console.warn('No se pudo registrar huella:', e.message);
+        }
+    }
+};
+</script>
+
 </body>
 </html>
