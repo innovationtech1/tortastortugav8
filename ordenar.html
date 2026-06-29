@@ -749,6 +749,41 @@ window.confirmarPagoSimulado = async function() {
     if (_origConfirmarPagoSimulado) await _origConfirmarPagoSimulado();
 };
 
+function abrirPagoDirecto() {
+    var cs = window._cuentasSys;
+    var total = 0;
+    if (cs) {
+        cs.cuentas.forEach(function(c) {
+            c.items.forEach(function(i) { total += (i.precio || 0); });
+        });
+    }
+    if (total <= 0) {
+        // Intentar con el total del DOM como fallback
+        var cartTotalEl = document.getElementById('cart-total');
+        if (cartTotalEl) {
+            total = parseFloat(cartTotalEl.textContent.replace('$','')) || 0;
+        }
+    }
+
+    // Mostrar modal de opciones de pago
+    var ov    = document.getElementById('pago-opciones-overlay');
+    var totEl = document.getElementById('pago-opciones-total');
+    if (ov) {
+        if (totEl) totEl.textContent = '$' + total.toFixed(2);
+        window._totalPagoActual = total;
+        ov.style.display = 'flex';
+        // Cerrar carrito
+        var cm = document.getElementById('cart-modal');
+        if (cm) cm.classList.remove('active');
+    }
+}
+
+function elegirMetodoPago(metodo) {
+    var ov = document.getElementById('pago-opciones-overlay');
+    if (ov) ov.style.display = 'none';
+    simularPago(metodo);
+}
+
 function switchCuenta(cid) {
     var cs = window._cuentasSys;
     if (cs) { cs.activa = cid; window.renderCuentasTabs(); window.renderCartItems(); }
@@ -1233,7 +1268,7 @@ function cerrarOrdenModal() {
                     </button>
 
                     <!-- Pagar -->
-                    <button onclick="abrirPago()"
+                    <button onclick="abrirPagoDirecto()"
                         style="width:100%;padding:.7rem;background:rgba(255,255,255,.06);
                                border:1.5px solid rgba(255,255,255,.15);color:#ccc;
                                border-radius:12px;font-family:inherit;font-size:.85rem;
@@ -1386,7 +1421,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782682373">
+<script type="module" src="js/app.js?v=1782694431">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
