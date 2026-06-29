@@ -671,7 +671,6 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
             win.document.close();
             win.print();
         };
-    }
 
     window.nuevoProducto = () => {
         ['prod-edit-id','prod-edit-productid','prod-nombre','prod-descripcion','prod-imagen','prod-incluye','prod-badge-texto'].forEach(id => { const e = document.getElementById(id); if(e) e.value = ''; });
