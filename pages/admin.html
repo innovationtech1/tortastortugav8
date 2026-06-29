@@ -360,6 +360,8 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
         onSnapshot(q, (snapshot) => {
             pedidosDB = [];
             snapshot.forEach(doc => { pedidosDB.push({ id: doc.id, ...doc.data() }); });
+            // Exponer para editor admin
+            window._adminPedidosDB = pedidosDB;
             // Ordenar por fecha descendente en JS
             pedidosDB.sort((a, b) => {
                 const ta = a.creado?.seconds || 0;
@@ -928,11 +930,16 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
 /* ── EDITOR DE ORDEN — Admin Panel ──────────────────────────── */
 window.abrirEditorAdmin = function(id) {
     var pedido = null;
-    // Buscar en pedidosDB que está en el módulo — acceder via window
-    if (window._adminPedidosDB) {
+    if (window._adminPedidosDB && window._adminPedidosDB.length) {
         pedido = window._adminPedidosDB.find(function(x){ return x.id === id; });
     }
-    if (!pedido) { alert('Orden no encontrada. Recarga la página.'); return; }
+    if (!pedido) {
+        // Fallback: construir pedido mínimo desde la fila de la tabla
+        var row = document.querySelector('#kcard-' + id) || document.querySelector('[data-id="' + id + '"]');
+        console.warn('Pedido no en cache, id:', id, '_adminPedidosDB:', window._adminPedidosDB?.length);
+        alert('Cargando datos... Por favor intenta de nuevo en 2 segundos.');
+        return;
+    }
 
     window._editAdminPedido = JSON.parse(JSON.stringify(pedido));
     window._editAdminPedido._tempItems = null;
