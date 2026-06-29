@@ -397,19 +397,13 @@ async function checkBiometricSupport() {
     } catch { return false; }
 }
 
-// Mostrar/ocultar botón según soporte
+// Actualizar texto del botón si ya hay credencial guardada
 (async () => {
-    const btn = document.getElementById('btn-biometric');
-    const supported = await checkBiometricSupport();
-    if (!supported && btn) {
-        btn.style.display = 'none';
-    }
-    // Si ya hay credencial guardada, cambiar texto del botón
-    const credId = localStorage.getItem(BIOMETRIC_KEY);
+    const credId  = localStorage.getItem(BIOMETRIC_KEY);
     const bioUser = localStorage.getItem(BIOMETRIC_USER_KEY);
-    if (credId && bioUser && btn) {
-        const txtEl = document.getElementById('btn-biometric-text');
-        if (txtEl) txtEl.textContent = 'Huella / Face ID — ' + bioUser;
+    const txtEl   = document.getElementById('btn-biometric-text');
+    if (credId && bioUser && txtEl) {
+        txtEl.textContent = '👆 Entrar como ' + bioUser;
     }
 })();
 
@@ -429,7 +423,9 @@ window.loginConHuella = async function() {
     try {
         const supported = await checkBiometricSupport();
         if (!supported) {
-            setStatus('Tu dispositivo no soporta autenticación biométrica.', '#FF4444');
+            setStatus('⚠️ Tu dispositivo o navegador no soporta biométrico. Usa Chrome/Safari en móvil.', '#F59E0B');
+            const btnEl2 = document.getElementById('btn-biometric');
+            if (btnEl2) btnEl2.disabled = false;
             return;
         }
 
