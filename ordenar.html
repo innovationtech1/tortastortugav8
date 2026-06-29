@@ -445,11 +445,14 @@ function cerrarPagoConfirm() {
 }
 
 async function confirmarPagoSimulado() {
-    var metodo = window._metodoPagoActual || 'efectivo';
-    var cs     = window._cuentasSys;
-    var totalGen = cs ? cs.cuentas.reduce(function(s,c){
-        return s + c.items.reduce(function(ss,i){ return ss+i.precio; }, 0);
-    }, 0) : 0;
+    var metodo   = window._metodoPagoActual || 'efectivo';
+    var totalGen = window._totalPagoActual || 0;
+    if (!totalGen) {
+        var cs = window._cuentasSys;
+        if (cs) cs.cuentas.forEach(function(c){
+            c.items.forEach(function(i){ totalGen += (i.precio||0); });
+        });
+    }
 
     // Cerrar modal
     var ov = document.getElementById('pago-confirm-overlay');
@@ -750,38 +753,55 @@ window.confirmarPagoSimulado = async function() {
 };
 
 function abrirPagoDirecto() {
-    var cs = window._cuentasSys;
+    // Obtener total del carrito
     var total = 0;
+    var cs = window._cuentasSys;
     if (cs) {
         cs.cuentas.forEach(function(c) {
             c.items.forEach(function(i) { total += (i.precio || 0); });
         });
     }
-    if (total <= 0) {
-        // Intentar con el total del DOM como fallback
-        var cartTotalEl = document.getElementById('cart-total');
-        if (cartTotalEl) {
-            total = parseFloat(cartTotalEl.textContent.replace('$','')) || 0;
-        }
+    // Fallback: leer del DOM
+    if (!total) {
+        var el = document.getElementById('cart-total');
+        if (el) total = parseFloat(el.textContent.replace('$','').trim()) || 0;
     }
 
-    // Mostrar modal de opciones de pago
-    var ov    = document.getElementById('pago-opciones-overlay');
+    // Cerrar carrito
+    var cm = document.getElementById('cart-modal');
+    if (cm) cm.classList.remove('active');
+
+    // Mostrar directamente modal de efectivo/tarjeta
+    var ov = document.getElementById('pago-opciones-overlay');
     var totEl = document.getElementById('pago-opciones-total');
-    if (ov) {
-        if (totEl) totEl.textContent = '$' + total.toFixed(2);
-        window._totalPagoActual = total;
-        ov.style.display = 'flex';
-        // Cerrar carrito
-        var cm = document.getElementById('cart-modal');
-        if (cm) cm.classList.remove('active');
-    }
+    if (totEl) totEl.textContent = '$' + total.toFixed(2);
+    window._totalPagoDirecto = total;
+    if (ov) ov.style.display = 'flex';
 }
 
 function elegirMetodoPago(metodo) {
-    var ov = document.getElementById('pago-opciones-overlay');
-    if (ov) ov.style.display = 'none';
-    simularPago(metodo);
+    document.getElementById('pago-opciones-overlay').style.display = 'none';
+
+    var total = window._totalPagoDirecto || 0;
+    var icono  = metodo === 'efectivo' ? '💵' : '💳';
+    var nombre = metodo === 'efectivo' ? 'Efectivo' : 'Tarjeta';
+
+    // Mostrar confirmación
+    var ov  = document.getElementById('pago-confirm-overlay');
+    var ico = document.getElementById('pago-confirm-icon');
+    var tit = document.getElementById('pago-confirm-titulo');
+    var tot = document.getElementById('pago-confirm-total');
+    var met = document.getElementById('pago-confirm-metodo');
+
+    if (ico) ico.textContent = icono;
+    if (tit) tit.textContent = 'Confirmar Pago';
+    if (tot) tot.textContent = '$' + total.toFixed(2);
+    if (met) met.textContent = nombre;
+
+    window._metodoPagoActual = metodo;
+    window._totalPagoActual  = total;
+
+    if (ov) ov.style.display = 'flex';
 }
 
 function switchCuenta(cid) {
@@ -1421,7 +1441,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782694431">
+<script type="module" src="js/app.js?v=1782694623">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
