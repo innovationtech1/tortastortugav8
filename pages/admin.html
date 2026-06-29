@@ -207,126 +207,94 @@
 
 <!-- MODAL CORTE DE CAJA -->
 <div class="caja-overlay" id="corte-modal">
-    <div class="caja-modal">
-        <h3 class="caja-title">💰 Corte de Caja (Hoy)</h3>
-        <div style="text-align: left; margin: 1.5rem 0; font-size: 1.1rem; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 1rem 0;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;"><span>💵 Efectivo:</span> <strong id="corte-efectivo" class="green">$0.00</strong></div>
-            <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;"><span>🟣 Zelle:</span> <strong id="corte-zelle" style="color:#6D1ED4;">$0.00</strong></div>
-            <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;"><span>🟢 Cash App:</span> <strong id="corte-cashapp" style="color:#00D64F;">$0.00</strong></div>
-            <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;"><span>🔵 Venmo:</span> <strong id="corte-venmo" style="color:#008CFF;">$0.00</strong></div>
-            <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;"><span>💳 Tarjeta/Stripe:</span> <strong id="corte-tarjeta">$0.00</strong></div>
+    <div class="caja-modal" style="max-width:600px;max-height:88vh;overflow-y:auto;">
+        <h3 class="caja-title">💰 Corte de Caja</h3>
+
+        <!-- Selector de fecha -->
+        <div style="display:flex;gap:.5rem;margin-bottom:1rem;align-items:center;">
+            <label style="font-size:.8rem;color:var(--muted);">Fecha:</label>
+            <input type="date" id="corte-fecha"
+                style="background:var(--surface-2);border:1px solid var(--border);
+                       color:var(--text);border-radius:8px;padding:.35rem .65rem;
+                       font-family:inherit;font-size:.85rem;flex:1;">
+            <button onclick="generarCorteCompleto()"
+                style="background:var(--primary);border:none;color:#fff;
+                       border-radius:8px;padding:.38rem .85rem;font-family:inherit;
+                       font-size:.82rem;font-weight:700;cursor:pointer;">
+                🔄 Actualizar
+            </button>
         </div>
-        <div style="display:flex; justify-content:space-between; font-size: 1.3rem; font-weight:bold;">
-            <span>TOTAL VENTAS:</span>
-            <span id="corte-total-ventas" class="orange">$0.00</span>
+
+        <!-- Resumen ejecutivo -->
+        <div id="corte-resumen-ejecutivo" style="margin-bottom:1rem;"></div>
+
+        <!-- Desglose por método de pago -->
+        <div style="border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1rem;">
+            <div style="font-weight:700;font-size:.85rem;margin-bottom:.75rem;color:var(--text);">
+                💳 Desglose por Método de Pago
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:.4rem;">
+                <span>💵 Efectivo</span>
+                <strong id="corte-efectivo" style="color:#25D366;">$0.00</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:.4rem;">
+                <span>💳 Tarjeta (Stripe)</span>
+                <strong id="corte-tarjeta" style="color:#3B82F6;">$0.00</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding-top:.5rem;
+                        border-top:1px solid var(--border);margin-top:.4rem;">
+                <span style="font-weight:700;">TOTAL COBRADO</span>
+                <strong id="corte-total-cobrado" style="color:var(--primary);font-size:1.1rem;">$0.00</strong>
+            </div>
         </div>
-        <button class="caja-btn btn-close" onclick="document.getElementById('corte-modal').classList.remove('active')">Cerrar</button>
+
+        <!-- Desglose por cajero -->
+        <div style="border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1rem;">
+            <div style="font-weight:700;font-size:.85rem;margin-bottom:.75rem;color:var(--text);">
+                🏪 Por Cajero
+            </div>
+            <div id="corte-por-cajero">
+                <div style="color:var(--muted);font-size:.82rem;">Cargando...</div>
+            </div>
+        </div>
+
+        <!-- Lista de turnos -->
+        <div style="border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1rem;">
+            <div style="font-weight:700;font-size:.85rem;margin-bottom:.75rem;color:var(--text);">
+                📋 Turnos del Día
+            </div>
+            <div id="corte-turnos-lista">
+                <div style="color:var(--muted);font-size:.82rem;">Cargando...</div>
+            </div>
+        </div>
+
+        <!-- Ordenes del día -->
+        <div style="border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1rem;">
+            <div style="font-weight:700;font-size:.85rem;margin-bottom:.75rem;color:var(--text);">
+                📦 Órdenes del Día
+            </div>
+            <div id="corte-ordenes-resumen" style="color:var(--muted);font-size:.82rem;">
+                Cargando...
+            </div>
+        </div>
+
+        <!-- Botones -->
+        <div style="display:flex;gap:.5rem;">
+            <button onclick="imprimirCorteAdmin()"
+                style="flex:1;padding:.75rem;background:var(--primary);border:none;color:#fff;
+                       border-radius:10px;font-family:inherit;font-size:.88rem;
+                       font-weight:700;cursor:pointer;">
+                🖨️ Imprimir Corte
+            </button>
+            <button onclick="document.getElementById('corte-modal').classList.remove('active')"
+                style="flex:1;padding:.75rem;background:transparent;
+                       border:1px solid var(--border);color:var(--muted);
+                       border-radius:10px;font-family:inherit;font-size:.88rem;cursor:pointer;">
+                Cerrar
+            </button>
+        </div>
     </div>
 </div>
-
-<!-- MODAL PRODUCTOS -->
-<div class="caja-overlay" id="productos-modal">
-    <div class="caja-modal" style="max-width: 750px; max-height: 92vh; overflow-y: auto; padding: 1.5rem;">
-        <!-- LIST VIEW -->
-        <div id="prod-list-view">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
-                <h3 style="margin:0; font-size:1.2rem;">📦 Productos del Menú</h3>
-                <div style="display:flex; gap:0.5rem;">
-                    <button class="caja-btn" style="width:auto; padding:0.5rem 1rem; background:var(--primary); color:white; border:none; border-radius:10px; font-weight:700; cursor:pointer;" onclick="nuevoProducto()">+ Nuevo Producto</button>
-                    <button class="caja-btn btn-close" onclick="cerrarProductos()">Cerrar</button>
-                </div>
-            </div>
-            <div id="prod-lista" style="max-height:65vh; overflow-y:auto;"></div>
-        </div>
-
-        <!-- EDITOR VIEW -->
-        <div id="prod-editor" style="display:none;">
-            <button class="back-pos-btn" onclick="cancelarEdicion()" style="background:none; border:none; color:var(--primary); font-weight:700; cursor:pointer; font-size:0.95rem; margin-bottom:1rem;">← Volver a lista</button>
-            <input type="hidden" id="prod-edit-id">
-            <input type="hidden" id="prod-edit-productid">
-
-            <div class="field-wrap" style="margin-bottom:0.7rem;">
-                <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--muted); margin-bottom:0.3rem;">Nombre del producto</label>
-                <input type="text" id="prod-nombre" class="login-input" style="margin-bottom:0;" placeholder="Ej: Original Torta Tortuga">
-            </div>
-
-            <div class="field-wrap" style="margin-bottom:0.7rem;">
-                <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--muted); margin-bottom:0.3rem;">Descripción</label>
-                <textarea id="prod-descripcion" class="login-input" style="margin-bottom:0; min-height:60px; resize:vertical;" placeholder="Descripción del producto..."></textarea>
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.7rem; margin-bottom:0.7rem;">
-                <div class="field-wrap">
-                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--muted); margin-bottom:0.3rem;">Categoría</label>
-                    <select id="prod-categoria" class="login-input" style="margin-bottom:0;">
-                        <option value="tortas">🥖 Tortas</option>
-                        <option value="drinks">🍹 Drinks</option>
-                        <option value="botanas">🥒 Botanas</option>
-                    </select>
-                </div>
-                <div class="field-wrap">
-                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--muted); margin-bottom:0.3rem;">Tipo</label>
-                    <select id="prod-tipo" class="login-input" style="margin-bottom:0;">
-                        <option value="torta">Torta (con personalización)</option>
-                        <option value="drink">Bebida / Side (directo)</option>
-                    </select>
-                </div>
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.7rem; margin-bottom:0.7rem;">
-                <div class="field-wrap">
-                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--muted); margin-bottom:0.3rem;">Imagen (ruta)</label>
-                    <input type="text" id="prod-imagen" class="login-input" style="margin-bottom:0;" placeholder="img/torta.png">
-                </div>
-                <div class="field-wrap">
-                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--muted); margin-bottom:0.3rem;">Incluye</label>
-                    <input type="text" id="prod-incluye" class="login-input" style="margin-bottom:0;" placeholder="✅ Can Soda + Chips">
-                </div>
-                <div class="field-wrap">
-                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--muted); margin-bottom:0.3rem;">Orden</label>
-                    <input type="number" id="prod-orden" class="login-input" style="margin-bottom:0;" value="50">
-                </div>
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.7rem; margin-bottom:0.7rem;">
-                <div class="field-wrap">
-                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--muted); margin-bottom:0.3rem;">Badge Text (opcional)</label>
-                    <input type="text" id="prod-badge-texto" class="login-input" style="margin-bottom:0;" placeholder="⭐ Best Seller">
-                </div>
-                <div class="field-wrap">
-                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--muted); margin-bottom:0.3rem;">Badge Clase</label>
-                    <select id="prod-badge-clase" class="login-input" style="margin-bottom:0;">
-                        <option value="">Sin clase</option>
-                        <option value="badge-bestseller">⭐ Best Seller</option>
-                        <option value="badge-special">🆕 Special</option>
-                        <option value="badge-meat">🥩 All Meat</option>
-                        <option value="badge-veg">🌱 Vegan</option>
-                        <option value="badge-kids">👧 Kids</option>
-                    </select>
-                </div>
-            </div>
-
-            <div style="margin-bottom:0.7rem;">
-                <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.85rem; font-weight:600;">
-                    <input type="checkbox" id="prod-disponible" checked> Disponible (mostrar en menú)
-                </label>
-            </div>
-
-            <div style="margin-bottom:1rem;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-                    <label style="font-size:0.75rem; font-weight:700; color:var(--muted);">Variantes (precios)</label>
-                    <button class="caja-btn" style="width:auto; padding:0.3rem 0.7rem; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:8px; cursor:pointer; font-size:0.8rem;" onclick="agregarVariante()">+ Agregar variante</button>
-                </div>
-                <div id="variantes-container"></div>
-                <small style="color:var(--muted); font-size:0.75rem;">Cada variante tiene un label (ej: "COMBO TRIPLE MEAT — $17") y un precio.</small>
-            </div>
-
-            <div style="display:flex; gap:0.7rem;">
-                <button class="caja-btn" style="flex:2; background:var(--primary); color:white; border:none; border-radius:10px; padding:0.8rem; font-weight:700; cursor:pointer;" onclick="guardarProducto()">💾 Guardar Producto</button>
-                <button class="caja-btn" id="btn-eliminar-producto" style="flex:1; background:rgba(244,67,54,0.15); color:#F44336; border:1px solid rgba(244,67,54,0.3); border-radius:10px; padding:0.8rem; font-weight:700; cursor:pointer;" onclick="eliminarProducto()">🗑️ Eliminar</button>
-            </div>
-        </div>
-    </div>
 </div>
 
 <script>
@@ -506,47 +474,202 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
     };
 
     window.abrirCorteCaja = () => {
-        let totales = { Efectivo: 0, Zelle: 0, 'Cash App': 0, Venmo: 0, Tarjeta: 0 }; let granTotal = 0;
-        pedidosDB.forEach(p => { if (p.estadoPago === 'Pagado' && p.estado !== 'Cancelado ❌' && p.totalNum) { const metodo = p.metodoPagoReal || 'Efectivo'; if(totales[metodo] !== undefined) { totales[metodo] += p.totalNum; granTotal += p.totalNum; } } });
-        document.getElementById('corte-efectivo').textContent = '$' + totales.Efectivo.toFixed(2);
-        document.getElementById('corte-zelle').textContent = '$' + totales.Zelle.toFixed(2);
-        document.getElementById('corte-cashapp').textContent = '$' + totales['Cash App'].toFixed(2);
-        document.getElementById('corte-venmo').textContent = '$' + totales.Venmo.toFixed(2);
-        document.getElementById('corte-tarjeta').textContent = '$' + totales.Tarjeta.toFixed(2);
-        document.getElementById('corte-total-ventas').textContent = '$' + granTotal.toFixed(2);
-        document.getElementById('corte-modal').classList.add('active');
-    };
+            // Set today's date
+            const fechaEl = document.getElementById('corte-fecha');
+            if (fechaEl && !fechaEl.value) {
+                fechaEl.value = new Date().toISOString().split('T')[0];
+            }
+            document.getElementById('corte-modal').classList.add('active');
+            generarCorteCompleto();
+        };
 
-    window.abrirProductos = async () => { document.getElementById('productos-modal').classList.add('active'); await cargarListaProductos(); };
-    window.cerrarProductos = () => { document.getElementById('productos-modal').classList.remove('active'); cancelarEdicion(); };
+        window.generarCorteCompleto = async () => {
+            const fechaStr = document.getElementById('corte-fecha')?.value
+                || new Date().toISOString().split('T')[0];
+            const [y, m, d] = fechaStr.split('-').map(Number);
+            const inicio = new Date(y, m-1, d, 0, 0, 0);
+            const fin    = new Date(y, m-1, d, 23, 59, 59);
 
-    let productosCache = []; // cache para no re-descargar al editar
+            // ── Pedidos del día ──────────────────────────────
+            const pedidosHoy = pedidosDB.filter(p => {
+                const ts = p.creado?.seconds
+                    ? new Date(p.creado.seconds * 1000) : null;
+                return ts && ts >= inicio && ts <= fin;
+            });
 
-    async function cargarListaProductos() {
-        const q = query(collection(db, 'productos'), orderBy('orden'));
-        const snap = await getDocs(q);
-        const lista = document.getElementById('prod-lista');
-        productosCache = [];
-        snap.forEach(d => productosCache.push({ id: d.id, ...d.data() }));
-        if (!productosCache.length) { lista.innerHTML = '<p style="text-align:center; padding:2rem; color:var(--muted);">No hay productos.</p>'; return; }
-        lista.innerHTML = productosCache.map(p => {
-            const preciosStr = p.variantes?.map(v => `$${v.precio}`).join(' / ') || '—';
-            const badge = p.badge?.texto || '';
-            return `<div style="display:flex; align-items:center; gap:0.75rem; padding:0.75rem; border-bottom:1px solid var(--border);" data-prod-id="${p.id}">
-                <div style="flex:1; min-width:0;"><div style="font-weight:700; font-size:0.9rem;">${p.nombre} ${badge ? `<span style="font-size:0.7rem; color:var(--primary);">${badge}</span>` : ''}</div>
-                <div style="font-size:0.75rem; color:var(--muted);">${p.categoria === 'tortas' ? '🥖' : p.categoria === 'drinks' ? '🍹' : '🥒'} ${p.categoria} · ${preciosStr} · <span style="color:${p.disponible ? 'var(--green)' : '#F44336'};">${p.disponible ? '✅ Disponible' : '❌ Agotado'}</span></div></div>
-                <button class="filter-btn btn-editar-prod" data-id="${p.id}" style="padding:0.3rem 0.7rem;">✏️ Editar</button>
-                <button class="delete-btn btn-eliminar-prod" data-id="${p.id}" title="Eliminar" style="padding:0.3rem 0.5rem;">🗑️</button>
-            </div>`;
-        }).join('');
+            // ── Turnos_caja del día (de Firestore) ──────────
+            let turnos = [];
+            try {
+                const { collection, getDocs } = await import(
+                    'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js'
+                );
+                const snap = await getDocs(collection(db, 'turnos_caja'));
+                turnos = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+                    .filter(t => {
+                        const ts = t.inicio?.seconds
+                            ? new Date(t.inicio.seconds * 1000) : null;
+                        return ts && ts >= inicio && ts <= fin;
+                    });
+            } catch(e) { console.warn('Error cargando turnos_caja:', e); }
 
-        // Event delegation — un solo listener para todos los botones
-        // Listener en el contenedor (no en los botones) — funciona aunque el HTML se regenere
-        lista.onclick = (e) => {
-            const editBtn = e.target.closest('.btn-editar-prod');
-            const delBtn  = e.target.closest('.btn-eliminar-prod');
-            if (editBtn) { e.stopPropagation(); editarProducto(editBtn.dataset.id); }
-            if (delBtn)  { e.stopPropagation(); confirmarEliminarProducto(delBtn.dataset.id); }
+            // ── Calcular totales ─────────────────────────────
+            let totalEfectivo = 0, totalTarjeta = 0, totalOrdenes = pedidosHoy.length;
+
+            // Sumar desde turnos_caja (fuente de verdad de cobros)
+            turnos.forEach(t => {
+                totalEfectivo += t.totalEfectivo || 0;
+                totalTarjeta  += t.totalTarjeta  || 0;
+            });
+
+            // Fallback: sumar desde pedidos si no hay turnos
+            if (totalEfectivo + totalTarjeta === 0) {
+                pedidosHoy.forEach(p => {
+                    const m = (p.metodoPago || '').toLowerCase();
+                    const tot = parseFloat(p.total) || 0;
+                    if (m === 'efectivo') totalEfectivo += tot;
+                    else if (m === 'tarjeta') totalTarjeta += tot;
+                    else totalEfectivo += tot; // asumir efectivo
+                });
+            }
+
+            const totalCobrado = totalEfectivo + totalTarjeta;
+
+            // ── Calcular por cajero ──────────────────────────
+            const porCajero = {};
+            pedidosHoy.forEach(p => {
+                const caj = p.cajeroNombre || p.cajeroId || 'Sistema';
+                if (!porCajero[caj]) porCajero[caj] = { ordenes: 0, total: 0 };
+                porCajero[caj].ordenes++;
+                porCajero[caj].total += parseFloat(p.total) || 0;
+            });
+
+            // ── Ticket promedio ──────────────────────────────
+            const ticketProm = totalOrdenes > 0 ? totalCobrado / totalOrdenes : 0;
+
+            // ── Actualizar UI ────────────────────────────────
+            // Resumen ejecutivo
+            const resEl = document.getElementById('corte-resumen-ejecutivo');
+            if (resEl) {
+                resEl.innerHTML =
+                    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.5rem;">' +
+                    statBox('📦', 'Órdenes', totalOrdenes, 'var(--primary)') +
+                    statBox('💰', 'Total Cobrado', '$' + totalCobrado.toFixed(2), '#25D366') +
+                    statBox('🧾', 'Ticket Prom.', '$' + ticketProm.toFixed(2), '#F59E0B') +
+                    '</div>';
+            }
+
+            // Métodos de pago
+            document.getElementById('corte-efectivo').textContent = '$' + totalEfectivo.toFixed(2);
+            document.getElementById('corte-tarjeta').textContent  = '$' + totalTarjeta.toFixed(2);
+            document.getElementById('corte-total-cobrado').textContent = '$' + totalCobrado.toFixed(2);
+
+            // Por cajero
+            const cajEl = document.getElementById('corte-por-cajero');
+            if (cajEl) {
+                if (Object.keys(porCajero).length === 0) {
+                    cajEl.innerHTML = '<div style="color:var(--muted);font-size:.8rem;">Sin datos</div>';
+                } else {
+                    cajEl.innerHTML = Object.entries(porCajero).map(([nom, data]) =>
+                        '<div style="display:flex;justify-content:space-between;' +
+                        'padding:.4rem 0;border-bottom:1px solid var(--border);font-size:.83rem;">' +
+                        '<span>🏪 ' + nom + ' <span style="color:var(--muted);">(' + data.ordenes + ' órd.)</span></span>' +
+                        '<strong style="color:var(--primary);">$' + data.total.toFixed(2) + '</strong>' +
+                        '</div>'
+                    ).join('');
+                }
+            }
+
+            // Turnos
+            const turnosEl = document.getElementById('corte-turnos-lista');
+            if (turnosEl) {
+                if (turnos.length === 0) {
+                    turnosEl.innerHTML = '<div style="color:var(--muted);font-size:.8rem;">No hay turnos registrados hoy</div>';
+                } else {
+                    turnosEl.innerHTML = turnos.map(t => {
+                        const ini = t.inicio?.seconds ? new Date(t.inicio.seconds*1000).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) : '--';
+                        const fin = t.fin?.seconds    ? new Date(t.fin.seconds*1000).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) : 'Activo';
+                        const tot = ((t.totalEfectivo||0) + (t.totalTarjeta||0));
+                        return '<div style="background:var(--surface-2);border-radius:8px;padding:.65rem;margin-bottom:.4rem;">' +
+                            '<div style="display:flex;justify-content:space-between;">' +
+                            '<strong style="font-size:.82rem;">' + (t.cajeroNombre||t.cajeroId) + '</strong>' +
+                            '<span style="color:' + (t.estado==='activo'?'#25D366':'var(--muted)') + ';font-size:.75rem;font-weight:700;">' +
+                            (t.estado==='activo'?'🟢 Activo':'⚫ Cerrado') + '</span>' +
+                            '</div>' +
+                            '<div style="display:flex;justify-content:space-between;font-size:.76rem;color:var(--muted);margin-top:.25rem;">' +
+                            '<span>' + ini + ' — ' + fin + '</span>' +
+                            '<span>Fondo: $' + (t.fondoInicial||0).toFixed(2) + ' · Cobrado: $' + tot.toFixed(2) + '</span>' +
+                            '</div>' +
+                        '</div>';
+                    }).join('');
+                }
+            }
+
+            // Órdenes resumen
+            const ordEl = document.getElementById('corte-ordenes-resumen');
+            if (ordEl) {
+                if (pedidosHoy.length === 0) {
+                    ordEl.innerHTML = '<div style="color:var(--muted);">Sin órdenes este día</div>';
+                } else {
+                    ordEl.innerHTML =
+                        '<div style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem;">' +
+                        pedidosHoy.length + ' orden(es) · $' + pedidosHoy.reduce((s,p)=>s+(parseFloat(p.total)||0),0).toFixed(2) + ' total' +
+                        '</div>' +
+                        pedidosHoy.slice(0,10).map(p =>
+                            '<div style="display:flex;justify-content:space-between;font-size:.78rem;padding:.3rem 0;border-bottom:1px solid var(--border);">' +
+                            '<span>' + (p.cliente||p.nombre||'Cliente') + ' <span style="color:var(--muted);">#' + (p.id||'').slice(-4) + '</span></span>' +
+                            '<span style="color:var(--primary);">$' + (parseFloat(p.total)||0).toFixed(2) + '</span>' +
+                            '</div>'
+                        ).join('') +
+                        (pedidosHoy.length > 10 ? '<div style="color:var(--muted);font-size:.75rem;margin-top:.4rem;">... y ' + (pedidosHoy.length-10) + ' más</div>' : '');
+                }
+            }
+
+            // Guardar para imprimir
+            window._corteData = { fechaStr, totalOrdenes, totalEfectivo, totalTarjeta, totalCobrado, ticketProm, porCajero, turnos };
+        };
+
+        function statBox(ico, label, val, color) {
+            return '<div style="background:var(--surface-2);border:1px solid var(--border);' +
+                'border-radius:10px;padding:.65rem;text-align:center;">' +
+                '<div style="font-size:1.2rem;">' + ico + '</div>' +
+                '<div style="font-size:.65rem;color:var(--muted);margin:.1rem 0;">' + label.toUpperCase() + '</div>' +
+                '<div style="font-size:.95rem;font-weight:900;color:' + color + ';">' + val + '</div>' +
+                '</div>';
+        }
+
+        window.imprimirCorteAdmin = () => {
+            const d = window._corteData;
+            if (!d) return;
+            const lineas = [
+                '═══════════════════════════════',
+                '    🐢 TORTAS TORTUGA',
+                '    CORTE DE CAJA — ' + d.fechaStr,
+                '═══════════════════════════════',
+                '',
+                '  RESUMEN',
+                '  Órdenes del día: ' + d.totalOrdenes,
+                '  Ticket promedio: $' + d.ticketProm.toFixed(2),
+                '',
+                '  COBROS',
+                '  💵 Efectivo:  $' + d.totalEfectivo.toFixed(2),
+                '  💳 Tarjeta:   $' + d.totalTarjeta.toFixed(2),
+                '  ─────────────────────────',
+                '  TOTAL:        $' + d.totalCobrado.toFixed(2),
+                '',
+                '  POR CAJERO',
+                ...Object.entries(d.porCajero).map(([n,v]) =>
+                    '  ' + n + ': ' + v.ordenes + ' órd. / $' + v.total.toFixed(2)
+                ),
+                '',
+                '═══════════════════════════════',
+                '  Generado: ' + new Date().toLocaleString('es-MX'),
+                '═══════════════════════════════'
+            ].join('\n');
+
+            const win = window.open('', '_blank', 'width=420,height=700');
+            win.document.write('<pre style="font-family:monospace;font-size:14px;padding:20px;">' + lineas + '</pre>');
+            win.document.close();
+            win.print();
         };
     }
 
