@@ -349,12 +349,21 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
     }
 
     function iniciarFirebaseEnVivo() {
-        const q = query(collection(db, 'pedidos'), orderBy('creado', 'desc'));
+        // Sin orderBy para evitar error de índice compuesto — ordenar en JS
+        const q = collection(db, 'pedidos');
         onSnapshot(q, (snapshot) => {
             pedidosDB = [];
             snapshot.forEach(doc => { pedidosDB.push({ id: doc.id, ...doc.data() }); });
+            // Ordenar por fecha descendente en JS
+            pedidosDB.sort((a, b) => {
+                const ta = a.creado?.seconds || 0;
+                const tb = b.creado?.seconds || 0;
+                return tb - ta;
+            });
             actualizarUI();
-            const hayNuevos = pedidosDB.some(p => p.estado === 'Nuevo 🆕');
+            const hayNuevos = pedidosDB.some(p =>
+                (p.estado === 'Nuevo 🆕' || p.estado === 'Nuevo') || p.estado === 'Nuevo'
+            );
             if(hayNuevos) {
                 const audio = new Audio('https://actions.google.com/sounds/v1/alarms/dinner_bell.ogg');
                 audio.play().catch(e=>{});
