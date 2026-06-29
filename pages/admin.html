@@ -119,9 +119,9 @@
     <div class="top-bar">
         <div class="top-bar-logo"><img src="../icons/icon-192.png" alt="" style="width:26px;height:26px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px;"> <span>Tortas Tortuga</span></div>
         <div class="top-bar-actions" style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; overflow-x:auto; -webkit-overflow-scrolling:touch;">
-            <button class="filter-btn" onclick="abrirCorteCaja()" style="border-color:var(--green); color:var(--green);">💰 Corte de Caja</button>
-            <button class="filter-btn" onclick="abrirProductos()" style="border-color:var(--primary); color:var(--primary);">📦 Productos</button>
-            <button class="filter-btn btn-empleados" onclick="window.location.href='empleados.html'" style="border-color:#A78BFA; color:#A78BFA;">👥 Empleados</button>
+            <button class="nav-btn" onclick="abrirCorteCaja()" style="border-color:var(--green); color:var(--green);">💰 Corte de Caja</button>
+            <button class="nav-btn" onclick="abrirProductos()" style="border-color:var(--primary); color:var(--primary);">📦 Productos</button>
+            <button class="nav-btn btn-empleados" onclick="window.location.href='empleados.html'" style="border-color:#A78BFA; color:#A78BFA;">👥 Empleados</button>
             <button class="filter-btn" onclick="window.location.href='../ordenar.html'" style="border-color:var(--border);">🏠 Tienda</button>
             <div class="live-badge"><div class="live-dot"></div> En vivo</div>
         </div>
@@ -415,9 +415,11 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
 
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
+            const dataFilter = e.target.getAttribute('data-filter');
+            if (!dataFilter) return; // ignorar botones sin data-filter
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
-            filtroActual = e.target.getAttribute('data-filter');
+            filtroActual = dataFilter;
             actualizarUI();
         });
     });
