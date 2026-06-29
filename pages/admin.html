@@ -488,6 +488,13 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
     };
 
     window.abrirCorteCaja = () => {
+            // Asegurar filtro en 'todos' antes de abrir corte
+            filtroActual = 'todos';
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            const btnTodos = document.querySelector('[data-filter="todos"]');
+            if (btnTodos) btnTodos.classList.add('active');
+            actualizarUI();
+
             // Set today's date
             const fechaEl = document.getElementById('corte-fecha');
             if (fechaEl && !fechaEl.value) {
