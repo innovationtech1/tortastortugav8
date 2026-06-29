@@ -899,9 +899,25 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
     window.eliminarProducto = () => { const id = document.getElementById('prod-edit-id').value; if (!id) return; if (confirm('⚠️ ¿Eliminar permanentemente?')) { deleteDoc(doc(db, 'productos', id)).then(() => { cancelarEdicion(); cargarListaProductos(); }); } };
 
     window.imprimirTicket = (ticketId) => {
-        const pedido = pedidosDB.find(p => p.id.slice(-4).toUpperCase() === ticketId); if(!pedido) return;
-        const win = window.open('', '_blank');
-        win.document.write(`<html><head><style>body{font-family:monospace;width:300px;padding:10px;margin:0 auto;color:black;background:white;}.center{text-align:center;}.bold{font-weight:bold;}.items{margin:15px 0;border-top:1px dashed black;border-bottom:1px dashed black;padding:10px 0;}</style></head><body><div class="center"><h2 style="margin:0;">TORTAS TORTUGA</h2><p style="margin:5px 0;">Ticket #${ticketId}</p><p style="margin:5px 0;">${new Date().toLocaleString()}</p></div><div class="items"><p class="bold">Cliente: ${pedido.nombre}</p><p>Tel: ${pedido.telefono || 'En tienda'}</p><p>Tipo: ${pedido.tipo}</p><br><div style="white-space:pre-wrap;">${pedido.items}</div></div><h3 style="text-align:right;">TOTAL: ${pedido.total}</h3><p class="center" style="margin-top:20px;font-size:12px;">¡Gracias por tu compra!</p><script>window.print();window.close();<\/script>
+        const pedido = pedidosDB.find(p => p.id.slice(-4).toUpperCase() === ticketId);
+        if (!pedido) return;
+        const win = window.open('', '_blank', 'width=400,height=600');
+        const items = (pedido.items || '').split(' | ').map(s => '<div style="margin:.3rem 0">• '+s+'</div>').join('');
+        const hora  = pedido.creado?.seconds ? new Date(pedido.creado.seconds*1000).toLocaleString('es-MX') : '';
+        win.document.write('<html><head><style>body{font-family:monospace;width:300px;padding:10px;margin:0 auto}</style></head><body>');
+        win.document.write('<div style="text-align:center;font-weight:bold;font-size:1.1rem">TORTAS TORTUGA</div>');
+        win.document.write('<div style="text-align:center;color:#666;font-size:.8rem">' + hora + '</div>');
+        win.document.write('<hr><div><b>Ticket:</b> #' + ticketId + '</div>');
+        win.document.write('<div><b>Cliente:</b> ' + (pedido.cliente||pedido.nombre||'') + '</div>');
+        win.document.write('<div><b>Tel:</b> ' + (pedido.telefono||'En tienda') + '</div>');
+        win.document.write('<hr>' + items);
+        win.document.write('<hr><div style="font-size:1.1rem;font-weight:bold">TOTAL: $' + (pedido.total||0) + '</div>');
+        win.document.write('<div><b>Pago:</b> ' + (pedido.metodoPagoReal||pedido.metodoPago||'pendiente') + '</div>');
+        win.document.write('<hr><div style="text-align:center;font-size:.75rem">Gracias por su visita!</div>');
+        win.document.write('<script>window.print();window.close();<\/script>');
+        win.document.write('</body></html>');
+        win.document.close();
+    };
 <!-- MODAL EDITOR ADMIN -->
 <div id="admin-edit-overlay"
      onclick="if(event.target===this)cerrarEditorAdmin()"
