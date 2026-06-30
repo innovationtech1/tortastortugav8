@@ -360,6 +360,8 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
     const ADMIN_PASSWORD = 'tortuga2025';
     let pedidosDB = [];
     let filtroActual = 'todos';
+    let _unsubscribePedidos = null;
+    let _reconnectTimer    = null;
 
     if (sessionStorage.getItem('tt_admin_logged') === 'true') {
         document.getElementById('login-screen').style.display = 'none';
@@ -381,9 +383,6 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
     window._adminUpdateDoc = async (id, data) => {
         await updateDoc(doc(db, 'pedidos', id), data);
     };
-
-    let _unsubscribePedidos = null;
-    let _reconnectTimer = null;
 
     function iniciarFirebaseEnVivo() {
         // Limpiar listener anterior si existe
