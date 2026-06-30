@@ -1342,9 +1342,20 @@ onAuthStateChanged(auth, async u=>{
         mostrarEmp();
         return;
       }
-      msg('msg-login','er','❌ Perfil no encontrado. Contacta al supervisor.'); await signOut(auth); return;
+      // Fallback: buscar por email en empleados
+      const qEmail = query(collection(db,'empleados'), where('email','==', u.email));
+      const snapEmail = await getDocs(qEmail);
+      if (!snapEmail.empty) {
+        empData = { ...snapEmail.docs[0].data(), id: snapEmail.docs[0].id };
+        rolActual   = empData.rol || 'gerente';
+        nivelActual = ROLES[rolActual]?.nivel || 4;
+        mostrarEmp();
+        return;
+      }
+      // No encontrado por UID ni email — cerrar sesión
+      await signOut(auth); return;
     }
-    empData=s.data();
+    empData = { ...s.data(), id: s.id };
     if(empData.estado==='inactivo'){ msg('msg-login','er','❌ Cuenta desactivada. Contacta al supervisor.'); await signOut(auth); return; }
     rolActual   = empData.rol || 'empleado';
     nivelActual = ROLES[rolActual]?.nivel || 1;
