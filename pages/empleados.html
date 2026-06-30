@@ -2284,11 +2284,13 @@ async function _guardarRol(uid){
 
 /* ─── EDITAR TURNO ────────────────────────────── */
 window.abrirEditTBtn = function(btn) {
-  var tid  = btn.getAttribute('data-tid');
-  var uid  = btn.getAttribute('data-uid') || (user ? user.uid : '');
-  var nom  = btn.getAttribute('data-nom') || '';
-  if (!nom.trim() && empData) nom = (empData.nombre||'') + ' ' + (empData.apellido||'');
-  abrirEditT(uid, nom.trim(), tid);
+  var tid = btn.getAttribute('data-tid');
+  // For own turns: use current user's uid or empData id
+  var uid = btn.getAttribute('data-uid');
+  if (!uid || uid === 'undefined') uid = (user ? user.uid : '') || (empData ? empData.id : '');
+  var nom = btn.getAttribute('data-nom') || '';
+  if (!nom || !nom.trim()) nom = empData ? ((empData.nombre||'') + ' ' + (empData.apellido||'')) : '';
+  abrirEditT(uid.trim(), nom.trim(), tid);
 };
 
 window.abrirEditT = function(uid, nombre, tid){
@@ -2343,8 +2345,13 @@ window.guardarEditT = async function(){
   if(rd&&rv){ const [rh,rm]=rd.split(':').map(Number),[vh,vm]=rv.split(':').map(Number); tsRD=mk(rh,rm); tsRV=mk(vh,vm); minDesc=Math.max(0,Math.round((tsRV-tsRD)/60000)); }
   const minNeto=Math.max(0,mins-minDesc);
   if(tsS&&minNeto<1){ msg('msg-edit','er','El turno debe tener al menos 1 minuto neto trabajado.'); return; }
-  const es=await getDoc(doc(db,'empleados',editEUid));
-  const ed=es.exists()?es.data():{};
+  // Obtener datos del empleado — con fallback a empData si es el propio usuario
+  let ed = {};
+  try {
+    const es = await getDoc(doc(db,'empleados',editEUid));
+    if (es.exists()) { ed = es.data(); }
+    else if (empData) { ed = empData; }
+  } catch(e) { if (empData) ed = empData; }
   btnLd('btn-edit',true);
   try{
     const data={
@@ -2363,7 +2370,12 @@ window.guardarEditT = async function(){
     if(editTId) await updateDoc(doc(db,'turnos',editTId),data);
     else await addDoc(collection(db,'turnos'),data);
     msg('msg-edit','ok','✅ Turno guardado correctamente.');
-    setTimeout(()=>{ cOv('ov-edit'); cargarRep(); },1500);
+    setTimeout(()=>{
+      cOv('ov-edit');
+      // Recargar la vista correcta según contexto
+      if(typeof cargarHistEmp === 'function') cargarHistEmp();
+      if(typeof cargarRep === 'function') cargarRep();
+    },1500);
   }catch(e){ msg('msg-edit','er','❌ '+e.message); }
   finally{ btnLd('btn-edit',false); }
 };
