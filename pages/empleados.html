@@ -1777,12 +1777,13 @@ async function mostrarAdmin(nivel){
    CONTROL DE TURNO — ESTADOS: off / activo / descanso / completo
    ════════════════════════════════════════════════ */
 async function cargarTurnoActivo(){
-  if(!user) return;
+  const empDocId = getEmpDocId();
+  if(!empDocId) return;
   const hoy2 = new Date(); const hoyISO = hoy2.getFullYear()+'-'+String(hoy2.getMonth()+1).padStart(2,'0')+'-'+String(hoy2.getDate()).padStart(2,'0');
   // Buscar turno activo de hoy
   // Sin filtro estado para evitar índice — filtramos en JS
   const q = query(collection(db,'turnos'),
-    where('uid','==',user.uid),
+    where('uid','==',empDocId),
     where('fechaISO','==',hoyISO)
   );
   const s = await getDocs(q);
@@ -1838,9 +1839,40 @@ function renderEstadoTurno(){
   }
 }
 
-window.accionTurno = async function(accion){
-  if(!user) return;
+
+    /* ─── HELPER: ID del empleado en Firestore ───────── */
+    function getEmpDocId() {
+      // Para Firebase Auth users: user.uid
+      // Para PIN-only users: empData.id (Firestore doc ID guardado en session)
+      if (user) return user.uid;
+      if (empData?.id) return empData.id;
+      return sessionStorage.getItem('tt_emp_docid') || null;
+    }
+
+    window.accionTurno = async function(accion){
+  const empDocId = getEmpDocId();
+  if(!empDocId || !empData) { msg('msg-clk','er','❌ Sesión expirada. Vuelve a iniciar sesión.'); return; }
   // Renovar sesión al hacer cualquier acción de turno
+  // Restaurar sesión PIN-only si no hay Firebase Auth
+  const _savedDocId = sessionStorage.getItem('tt_emp_docid');
+  const _savedTs    = parseInt(sessionStorage.getItem('tt_emp_ts')||'0');
+  if(_savedDocId && !user && (Date.now()-_savedTs < 20*60*1000)){
+    try {
+      const _snap = await getDoc(doc(db,'empleados', _savedDocId));
+      if(_snap.exists()){
+        empData     = { ..._snap.data(), id: _snap.id };
+        rolActual   = empData.rol || 'empleado';
+        nivelActual = ROLES[rolActual]?.nivel || 1;
+        mostrarEmp();
+        return;
+      }
+    } catch(e) {}
+    // Sesión inválida — limpiar
+    sessionStorage.removeItem('tt_emp_docid');
+    sessionStorage.removeItem('tt_emp_id');
+    sessionStorage.removeItem('tt_emp_ts');
+  }
+
   if(sessionStorage.getItem('tt_emp_id')){
     sessionStorage.setItem('tt_emp_ts', Date.now().toString());
   }
@@ -1856,7 +1888,7 @@ window.accionTurno = async function(accion){
     if(accion==='entrada'){
       if(turnoId){ msg('msg-clk','wa','⚠️ Ya tienes un turno activo hoy.'); return; }
       const ref = await addDoc(collection(db,'turnos'),{
-        uid:user.uid, empleadoId:empData.empleadoId,
+        uid:empDocId, empleadoId:empData.empleadoId,
         nombre:empData.nombre, apellido:empData.apellido,
         entrada:ahoraTs, salida:null,
         inicioDescanso:null, finDescanso:null,
@@ -1865,7 +1897,7 @@ window.accionTurno = async function(accion){
         fechaISO:hoyISO, creado:serverTimestamp()
       });
       turnoId = ref.id;
-      turnoData = { uid:user.uid, entrada:ahoraTs, estado:'activo', minDescanso:0,
+      turnoData = { uid:empDocId, entrada:ahoraTs, estado:'activo', minDescanso:0,
                     nombre:empData.nombre, apellido:empData.apellido,
                     empleadoId:empData.empleadoId };
       msg('msg-clk','ok',`✅ Turno iniciado a las ${fHora(ahora)}`);
@@ -1960,12 +1992,13 @@ async function cargarResumenHoy(){
 /* ─── HISTORIAL EMPLEADO ──────────────────────── */
 window.cambSem = d=>{ semOff+=d; if(semOff>0)semOff=0; cargarHistEmp(); };
 async function cargarHistEmp(){
-  if(!user) return;
+  const empDocId = getEmpDocId();
+  if(!empDocId) return;
   const {l,d}=semRng(semOff);
   el('wlbl-emp').textContent=semLbl(l,d);
   try{
     // Solo filtrar por uid — sin rango de fechas para evitar índice compuesto
-    const q=query(collection(db,'turnos'), where('uid','==',user.uid));
+    const q=query(collection(db,'turnos'), where('uid','==',empDocId));
     const s=await getDocs(q);
     let mins=0,cnt=0,items=[];
     const ahora = new Date();
@@ -2088,14 +2121,42 @@ window.loginEmp = async function(){
     sessionStorage.setItem('tt_emp_id', empId);
     sessionStorage.setItem('tt_emp_pin', pin);
     sessionStorage.setItem('tt_emp_ts', Date.now().toString());
-  }catch(e){
-    const m={
-      'auth/invalid-credential':'Número o PIN incorrecto.',
-      'auth/too-many-requests':'Demasiados intentos. Espera unos minutos.',
-      'auth/network-request-failed':'Sin conexión. Verifica tu internet.',
-    };
-    msg('msg-login','er','❌ '+(m[e.code]||'Número o PIN incorrecto.'));
-  }finally{ btnLd('btn-login',false); }
+  } catch(e) {
+    // Firebase Auth falló — intentar login directo con Firestore (cajeros sin Auth)
+    try {
+      const qPin = query(collection(db,'empleados'),
+        where('empleadoId','==', empId),
+        where('pin','==', pin));
+      const snapPin = await getDocs(qPin);
+      if (snapPin.empty) {
+        msg('msg-login','er','❌ Número o PIN incorrecto.');
+        return;
+      }
+      // Empleado encontrado en Firestore sin Firebase Auth
+      const empDoc = snapPin.docs[0];
+      empData      = { ...empDoc.data(), id: empDoc.id };
+      if (empData.estado === 'inactivo') {
+        msg('msg-login','er','❌ Cuenta desactivada. Contacta a tu supervisor.');
+        return;
+      }
+      rolActual   = empData.rol || 'empleado';
+      nivelActual = ROLES[rolActual]?.nivel || 1;
+      // Guardar sesión como PIN-only (sin Firebase Auth)
+      sessionStorage.setItem('tt_emp_id',   empId);
+      sessionStorage.setItem('tt_emp_pin',  pin);
+      sessionStorage.setItem('tt_emp_docid', empDoc.id);
+      sessionStorage.setItem('tt_emp_ts',   Date.now().toString());
+      // user = null para pin-only, pero empData está disponible
+      user = null;
+      mostrarEmp();
+    } catch(e2) {
+      const m = {
+        'auth/too-many-requests':'Demasiados intentos. Espera unos minutos.',
+        'auth/network-request-failed':'Sin conexión. Verifica tu internet.',
+      };
+      msg('msg-login','er','❌ '+(m[e.code]||'Número o PIN incorrecto.'));
+    }
+  } finally { btnLd('btn-login',false); }
 };
 
 /* auto-registro eliminado — solo admin puede crear empleados */
