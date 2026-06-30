@@ -892,7 +892,7 @@ async function checaRapido(){
                 '<span style="color:#25D366">✅ Entrada registrada</span><br>' +
                 '<span style="font-size:.85rem;color:#888">'+nombre+' — '+fHora(ahora)+'</span>';
             showMsg('ok','✅ ¡Buen día, '+nombre+'! Entrada: '+fHora(ahora));
-            setTimeout(function(){ document.getElementById('ov-checar').classList.remove('open'); }, 3000);
+            // Sin auto-cierre
 
         } else {
             // CON turno → CHECAR SALIDA
@@ -919,7 +919,7 @@ async function checaRapido(){
                 '<span style="color:#FF4444">⏹ Salida registrada</span><br>' +
                 '<span style="font-size:.85rem;color:#888">'+nombre+' — '+fHora(ahora)+' · '+mToH(neto)+' trabajadas</span>';
             showMsg('ok','✅ ¡Hasta luego, '+nombre+'! Trabajaste '+mToH(neto)+' hoy.');
-            setTimeout(function(){ document.getElementById('ov-checar').classList.remove('open'); }, 3000);
+            // Sin auto-cierre — el empleado cierra manualmente
         }
 
         // 4. Cerrar sesión REST
