@@ -999,23 +999,24 @@ var _restToken = null;
 
 async function getRestToken(){
     if(_restToken) return _restToken;
-    // Login silencioso del gerente para obtener token
+    // Usar token del usuario autenticado en Firebase Auth si está disponible
+    try {
+        if(user && user.getIdToken) {
+            _restToken = await user.getIdToken();
+            return _restToken;
+        }
+    } catch(e) {}
+    // Login silencioso — errores 400 son normales si la cuenta no existe
     var API_KEY = 'AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k';
-    var res = await fetch(
-        'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+API_KEY,
-        { method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({email:'gerente@tortuga.local', password:'GerenteTortuga2026', returnSecureToken:true}) }
-    );
-    var d = await res.json();
-    if(d.idToken){ _restToken = d.idToken; return _restToken; }
-    // Intentar con nueva cuenta
-    var res2 = await fetch(
-        'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+API_KEY,
-        { method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({email:'emp-gerente@tortuga.local', password:'EMP-GERENTE1234', returnSecureToken:true}) }
-    );
-    var d2 = await res2.json();
-    if(d2.idToken){ _restToken = d2.idToken; return _restToken; }
+    try {
+        var res = await fetch(
+            'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+API_KEY,
+            { method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({email:'gerente@tortuga.local', password:'GerenteTortuga2026', returnSecureToken:true}) }
+        );
+        var d = await res.json();
+        if(d.idToken){ _restToken = d.idToken; return _restToken; }
+    } catch(e) {}
     return null;
 }
 
