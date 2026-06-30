@@ -1224,18 +1224,37 @@ function cerrarOrdenModal() {
         <a href="index.html" class="hero-back-btn"> Regresar</a>
     </section>
 
-    <section class="app-menu-section">
-        <h2 class="app-section-title"> Nuestras Tortas</h2>
+    <!-- TABS DE CATEGORÍAS -->
+    <div id="menu-tabs-bar" style="
+        display:flex;gap:.45rem;padding:.6rem 1rem;
+        overflow-x:auto;-webkit-overflow-scrolling:touch;
+        background:var(--bg-dark,#121212);
+        position:sticky;top:56px;z-index:90;
+        border-bottom:1px solid rgba(255,255,255,.06);
+        scrollbar-width:none;">
+        <button class="menu-tab active" data-tab="tortas" onclick="switchMenuTab('tortas',this)">
+            🌮 Nuestras Tortas
+        </button>
+        <button class="menu-tab" data-tab="drinks" onclick="switchMenuTab('drinks',this)">
+            🍹 Drinks & Micheladas
+        </button>
+        <button class="menu-tab" data-tab="botanas" onclick="switchMenuTab('botanas',this)">
+            🍿 Para Botanear & Sides
+        </button>
+    </div>
+
+    <!-- TORTAS -->
+    <section class="app-menu-section menu-tab-content" id="tab-tortas">
         <div class="app-menu-grid" id="menu-container"></div>
     </section>
 
-    <section class="app-menu-section">
-        <h2 class="app-section-title"> Drinks & Micheladas</h2>
+    <!-- DRINKS -->
+    <section class="app-menu-section menu-tab-content" id="tab-drinks" style="display:none;">
         <div class="app-menu-grid drinks-grid" id="drinks-container"></div>
     </section>
 
-    <section class="app-menu-section">
-        <h2 class="app-section-title"> Para Botanear & Sides</h2>
+    <!-- BOTANAS -->
+    <section class="app-menu-section menu-tab-content" id="tab-botanas" style="display:none;">
         <div class="app-menu-grid drinks-grid" id="botanas-container"></div>
     </section>
 </main>
@@ -1569,7 +1588,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1782790594';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1782791298';
     (async () => {
         try {
             await seedProductos();
@@ -2269,5 +2288,35 @@ window.abrirDeliveryModal = function() {
 };
 
 </script>
+
+<script>
+function switchMenuTab(tab, btn) {
+    // Update buttons
+    document.querySelectorAll('.menu-tab').forEach(function(b) {
+        b.classList.remove('active');
+    });
+    if (btn) btn.classList.add('active');
+
+    // Show/hide sections
+    document.querySelectorAll('.menu-tab-content').forEach(function(s) {
+        s.style.display = 'none';
+    });
+    var target = document.getElementById('tab-' + tab);
+    if (target) {
+        target.style.display = 'block';
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // Save active tab
+    window._menuTabActivo = tab;
+}
+
+// Activate first tab on load
+document.addEventListener('DOMContentLoaded', function() {
+    var firstBtn = document.querySelector('.menu-tab[data-tab="tortas"]');
+    switchMenuTab('tortas', firstBtn);
+});
+</script>
+
 </body>
 </html>
