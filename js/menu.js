@@ -307,17 +307,14 @@ function crearCard(p) {
         html += `</select>`;
     }
 
-    // Selector de cantidad + botón agregar
+    // Selector de cantidad (solo +/-) — agregar al carrito via FAB flotante
     html += `
-    <div class="qty-add-row">
+    <div class="qty-add-row" style="justify-content:center;">
         <div class="qty-selector">
             <button class="qty-btn qty-minus" data-pid="${pid}" type="button">−</button>
             <span class="qty-num" id="qty-${pid}">0</span>
             <button class="qty-btn qty-plus" data-pid="${pid}" type="button">+</button>
         </div>
-        <button class="add-to-cart" id="btn-add-${pid}" style="display:none;">
-            ${isTorta ? '🛒 Agregar' : '🛒 Agregar'}
-        </button>
     </div>
     </div>`;
 
