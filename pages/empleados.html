@@ -1714,7 +1714,7 @@ async function mostrarAdmin(nivel){
    ════════════════════════════════════════════════ */
 async function cargarTurnoActivo(){
   if(!user) return;
-  const hoyISO = new Date().toISOString().split('T')[0];
+  const hoy2 = new Date(); const hoyISO = hoy2.getFullYear()+'-'+String(hoy2.getMonth()+1).padStart(2,'0')+'-'+String(hoy2.getDate()).padStart(2,'0');
   // Buscar turno activo de hoy
   // Sin filtro estado para evitar índice — filtramos en JS
   const q = query(collection(db,'turnos'),
@@ -1782,7 +1782,7 @@ window.accionTurno = async function(accion){
   }
   const ahora = new Date();
   const ahoraTs = Timestamp.fromDate(ahora);
-  const hoyISO = ahora.toISOString().split('T')[0];
+  const hoyISO = ahora.getFullYear()+'-'+String(ahora.getMonth()+1).padStart(2,'0')+'-'+String(ahora.getDate()).padStart(2,'0');
 
   // Deshabilitar todos los botones mientras se procesa
   document.querySelectorAll('.btn-ck').forEach(b=>{ b.disabled=true; });
@@ -1918,10 +1918,12 @@ async function cargarHistEmp(){
           // Turno en curso — calcular en tiempo real
           const descMin = t.minDescanso || 0;
           const bruto = Math.round((ahora - entrada) / 60000);
-          const neto = Math.max(0, bruto - descMin);
+          // Cap de 16h (960 min) para evitar que turnos sin salida distorsionen el total
+          const brutoCapped = Math.min(bruto, 960);
+          const neto = Math.max(0, brutoCapped - descMin);
           mins += neto;
-          // Guardar calculado para mostrarlo en la fila
           t._minCalculados = neto;
+          t._sinSalida = bruto > 960; // marcar si excede límite razonable
         }
         cnt++;
         items.push(t);
@@ -1972,7 +1974,7 @@ function hiRow(t, adminMode){
 
   return `<div class="hi">
     <div class="hi-top">
-      <div class="hi-ico">${t.editado?'✏️':inc?'🟡':'✅'}</div>
+      <div class="hi-ico">${t.editado?'✏️':t._sinSalida?'⚠️':inc?'🟡':'✅'}</div>
       <div class="hi-inf">
         ${adminMode?`<div class="hi-emp">${t.nombre||''} ${t.apellido||''}</div>`:''}
         <div class="hi-date">${e?fShort(e):'—'}${t.editado?' · corregido':''}</div>
@@ -2506,7 +2508,7 @@ window._checaRapidoReal = async function checaRapidoImpl(){
     const snap = await getDoc(doc(db,'empleados', u.uid));
     if(!snap.exists()){ msg('msg-checar','er','Empleado no encontrado.'); await signOut(auth); return; }
     const emp = snap.data();
-    const hoyISO = new Date().toISOString().split('T')[0];
+    const hoy2 = new Date(); const hoyISO = hoy2.getFullYear()+'-'+String(hoy2.getMonth()+1).padStart(2,'0')+'-'+String(hoy2.getDate()).padStart(2,'0');
     const qT = query(collection(db,'turnos'),
       where('uid','==',u.uid), where('fechaISO','==',hoyISO),
       where('estado','in',['activo','descanso']));
@@ -2808,7 +2810,7 @@ window.abrirMasterAction = function(uid, nombre, turnoId, estado) {
 
 window.masterAccion = async function(accion) {
   const ahora = new Date();
-  const hoyISO = ahora.toISOString().split('T')[0];
+  const hoyISO = ahora.getFullYear()+'-'+String(ahora.getMonth()+1).padStart(2,'0')+'-'+String(ahora.getDate()).padStart(2,'0');
   const ahoraTs = Timestamp.fromDate(ahora);
   const msgEl = el('msg-master-action');
 
