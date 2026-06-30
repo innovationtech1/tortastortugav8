@@ -1,5 +1,5 @@
 // sw.js — Service Worker para Tortas Tortuga PWA
-const CACHE_NAME = 'tortas-v1782789202';
+const CACHE_NAME = 'tortas-v1782789908';
 
 // Solo cachear assets estáticos esenciales — NO las páginas HTML
 // para evitar que el SW recargue la app y saque al usuario de su sesión
