@@ -1447,11 +1447,11 @@ function renderPerfil(){
       </div>
       <!-- CAMBIO DE CONTRASEÑA -->
       <div style="border-top:1px solid var(--bd);margin:.75rem 0 .75rem;padding-top:.75rem;">
-        <div style="font-size:.72rem;font-weight:800;color:var(--mu);letter-spacing:.05em;margin-bottom:.55rem;">CAMBIAR CONTRASEÑA (opcional)</div>
+        <div style="font-size:.72rem;font-weight:800;color:var(--mu);letter-spacing:.05em;margin-bottom:.55rem;"><span id="pw-section-label">CAMBIAR CONTRASEÑA / PIN (opcional)</span></div>
         <div style="margin-bottom:.6rem;">
-          <div style="font-size:.72rem;color:var(--mu);margin-bottom:.25rem;">Nueva contraseña</div>
+          <div style="font-size:.72rem;color:var(--mu);margin-bottom:.25rem;" id="pw-new-label">Nueva contraseña o PIN</div>
           <div style="position:relative;">
-            <input type="password" id="edit-pw-new" placeholder="Mín 6 caracteres" style="width:100%;padding:.6rem 2.8rem .6rem .75rem;background:var(--sf3);border:1.5px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:.88rem;outline:none;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--bd)'" oninput="checkPwMatch()">
+            <input type="password" id="edit-pw-new" placeholder="PIN (4 dígitos) o contraseña (mín 6)" style="width:100%;padding:.6rem 2.8rem .6rem .75rem;background:var(--sf3);border:1.5px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:.88rem;outline:none;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--bd)'" oninput="checkPwMatch()">
             <button type="button" onclick="togglePwEdit('edit-pw-new',this)" style="position:absolute;right:.6rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:.9rem;opacity:.5;">👁️</button>
           </div>
         </div>
@@ -1509,8 +1509,14 @@ window.guardarPerfil = async function(){
   if(nombre.length < 2){ msgEl.textContent='❌ Nombre muy corto'; msgEl.style.color='var(--er)'; return; }
   if(apellido.length < 2){ msgEl.textContent='❌ Apellido muy corto'; msgEl.style.color='var(--er)'; return; }
   if(tel.length !== 10){ msgEl.textContent='❌ Teléfono debe tener 10 dígitos'; msgEl.style.color='var(--er)'; return; }
-  if(pwNew && pwNew.length < 6){ msgEl.textContent='❌ La contraseña debe tener mínimo 6 caracteres'; msgEl.style.color='var(--er)'; return; }
-  if(pwNew && pwNew !== pwCfg){ msgEl.textContent='❌ Las contraseñas no coinciden'; msgEl.style.color='var(--er)'; return; }
+  // Validar: PIN (4 dígitos) O contraseña (mín 6 chars)
+  const esPIN = pwNew && /^\d{4}$/.test(pwNew);
+  const esPW  = pwNew && pwNew.length >= 6;
+  if(pwNew && !esPIN && !esPW){
+    msgEl.textContent='❌ Ingresa un PIN de 4 dígitos o una contraseña de mínimo 6 caracteres';
+    msgEl.style.color='var(--er)'; return;
+  }
+  if(pwNew && pwNew !== pwCfg){ msgEl.textContent='❌ No coinciden — vuelve a escribir'; msgEl.style.color='var(--er)'; return; }
 
   btn.textContent = 'Guardando…'; btn.disabled = true;
   try{
@@ -1520,13 +1526,21 @@ window.guardarPerfil = async function(){
     empData.telefono = tel; empData.puesto = puesto;
     await updateProfile(user,{displayName:`${nombre} ${apellido}`});
 
-    // Cambiar contraseña si se ingresó una
+    // Cambiar credencial si se ingresó
     if(pwNew){
-      await updatePassword(user, pwNew);
-      // Limpiar campos de contraseña
-      if(el('edit-pw-new')) el('edit-pw-new').value='';
+      const esPINnuevo = /^\d{4}$/.test(pwNew);
+      if(esPINnuevo){
+        // Actualizar PIN en Firestore
+        const docId = empData?.id || empData?.docId || (user ? user.uid : null);
+        if(docId) await updateDoc(doc(db,'empleados',docId), { pin: pwNew });
+        if(empData) empData.pin = pwNew;
+      } else if(user){
+        // Actualizar contraseña Firebase Auth (solo si tiene cuenta Auth)
+        await updatePassword(user, pwNew);
+      }
+      if(el('edit-pw-new'))    el('edit-pw-new').value='';
       if(el('edit-pw-confirm')) el('edit-pw-confirm').value='';
-      if(el('pw-match-msg')) el('pw-match-msg').textContent='';
+      if(el('pw-match-msg'))   el('pw-match-msg').textContent='';
     }
 
     msgEl.textContent = pwNew
