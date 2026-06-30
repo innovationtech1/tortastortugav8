@@ -1588,7 +1588,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1782791298';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1782791316';
     (async () => {
         try {
             await seedProductos();
@@ -2092,6 +2092,33 @@ function enviarOrdenModal() {
     border-color: rgba(255,90,0,.5) !important;
     color: #FF5A00 !important;
 }
+
+    /* ── MENU CATEGORY TABS ─────────────────── */
+    .menu-tab {
+        white-space: nowrap;
+        padding: .5rem 1.1rem;
+        border-radius: 20px;
+        border: 1.5px solid rgba(255,255,255,.12);
+        background: transparent;
+        color: #888;
+        font-family: inherit;
+        font-size: .82rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all .18s;
+        flex-shrink: 0;
+    }
+    .menu-tab.active {
+        background: rgba(255,90,0,.15);
+        border-color: rgba(255,90,0,.6);
+        color: #FF5A00;
+    }
+    #menu-tabs-bar::-webkit-scrollbar { display: none; }
+    .menu-tab-content { animation: fadeTab .2s ease; }
+    @keyframes fadeTab {
+        from { opacity:0; transform:translateY(6px); }
+        to   { opacity:1; transform:translateY(0); }
+    }
 </style>
 
 
