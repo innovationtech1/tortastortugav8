@@ -409,10 +409,8 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
             if(hayNuevos) {
                 _playBell(false);
             }
-        });
         }, function(error) {
-            console.warn('Firestore conexión interrumpida, reconectando...', error.code);
-            // Mostrar badge de reconexión
+            console.warn('Firestore reconectando...', error.code);
             var errBadge = document.getElementById('firebase-err');
             if (!errBadge) {
                 errBadge = document.createElement('div');
@@ -422,10 +420,7 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
                 document.body.appendChild(errBadge);
             }
             errBadge.style.display = 'block';
-            // Reconectar después de 3 segundos
-            _reconnectTimer = setTimeout(function() {
-                iniciarFirebaseEnVivo();
-            }, 3000);
+            _reconnectTimer = setTimeout(iniciarFirebaseEnVivo, 3000);
         });
 
         setInterval(actualizarUI, 60000);
