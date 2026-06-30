@@ -3152,5 +3152,52 @@ if(window._adminNivel && window._mostrarAdminReal){
     window._adminNivel = null;
 }
 </script>
+
+<script>
+/* ── ACTIVAR / DESACTIVAR EMPLEADO ─────────────── */
+window.toggleEstado = async function(docId, estadoActual) {
+    if (!docId || docId === 'undefined') {
+        alert('Error: ID de empleado no encontrado');
+        return;
+    }
+    var nuevoEstado = estadoActual === 'activo' ? 'inactivo' : 'activo';
+    var accion      = nuevoEstado === 'activo' ? 'activar' : 'desactivar';
+
+    if (!confirm('¿Deseas ' + accion + ' esta cuenta?')) return;
+
+    if (!window._adminUpdateDoc) {
+        alert('Firebase cargando, intenta en 2 segundos');
+        return;
+    }
+
+    try {
+        await window._adminUpdateDoc(docId, {
+            estado: nuevoEstado,
+            estadoCambiadoEn: new Date().toISOString()
+        }, 'empleados');
+
+        // Toast de confirmación
+        var toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);' +
+            'background:' + (nuevoEstado==='activo'?'#25D366':'#FF5A00') + ';' +
+            'color:#fff;padding:.65rem 1.25rem;border-radius:12px;font-weight:700;font-size:.88rem;z-index:99999;';
+        toast.textContent = nuevoEstado === 'activo' ? '✅ Cuenta activada' : '🚫 Cuenta desactivada';
+        document.body.appendChild(toast);
+        setTimeout(function(){ toast.remove(); }, 2500);
+
+        // Reabrir detalle para reflejar cambio
+        setTimeout(function(){
+            if (typeof verDetalle === 'function') verDetalle(docId);
+        }, 300);
+
+        // Refrescar lista si existe
+        if (typeof renderEmpleados === 'function') renderEmpleados();
+
+    } catch(e) {
+        alert('Error al cambiar estado: ' + e.message);
+    }
+};
+</script>
+
 </body>
 </html>
