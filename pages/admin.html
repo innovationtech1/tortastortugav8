@@ -966,7 +966,8 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
         win.document.write('<div><b>Pago:</b> ' + (pedido.metodoPagoReal||pedido.metodoPago||'pendiente') + '</div>');
         win.document.write('<hr><div style="text-align:center;font-size:.75rem">Gracias por su visita!</div>');
         win.document.write('<script>window.print();window.close();<\/script>');
-        win.document.write('
+        win.document.write('</script>
+
 <!-- MODAL PRODUCTOS -->
 <div id="productos-modal" onclick="if(event.target===this)this.style.display='none'"
      style="position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9000;
@@ -1096,7 +1097,7 @@ window.eliminarProducto = async function(docId) {
         await cargarListaProductos();
     } catch(e) { alert('Error: ' + e.message); }
 };
-</script>
+
 
 </body></html>');
         win.document.close();
