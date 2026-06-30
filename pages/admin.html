@@ -927,7 +927,7 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
     // guardarProducto se define en script global con soporte de variantes
 
     window.confirmarEliminarProducto = (id) => { if (confirm('⚠️ ¿Eliminar este producto permanentemente?')) { deleteDoc(doc(db, 'productos', id)).then(() => cargarListaProductos()); } };
-    window.eliminarProducto = () => { const id = document.getElementById('prod-edit-id').value; if (!id) return; if (confirm('⚠️ ¿Eliminar permanentemente?')) { deleteDoc(doc(db, 'productos', id)).then(() => { cancelarEdicion(); cargarListaProductos(); }); } };
+    // eliminarProducto definida en script global
 
     window.imprimirTicket = (ticketId) => {
         const pedido = pedidosDB.find(p => p.id.slice(-4).toUpperCase() === ticketId);
@@ -1003,11 +1003,19 @@ function _addVariantRow(container, pid, idx, label, precio, letra) {
 }
 
 window.guardarProducto = async function(id) {
-    if (!window._adminUpdateDoc) { alert('Firebase cargando'); return; }
+    if (!id) { alert('Error: ID de producto no encontrado'); return; }
+    if (!window._adminUpdateDoc) { alert('Firebase cargando, intenta en 2 segundos'); return; }
 
-    var nombre  = document.getElementById('pe-nombre-' + id)?.value.trim();
-    var cat     = document.getElementById('pe-cat-' + id)?.value;
-    var desc    = document.getElementById('pe-desc-' + id)?.value.trim();
+    var elNombre = document.getElementById('pe-nombre-' + id);
+    var elCat    = document.getElementById('pe-cat-'    + id);
+    var elDesc   = document.getElementById('pe-desc-'   + id);
+
+    if (!elNombre) { alert('Error: formulario no encontrado (ID: ' + id + ')'); return; }
+
+    var nombre = (elNombre.value || '').trim();
+    var cat    = elCat    ? elCat.value    : 'tortas';
+    var desc   = elDesc   ? (elDesc.value || '').trim() : '';
+
     if (!nombre) { alert('El nombre es obligatorio'); return; }
 
     // Recoger variantes
