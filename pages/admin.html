@@ -384,6 +384,12 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
         await updateDoc(doc(db, 'pedidos', id), data);
     };
 
+    // Exponer db y funciones Firestore para scripts globales
+    window._adminDB = db;
+    window._adminAddDoc    = (col, data) => import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js').then(({addDoc, collection}) => addDoc(collection(db, col), data));
+    window._adminDeleteDoc = (col, id)   => import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js').then(({deleteDoc, doc}) => deleteDoc(doc(db, col, id)));
+    window._adminGetDocs   = (col)       => import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js').then(({getDocs, collection}) => getDocs(collection(db, col)));
+
     function iniciarFirebaseEnVivo() {
         // Limpiar listener anterior si existe
         if (_unsubscribePedidos) { try { _unsubscribePedidos(); } catch(e) {} }
@@ -1193,9 +1199,13 @@ window.abrirGestionEmpleados = async function() {
 window.cargarListaCajeros = async function() {
     var lista = document.getElementById('cajeros-lista');
     if (!lista) return;
+    if (!window._adminGetDocs) {
+        lista.innerHTML = '<div style="color:#888;font-size:.82rem;text-align:center;padding:.5rem;">Cargando Firebase...</div>';
+        setTimeout(cargarListaCajeros, 1500);
+        return;
+    }
     try {
-        var { collection, getDocs, getFirestore } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-        var snap = await getDocs(collection(db, 'empleados'));
+        var snap = await window._adminGetDocs('empleados');
         var emps = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
         if (!emps.length) { lista.innerHTML = '<div style="color:#555;text-align:center;padding:1rem;font-size:.82rem;">No hay cajeros registrados</div>'; return; }
         lista.innerHTML = '';
@@ -1226,29 +1236,36 @@ window.crearCajero = async function() {
     var rol      = document.getElementById('caj-rol').value;
 
     if (!nombre || !empId || !pin) { alert('Llena nombre, ID y PIN'); return; }
-    if (pin.length !== 4 || isNaN(pin)) { alert('El PIN debe ser de 4 dígitos'); return; }
+    if (pin.length !== 4 || isNaN(Number(pin))) { alert('El PIN debe ser de 4 dígitos numéricos'); return; }
+    if (!window._adminAddDoc) { alert('Firebase cargando, intenta en 2 segundos'); return; }
 
     try {
-        var { collection, addDoc, getFirestore } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-        await addDoc(collection(db, 'empleados'), {
-            nombre, apellido, empleadoId: empId, pin, rol,
-            activo: true, creado: new Date().toISOString()
+        await window._adminAddDoc('empleados', {
+            nombre: nombre,
+            apellido: apellido,
+            empleadoId: empId,
+            pin: pin,
+            rol: rol,
+            activo: true,
+            creado: new Date().toISOString()
         });
         ['caj-nombre','caj-apellido','caj-id','caj-pin'].forEach(function(id){
-            document.getElementById(id).value = '';
+            var el = document.getElementById(id);
+            if (el) el.value = '';
         });
         await cargarListaCajeros();
-        alert('✅ Cajero ' + nombre + ' creado con ID: ' + empId);
-    } catch(e) { alert('Error: ' + e.message); }
+        alert('✅ Cajero ' + nombre + ' creado.
+ID: ' + empId + '  PIN: ' + pin);
+    } catch(e) { alert('Error al crear cajero: ' + e.message); }
 };
 
 window.eliminarCajero = async function(empId, docId) {
-    if (!confirm('Eliminar cajero ' + empId + '?')) return;
+    if (!confirm('¿Eliminar cajero ' + empId + '?')) return;
+    if (!window._adminDeleteDoc) { alert('Firebase cargando, intenta de nuevo'); return; }
     try {
-        var { doc, deleteDoc, getFirestore } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-        await deleteDoc(doc(db, 'empleados', docId));
+        await window._adminDeleteDoc('empleados', docId);
         await cargarListaCajeros();
-    } catch(e) { alert('Error: ' + e.message); }
+    } catch(e) { alert('Error al eliminar: ' + e.message); }
 };
 </script>
 
