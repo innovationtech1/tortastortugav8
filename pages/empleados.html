@@ -1119,7 +1119,7 @@ window.addEventListener('unhandledrejection', function(e){ console.error('Promis
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-         onAuthStateChanged, signOut, updateProfile }
+         onAuthStateChanged, signOut, updateProfile, updatePassword }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { getFirestore, doc, setDoc, getDoc, addDoc, updateDoc,
          collection, query, where, orderBy, getDocs, serverTimestamp, Timestamp }
@@ -1518,7 +1518,7 @@ window.guardarPerfil = async function(){
 
     // Cambiar contraseña si se ingresó una
     if(pwNew){
-      await user.updatePassword(pwNew);
+      await updatePassword(user, pwNew);
       // Limpiar campos de contraseña
       if(el('edit-pw-new')) el('edit-pw-new').value='';
       if(el('edit-pw-confirm')) el('edit-pw-confirm').value='';
