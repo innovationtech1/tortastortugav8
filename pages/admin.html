@@ -924,28 +924,7 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
         container.appendChild(div);
     };
 
-    window.guardarProducto = async () => {
-        const id = document.getElementById('prod-edit-id').value;
-        const nombre = document.getElementById('prod-nombre').value.trim();
-        if (!nombre) { alert('⚠️ El nombre es obligatorio.'); return; }
-        const variantes = [];
-        document.querySelectorAll('#variantes-container > div').forEach(row => {
-            const inputs = row.querySelectorAll('input'); const label = inputs[0]?.value.trim(); const precio = parseFloat(inputs[1]?.value);
-            if (label && !isNaN(precio)) variantes.push({ label, precio });
-        });
-        if (!variantes.length) { alert('⚠️ Agrega al menos una variante con precio.'); return; }
-        const data = {
-            productId: document.getElementById('prod-edit-productid').value || nombre.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now().toString(36).slice(-4),
-            nombre, descripcion: document.getElementById('prod-descripcion').value.trim(),
-            categoria: document.getElementById('prod-categoria').value, tipo: document.getElementById('prod-tipo').value,
-            imagen: document.getElementById('prod-imagen').value.trim() || null, incluye: document.getElementById('prod-incluye').value.trim() || null,
-            orden: parseInt(document.getElementById('prod-orden').value) || 50, badge: null,
-            disponible: document.getElementById('prod-disponible').checked, variantes
-        };
-        const badgeTexto = document.getElementById('prod-badge-texto').value.trim(); const badgeClase = document.getElementById('prod-badge-clase').value;
-        if (badgeTexto && badgeClase) data.badge = { texto: badgeTexto, clase: badgeClase };
-        try { if (id) { await updateDoc(doc(db, 'productos', id), data); } else { await addDoc(collection(db, 'productos'), data); } cancelarEdicion(); await cargarListaProductos(); } catch(e) { alert('Error al guardar: ' + e.message); }
-    };
+    // guardarProducto se define en script global con soporte de variantes
 
     window.confirmarEliminarProducto = (id) => { if (confirm('⚠️ ¿Eliminar este producto permanentemente?')) { deleteDoc(doc(db, 'productos', id)).then(() => cargarListaProductos()); } };
     window.eliminarProducto = () => { const id = document.getElementById('prod-edit-id').value; if (!id) return; if (confirm('⚠️ ¿Eliminar permanentemente?')) { deleteDoc(doc(db, 'productos', id)).then(() => { cancelarEdicion(); cargarListaProductos(); }); } };
