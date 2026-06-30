@@ -382,10 +382,16 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
         await updateDoc(doc(db, 'pedidos', id), data);
     };
 
+    let _unsubscribePedidos = null;
+    let _reconnectTimer = null;
+
     function iniciarFirebaseEnVivo() {
-        // Sin orderBy para evitar error de índice compuesto — ordenar en JS
+        // Limpiar listener anterior si existe
+        if (_unsubscribePedidos) { try { _unsubscribePedidos(); } catch(e) {} }
+        if (_reconnectTimer)     { clearTimeout(_reconnectTimer); }
+
         const q = collection(db, 'pedidos');
-        onSnapshot(q, (snapshot) => {
+        _unsubscribePedidos = onSnapshot(q, (snapshot) => {
             pedidosDB = [];
             snapshot.forEach(doc => { pedidosDB.push({ id: doc.id, ...doc.data() }); });
             // Exponer para editor admin
@@ -404,6 +410,24 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
                 _playBell(false);
             }
         });
+        }, function(error) {
+            console.warn('Firestore conexión interrumpida, reconectando...', error.code);
+            // Mostrar badge de reconexión
+            var errBadge = document.getElementById('firebase-err');
+            if (!errBadge) {
+                errBadge = document.createElement('div');
+                errBadge.id = 'firebase-err';
+                errBadge.style.cssText = 'position:fixed;top:60px;right:10px;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);color:#FBB724;padding:.35rem .75rem;border-radius:8px;font-size:.72rem;font-weight:700;z-index:9999;';
+                errBadge.textContent = '⚠️ Reconectando...';
+                document.body.appendChild(errBadge);
+            }
+            errBadge.style.display = 'block';
+            // Reconectar después de 3 segundos
+            _reconnectTimer = setTimeout(function() {
+                iniciarFirebaseEnVivo();
+            }, 3000);
+        });
+
         setInterval(actualizarUI, 60000);
 
         // Asegurar Todos activo al iniciar
