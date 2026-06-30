@@ -2096,36 +2096,93 @@ window.filtrarEmp=function(){
 /* ─── DETALLE EMPLEADO ────────────────────────── */
 window.verDetalle = async function(uid){
   aOv('ov-detail');
-  const s=await getDoc(doc(db,'empleados',uid));
-  if(!s.exists()){ el('detail-body').innerHTML='No encontrado.'; return; }
-  const e=s.data();
-  const R=ROLES[e.rol||'empleado'];
-  // Horas esta semana
-  const {l,d}=semRng(0);
-  const qt=query(collection(db,'turnos'),where('uid','==',uid),
-    where('entrada','>=',Timestamp.fromDate(l)),
-    where('entrada','<=',Timestamp.fromDate(d)));
-  const ts=await getDocs(qt);
-  let minSem=0,turnSem=0;
-  ts.forEach(dd=>{ const t=dd.data(); if(t.minTrabajados)minSem+=t.minTrabajados; turnSem++; });
+  el('detail-body').innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">Cargando...</div>';
 
-  el('detail-body').innerHTML=`
+  let eData = null;
+  let docId  = uid;
+
+  try {
+    // Intentar por docId directo
+    const s = await getDoc(doc(db,'empleados', uid));
+    if (s.exists()) {
+      eData = s.data();
+      docId  = s.id;
+    }
+  } catch(e) {}
+
+  // Fallback: buscar en empleados cargados en memoria
+  if (!eData && window._empleadosCache) {
+    const found = window._empleadosCache.find(function(e){
+      return e.uid === uid || e.id === uid || e.empleadoId === uid;
+    });
+    if (found) { eData = found; docId = found.id || uid; }
+  }
+
+  if (!eData) {
+    el('detail-body').innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">No se encontraron datos del empleado.</div>';
+    return;
+  }
+
+  const e = eData;
+  const R = ROLES[e.rol||'empleado'] || ROLES['empleado'];
+
+  // Horas esta semana
+  let minSem = 0, turnSem = 0;
+  try {
+    const {l,d} = semRng(0);
+    const qt = query(collection(db,'turnos'),
+      where('uid','==', docId),
+      where('entrada','>=', Timestamp.fromDate(l)),
+      where('entrada','<=', Timestamp.fromDate(d)));
+    const ts = await getDocs(qt);
+    ts.forEach(dd => {
+      const t = dd.data();
+      if (t.minTrabajados) minSem += t.minTrabajados;
+      turnSem++;
+    });
+  } catch(err) {}
+
+  const ini = ((e.nombre||'?')[0] + (e.apellido||'?')[0]).toUpperCase();
+
+  el('detail-body').innerHTML = `
     <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:.95rem;">
-      <div class="av av-${R.css}" style="width:52px;height:52px;font-size:1.25rem;">${(e.nombre[0]||'')+(e.apellido[0]||'')}</div>
-      <div><div style="font-size:1rem;font-weight:800;">${e.nombre} ${e.apellido}</div>
-      <div style="font-size:.73rem;color:var(--mu);">${e.empleadoId} · ${e.puesto}</div></div>
+      <div class="av av-${R.css}" style="width:52px;height:52px;font-size:1.25rem;">${ini}</div>
+      <div>
+        <div style="font-size:1.05rem;font-weight:800;">${e.nombre||''} ${e.apellido||''}</div>
+        <div style="font-size:.8rem;color:#888;">${e.empleadoId||docId} &middot; ${e.puesto||e.rol||'empleado'}</div>
+        <div class="chip ch-${R.css}" style="margin-top:.25rem;display:inline-block;">${R.ico||'👤'} ${R.lbl||e.rol}</div>
+      </div>
     </div>
-    <div class="ir"><span class="ir-k">Rol</span><span class="ir-v"><span class="chip ch-${R.css}">${R.ico} ${R.label}</span></span></div>
-    <div class="ir"><span class="ir-k">Correo</span><span class="ir-v" style="font-size:.82rem;">${e.email}</span></div>
-    <div class="ir"><span class="ir-k">Teléfono</span><span class="ir-v">${e.telefono}</span></div>
-    <div class="ir"><span class="ir-k">Horas esta semana</span><span class="ir-v" style="color:var(--primary);font-size:1rem;">${mToH(minSem)} <span style="font-size:.75rem;font-weight:400;color:var(--mu);">(${turnSem} turnos)</span></span></div>
-    <div class="ir"><span class="ir-k">Estado</span><span class="ir-v"><span class="chip ${e.estado==='activo'?'ch-on':'ch-off'}">${e.estado}</span></span></div>
-    <div style="display:flex;flex-direction:column;gap:.48rem;margin-top:.95rem;">
-      <button class="btn bs bsm" onclick="abrirEditT('${uid}','${e.nombre} ${e.apellido}',null)">✏️ Agregar / corregir turno</button>
-      <button class="btn ${e.estado==='activo'?'bd':'bok'} bsm" onclick="toggleStatus('${uid}','${e.estado}')">
-        ${e.estado==='activo'?'🚫 Desactivar cuenta':'✅ Activar cuenta'}
-      </button>
-    </div>`;
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.85rem;">
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.65rem;text-align:center;">
+        <div style="font-size:1.3rem;font-weight:900;color:#FF5A00;">${mToH(minSem)}</div>
+        <div style="font-size:.7rem;color:#888;">Horas esta semana</div>
+      </div>
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.65rem;text-align:center;">
+        <div style="font-size:1.3rem;font-weight:900;color:#3B82F6;">${turnSem}</div>
+        <div style="font-size:.7rem;color:#888;">Turnos esta semana</div>
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.75rem;margin-bottom:.75rem;">
+      <div style="font-size:.72rem;color:#888;font-weight:700;margin-bottom:.5rem;">INFORMACIÓN</div>
+      <div style="font-size:.83rem;display:flex;flex-direction:column;gap:.35rem;">
+        <div><span style="color:#888;">Email:</span> ${e.email||'—'}</div>
+        <div><span style="color:#888;">Teléfono:</span> ${e.telefono||'—'}</div>
+        <div><span style="color:#888;">Salario/hr:</span> $${e.salarioPorHora||e.salario||'—'}</div>
+        <div><span style="color:#888;">Estado:</span>
+          <span style="color:${e.estado==='activo'?'#25D366':'#888'};">
+            ${e.estado==='activo'?'🟢 Activo':'⚫ Inactivo'}
+          </span>
+        </div>
+      </div>
+    </div>
+    <button onclick="toggleEstado('${docId}','${e.estado}')"
+      style="width:100%;padding:.7rem;background:rgba(255,255,255,.06);
+             border:1px solid rgba(255,255,255,.1);color:#ccc;
+             border-radius:10px;font-family:inherit;font-size:.85rem;cursor:pointer;">
+      ${e.estado==='activo'?'🚫 Desactivar cuenta':'✅ Activar cuenta'}
+    </button>
+  `;
 };
 
 window.toggleStatus = async function(uid, est){
