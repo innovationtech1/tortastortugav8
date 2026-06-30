@@ -367,6 +367,7 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
         iniciarFirebaseEnVivo();
+        if('Notification' in window && Notification.permission==='default') Notification.requestPermission();
     }
 
     // El login lo maneja entrarAdmin() (función global)
