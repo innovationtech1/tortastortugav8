@@ -828,14 +828,78 @@ async function checaRapido(){
         }
 
         if(authData.error){
-            var m = { 'INVALID_LOGIN_CREDENTIALS':'Número o PIN incorrecto.',
-                      'TOO_MANY_ATTEMPTS_TRY_LATER':'Demasiados intentos. Espera unos minutos.' };
-            showMsg('er','❌ ' + (m[authData.error.message] || 'Número o PIN incorrecto.'));
+            // Fallback: buscar en Firestore directamente por empleadoId + pin
+            var snapQ = await getDocs(query(
+                collection(db, 'empleados'),
+                where('empleadoId','==', empId),
+                where('pin','==', pin)
+            ));
+            if(snapQ.empty){
+                var m = { 'INVALID_LOGIN_CREDENTIALS':'Número o PIN incorrecto.',
+                          'TOO_MANY_ATTEMPTS_TRY_LATER':'Demasiados intentos. Espera unos minutos.' };
+                showMsg('er','❌ ' + (m[authData.error.message] || 'Número o PIN incorrecto.'));
+                return;
+            }
+            // Empleado encontrado en Firestore — checar sin Firebase Auth
+            var empDocFS  = snapQ.docs[0];
+            var empDataFS = empDocFS.data();
+            var uidFS     = empDocFS.id;
+            var nombreFS  = empDataFS.nombre || empId;
+            var ahoraFS   = new Date();
+            var hoyISOFS  = hoyISO;
+            var fHoraFS   = function(d){ return d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:true}); };
+            var mToHFS    = function(m){ return Math.floor(m/60)+'h '+Math.round(m%60)+'m'; };
+
+            // Buscar turno activo de hoy
+            var qFS = query(collection(db,'turnos'),
+                where('uid','==', uidFS),
+                where('fechaISO','==', hoyISOFS));
+            var snapT = await getDocs(qFS);
+            var turnoActivoFS = null;
+            snapT.forEach(function(d){
+                var t = d.data();
+                if(t.estado==='activo'||t.estado==='descanso') turnoActivoFS = {id:d.id, ...t};
+            });
+
+            if(!turnoActivoFS){
+                // ENTRADA
+                await addDoc(collection(db,'turnos'),{
+                    uid:uidFS, empleadoId:empId,
+                    nombre:nombreFS, apellido:empDataFS.apellido||'',
+                    entrada:Timestamp.fromDate(ahoraFS), salida:null,
+                    inicioDescanso:null, finDescanso:null,
+                    minDescanso:0, minTrabajados:null, horas:null,
+                    estado:'activo', editado:false, nota:'',
+                    fechaISO:hoyISOFS, creado:serverTimestamp()
+                });
+                document.getElementById('ck-estado-info').style.display='block';
+                document.getElementById('ck-estado-txt').innerHTML =
+                    '<span style="color:#25D366">✅ Entrada registrada</span><br>' +
+                    '<span style="font-size:.85rem;color:#888">'+nombreFS+' — '+fHoraFS(ahoraFS)+'</span>';
+                showMsg('ok','✅ ¡Buen día, '+nombreFS+'! Entrada: '+fHoraFS(ahoraFS));
+            } else {
+                // SALIDA
+                var entradaFS = turnoActivoFS.entrada?.toDate?.() || (turnoActivoFS.entrada?.seconds ? new Date(turnoActivoFS.entrada.seconds*1000) : ahoraFS);
+                var descFS    = turnoActivoFS.minDescanso || 0;
+                var brutoFS   = Math.round((ahoraFS - entradaFS)/60000);
+                var netoFS    = Math.max(0, Math.min(brutoFS, 960) - descFS);
+                await updateDoc(doc(db,'turnos',turnoActivoFS.id),{
+                    salida:Timestamp.fromDate(ahoraFS),
+                    estado:'completo',
+                    minTrabajados:netoFS,
+                    horas:parseFloat((netoFS/60).toFixed(2))
+                });
+                document.getElementById('ck-estado-info').style.display='block';
+                document.getElementById('ck-estado-txt').innerHTML =
+                    '<span style="color:#FF4444">⏹ Salida registrada</span><br>' +
+                    '<span style="font-size:.85rem;color:#888">'+nombreFS+' — '+fHoraFS(ahoraFS)+' · '+mToHFS(netoFS)+' trabajadas</span>';
+                showMsg('ok','✅ ¡Hasta luego, '+nombreFS+'! Trabajaste '+mToHFS(netoFS)+' hoy.');
+            }
             return;
         }
         var uid   = authData.localId;
         var token = authData.idToken;
-        var hoyISO = new Date().toISOString().split('T')[0];
+        var _hd = new Date(); var hoyISO = _hd.getFullYear()+'-'+String(_hd.getMonth()+1).padStart(2,'0')+'-'+String(_hd.getDate()).padStart(2,'0');
         var ahora  = new Date();
 
         // 2. Buscar empleado en Firestore
