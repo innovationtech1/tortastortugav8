@@ -967,7 +967,11 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
         win.document.write('<div><b>Pago:</b> ' + (pedido.metodoPagoReal||pedido.metodoPago||'pendiente') + '</div>');
         win.document.write('<hr><div style="text-align:center;font-size:.75rem">Gracias por su visita!</div>');
         win.document.write('<scr'+'ipt>window.print();window.close();</'+'script>');
-        win.document.write('
+        win.document.write('</body></html>');
+        win.document.close();
+    };
+</script>
+
 <script>
 /* ── VARIANTES DE PRECIO ────────────────────────────── */
 function _addVariantRow(container, pid, idx, label, precio, letra) {
