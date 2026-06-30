@@ -1910,7 +1910,9 @@ async function cargarHistEmp(){
     el('wshift-emp').textContent=cnt;
     const list=el('hist-emp');
     if(!items.length){ list.innerHTML='<div class="hi-empty">Sin turnos esta semana.</div>'; return; }
-    list.innerHTML=items.map(t=>hiRow(t,false)).join('');
+    // Mostrar botón editar si el usuario es cajero, supervisor o gerente
+    const canEdit = nivelActual >= 2;
+    list.innerHTML=items.map(t=>hiRow(t, canEdit)).join('');
   } catch(e){
     console.error('cargarHistEmp error:', e);
     const list=el('hist-emp');
@@ -1950,7 +1952,7 @@ function hiRow(t, adminMode){
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.25rem;">
         <div class="hi-hrs ${hrsMin>0?'hc-ok':inc?'hc-wa':'hc-rest'}">${hrsMin>0?hrs:(inc?t.estado||'activo':'—')}</div>
-        ${adminMode?`<button class="btn bs bsm" style="font-size:.68rem;padding:.28rem .5rem;" onclick="abrirEditT('${t.uid}','${t.nombre||''} ${t.apellido||''}','${t.id}')">✏️ Editar</button>`:''}
+        ${adminMode?`<button class="btn bsm" style="background:rgba(59,130,246,.2);border:1px solid rgba(59,130,246,.3);color:#3B82F6;border-radius:6px;font-size:.7rem;padding:.28rem .55rem;cursor:pointer;font-family:inherit;" data-tid="${t.id}" data-uid="${t.uid||''}" data-nom="${(t.nombre||empData?.nombre||'')+ ' ' +(t.apellido||empData?.apellido||'')}" onclick="abrirEditTBtn(this)">✏️ Editar</button>`:''}
       </div>
     </div>
     <div class="hi-detail">${segs}</div>
@@ -2281,6 +2283,14 @@ async function _guardarRol(uid){
 }
 
 /* ─── EDITAR TURNO ────────────────────────────── */
+window.abrirEditTBtn = function(btn) {
+  var tid  = btn.getAttribute('data-tid');
+  var uid  = btn.getAttribute('data-uid') || (user ? user.uid : '');
+  var nom  = btn.getAttribute('data-nom') || '';
+  if (!nom.trim() && empData) nom = (empData.nombre||'') + ' ' + (empData.apellido||'');
+  abrirEditT(uid, nom.trim(), tid);
+};
+
 window.abrirEditT = function(uid, nombre, tid){
   editEUid=uid; editTId=tid;
   el('edit-name').textContent=nombre;
