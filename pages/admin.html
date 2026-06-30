@@ -1254,8 +1254,7 @@ window.crearCajero = async function() {
             if (el) el.value = '';
         });
         await cargarListaCajeros();
-        alert('✅ Cajero ' + nombre + ' creado.
-ID: ' + empId + '  PIN: ' + pin);
+        alert('Cajero ' + nombre + ' creado. ID: ' + empId + ' PIN: ' + pin);
     } catch(e) { alert('Error al crear cajero: ' + e.message); }
 };
 
