@@ -967,7 +967,106 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
         win.document.write('<div><b>Pago:</b> ' + (pedido.metodoPagoReal||pedido.metodoPago||'pendiente') + '</div>');
         win.document.write('<hr><div style="text-align:center;font-size:.75rem">Gracias por su visita!</div>');
         win.document.write('<scr'+'ipt>window.print();window.close();</'+'script>');
-        win.document.write('</body></html>');
+        win.document.write('
+<script>
+/* ── VARIANTES DE PRECIO ────────────────────────────── */
+function _addVariantRow(container, pid, idx, label, precio, letra) {
+    var row = document.createElement('div');
+    row.className = 'var-row';
+    row.style.cssText = 'background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:.5rem .6rem;margin-bottom:.35rem;';
+
+    var header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;gap:.4rem;margin-bottom:.35rem;';
+
+    var badge = document.createElement('span');
+    badge.style.cssText = 'background:#FF5A00;color:#fff;border-radius:6px;padding:.15rem .45rem;font-size:.72rem;font-weight:900;flex-shrink:0;';
+    badge.textContent = 'Opción ' + letra;
+
+    var btnRemove = document.createElement('button');
+    btnRemove.textContent = '✕';
+    btnRemove.style.cssText = 'margin-left:auto;background:rgba(244,67,54,.15);border:1px solid rgba(244,67,54,.3);color:#F44336;border-radius:6px;padding:.15rem .4rem;font-size:.72rem;cursor:pointer;';
+    btnRemove.onclick = function() { row.remove(); };
+
+    header.appendChild(badge);
+    header.appendChild(btnRemove);
+
+    var inLabel = document.createElement('input');
+    inLabel.placeholder = 'Ej: A COMBO TRIPLE MEAT · 9 Slices';
+    inLabel.value = label;
+    inLabel.className = 'var-label';
+    inLabel.style.cssText = 'width:100%;background:#111;border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:7px;padding:.38rem .6rem;font-family:inherit;font-size:.78rem;margin-bottom:.3rem;box-sizing:border-box;';
+
+    var priceRow = document.createElement('div');
+    priceRow.style.cssText = 'display:flex;align-items:center;gap:.4rem;';
+
+    var priceLabel = document.createElement('span');
+    priceLabel.style.cssText = 'font-size:.72rem;color:#888;white-space:nowrap;';
+    priceLabel.textContent = 'Precio $:';
+
+    var inPrecio = document.createElement('input');
+    inPrecio.type = 'number';
+    inPrecio.placeholder = '0.00';
+    inPrecio.value = precio || '';
+    inPrecio.className = 'var-precio';
+    inPrecio.style.cssText = 'flex:1;background:#111;border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:7px;padding:.38rem .6rem;font-family:inherit;font-size:.82rem;box-sizing:border-box;';
+
+    priceRow.appendChild(priceLabel);
+    priceRow.appendChild(inPrecio);
+
+    row.appendChild(header);
+    row.appendChild(inLabel);
+    row.appendChild(priceRow);
+    container.appendChild(row);
+}
+
+window.guardarProducto = async function(id) {
+    if (!window._adminUpdateDoc) { alert('Firebase cargando'); return; }
+
+    var nombre  = document.getElementById('pe-nombre-' + id)?.value.trim();
+    var cat     = document.getElementById('pe-cat-' + id)?.value;
+    var desc    = document.getElementById('pe-desc-' + id)?.value.trim();
+    if (!nombre) { alert('El nombre es obligatorio'); return; }
+
+    // Recoger variantes
+    var varContainer = document.getElementById('pe-vars-' + id);
+    var variantes = [];
+    if (varContainer) {
+        varContainer.querySelectorAll('.var-row').forEach(function(row) {
+            var lbl = row.querySelector('.var-label')?.value.trim() || '';
+            var pr  = parseFloat(row.querySelector('.var-precio')?.value) || 0;
+            if (pr > 0) variantes.push({ label: lbl, precio: pr });
+        });
+    }
+
+    // Precio principal = primera variante (o único precio)
+    var precioBase = variantes.length > 0 ? variantes[0].precio : 0;
+
+    try {
+        await window._adminUpdateDoc(id, {
+            nombre: nombre,
+            precio: precioBase,
+            _precio: precioBase,
+            categoria: cat,
+            descripcion: desc,
+            variantes: variantes
+        }, 'productos');
+
+        // Refrescar lista
+        await cargarListaProductos();
+
+        // Toast
+        var t = document.createElement('div');
+        t.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#25D366;color:#fff;padding:.6rem 1.2rem;border-radius:12px;font-weight:700;font-size:.85rem;z-index:99999;';
+        t.textContent = '✅ Producto actualizado';
+        document.body.appendChild(t);
+        setTimeout(function(){ t.remove(); }, 2500);
+    } catch(e) {
+        alert('Error al guardar: ' + e.message);
+    }
+};
+</script>
+
+</body></html>');
         win.document.close();
     };
 </script>
@@ -1451,10 +1550,44 @@ window.cargarListaProductos = async function() {
             actRow.appendChild(btnSave);
             actRow.appendChild(btnCnc);
 
+            // Nombre
             editDiv.appendChild(inp('pe-nombre-'+p.id, p.nombre||'', 'Nombre'));
-            editDiv.appendChild(inp('pe-precio-'+p.id, pr||'', 'Precio $', 'number'));
+            // Categoría
             editDiv.appendChild(sel);
-            editDiv.appendChild(inp('pe-desc-'+p.id, p.descripcion||'', 'Descripcion'));
+            // Descripción
+            editDiv.appendChild(inp('pe-desc-'+p.id, p.descripcion||'', 'Descripcion (opcional)'));
+
+            // ── VARIANTES DE PRECIO ──
+            var varLabel = document.createElement('div');
+            varLabel.style.cssText = 'font-size:.7rem;color:#A78BFA;font-weight:700;margin:.4rem 0 .3rem;letter-spacing:.05em;';
+            varLabel.textContent = 'OPCIONES DE PRECIO (A, B, C...)';
+            editDiv.appendChild(varLabel);
+
+            var varContainer = document.createElement('div');
+            varContainer.id = 'pe-vars-' + p.id;
+            editDiv.appendChild(varContainer);
+
+            // Build existing variants
+            var initVars = (p.variantes && p.variantes.length)
+                ? p.variantes
+                : [{ label: 'Precio base', precio: pr }];
+            var letras = ['A','B','C','D','E','F'];
+            initVars.forEach(function(v, i) {
+                _addVariantRow(varContainer, p.id, i, v.label||'', v.precio||0, letras[i]||String(i+1));
+            });
+
+            // Botón agregar variante
+            var btnAddVar = document.createElement('button');
+            btnAddVar.textContent = '+ Agregar opción de precio';
+            btnAddVar.style.cssText = 'width:100%;padding:.4rem;background:rgba(167,139,250,.1);border:1px dashed rgba(167,139,250,.4);color:#A78BFA;border-radius:8px;font-family:inherit;font-size:.78rem;cursor:pointer;margin-bottom:.4rem;';
+            btnAddVar.setAttribute('data-pid', p.id);
+            btnAddVar.onclick = function() {
+                var vc = document.getElementById('pe-vars-' + this.getAttribute('data-pid'));
+                var idx2 = vc.querySelectorAll('.var-row').length;
+                var letras2 = ['A','B','C','D','E','F'];
+                _addVariantRow(vc, this.getAttribute('data-pid'), idx2, '', 0, letras2[idx2]||String(idx2+1));
+            };
+            editDiv.appendChild(btnAddVar);
             editDiv.appendChild(actRow);
 
             row.appendChild(viewDiv);
