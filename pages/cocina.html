@@ -427,7 +427,7 @@ function renderEditor() {
 
     document.getElementById('edit-modal-body').innerHTML = `
 
-        <!-- Estado -->
+        /* Estado */
         <div style="margin-bottom:.85rem;">
             <div style="font-size:.75rem;color:var(--muted);font-weight:700;margin-bottom:.4rem;">ESTADO DE LA ORDEN</div>
             <div class="status-grid">
@@ -438,7 +438,7 @@ function renderEditor() {
             </div>
         </div>
 
-        <!-- Cliente -->
+        /* Cliente */
         <div style="margin-bottom:.85rem;">
             <div style="font-size:.75rem;color:var(--muted);font-weight:700;margin-bottom:.4rem;">CLIENTE</div>
             <input id="edit-cliente" value="${p.cliente||p.nombre||''}"
@@ -446,7 +446,7 @@ function renderEditor() {
                        border-radius:8px;padding:.45rem .75rem;font-family:inherit;font-size:.85rem;">
         </div>
 
-        <!-- Nota cocina -->
+        /* Nota cocina */
         <div style="margin-bottom:.85rem;">
             <div style="font-size:.75rem;color:var(--muted);font-weight:700;margin-bottom:.4rem;">📝 NOTA PARA COCINA</div>
             <input id="edit-nota" value="${p.notaCocina||''}" placeholder="Ej: extra salsa, sin hielo..."
@@ -454,7 +454,7 @@ function renderEditor() {
                        border-radius:8px;padding:.45rem .75rem;font-family:inherit;font-size:.82rem;">
         </div>
 
-        <!-- Items -->
+        /* Items */
         <div style="font-size:.75rem;color:var(--muted);font-weight:700;margin-bottom:.4rem;">PRODUCTOS</div>
         <div id="edit-items-list">
             ${items.map((item,idx)=>`
@@ -473,7 +473,7 @@ function renderEditor() {
             `).join('')}
         </div>
 
-        <!-- Agregar producto -->
+        /* Agregar producto */
         <div class="add-section" style="margin-top:.65rem;">
             <div class="add-section-title">➕ Agregar Producto</div>
             <div class="add-row" style="margin-bottom:.4rem;">
@@ -484,7 +484,7 @@ function renderEditor() {
             <button class="add-btn" style="width:100%;" onclick="agregarItem()">➕ Agregar</button>
         </div>
 
-        <!-- Botones -->
+        /* Botones */
         <button class="save-btn" onclick="guardarCambios()">💾 Guardar Cambios</button>
         <button class="cancel-btn" onclick="cerrarEditor()">Cancelar</button>
         <div style="margin-top:.65rem;padding-top:.65rem;border-top:1px solid var(--border);">
