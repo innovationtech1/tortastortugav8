@@ -1462,7 +1462,7 @@ window.guardarProducto = async function(id) {
     var desc   = document.getElementById('pe-desc-' + id)?.value.trim();
     if (!nombre) { alert('El nombre es obligatorio'); return; }
     try {
-        await window._adminUpdateDoc(id, { nombre: nombre, precio: precio, categoria: cat, descripcion: desc });
+        await window._adminUpdateDoc(id, { nombre: nombre, precio: precio, categoria: cat, descripcion: desc }, 'productos');
         await cargarListaProductos();
     } catch(e) { alert('Error al guardar: ' + e.message); }
 };
