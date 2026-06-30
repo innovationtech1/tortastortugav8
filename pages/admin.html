@@ -380,8 +380,8 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
     }
 
     // Exponer updateDoc para el editor admin global
-    window._adminUpdateDoc = async (id, data) => {
-        await updateDoc(doc(db, 'pedidos', id), data);
+    window._adminUpdateDoc = async (id, data, col) => {
+        await updateDoc(doc(db, col || 'pedidos', id), data);
     };
 
     // Exponer db y funciones Firestore para scripts globales
@@ -1346,28 +1346,125 @@ window.cargarListaProductos = async function() {
             lista.innerHTML = '<div style="color:#555;text-align:center;padding:1rem;font-size:.82rem;">Sin productos registrados</div>';
             return;
         }
+
+        // Deduplicar por nombre (mantener el primero encontrado)
+        var seen = {};
+        prods = prods.filter(function(p) {
+            var key = (p.nombre||'').toLowerCase().trim();
+            if (seen[key]) return false;
+            seen[key] = true;
+            return true;
+        });
+
         lista.innerHTML = '';
         prods.sort(function(a,b){ return (a.nombre||'').localeCompare(b.nombre||''); });
+
         prods.forEach(function(p) {
+            var precio = parseFloat(p.precio || p.price || p.costo || 0);
             var row = document.createElement('div');
-            row.style.cssText = 'background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.65rem;margin-bottom:.4rem;display:flex;justify-content:space-between;align-items:center;';
+            row.style.cssText = 'background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.65rem;margin-bottom:.4rem;';
+            row.id = 'prod-row-' + p.id;
+
+            // Vista normal
+            var viewDiv = document.createElement('div');
+            viewDiv.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;';
+            viewDiv.id = 'prod-view-' + p.id;
+
             var info = document.createElement('div');
+            info.style.flex = '1';
             info.innerHTML =
                 '<div style="font-size:.85rem;font-weight:700;color:#fff;">' + (p.nombre||'Sin nombre') + '</div>' +
-                '<div style="font-size:.72rem;color:#888;">' + (p.categoria||'general') + ' &middot; $' + (p.precio||0) + '</div>' +
-                (p.descripcion ? '<div style="font-size:.7rem;color:#666;margin-top:.1rem;">' + p.descripcion + '</div>' : '');
+                '<div style="font-size:.75rem;color:#888;margin-top:.1rem;">' +
+                    (p.categoria||'general') + ' &middot; ' +
+                    '<span style="color:#25D366;font-weight:700;">$' + precio.toFixed(2) + '</span>' +
+                '</div>' +
+                (p.descripcion ? '<div style="font-size:.7rem;color:#666;margin-top:.15rem;">' + p.descripcion.slice(0,60) + (p.descripcion.length>60?'...':'') + '</div>' : '');
+
+            var btnGrp = document.createElement('div');
+            btnGrp.style.cssText = 'display:flex;gap:.35rem;flex-shrink:0;margin-left:.5rem;';
+
+            var btnEdit = document.createElement('button');
+            btnEdit.textContent = 'Editar';
+            btnEdit.style.cssText = 'background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);color:#3B82F6;border-radius:7px;padding:.25rem .55rem;font-size:.72rem;cursor:pointer;font-family:inherit;font-weight:700;';
+            btnEdit.setAttribute('data-id', p.id);
+            btnEdit.onclick = function() { editarProducto(this.getAttribute('data-id')); };
+
             var btnDel = document.createElement('button');
-            btnDel.textContent = String.fromCodePoint(128465);
-            btnDel.style.cssText = 'background:rgba(244,67,54,.15);border:1px solid rgba(244,67,54,.3);color:#F44336;border-radius:7px;padding:.25rem .55rem;font-size:.72rem;cursor:pointer;flex-shrink:0;';
-            btnDel.setAttribute('data-did', p.id);
-            btnDel.onclick = function() { eliminarProducto(this.getAttribute('data-did')); };
-            row.appendChild(info);
-            row.appendChild(btnDel);
+            btnDel.innerHTML = '&#128465;';
+            btnDel.style.cssText = 'background:rgba(244,67,54,.15);border:1px solid rgba(244,67,54,.3);color:#F44336;border-radius:7px;padding:.25rem .5rem;font-size:.72rem;cursor:pointer;';
+            btnDel.setAttribute('data-id', p.id);
+            btnDel.onclick = function() { eliminarProducto(this.getAttribute('data-id')); };
+
+            btnGrp.appendChild(btnEdit);
+            btnGrp.appendChild(btnDel);
+            viewDiv.appendChild(info);
+            viewDiv.appendChild(btnGrp);
+
+            // Formulario de edición (oculto)
+            var editDiv = document.createElement('div');
+            editDiv.id = 'prod-edit-' + p.id;
+            editDiv.style.display = 'none';
+            editDiv.style.marginTop = '.5rem';
+            editDiv.innerHTML =
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.35rem;margin-bottom:.35rem;">' +
+                    '<input id="pe-nombre-' + p.id + '" value="' + (p.nombre||'').replace(/"/g,'&quot;') + '" placeholder="Nombre" ' +
+                        'style="background:#111;border:1px solid rgba(255,255,255,.12);color:#fff;border-radius:7px;padding:.38rem .6rem;font-family:inherit;font-size:.8rem;">' +
+                    '<input id="pe-precio-' + p.id + '" type="number" value="' + precio + '" placeholder="Precio" ' +
+                        'style="background:#111;border:1px solid rgba(255,255,255,.12);color:#fff;border-radius:7px;padding:.38rem .6rem;font-family:inherit;font-size:.8rem;">' +
+                '</div>' +
+                '<select id="pe-cat-' + p.id + '" style="width:100%;background:#111;border:1px solid rgba(255,255,255,.12);color:#fff;border-radius:7px;padding:.38rem .6rem;font-family:inherit;font-size:.8rem;margin-bottom:.35rem;">' +
+                    '<option value="tortas"' + ((p.categoria||'')==='tortas'?' selected':'') + '>Tortas</option>' +
+                    '<option value="bebidas"' + ((p.categoria||'')==='bebidas'?' selected':'') + '>Bebidas</option>' +
+                    '<option value="drinks"' + ((p.categoria||'')==='drinks'?' selected':'') + '>Drinks</option>' +
+                    '<option value="botanas"' + ((p.categoria||'')==='botanas'?' selected':'') + '>Botanas</option>' +
+                    '<option value="extras"' + ((p.categoria||'')==='extras'?' selected':'') + '>Extras</option>' +
+                    '<option value="combos"' + ((p.categoria||'')==='combos'?' selected':'') + '>Combos</option>' +
+                    '<option value="especiales"' + ((p.categoria||'')==='especiales'?' selected':'') + '>Especiales</option>' +
+                '</select>' +
+                '<input id="pe-desc-' + p.id + '" value="' + (p.descripcion||'').replace(/"/g,'&quot;') + '" placeholder="Descripcion" ' +
+                    'style="width:100%;background:#111;border:1px solid rgba(255,255,255,.12);color:#fff;border-radius:7px;padding:.38rem .6rem;font-family:inherit;font-size:.8rem;margin-bottom:.35rem;">' +
+                '<div style="display:flex;gap:.35rem;">' +
+                    '<button onclick="guardarProducto('' + p.id + '')" ' +
+                        'style="flex:1;padding:.45rem;background:rgba(37,211,102,.2);border:1px solid rgba(37,211,102,.4);color:#25D366;border-radius:7px;font-family:inherit;font-size:.78rem;font-weight:700;cursor:pointer;">Guardar</button>' +
+                    '<button onclick="cancelarEditarProducto('' + p.id + '')" ' +
+                        'style="padding:.45rem .75rem;background:transparent;border:1px solid rgba(255,255,255,.1);color:#888;border-radius:7px;font-family:inherit;font-size:.78rem;cursor:pointer;">Cancelar</button>' +
+                '</div>';
+
+            row.appendChild(viewDiv);
+            row.appendChild(editDiv);
             lista.appendChild(row);
         });
+
     } catch(e) {
         lista.innerHTML = '<div style="color:#F44336;font-size:.8rem;">Error: ' + e.message + '</div>';
     }
+};
+
+window.editarProducto = function(id) {
+    var view = document.getElementById('prod-view-' + id);
+    var edit = document.getElementById('prod-edit-' + id);
+    if (view) view.style.display = 'none';
+    if (edit) { edit.style.display = 'block'; edit.querySelector('input').focus(); }
+};
+
+window.cancelarEditarProducto = function(id) {
+    var view = document.getElementById('prod-view-' + id);
+    var edit = document.getElementById('prod-edit-' + id);
+    if (view) view.style.display = 'flex';
+    if (edit) edit.style.display = 'none';
+};
+
+window.guardarProducto = async function(id) {
+    if (!window._adminUpdateDoc) { alert('Firebase cargando'); return; }
+    var nombre = document.getElementById('pe-nombre-' + id)?.value.trim();
+    var precio = parseFloat(document.getElementById('pe-precio-' + id)?.value) || 0;
+    var cat    = document.getElementById('pe-cat-' + id)?.value;
+    var desc   = document.getElementById('pe-desc-' + id)?.value.trim();
+    if (!nombre) { alert('El nombre es obligatorio'); return; }
+    try {
+        await window._adminUpdateDoc(id, { nombre: nombre, precio: precio, categoria: cat, descripcion: desc });
+        await cargarListaProductos();
+    } catch(e) { alert('Error al guardar: ' + e.message); }
 };
 
 window.crearProducto = async function() {
@@ -1384,18 +1481,18 @@ window.crearProducto = async function() {
             categoria: cat, descripcion: desc,
             activo: true, creado: new Date().toISOString()
         });
-        document.getElementById('prod-nombre').value    = '';
-        document.getElementById('prod-precio').value    = '';
+        document.getElementById('prod-nombre').value     = '';
+        document.getElementById('prod-precio').value     = '';
         document.getElementById('prod-descripcion').value = '';
         await cargarListaProductos();
     } catch(e) { alert('Error: ' + e.message); }
 };
 
-window.eliminarProducto = async function(docId) {
+window.eliminarProducto = async function(id) {
     if (!confirm('Eliminar este producto?')) return;
     if (!window._adminDeleteDoc) { alert('Firebase cargando'); return; }
     try {
-        await window._adminDeleteDoc('productos', docId);
+        await window._adminDeleteDoc('productos', id);
         await cargarListaProductos();
     } catch(e) { alert('Error: ' + e.message); }
 };
