@@ -1180,15 +1180,23 @@ window.cargarListaCajeros = async function() {
         var snap = await getDocs(collection(db, 'empleados'));
         var emps = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
         if (!emps.length) { lista.innerHTML = '<div style="color:#555;text-align:center;padding:1rem;font-size:.82rem;">No hay cajeros registrados</div>'; return; }
-        lista.innerHTML = emps.map(function(e) {
-            return '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.65rem;margin-bottom:.4rem;display:flex;justify-content:space-between;align-items:center;">' +
-                '<div>' +
-                '<div style="font-size:.85rem;font-weight:700;">' + (e.nombre||'') + ' ' + (e.apellido||'') + '</div>' +
-                '<div style="font-size:.72rem;color:#888;">' + (e.empleadoId||e.id) + ' · ' + (e.rol||'cajero') + '</div>' +
-                '</div>' +
-                '<button onclick="eliminarCajero('' + (e.empleadoId||e.id) + '','' + e.id + '')" style="background:rgba(244,67,54,.15);border:1px solid rgba(244,67,54,.3);color:#F44336;border-radius:7px;padding:.25rem .55rem;font-size:.72rem;cursor:pointer;font-family:inherit;">🗑️</button>' +
-                '</div>';
-        }).join('');
+        lista.innerHTML = '';
+        emps.forEach(function(e) {
+            var row = document.createElement('div');
+            row.style.cssText = 'background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.65rem;margin-bottom:.4rem;display:flex;justify-content:space-between;align-items:center;';
+            var info = document.createElement('div');
+            info.innerHTML = '<div style="font-size:.85rem;font-weight:700;">' + (e.nombre||'') + ' ' + (e.apellido||'') + '</div>'
+                + '<div style="font-size:.72rem;color:#888;">' + (e.empleadoId||e.id) + ' &middot; ' + (e.rol||'cajero') + '</div>';
+            var btn = document.createElement('button');
+            btn.textContent = String.fromCodePoint(128465);
+            btn.style.cssText = 'background:rgba(244,67,54,.15);border:1px solid rgba(244,67,54,.3);color:#F44336;border-radius:7px;padding:.25rem .55rem;font-size:.72rem;cursor:pointer;';
+            btn.setAttribute('data-eid', e.empleadoId || e.id);
+            btn.setAttribute('data-did', e.id);
+            btn.onclick = function() { eliminarCajero(this.getAttribute('data-eid'), this.getAttribute('data-did')); };
+            row.appendChild(info);
+            row.appendChild(btn);
+            lista.appendChild(row);
+        });
     } catch(e) { lista.innerHTML = '<div style="color:#F44336;font-size:.8rem;">Error: ' + e.message + '</div>'; }
 };
 
