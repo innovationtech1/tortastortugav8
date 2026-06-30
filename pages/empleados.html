@@ -1487,7 +1487,7 @@ function renderPerfil(){
   const R=ROLES[rolActual];
   const puestos = ['cajero','cocinero','mesero','repartidor','limpieza','otro'];
   el('prof-body').innerHTML=`
-    <!-- AVATAR + NOMBRE CON EDICIÓN -->
+    /* AVATAR + NOMBRE CON EDICION */
     <div style="background:var(--sf2);border-radius:var(--rxs);padding:.9rem;margin-bottom:.7rem;display:flex;align-items:center;gap:.8rem;">
       <div class="av av-${R.css}" style="width:50px;height:50px;font-size:1.25rem;" id="prof-av">${(empData.nombre[0]||'')+(empData.apellido[0]||'')}</div>
       <div style="flex:1;">
@@ -1497,7 +1497,7 @@ function renderPerfil(){
       <button onclick="abrirEditPerfil()" style="background:var(--pglow);border:1px solid rgba(255,90,0,.3);color:var(--primary);border-radius:6px;padding:.28rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit;">✏️ Editar perfil</button>
     </div>
 
-    <!-- FORMULARIO DE EDICIÓN (oculto por defecto) -->
+    /* FORMULARIO DE EDICION */
     <div id="prof-edit-form" style="display:none;background:var(--sf2);border:1px solid rgba(255,90,0,.25);border-radius:var(--rxs);padding:1rem;margin-bottom:.7rem;">
       <div style="font-size:.76rem;font-weight:800;color:var(--mu);letter-spacing:.05em;margin-bottom:.75rem;">EDITAR INFORMACIÓN</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.6rem;">
@@ -1520,7 +1520,7 @@ function renderPerfil(){
           ${puestos.map(p=>`<option value="${p}" ${empData.puesto===p?'selected':''}>${p.charAt(0).toUpperCase()+p.slice(1)}</option>`).join('')}
         </select>
       </div>
-      <!-- CAMBIO DE CONTRASEÑA -->
+      /* CAMBIO DE CONTRASENA */
       <div style="border-top:1px solid var(--bd);margin:.75rem 0 .75rem;padding-top:.75rem;">
         <div style="font-size:.72rem;font-weight:800;color:var(--mu);letter-spacing:.05em;margin-bottom:.55rem;"><span id="pw-section-label">CAMBIAR CONTRASEÑA / PIN (opcional)</span></div>
         <div style="margin-bottom:.6rem;">
@@ -3151,7 +3151,7 @@ window.cargarNomina = async function(){
             <div style="font-size:.72rem;color:var(--mu);">trabajadas</div>
           </div>
         </div>
-        <!-- Salario por hora editable -->
+        /* Salario por hora editable */
         <div style="background:var(--sf2);border-radius:var(--rxs);padding:.65rem .85rem;display:flex;align-items:center;gap:.65rem;margin-bottom:.55rem;">
           <div style="font-size:.78rem;color:var(--mu);flex:1;">Salario por hora</div>
           <div style="display:flex;align-items:center;gap:.4rem;">
@@ -3166,7 +3166,7 @@ window.cargarNomina = async function(){
             <span style="font-size:.75rem;color:var(--mu);">/hr</span>
           </div>
         </div>
-        <!-- Pago calculado -->
+        /* Pago calculado */
         <div style="display:flex;align-items:center;justify-content:space-between;padding:.55rem .85rem;background:${sinSal?'var(--wa2)':'var(--ok2)'};border-radius:var(--rxs);border:1px solid ${sinSal?'rgba(245,158,11,.25)':'rgba(37,211,102,.25)'};">
           <div style="font-size:.8rem;font-weight:700;color:${sinSal?'var(--wa)':'var(--ok)'};">
             ${sinSal ? '⚠️ Sin salario configurado' : '✅ Pago del día'}
@@ -3175,7 +3175,7 @@ window.cargarNomina = async function(){
             ${sinSal ? '—' : pagoStr}
           </div>
         </div>
-        <!-- Detalle de turnos -->
+        /* Detalle de turnos */
         ${e.turnos.length > 1 ? `<div style="margin-top:.5rem;font-size:.72rem;color:var(--mu);">${e.turnos.length} turnos registrados este día</div>` : ''}
       </div>`;
     }).join('');
