@@ -462,14 +462,17 @@ window.agregarTodoAlCarrito = function() {
         const pid = qtyEl.id.replace('qty-', '');
         if (!pid) return;
 
-        // Obtener select y precio
-        const sel    = document.getElementById('select-' + pid);
-        const precio = sel ? (parseFloat(sel.value) || 0) : 0;
-        const label  = sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex].text : '';
+        // Obtener variante y precio desde la tarjeta
+        const cardRef2 = window._menuCards && window._menuCards[pid];
+        const variante = cardRef2 ? cardRef2._getVariante() : null;
+        const precio   = variante ? (parseFloat(variante.precio) || 0) : 0;
+        const label    = variante ? (variante.label || '') : '';
 
-        // Obtener nombre de la card padre
-        const card   = qtyEl.closest('.product-card');
-        const nombre = card ? (card.querySelector('.product-title')?.textContent || pid) : pid;
+        // Obtener nombre — usar cache de tarjetas (_menuCards) o fallback
+        const cardRef = window._menuCards && window._menuCards[pid];
+        const nombre  = cardRef && cardRef._productoData
+            ? cardRef._productoData.nombre
+            : (qtyEl.closest('[data-nombre]')?.getAttribute('data-nombre') || pid);
 
         // Agregar qty veces al carrito activo
         for (let i = 0; i < qty; i++) {
