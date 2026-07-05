@@ -250,8 +250,7 @@ export async function eliminarProducto(id) {
 }
 
 // ── MENÚ EN TIEMPO REAL ──────────────────────────────────────────────────────
-let _menuUnsub  = null;
-let _menuActive = false;
+let _menuUnsub = null;
 
 function _limpiarMenuContainers() {
     ['menu-container','drinks-container','botanas-container'].forEach(function(id) {
@@ -293,23 +292,23 @@ function _renderProductos(productos) {
 }
 
 export function renderMenu() {
-    // Prevenir múltiples listeners
-    if (_menuActive) return;
-    _menuActive = true;
-
-    if (_menuUnsub) { try { _menuUnsub(); } catch(e) {} }
+    // Solo inicializar una vez
+    if (_menuUnsub) return;
 
     _limpiarMenuContainers();
+    // Mostrar loading
+    const mc = document.getElementById('menu-container');
+    if (mc) mc.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">Cargando menú...</div>';
 
-    // Usar datos estáticos de inmediato mientras carga Firestore
-    _renderProductos([...PRODUCTOS_INICIALES]);
-
-    // Actualizar desde Firestore
     try {
         _menuUnsub = onSnapshot(
             collection(db, 'productos'),
             function(snapshot) {
-                if (snapshot.empty) return; // mantener estático
+                if (snapshot.empty) {
+                    // Firestore vacío — usar datos estáticos
+                    _renderProductos([...PRODUCTOS_INICIALES]);
+                    return;
+                }
 
                 const fsProds = snapshot.docs.map(function(d) {
                     const data = d.data();
