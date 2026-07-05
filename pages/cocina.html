@@ -587,7 +587,10 @@ window.confirmarEliminar = async (id) => {
 };
 
 /* ── onSnapshot ─────────────────────────────────────────────── */
-onSnapshot(collection(db,'pedidos'), snap => {
+let _kdsUnsub = null;
+function iniciarKDS(){
+  if(_kdsUnsub) try{_kdsUnsub();}catch(e){}
+  _kdsUnsub = onSnapshot(collection(db,'pedidos'), snap => {
     todos = snap.docs.map(d => ({ id:d.id, ...d.data() }));
 
     const hoy = new Date(); hoy.setHours(0,0,0,0);
