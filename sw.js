@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tortas-v1783284922';
+const CACHE_NAME = 'tortas-v1783286277';
 const STATIC_ASSETS = [
   '/tortastortugav8/',
   '/tortastortugav8/index.html',
