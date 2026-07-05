@@ -254,6 +254,11 @@ let _menuUnsubscribe = null;
 
 function iniciarMenuEnVivo() {
     if (_menuUnsubscribe) try { _menuUnsubscribe(); } catch(e) {}
+    // Limpiar todos los contenedores antes de empezar
+    ['menu-container','drinks-container','botanas-container'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;font-size:.85rem;">Cargando menú...</div>';
+    });
     try {
         _menuUnsubscribe = onSnapshot(
             collection(db, 'productos'),
@@ -320,8 +325,20 @@ function renderMenuConDatos(productos) {
         combos:  document.getElementById('botanas-container'),
         especiales: document.getElementById('botanas-container'),
     };
-    Object.values(containers).forEach(el => { if (el) el.innerHTML = ''; });
+    // Limpiar solo los 3 contenedores únicos para evitar duplicados
+    ['menu-container','drinks-container','botanas-container'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+    });
 
+    // Deduplicar por nombre antes de renderizar
+    const seen = new Set();
+    productos = productos.filter(p => {
+        const key = (p.nombre||'').toLowerCase().trim();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
     productos.sort((a, b) => (a.orden||99) - (b.orden||99));
 
     productos.forEach(p => {
