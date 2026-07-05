@@ -1399,7 +1399,7 @@ function cerrarOrdenModal() {
                 <p class="mods-subtitle" id="mods-item-name"
                    style="color:#FF5A00;font-weight:700;font-size:.88rem;margin-top:.2rem;"></p>
             </div>
-            <button class="close-btn" id="close-mods"
+            <button class="close-btn" id="close-mods" onclick="document.getElementById('mods-modal').classList.remove('open')"
                 style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
                        color:#888;border-radius:8px;width:32px;height:32px;font-size:1rem;cursor:pointer;">✕</button>
         </div>
@@ -1504,7 +1504,7 @@ function cerrarOrdenModal() {
             </div>
         </div>
         <div class="mods-footer" style="padding:1rem;display:flex;gap:.5rem;">
-            <button class="mods-skip-btn" id="mods-skip" onclick="confirmarMods(false)"
+            <button class="mods-skip-btn" id="mods-skip" onclick="confirmarMods(false);document.getElementById('mods-modal').classList.remove('open')"
                 style="flex:1;padding:.7rem;background:rgba(255,255,255,.06);
                        border:1px solid rgba(255,255,255,.12);color:#aaa;
                        border-radius:12px;font-family:inherit;font-size:.85rem;
@@ -1700,7 +1700,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783293947';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783294593';
     (async () => {
         try {
             await seedProductos();
