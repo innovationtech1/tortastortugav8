@@ -308,9 +308,65 @@ function crearCard(p) {
             '</div>' +
         '</div>';
 
-    const qtyEl = card.querySelector('.qty-num');
-    card.querySelector('.qty-plus').onclick  = function() { qtyEl.textContent = parseInt(qtyEl.textContent)+1; actualizarBotonAgregarTodo(); };
-    card.querySelector('.qty-minus').onclick = function() { qtyEl.textContent = Math.max(0,parseInt(qtyEl.textContent)-1); actualizarBotonAgregarTodo(); };
+    const qtyEl   = card.querySelector('.qty-num');
+    const btnAgr  = card.querySelector('.btn-agregar-card');
+
+    /* Función para abrir el modal de modificaciones */
+    function abrirModsParaEsteProducto() {
+        const variante = card._getVariante();
+        const precio   = parseFloat(variante.precio) || parseFloat(p.precio) || 0;
+        window._pendingItem = {
+            id: pid, nombre: p.nombre || 'Producto',
+            precio: precio, variante: variante.label || '',
+            modificaciones: [], _qty: 1,
+        };
+        window._pendingItemCard = card;
+        const modal  = document.getElementById('mods-modal');
+        const nameEl = document.getElementById('mods-item-name');
+        if (nameEl) nameEl.textContent = (p.nombre||'') + (variante.label ? ' · ' + variante.label : '');
+        const isTorta = p.tipo === 'torta' || (p.categoria||'').toLowerCase() === 'tortas';
+        document.querySelectorAll('.mods-section').forEach(function(s, i) {
+            s.style.display = (!isTorta && (i===1||i===2)) ? 'none' : 'block';
+        });
+        document.querySelectorAll('.mod-chip input').forEach(function(cb) {
+            cb.checked = false;
+            if (cb.closest) cb.closest('.mod-chip').classList.remove('selected');
+        });
+        var notasEl = document.getElementById('mods-notes');
+        if (notasEl) notasEl.value = '';
+        if (modal) modal.classList.add('open');
+    }
+
+    /* Botón Agregar — abre modificaciones */
+    if (btnAgr) btnAgr.onclick = abrirModsParaEsteProducto;
+
+    /* Botón + — también abre modificaciones (atajo rápido) */
+    card.querySelector('.qty-plus').onclick = abrirModsParaEsteProducto;
+
+    /* Botón − — quita el último item de este producto del carrito */
+    card.querySelector('.qty-minus').onclick = function() {
+        var cs = window._cuentasSys;
+        if (!cs) return;
+        var c = cs.cuentas.find(function(x){ return x.id === cs.activa; });
+        if (!c || !c.items.length) return;
+        var items = c.items;
+        var lastIdx = -1;
+        for (var i = items.length-1; i >= 0; i--) {
+            if (items[i].id === pid) { lastIdx = i; break; }
+        }
+        if (lastIdx >= 0) {
+            items.splice(lastIdx, 1);
+            var cur = parseInt(qtyEl.textContent) || 0;
+            qtyEl.textContent = Math.max(0, cur - 1);
+            if (window.renderCartItems)   window.renderCartItems();
+            if (window.renderCuentasTabs) window.renderCuentasTabs();
+        }
+    };
+
+    /* Callback cuando se confirma agregar desde el modal */
+    card._onItemAdded = function() {
+        qtyEl.textContent = parseInt(qtyEl.textContent) + 1;
+    };
 
     card._pid = pid;
     card._productoData = p;
