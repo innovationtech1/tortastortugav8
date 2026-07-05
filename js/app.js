@@ -988,9 +988,12 @@ window.renderCartItems = function() {
     if (!el || !cActiva) return;
     const items = cActiva.items;
 
-    // ── Header cuenta label
-    const lbl = document.getElementById('cuenta-label-active');
-    if (lbl) lbl.textContent = cActiva.nombre;
+    // ── Sincronizar input nombre con cuenta activa
+    const nomInp = document.getElementById('nombre-cuenta-input');
+    if (nomInp && document.activeElement !== nomInp) {
+        nomInp.value = cActiva.nombre === ('Cuenta ' + cActiva.id) ? '' : (cActiva.nombre || '');
+        nomInp.placeholder = '✏️ ' + (cActiva.nombre || 'Nombre cliente...');
+    }
 
     // ── Total
     const total = items.reduce((s, i) => s + (parseFloat(i.precio)||0), 0);
