@@ -142,6 +142,13 @@ function confirmarMods(conMods) {
     if (cm) cm.classList.add('active');
 }
 
+function abrirCarrito() {
+    if (window.renderCuentasTabs) window.renderCuentasTabs();
+    if (window.renderCartItems)   window.renderCartItems();
+    var cm = document.getElementById('cart-modal');
+    if (cm) cm.classList.add('active');
+}
+
 function limpiarCarrito() {
     if (window._limpiarCarrito) window._limpiarCarrito();
     else {
@@ -1256,7 +1263,7 @@ function cerrarOrdenModal() {
         })();
         </script>
         <button class="signout-btn" onclick="cerrarSesion()" title="Cerrar sesion">Salir</button>
-        <div class="cart-icon" id="cart-icon" onclick="cerrarModal()" title="Ver orden">
+        <div class="cart-icon" id="cart-icon" onclick="abrirCarrito()" title="Ver orden">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                  style="display:block;">
@@ -1640,7 +1647,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783290931';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783290963';
     (async () => {
         try {
             await seedProductos();
