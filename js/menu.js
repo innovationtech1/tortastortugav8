@@ -306,7 +306,7 @@ function renderMenuEstatico() {
     renderMenuConDatos([...PRODUCTOS_INICIALES]);
 }
 
-function renderMenu() {
+export function renderMenu() {
     iniciarMenuEnVivo();
 }
 
