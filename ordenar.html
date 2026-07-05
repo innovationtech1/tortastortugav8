@@ -1350,24 +1350,15 @@ function cerrarOrdenModal() {
 
         <!-- BOTONES CUENTA -->
         <div style="display:flex;gap:.4rem;padding:.5rem .9rem;flex-shrink:0;">
-            <div id="nombre-cuenta-wrap" style="flex:1;position:relative;">
-                <!-- Vista normal: botón -->
-                <button id="btn-nombre-cuenta" onclick="window.editarNombreCuenta()"
-                    style="width:100%;padding:.4rem;background:rgba(255,255,255,.05);
-                           border:1px solid rgba(255,255,255,.1);color:#aaa;
-                           border-radius:8px;font-family:inherit;font-size:.75rem;cursor:pointer;">
-                    ✏️ Nombre
-                </button>
-                <!-- Input inline (oculto por defecto) -->
-                <div id="nombre-cuenta-input-wrap"
-                     style="display:none;position:absolute;top:0;left:0;right:0;z-index:10;">
-                    <input id="nombre-cuenta-input" type="text"
-                        placeholder="Nombre de la cuenta"
-                        style="width:100%;box-sizing:border-box;padding:.4rem .65rem;
-                               background:#111;border:1.5px solid #FF5A00;color:#fff;
-                               border-radius:8px;font-family:inherit;font-size:.8rem;outline:none;">
-                </div>
-            </div>
+            <input id="nombre-cuenta-input" type="text"
+                    placeholder="✏️ Nombre cliente..."
+                    inputmode="text" autocomplete="off" autocorrect="off"
+                    style="flex:1;box-sizing:border-box;padding:.42rem .65rem;
+                           background:rgba(255,255,255,.06);
+                           border:1.5px solid rgba(255,255,255,.12);
+                           color:#fff;border-radius:8px;font-family:inherit;
+                           font-size:.82rem;outline:none;min-width:0;
+                           -webkit-appearance:none;appearance:none;">
             <button onclick="window.limpiarCuentaActual()"
                 style="flex:1;padding:.4rem;background:rgba(255,255,255,.05);
                        border:1px solid rgba(255,255,255,.1);color:#aaa;
@@ -1643,7 +1634,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783291706';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783291975';
     (async () => {
         try {
             await seedProductos();
@@ -2402,6 +2393,37 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 <script>
+// Guardar nombre de cuenta al escribir (debounce)
+(function() {
+    var _timer = null;
+    function initNombreInput() {
+        var inp = document.getElementById('nombre-cuenta-input');
+        if (!inp) return;
+
+        inp.addEventListener('input', function() {
+            clearTimeout(_timer);
+            var val = inp.value.trim();
+            _timer = setTimeout(function() {
+                var cs = window._cuentasSys;
+                if (!cs) return;
+                var c = cs.cuentas.find(function(x){ return x.id === cs.activa; });
+                if (c && val) {
+                    c.nombre = val;
+                    // Actualizar tab sin re-renderizar todo
+                    if (window.renderCartItems) window.renderCartItems();
+                }
+            }, 400);
+        });
+
+        inp.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { inp.blur(); }
+        });
+    }
+    document.addEventListener('DOMContentLoaded', initNombreInput);
+    // También intentar después si DOMContentLoaded ya pasó
+    setTimeout(initNombreInput, 500);
+})();
+
 window.editarNombreCuenta = function() {
     var cs  = window._cuentasSys;
     var inp = document.getElementById('nombre-cuenta-input');
