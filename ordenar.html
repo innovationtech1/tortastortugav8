@@ -1646,7 +1646,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783292810';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783293147';
     (async () => {
         try {
             await seedProductos();
@@ -2017,23 +2017,7 @@ function enviarOrdenModal() {
 
 
 <!-- FAB: AGREGAR TODO AL CARRITO -->
-<div id="fab-agregar-todo"
-     onclick="window.agregarTodoAlCarrito()"
-     style="position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);
-            background:linear-gradient(135deg,#FF5A00,#FF8800);color:#fff;
-            border-radius:50px;padding:.8rem 1.5rem;
-            display:none;align-items:center;gap:.6rem;
-            z-index:8000;cursor:pointer;
-            box-shadow:0 8px 28px rgba(255,90,0,.5);
-            font-family:inherit;font-weight:800;font-size:.92rem;
-            transition:background .2s, transform .1s;
-            -webkit-tap-highlight-color:transparent;">
-  <span style="font-size:1.1rem;">🛒</span>
-  <span>Agregar al carrito</span>
-  <span id="fab-count"
-        style="background:rgba(0,0,0,.2);border-radius:20px;
-               padding:.15rem .55rem;font-size:.78rem;">0 productos</span>
-</div>
+
 
 
 <!-- ═══════════════════════════════════════════════════
