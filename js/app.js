@@ -1064,6 +1064,8 @@ window.renderCartItems = function() {
     }).join('');
 
 
+};
+
 window.agregarNuevaCuenta = function() {
     CS.counter++;
     const color = CUENTA_COLORS[(CS.cuentas.length) % CUENTA_COLORS.length];
