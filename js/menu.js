@@ -278,7 +278,7 @@ function crearCard(p) {
         const opts = vars.map(function(v, i) {
             return '<option value="' + i + '">' + (v.label || ('Combo ' + String.fromCharCode(65+i))) + '</option>';
         }).join('');
-        varEl = '<select id="var-' + pid + '" class="var-select" style="width:100%;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,90,0,.4);color:#fff;border-radius:10px;padding:.42rem .65rem;font-family:inherit;font-size:.78rem;margin:.3rem 0;outline:none;cursor:pointer;">' + opts + '</select>';
+        varEl = '<select id="var-' + pid + '" class="var-select" style="width:100%;background:#0d0d0d;border:1.5px solid rgba(255,90,0,.5);color:#fff;border-radius:10px;padding:.42rem .65rem;font-family:inherit;font-size:.78rem;margin:.3rem 0;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;">' + opts + '</select>';
     } else if (vars.length === 1) {
         varEl = '<div style="font-size:.78rem;color:#FF5A00;font-weight:700;margin:.2rem 0;">' + (vars[0].label || ('$' + (vars[0].precio || p.precio || 0))) + '</div>';
     } else if (p.precio) {
