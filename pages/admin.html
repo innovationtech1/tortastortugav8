@@ -108,7 +108,7 @@
 <!-- LOGIN -->
 <div id="login-screen">
     <div class="login-box">
-        <div class="login-logo"><img src="../icons/icon-192.png" alt="Tortas Tortuga" style="width:72px;height:72px;border-radius:50%;object-fit:cover;"></div>
+        <div class="login-logo"><img src="../icons/icon-192.png" alt="Tortas Tortuga" style="width:72px;height:72px;border-radius:50%;object-fit:cover;" loading="lazy"></div>
         <h2>Panel Admin Vivo</h2>
         <p>Tortas Tortuga — Pedidos en Tiempo Real</p>
         <input type="password" id="password-input" class="login-input" placeholder="Contraseña" onkeydown="if(event.key==='Enter')entrarAdmin()">
@@ -121,7 +121,7 @@
 <!-- DASHBOARD -->
 <div id="dashboard">
     <div class="top-bar">
-        <div class="top-bar-logo"><img src="../icons/icon-192.png" alt="" style="width:26px;height:26px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px;"> <span>Tortas Tortuga</span></div>
+        <div class="top-bar-logo"><img src="../icons/icon-192.png" alt="" style="width:26px;height:26px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px;" loading="lazy"> <span>Tortas Tortuga</span></div>
         <div class="top-bar-actions" style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; overflow-x:auto; -webkit-overflow-scrolling:touch;">
             <button class="nav-btn" onclick="abrirCorteCaja()" style="border-color:var(--green); color:var(--green);">💰 Corte de Caja</button>
             <button class="nav-btn" onclick="abrirProductos()" style="border-color:var(--primary); color:var(--primary);">📦 Productos</button>
@@ -571,7 +571,7 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
             // Solo abrir el modal — no tocar el filtro de la tabla
             const fechaEl = document.getElementById('corte-fecha');
             if (fechaEl && !fechaEl.value) {
-                fechaEl.value = new Date().toISOString().split('T')[0];
+                fechaEl.value = (function(){var _d=new Date();return _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');})();
             }
             document.getElementById('corte-modal').classList.add('active');
             generarCorteCompleto();
@@ -579,7 +579,7 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
 
         window.generarCorteCompleto = async () => {
             const fechaEl  = document.getElementById('corte-fecha');
-            const fechaStr = fechaEl?.value || new Date().toISOString().split('T')[0];
+            const fechaStr = fechaEl?.value || (function(){var _d=new Date();return _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');})();
             if (fechaEl && !fechaEl.value) fechaEl.value = fechaStr;
 
             const [y, m, d] = fechaStr.split('-').map(Number);
