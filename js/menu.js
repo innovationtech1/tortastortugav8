@@ -254,6 +254,93 @@ export async function eliminarProducto(id) {
 // ── MENÚ EN TIEMPO REAL ──────────────────────────────────────────────────────
 let _menuUnsub = null;
 
+
+/* ── CREAR TARJETA DE PRODUCTO ────────────────────────────────── */
+function crearCard(p) {
+    const pid  = p.productId || p.id || Math.random().toString(36).slice(2);
+    const card = document.createElement('div');
+    card.className = 'menu-card';
+
+    // Badge
+    let badgeHTML = '';
+    if (p.badge) {
+        badgeHTML = `<div class="badge ${p.badge.clase||''}">${p.badge.texto||''}</div>`;
+    }
+
+    // Imagen
+    const imgSrc = p.imagen || 'img/torta-original.png';
+    let html = `<div class="card-img-wrap">${badgeHTML}
+        <img src="${imgSrc}" alt="${p.nombre}" loading="lazy" class="card-img">
+    </div>
+    <div class="card-body">
+        <h3 class="card-title">${p.nombre||''}</h3>
+        <p class="card-desc">${p.descripcion||''}</p>`;
+
+    // Incluye
+    if (p.incluye) {
+        html += `<div class="card-incluye">✅ ${p.incluye}</div>`;
+    }
+
+    // Variantes — select o radio
+    const vars = p.variantes || [];
+    if (vars.length > 1) {
+        html += `<select class="var-select" id="var-${pid}" style="width:100%;background:#1a1a1a;border:1px solid rgba(255,90,0,.3);color:#fff;border-radius:8px;padding:.4rem .6rem;font-family:inherit;font-size:.78rem;margin:.4rem 0;">`;
+        vars.forEach(function(v, i) {
+            html += `<option value="${i}">${v.label||v.nombre||('Opción '+(i+1))} — $${v.precio||0}</option>`;
+        });
+        html += '</select>';
+    } else if (vars.length === 1) {
+        html += `<div class="card-precio" style="font-size:.82rem;color:#FF5A00;font-weight:700;margin:.25rem 0;">${vars[0].label||'Precio'} — $${vars[0].precio||p.precio||0}</div>`;
+    } else if (p.precio) {
+        html += `<div class="card-precio" style="font-size:.82rem;color:#FF5A00;font-weight:700;margin:.25rem 0;">$${p.precio}</div>`;
+    }
+
+    // Selector cantidad
+    html += `<div class="qty-add-row" style="justify-content:center;">
+        <div class="qty-selector">
+            <button class="qty-btn qty-minus" data-pid="${pid}" type="button">−</button>
+            <span class="qty-num" id="qty-${pid}">0</span>
+            <button class="qty-btn qty-plus" data-pid="${pid}" type="button">+</button>
+        </div>
+    </div></div>`;
+
+    card.innerHTML = html;
+
+    // Botones − y +
+    const minusBtn = card.querySelector('.qty-minus');
+    const plusBtn  = card.querySelector('.qty-plus');
+    const qtyEl    = card.querySelector('.qty-num');
+
+    plusBtn.onclick = function() {
+        const n = parseInt(qtyEl.textContent) + 1;
+        qtyEl.textContent = n;
+        actualizarBotonAgregarTodo();
+    };
+    minusBtn.onclick = function() {
+        const n = Math.max(0, parseInt(qtyEl.textContent) - 1);
+        qtyEl.textContent = n;
+        actualizarBotonAgregarTodo();
+    };
+
+    // Exponer datos del producto
+    card._productoData = p;
+    card._pid = pid;
+    card._getQty = function() { return parseInt(qtyEl.textContent) || 0; };
+    card._getVariante = function() {
+        const sel = card.querySelector('.var-select');
+        if (sel && vars.length > 1) {
+            return vars[parseInt(sel.value)] || vars[0];
+        }
+        return vars[0] || { label: p.nombre, precio: p.precio || 0 };
+    };
+
+    // Registrar en window para el FAB
+    if (!window._menuCards) window._menuCards = {};
+    window._menuCards[pid] = card;
+
+    return card;
+}
+
 function _limpiarMenuContainers() {
     ['menu-container','drinks-container','botanas-container'].forEach(function(id) {
         const el = document.getElementById(id);
