@@ -1074,31 +1074,35 @@ window.guardarProducto = async function(id) {
 
     <!-- Formulario nuevo producto -->
     <div style="background:rgba(255,90,0,.08);border:1px solid rgba(255,90,0,.2);border-radius:12px;padding:1rem;margin-bottom:1rem;">
-      <div style="font-size:.75rem;color:var(--primary);font-weight:700;margin-bottom:.65rem;">➕ NUEVO PRODUCTO</div>
-      <input id="prod-nombre" placeholder="Nombre del producto *"
-        style="width:100%;background:#111;border:1px solid rgba(255,255,255,.1);color:#fff;
-               border-radius:8px;padding:.45rem .75rem;font-family:inherit;font-size:.83rem;margin-bottom:.4rem;">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.4rem;">
-        <input id="prod-precio" type="number" placeholder="Precio $ *"
-          style="background:#111;border:1px solid rgba(255,255,255,.1);color:#fff;
-                 border-radius:8px;padding:.45rem .65rem;font-family:inherit;font-size:.83rem;">
-        <select id="prod-categoria"
-          style="background:#111;border:1px solid rgba(255,255,255,.1);color:#fff;
-                 border-radius:8px;padding:.45rem .65rem;font-family:inherit;font-size:.83rem;">
-          <option value="tortas">Tortas</option>
-          <option value="bebidas">Bebidas</option>
-          <option value="extras">Extras</option>
-          <option value="combos">Combos</option>
-          <option value="especiales">Especiales</option>
-        </select>
-      </div>
-      <input id="prod-descripcion" placeholder="Descripcion (opcional)"
-        style="width:100%;background:#111;border:1px solid rgba(255,255,255,.1);color:#fff;
-               border-radius:8px;padding:.45rem .75rem;font-family:inherit;font-size:.83rem;margin-bottom:.5rem;">
+      <div style="font-size:.75rem;color:#FF5A00;font-weight:700;margin-bottom:.75rem;letter-spacing:.04em;">➕ NUEVO PRODUCTO</div>
+      <input id="prod-nombre" placeholder="Nombre del producto *" autocomplete="off"
+        style="display:block;width:100%;box-sizing:border-box;background:#0d0d0d;border:1.5px solid rgba(255,255,255,.15);color:#fff;
+               border-radius:10px;padding:.55rem .8rem;font-family:inherit;font-size:.88rem;margin-bottom:.5rem;
+               -webkit-appearance:none;appearance:none;outline:none;">
+      <input id="prod-precio" type="number" inputmode="decimal" placeholder="Precio base $ *" autocomplete="off"
+        style="display:block;width:100%;box-sizing:border-box;background:#0d0d0d;border:1.5px solid rgba(255,255,255,.15);color:#fff;
+               border-radius:10px;padding:.55rem .8rem;font-family:inherit;font-size:.88rem;margin-bottom:.5rem;
+               -webkit-appearance:none;appearance:none;outline:none;">
+      <select id="prod-categoria"
+        style="display:block;width:100%;box-sizing:border-box;background:#0d0d0d;border:1.5px solid rgba(255,255,255,.15);color:#fff;
+               border-radius:10px;padding:.55rem .8rem;font-family:inherit;font-size:.88rem;margin-bottom:.5rem;">
+        <option value="tortas">🌮 Tortas</option>
+        <option value="bebidas">🍺 Bebidas</option>
+        <option value="drinks">🍹 Drinks</option>
+        <option value="botanas">🍿 Botanas</option>
+        <option value="extras">➕ Extras</option>
+        <option value="combos">🎁 Combos</option>
+        <option value="especiales">⭐ Especiales</option>
+      </select>
+      <input id="prod-descripcion" placeholder="Descripción (opcional)" autocomplete="off"
+        style="display:block;width:100%;box-sizing:border-box;background:#0d0d0d;border:1.5px solid rgba(255,255,255,.15);color:#fff;
+               border-radius:10px;padding:.55rem .8rem;font-family:inherit;font-size:.88rem;margin-bottom:.65rem;
+               -webkit-appearance:none;appearance:none;outline:none;">
+      <div id="prod-nuevo-msg" style="font-size:.78rem;margin-bottom:.4rem;min-height:1.2rem;"></div>
       <button onclick="crearProducto()"
-        style="width:100%;padding:.6rem;background:rgba(255,90,0,.2);
-               border:1px solid rgba(255,90,0,.4);color:var(--primary);
-               border-radius:8px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
+        style="display:block;width:100%;padding:.7rem;background:linear-gradient(135deg,#FF5A00,#FF8C00);
+               border:none;color:#fff;border-radius:10px;font-family:inherit;font-size:.9rem;
+               font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent;letter-spacing:.02em;">
         ➕ Agregar Producto
       </button>
     </div>
@@ -1431,9 +1435,14 @@ window.cargarListaProductos = async function() {
         var prods = snap.docs.map(function(d) {
             var data = d.data();
             // Normalizar precio — puede venir como number, string, o anidado
-            var pr = data.precio || data.price || data.costo || data.Price || 0;
+            var pr = data.precio || data.price || data.costo || data.Price || data._precio || 0;
             if (typeof pr === 'object') pr = pr.integerValue || pr.doubleValue || 0;
             pr = parseFloat(pr) || 0;
+            // Fallback: leer de primera variante si precio es 0
+            if (!pr && data.variantes && data.variantes.length) {
+                var v0 = data.variantes[0];
+                pr = parseFloat(v0.precio || v0.price || 0) || 0;
+            }
             return Object.assign({}, data, { id: d.id, _precio: pr });
         });
 
@@ -1605,24 +1614,47 @@ window.cancelarEditarProducto = function(id) {
 
 
 window.crearProducto = async function() {
-    var nombre = document.getElementById('prod-nombre').value.trim();
-    var precio = parseFloat(document.getElementById('prod-precio').value) || 0;
-    var cat    = document.getElementById('prod-categoria').value;
-    var desc   = document.getElementById('prod-descripcion').value.trim();
-    if (!nombre) { alert('El nombre es obligatorio'); return; }
-    if (!precio)  { alert('Ingresa el precio'); return; }
-    if (!window._adminAddDoc) { alert('Firebase cargando, intenta en 2 segundos'); return; }
+    var elNom  = document.getElementById('prod-nombre');
+    var elPr   = document.getElementById('prod-precio');
+    var elCat  = document.getElementById('prod-categoria');
+    var elDesc = document.getElementById('prod-descripcion');
+    var msgEl  = document.getElementById('prod-nuevo-msg');
+
+    var nombre = (elNom?.value || '').trim();
+    var precio = parseFloat(elPr?.value || '0') || 0;
+    var cat    = elCat?.value || 'tortas';
+    var desc   = (elDesc?.value || '').trim();
+
+    var showMsg = function(txt, ok) {
+        if (!msgEl) return;
+        msgEl.style.color = ok ? '#25D366' : '#FF4444';
+        msgEl.textContent = txt;
+        if (ok) setTimeout(function(){ msgEl.textContent = ''; }, 3000);
+    };
+
+    if (!nombre) { showMsg('⚠️ Escribe el nombre del producto', false); elNom?.focus(); return; }
+    if (!precio)  { showMsg('⚠️ Ingresa el precio (mayor a $0)', false); elPr?.focus(); return; }
+    if (!window._adminAddDoc) { showMsg('⏳ Firebase cargando, intenta en 2 segundos', false); return; }
+
     try {
         await window._adminAddDoc('productos', {
-            nombre: nombre, precio: precio,
-            categoria: cat, descripcion: desc,
-            activo: true, creado: new Date().toISOString()
+            nombre:      nombre,
+            precio:      precio,
+            _precio:     precio,
+            categoria:   cat,
+            descripcion: desc,
+            variantes:   [{ label: 'Precio base', precio: precio }],
+            activo:      true,
+            creado:      new Date().toISOString()
         });
-        document.getElementById('prod-nombre').value     = '';
-        document.getElementById('prod-precio').value     = '';
-        document.getElementById('prod-descripcion').value = '';
+        if (elNom)  elNom.value  = '';
+        if (elPr)   elPr.value   = '';
+        if (elDesc) elDesc.value = '';
+        showMsg('✅ Producto agregado correctamente', true);
         await cargarListaProductos();
-    } catch(e) { alert('Error: ' + e.message); }
+    } catch(e) {
+        showMsg('❌ Error: ' + e.message, false);
+    }
 };
 
 window.eliminarProducto = async function(id) {
