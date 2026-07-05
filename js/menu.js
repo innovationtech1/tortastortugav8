@@ -429,6 +429,8 @@ export async function renderMenu() {
 
 
 export function actualizarBotonAgregarTodo() {
+    // FAB eliminado — no necesario
+    return;
     let totalItems = 0;
     let totalProductos = 0;
     document.querySelectorAll('.qty-num').forEach(el => {
