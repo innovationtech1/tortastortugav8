@@ -1,6 +1,6 @@
 import { db } from './firebase-config.js';
 import {
-    collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy
+    collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, onSnapshot
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const COL = 'productos';
@@ -249,15 +249,80 @@ export async function eliminarProducto(id) {
     await deleteDoc(doc(db, COL, id));
 }
 
-export async function renderMenu() {
+export async // Listener en tiempo real de Firestore
+let _menuUnsubscribe = null;
+
+function iniciarMenuEnVivo() {
+    if (_menuUnsubscribe) try { _menuUnsubscribe(); } catch(e) {}
+    try {
+        _menuUnsubscribe = onSnapshot(
+            collection(db, 'productos'),
+            (snapshot) => {
+                if (snapshot.empty) {
+                    // Sin productos en Firestore — usar datos estáticos
+                    renderMenuEstatico();
+                    return;
+                }
+                const fsProds = snapshot.docs.map(d => {
+                    const data = d.data();
+                    // Normalizar precio
+                    let pr = parseFloat(data.precio || data._precio || 0);
+                    if (!pr && data.variantes && data.variantes.length) {
+                        pr = parseFloat(data.variantes[0].precio || 0);
+                    }
+                    // Mapear a formato del menú
+                    const base = PRODUCTOS_INICIALES.find(p =>
+                        p.nombre.toLowerCase().includes((data.nombre||'').toLowerCase().slice(0,10)) ||
+                        (data.nombre||'').toLowerCase().includes(p.nombre.toLowerCase().slice(0,10))
+                    ) || {};
+                    return Object.assign({}, base, {
+                        productId:   d.id,
+                        nombre:      data.nombre || base.nombre || '',
+                        descripcion: data.descripcion || base.descripcion || '',
+                        categoria:   data.categoria || base.categoria || 'tortas',
+                        precio:      pr || (base.variantes ? base.variantes[0]?.precio : 0) || 0,
+                        variantes:   data.variantes || base.variantes || [{ label: 'Precio base', precio: pr }],
+                        imagen:      base.imagen || 'img/torta-original.png',
+                        badge:       base.badge   || null,
+                        disponible:  data.activo !== false,
+                        orden:       data.orden || base.orden || 99,
+                        tipo:        base.tipo || 'torta',
+                        incluye:     base.incluye || null,
+                    });
+                });
+                renderMenuConDatos(fsProds);
+            },
+            (error) => {
+                console.warn('Menu Firestore error, usando estático:', error.code);
+                renderMenuEstatico();
+            }
+        );
+    } catch(e) {
+        renderMenuEstatico();
+    }
+}
+
+function renderMenuEstatico() {
+    renderMenuConDatos([...PRODUCTOS_INICIALES]);
+}
+
+function renderMenu() {
+    iniciarMenuEnVivo();
+}
+
+function renderMenuConDatos(productos) {
     const containers = {
-        tortas: document.getElementById('menu-container'),
-        drinks: document.getElementById('drinks-container'),
-        botanas: document.getElementById('botanas-container')
+        tortas:  document.getElementById('menu-container'),
+        drinks:  document.getElementById('drinks-container'),
+        botanas: document.getElementById('botanas-container'),
+        bebidas: document.getElementById('drinks-container'),
+        extras:  document.getElementById('botanas-container'),
+        combos:  document.getElementById('botanas-container'),
+        especiales: document.getElementById('botanas-container'),
     };
     Object.values(containers).forEach(el => { if (el) el.innerHTML = ''; });
 
-    const productos = [...PRODUCTOS_INICIALES].sort((a, b) => a.orden - b.orden);
+    productos.sort((a, b) => (a.orden||99) - (b.orden||99));
 
     productos.forEach(p => {
         if (!p.disponible) return;
