@@ -399,7 +399,7 @@ async function _doEnvioAdmin() {
         }
         payToast.innerHTML = '<div style="font-size:1.4rem;margin-bottom:.4rem;">✅</div>' +
             '<div style="font-weight:800;color:#25D366;margin-bottom:.3rem;">¡Orden enviada!</div>' +
-            '<div style="font-size:.78rem;color:#aaa;">Ya puedes presionar <strong style="color:#25D366;">💳 Pagar ahora</strong></div>';
+            '<div style="font-size:.78rem;color:#aaa;">La cocina recibió tu pedido</div>';
         payToast.style.display = 'block';
         clearTimeout(window._toastTimer);
         window._toastTimer = setTimeout(function(){ payToast.style.display = 'none'; }, 4000);
@@ -1389,15 +1389,7 @@ function cerrarOrdenModal() {
                         📋 Enviar todas las cuentas
                     </button>
 
-                    <!-- Pagar -->
-                    <button onclick="abrirPagoDirecto()"
-                        style="width:100%;padding:.7rem;background:rgba(255,255,255,.06);
-                               border:1.5px solid rgba(255,255,255,.15);color:#ccc;
-                               border-radius:12px;font-family:inherit;font-size:.85rem;
-                               font-weight:700;cursor:pointer;
-                               display:flex;align-items:center;justify-content:center;gap:.5rem;">
-                        💳 Pagar ahora
-                    </button>
+
                 </div>
             </div>
         </div>
@@ -1648,7 +1640,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783290250';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783290502';
     (async () => {
         try {
             await seedProductos();
