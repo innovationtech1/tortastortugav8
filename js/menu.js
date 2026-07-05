@@ -255,73 +255,67 @@ export async function eliminarProducto(id) {
 let _menuUnsub = null;
 
 
-/* ── CREAR TARJETA DE PRODUCTO ────────────────────────────────── */
+/* ── CREAR TARJETA DE PRODUCTO ──────────────────────── */
 function crearCard(p) {
     const pid  = p.productId || p.id || Math.random().toString(36).slice(2);
-    const card = document.createElement('div');
-    card.className = 'product-card';
+    const vars = p.variantes || [];
 
-    const imgSrc = p.imagen || 'img/torta-original.png';
-    const vars   = p.variantes || [];
-
-    // Badge HTML
-    let badgeHTML = '';
-    if (p.badge && p.badge.texto) {
-        badgeHTML = `<span class="product-badge ${p.badge.clase||'badge-special'}">${p.badge.texto}</span>`;
-    }
-
-    // Variantes HTML
-    let varHTML = '';
-    if (vars.length > 1) {
-        varHTML = `<select class="var-select" id="var-${pid}"
-            style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,90,0,.3);
-                   color:#fff;border-radius:10px;padding:.42rem .65rem;font-family:inherit;
-                   font-size:.78rem;margin:.4rem 0;cursor:pointer;">`;
-        vars.forEach((v, i) => {
-            varHTML += `<option value="${i}">${v.label||('Opción '+(i+1))} — $${v.precio||0}</option>`;
-        });
-        varHTML += '</select>';
-    } else if (vars.length === 1) {
-        varHTML = `<div style="font-size:.8rem;color:var(--primary,#FF5A00);font-weight:700;
-                               margin:.2rem 0;">${vars[0].label||'Precio'} — $${vars[0].precio||p.precio||0}</div>`;
-    } else if (p.precio) {
-        varHTML = `<div style="font-size:.8rem;color:var(--primary,#FF5A00);font-weight:700;">$${p.precio}</div>`;
-    }
-
-    // Incluye
-    const incluyeHTML = p.incluye
-        ? `<div style="font-size:.72rem;color:#25D366;margin:.2rem 0;">✅ ${p.incluye}</div>`
+    /* Badge */
+    const badgeTxt = p.badge ? p.badge.texto : '';
+    const badgeEl  = badgeTxt
+        ? '<span style="position:absolute;top:.55rem;left:.55rem;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);color:#FBB724;font-size:.68rem;font-weight:900;letter-spacing:.05em;padding:.22rem .65rem;border-radius:20px;pointer-events:none;">' + badgeTxt + '</span>'
         : '';
 
-    card.innerHTML = `
-    <div class="card-img-wrap" style="position:relative;">
-        ${badgeHTML}
-        <img src="${imgSrc}" alt="${p.nombre}" loading="lazy"
-             style="width:100%;height:140px;object-fit:cover;border-radius:12px;display:block;">
-    </div>
-    <div class="product-card card-body" style="flex:1;display:flex;flex-direction:column;padding:.5rem 0 0;">
-        <h3 style="font-size:1rem;font-weight:800;margin:0 0 .25rem;color:#fff;">${p.nombre||''}</h3>
-        <p style="font-size:.75rem;color:#888;margin:0 0 .25rem;line-height:1.4;">${p.descripcion||''}</p>
-        ${incluyeHTML}
-        ${varHTML}
-        <div class="qty-add-row" style="justify-content:center;margin-top:auto;padding-top:.4rem;">
-            <div class="qty-selector">
-                <button class="qty-btn qty-minus" data-pid="${pid}" type="button">−</button>
-                <span class="qty-num" id="qty-${pid}" style="min-width:28px;text-align:center;font-weight:700;">0</span>
-                <button class="qty-btn qty-plus" data-pid="${pid}" type="button">+</button>
-            </div>
-        </div>
-    </div>`;
+    /* Incluye — quitar emoji duplicado del dato */
+    const incluyeRaw = (p.incluye || '').replace(/^[✅\s]+/, '').trim();
+    const incluyeEl  = incluyeRaw
+        ? '<div style="font-size:.7rem;color:#25D366;font-weight:600;margin:.2rem 0;">✅ ' + incluyeRaw + '</div>'
+        : '';
 
-    // Botones − y +
+    /* Variantes — labels YA traen precio, NO agregar de nuevo */
+    let varEl = '';
+    if (vars.length > 1) {
+        const opts = vars.map(function(v, i) {
+            return '<option value="' + i + '">' + (v.label || ('Combo ' + String.fromCharCode(65+i))) + '</option>';
+        }).join('');
+        varEl = '<select id="var-' + pid + '" class="var-select" style="width:100%;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,90,0,.4);color:#fff;border-radius:10px;padding:.42rem .65rem;font-family:inherit;font-size:.78rem;margin:.3rem 0;outline:none;cursor:pointer;">' + opts + '</select>';
+    } else if (vars.length === 1) {
+        varEl = '<div style="font-size:.78rem;color:#FF5A00;font-weight:700;margin:.2rem 0;">' + (vars[0].label || ('$' + (vars[0].precio || p.precio || 0))) + '</div>';
+    } else if (p.precio) {
+        varEl = '<div style="font-size:.88rem;color:#FF5A00;font-weight:800;">$' + p.precio + '</div>';
+    }
+
+    const imgSrc = p.imagen || 'img/torta-original.png';
+    const card   = document.createElement('div');
+    card.style.cssText = 'background:#1E1E1E;border-radius:18px;border:1px solid rgba(255,255,255,.07);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 4px 20px rgba(0,0,0,.45);';
+
+    card.innerHTML =
+        '<div style="position:relative;width:100%;height:170px;overflow:hidden;flex-shrink:0;">' +
+            '<img src="' + imgSrc + '" alt="' + (p.nombre||'') + '" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;">' +
+            badgeEl +
+        '</div>' +
+        '<div style="padding:.75rem .9rem .9rem;display:flex;flex-direction:column;flex:1;gap:.15rem;">' +
+            '<h3 style="font-size:.9rem;font-weight:800;color:#fff;margin:0;line-height:1.25;">' + (p.nombre||'') + '</h3>' +
+            '<p style="font-size:.7rem;color:#888;margin:0;line-height:1.4;">' + (p.descripcion||'') + '</p>' +
+            incluyeEl +
+            varEl +
+            '<div style="display:flex;justify-content:center;margin-top:auto;padding-top:.45rem;">' +
+                '<div class="qty-selector">' +
+                    '<button class="qty-btn qty-minus" data-pid="' + pid + '" type="button">−</button>' +
+                    '<span class="qty-num" id="qty-' + pid + '" style="min-width:32px;text-align:center;font-weight:800;font-size:.95rem;color:#fff;">0</span>' +
+                    '<button class="qty-btn qty-plus" data-pid="' + pid + '" type="button">+</button>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
     const qtyEl = card.querySelector('.qty-num');
-    card.querySelector('.qty-plus').onclick  = () => { qtyEl.textContent = parseInt(qtyEl.textContent)+1; actualizarBotonAgregarTodo(); };
-    card.querySelector('.qty-minus').onclick = () => { qtyEl.textContent = Math.max(0,parseInt(qtyEl.textContent)-1); actualizarBotonAgregarTodo(); };
+    card.querySelector('.qty-plus').onclick  = function() { qtyEl.textContent = parseInt(qtyEl.textContent)+1; actualizarBotonAgregarTodo(); };
+    card.querySelector('.qty-minus').onclick = function() { qtyEl.textContent = Math.max(0,parseInt(qtyEl.textContent)-1); actualizarBotonAgregarTodo(); };
 
-    card._productoData = p;
     card._pid = pid;
-    card._getQty = () => parseInt(qtyEl.textContent) || 0;
-    card._getVariante = () => {
+    card._productoData = p;
+    card._getQty      = function() { return parseInt(qtyEl.textContent) || 0; };
+    card._getVariante = function() {
         const sel = card.querySelector('.var-select');
         if (sel && vars.length > 1) return vars[parseInt(sel.value)] || vars[0];
         return vars[0] || { label: p.nombre, precio: p.precio || 0 };
@@ -331,7 +325,6 @@ function crearCard(p) {
     window._menuCards[pid] = card;
     return card;
 }
-
 function _limpiarMenuContainers() {
     ['menu-container','drinks-container','botanas-container'].forEach(function(id) {
         const el = document.getElementById(id);
