@@ -1956,7 +1956,7 @@ function renderEstadoTurno(){
 
 async function cargarResumenHoy(){
   if(!user) return;
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = (function(){var _d=new Date();return _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');})();
   const q   = query(collection(db,'turnos'),
     where('uid','==',user.uid),
     where('fechaISO','==',hoy));
@@ -2452,7 +2452,7 @@ window.abrirEditT = function(uid, nombre, tid){
   el('edit-name').textContent=nombre;
   el('et-nota').value='';
   el('msg-edit').className='msg';
-  const hoy=new Date().toISOString().split('T')[0];
+  const hoy=(function(){var _d=new Date();return _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');})();
   el('et-fecha').value=hoy;
   ['et-in','et-out','et-rd','et-rv'].forEach(i=>{ const e=el(i); if(e)e.value=''; });
   el('et-calc').style.display='none';
@@ -2743,7 +2743,7 @@ window.swMaster = function(t) {
 
 // ── Quién está en el sistema ahora ──────────────────────────
 async function cargarMasterLive() {
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = (function(){var _d=new Date();return _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');})();
   const q = query(collection(db,'turnos'), where('fechaISO','==',hoy));
   const s = await getDocs(q);
   let activos=[], descanso=[], completados=[];
@@ -2787,7 +2787,7 @@ function masterLiveRow(t, estado) {
 
 // ── Horas de hoy ────────────────────────────────────────────
 async function cargarMasterHoy() {
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = (function(){var _d=new Date();return _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');})();
   const q = query(collection(db,'turnos'), where('fechaISO','==',hoy));
   const s = await getDocs(q);
   let items = [];
@@ -3005,7 +3005,7 @@ window.calcMaHoras = function() {
 };
 
 window.guardarTurnoMaster = async function() {
-  const fecha = new Date().toISOString().split('T')[0];
+  const fecha = (function(){var _d=new Date();return _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');})();
   const ei=el('ma-entrada').value, so=el('ma-salida').value, nota=el('ma-nota').value.trim();
   if(!ei){ msg('msg-master-action','er','Ingresa hora de entrada'); return; }
   const mk=(h,m)=>{ const d=new Date(fecha); d.setHours(h,m,0,0); return d; };
@@ -3051,7 +3051,7 @@ window.guardarTurnoMaster = async function() {
 function initNomina(){
   const fechaEl = el('nom-fecha');
   if(fechaEl && !fechaEl.value){
-    fechaEl.value = new Date().toISOString().split('T')[0];
+    fechaEl.value = (function(){var _d=new Date();return _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');})();
     cargarNomina();
   }
 }
@@ -3059,7 +3059,7 @@ function initNomina(){
 window.cargarNomina = async function(){
   const fechaEl = el('nom-fecha');
   if(!fechaEl) return;
-  const fecha = fechaEl.value || new Date().toISOString().split('T')[0];
+  const fecha = fechaEl.value || (function(){var _d=new Date();return _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');})();
   const list  = el('nom-list');
   if(list) list.innerHTML = '<div class="hi-empty">⏳ Calculando nómina…</div>';
 
@@ -3195,7 +3195,7 @@ window.actualizarSalario = async function(uid, valor, pagoElId){
     if(!salInput) return;
     const nomFecha = el('nom-fecha');
     if(!nomFecha) return;
-    const fecha = nomFecha.value || new Date().toISOString().split('T')[0];
+    const fecha = nomFecha.value || (function(){var _d=new Date();return _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');})();
     // Obtener minutos del empleado del DOM
     const pagoEl = el(pagoElId);
     if(pagoEl){
