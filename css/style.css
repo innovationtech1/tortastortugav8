@@ -443,13 +443,20 @@ h1 {
 }
 
 .cart-icon {
-    font-size: 1.5rem;
     cursor: pointer;
     position: relative;
-    padding: 0.5rem;
-    border-radius: 50%;
-    transition: background 0.2s;
+    padding: .45rem .5rem;
+    border-radius: 12px;
+    background: rgba(255,90,0,.1);
+    border: 1.5px solid rgba(255,90,0,.25);
+    color: #FF5A00;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .2s, transform .15s;
+    -webkit-tap-highlight-color: transparent;
 }
+.cart-icon:active { transform: scale(.92); }
 
 .cart-icon:hover { background: rgba(255, 255, 255, 0.1); }
 
@@ -493,18 +500,21 @@ h1 {
 
 #cart-count {
     position: absolute;
-    top: 0;
-    right: 0;
-    background: var(--primary);
-    color: white;
-    font-size: 0.8rem;
-    font-weight: bold;
+    top: -6px;
+    right: -6px;
+    background: #FF5A00;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 900;
     height: 20px;
-    width: 20px;
+    min-width: 20px;
+    padding: 0 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
+    border-radius: 10px;
+    border: 2px solid #121212;
+    box-shadow: 0 2px 6px rgba(255,90,0,.5);
 }
 
 .signout-btn {
