@@ -1449,9 +1449,21 @@ function cerrarOrdenModal() {
                 <textarea class="mods-notes" id="mods-notes" placeholder="Ej: calentar bien, sin sal..."></textarea>
             </div>
         </div>
-        <div class="mods-footer">
-            <button class="mods-skip-btn" id="mods-skip" onclick="confirmarMods(false)">Sin cambios</button>
-            <button class="mods-confirm-btn" id="mods-confirm" onclick="confirmarMods(true)">Agregar al Pedido</button>
+        <div class="mods-footer" style="padding:1rem;display:flex;gap:.5rem;">
+            <button class="mods-skip-btn" id="mods-skip" onclick="confirmarMods(false)"
+                style="flex:1;padding:.7rem;background:rgba(255,255,255,.06);
+                       border:1px solid rgba(255,255,255,.12);color:#aaa;
+                       border-radius:12px;font-family:inherit;font-size:.85rem;
+                       font-weight:700;cursor:pointer;">
+                Sin cambios
+            </button>
+            <button class="mods-confirm-btn" id="mods-confirm" onclick="confirmarMods(true)"
+                style="flex:2;padding:.7rem;background:linear-gradient(135deg,#FF5A00,#FF8C00);
+                       border:none;color:#fff;border-radius:12px;font-family:inherit;
+                       font-size:.85rem;font-weight:800;cursor:pointer;
+                       box-shadow:0 4px 12px rgba(255,90,0,.3);">
+                ✅ Agregar al Pedido
+            </button>
         </div>
     </div>
 </div>
@@ -1634,7 +1646,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783292515';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783292810';
     (async () => {
         try {
             await seedProductos();
