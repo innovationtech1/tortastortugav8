@@ -291,62 +291,66 @@ function _renderProductos(productos) {
     });
 }
 
-export function renderMenu() {
-    // Solo inicializar una vez
-    if (_menuUnsub) return;
+export async function renderMenu() {
+    // Solo cargar una vez
+    if (window._menuCargado) return;
+    window._menuCargado = true;
 
     _limpiarMenuContainers();
-    // Mostrar loading
     const mc = document.getElementById('menu-container');
     if (mc) mc.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">Cargando menú...</div>';
 
     try {
-        _menuUnsub = onSnapshot(
-            collection(db, 'productos'),
-            function(snapshot) {
-                if (snapshot.empty) {
-                    // Firestore vacío — usar datos estáticos
-                    _renderProductos([...PRODUCTOS_INICIALES]);
-                    return;
-                }
+        const snapshot = await getDocs(collection(db, 'productos'));
 
-                const fsProds = snapshot.docs.map(function(d) {
-                    const data = d.data();
-                    let pr = parseFloat(data.precio || data._precio || 0);
-                    if (!pr && data.variantes && data.variantes.length) {
-                        pr = parseFloat(data.variantes[0].precio || 0);
-                    }
-                    // Buscar base estático para imagen y badge
-                    const base = PRODUCTOS_INICIALES.find(function(p) {
-                        return p.nombre.toLowerCase().slice(0,8) ===
-                               (data.nombre||'').toLowerCase().slice(0,8);
-                    }) || {};
-                    return {
-                        productId:   d.id,
-                        nombre:      data.nombre      || base.nombre      || '',
-                        descripcion: data.descripcion || base.descripcion || '',
-                        categoria:   data.categoria   || base.categoria   || 'tortas',
-                        precio:      pr,
-                        variantes:   (data.variantes && data.variantes.length)
-                                        ? data.variantes
-                                        : (base.variantes || [{ label:'Precio base', precio: pr }]),
-                        imagen:      base.imagen  || 'img/torta-original.png',
-                        badge:       base.badge   || null,
-                        incluye:     base.incluye || null,
-                        tipo:        base.tipo    || 'torta',
-                        disponible:  data.activo  !== false,
-                        orden:       data.orden   || base.orden || 99,
-                    };
-                });
-                _renderProductos(fsProds);
-            },
-            function(err) {
-                console.warn('Menu Firestore error:', err.code);
-                // Mantener datos estáticos ya renderizados
+        if (snapshot.empty) {
+            _renderProductos([...PRODUCTOS_INICIALES]);
+            return;
+        }
+
+        // Deduplicar por nombre — quedarse con el que tiene variantes actualizado
+        const byNombre = {};
+        snapshot.docs.forEach(function(d) {
+            const data = d.data();
+            const key = (data.nombre || '').toLowerCase().trim();
+            const existing = byNombre[key];
+            // Preferir el que tiene variantes con precio actualizado
+            if (!existing || (data.variantes && data.variantes.length > 0)) {
+                byNombre[key] = Object.assign({}, data, { _docId: d.id });
             }
-        );
+        });
+
+        const fsProds = Object.values(byNombre).map(function(data) {
+            let pr = parseFloat(data.precio || data._precio || 0);
+            if (!pr && data.variantes && data.variantes.length) {
+                pr = parseFloat(data.variantes[0].precio || 0);
+            }
+            const base = PRODUCTOS_INICIALES.find(function(p) {
+                return (p.nombre||'').toLowerCase().slice(0,10) ===
+                       (data.nombre||'').toLowerCase().slice(0,10);
+            }) || {};
+            return {
+                productId:   data._docId,
+                nombre:      data.nombre      || base.nombre      || '',
+                descripcion: data.descripcion || base.descripcion || '',
+                categoria:   data.categoria   || base.categoria   || 'tortas',
+                precio:      pr,
+                variantes:   (data.variantes && data.variantes.length)
+                                ? data.variantes
+                                : (base.variantes || [{ label:'Precio base', precio: pr }]),
+                imagen:      base.imagen  || 'img/torta-original.png',
+                badge:       base.badge   || null,
+                incluye:     base.incluye || null,
+                tipo:        base.tipo    || 'torta',
+                disponible:  data.activo  !== false,
+                orden:       data.orden   || base.orden || 99,
+            };
+        });
+
+        _renderProductos(fsProds);
     } catch(e) {
-        console.warn('Menu listener error:', e);
+        console.warn('Menu Firestore error, usando estatico:', e);
+        _renderProductos([...PRODUCTOS_INICIALES]);
     }
 }
 
