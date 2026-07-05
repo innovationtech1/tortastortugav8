@@ -1262,16 +1262,20 @@ h1 {
 .mods-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.65);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     display: flex;
     align-items: flex-end;
     justify-content: center;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.3s;
-    z-index: 2000;
+    transition: opacity 0.25s;
+    z-index: 5000;
+}
+.mods-overlay.open {
+    opacity: 1;
+    pointer-events: all;
 }
 
 .mods-overlay.active { opacity: 1; pointer-events: all; }
