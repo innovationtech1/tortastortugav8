@@ -249,7 +249,7 @@ export async function eliminarProducto(id) {
     await deleteDoc(doc(db, COL, id));
 }
 
-export async // Listener en tiempo real de Firestore
+// Listener en tiempo real de Firestore
 let _menuUnsubscribe = null;
 
 function iniciarMenuEnVivo() {
