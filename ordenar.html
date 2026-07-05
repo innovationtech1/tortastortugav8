@@ -1321,11 +1321,11 @@ function cerrarOrdenModal() {
 
 <!-- MODAL CARRITO -->
 <div class="modal-overlay" id="cart-modal">
-    <div class="cart-container">
-        <!-- ORDERS SCREEN HEADER -->
-        <div class="cart-header" style="flex-direction:column;padding:0;gap:0;border-bottom:1px solid rgba(255,255,255,.06);">
-          <!-- Top bar -->
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:.9rem 1rem .7rem;width:100%;">
+    <div class="cart-container" style="display:flex;flex-direction:column;height:100%;">
+
+        <!-- HEADER -->
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:.9rem 1rem;border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0;">
             <div style="display:flex;align-items:center;gap:.5rem;">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF5A00"
                      stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -1333,75 +1333,59 @@ function cerrarOrdenModal() {
                     <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
                 </svg>
                 <span style="font-size:1rem;font-weight:800;color:#FF5A00;">Mi Orden</span>
+                <span id="cuenta-label-active"
+                      style="font-size:.75rem;color:#888;background:rgba(255,255,255,.06);
+                             border-radius:6px;padding:.15rem .5rem;"></span>
             </div>
-            <button id="close-cart" style="background:none;border:none;color:#888;font-size:1.3rem;cursor:pointer;padding:.2rem .4rem;">✕</button>
-          </div>
-          <!-- Cuenta tabs -->
-          <div id="cuentas-tabs" style="display:flex;gap:.4rem;padding:0 .85rem .6rem;overflow-x:auto;scrollbar-width:none;">
-            <div class="ctab active" data-cid="1" onclick="switchCuenta(1)" style="border-color:#FF5A00;">
-              <span class="ctab-nom">Cuenta 1</span>
-              <span class="ctab-tot" id="ctab-tot-1">$0.00</span>
-            </div>
-            <button onclick="agregarNuevaCuenta()" class="ctab-add">+ Nueva cuenta</button>
-          </div>
-          <!-- Actions bar -->
-          <div style="display:flex;gap:.4rem;padding:0 .85rem .65rem;border-bottom:1px solid rgba(255,255,255,.08);">
-            <button onclick="mostrarNombreCuenta()" class="cart-action-btn" style="color:#A78BFA;border-color:rgba(167,139,250,.35);">✏️ Nombre</button>
-            <button id="btn-eliminar-cuenta" onclick="eliminarCuentaActiva()" class="cart-action-btn" style="color:#FF4444;border-color:rgba(255,68,68,.3);display:none;">✕ Eliminar cuenta</button>
-            <button onclick="limpiarCuentaActual()" class="cart-action-btn" style="color:#FF6B00;border-color:rgba(255,107,0,.3);">🧹 Limpiar</button>
-          </div>
+            <button id="close-cart"
+                style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+                       color:#888;font-size:1.1rem;border-radius:8px;width:32px;height:32px;
+                       cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
         </div>
-        <div class="cart-body">
-            
 
-            <div style="padding:.5rem .85rem .3rem;font-size:.72rem;color:#888;font-weight:700;letter-spacing:.04em;" id="cuenta-label-active">CUENTA 1</div>
-            <div class="cart-items" id="cart-items">
-                <p class="empty-cart">Tu carrito esta vacio </p>
+        <!-- TABS CUENTAS -->
+        <div id="cuentas-tabs" style="display:flex;gap:.4rem;padding:.6rem .9rem;
+             overflow-x:auto;flex-shrink:0;scrollbar-width:none;
+             border-bottom:1px solid rgba(255,255,255,.06);"></div>
+
+        <!-- BOTONES CUENTA -->
+        <div style="display:flex;gap:.4rem;padding:.5rem .9rem;flex-shrink:0;">
+            <button onclick="window.setCuentaNombre()"
+                style="flex:1;padding:.4rem;background:rgba(255,255,255,.05);
+                       border:1px solid rgba(255,255,255,.1);color:#aaa;
+                       border-radius:8px;font-family:inherit;font-size:.75rem;cursor:pointer;">
+                ✏️ Nombre
+            </button>
+            <button onclick="window.limpiarCuentaActual()"
+                style="flex:1;padding:.4rem;background:rgba(255,255,255,.05);
+                       border:1px solid rgba(255,255,255,.1);color:#aaa;
+                       border-radius:8px;font-family:inherit;font-size:.75rem;cursor:pointer;">
+                🗑 Limpiar
+            </button>
+        </div>
+
+        <!-- LISTA DE PRODUCTOS -->
+        <div id="cart-items"
+             style="flex:1;overflow-y:auto;scrollbar-width:thin;
+                    scrollbar-color:rgba(255,90,0,.3) transparent;"></div>
+
+        <!-- TOTAL + ENVIAR -->
+        <div style="padding:.85rem 1rem;border-top:1px solid rgba(255,255,255,.07);flex-shrink:0;
+                    background:#1A1A1A;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+                <span style="font-size:1rem;font-weight:700;color:#fff;">Total:</span>
+                <span id="cart-total-amount"
+                      style="font-size:1.4rem;font-weight:900;color:#25D366;">$0.00</span>
             </div>
-            <div class="cart-footer">
-                <div class="total-row">
-                    <span>Total:</span>
-                    <span id="cart-total">$0.00</span>
-                </div>
-
-                <!-- Botones de acción -->
-                <div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.75rem;">
-
-                    <!-- ENVIAR AL ADMIN -->
-                    <button onclick="enviarOrdenAdmin()"
-                        style="width:100%;padding:.85rem;background:linear-gradient(135deg,#FF5A00,#FF8800);
-                               color:#fff;border:none;border-radius:12px;font-family:inherit;
-                               font-size:.95rem;font-weight:800;cursor:pointer;
-                               box-shadow:0 4px 16px rgba(255,90,0,.3);">
-                        Enviar Orden
-                    </button>
-
-                    <!-- Ordenar cuenta activa -->
-                    <button onclick="ordenarCuentaActiva()" style="display:none;" disabled
-                        style="width:100%;padding:.8rem;background:linear-gradient(135deg,#25D366,#18a849);
-                               color:#fff;border:none;border-radius:12px;font-family:inherit;
-                               font-size:.92rem;font-weight:700;cursor:pointer;
-                               display:flex;align-items:center;justify-content:center;gap:.5rem;">
-                        📱 Ordenar cuenta activa por WhatsApp
-                    </button>
-
-                    <!-- Ordenar todas las cuentas -->
-                    <button onclick="ordenarTodasWhatsApp()"
-                        id="btn-todas-cuentas" style="display:none!important;" disabled
-                        style="width:100%;padding:.7rem;background:rgba(37,211,102,.1);
-                               border:1.5px solid rgba(37,211,102,.35);color:#25D366;
-                               border-radius:12px;font-family:inherit;font-size:.85rem;
-                               font-weight:700;cursor:pointer;display:none;
-                               align-items:center;justify-content:center;gap:.5rem;">
-                        📋 Enviar todas las cuentas
-                    </button>
-
-
-                </div>
-            </div>
+            <button onclick="enviarOrden()"
+                style="width:100%;padding:.85rem;background:linear-gradient(135deg,#FF5A00,#FF8C00);
+                       border:none;color:#fff;border-radius:14px;font-family:inherit;
+                       font-size:1rem;font-weight:800;cursor:pointer;
+                       box-shadow:0 4px 16px rgba(255,90,0,.35);letter-spacing:.02em;">
+                🚀 Enviar Orden
+            </button>
         </div>
     </div>
-</div>
 
 <!-- MODAL MODIFICACIONES -->
 <div class="mods-overlay" id="mods-modal">
@@ -1647,7 +1631,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783290963';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783291167';
     (async () => {
         try {
             await seedProductos();
