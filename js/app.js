@@ -984,83 +984,85 @@ window.renderCuentasTabs = function() {
 // ── Render items de cuenta activa ─────────────────────────────
 window.renderCartItems = function() {
     const cActiva = CS.cuentas.find(c => c.id === CS.activa);
-    const cartItemsEl = document.getElementById('cart-items');
-    if (!cartItemsEl || !cActiva) return;
-
+    const el = document.getElementById('cart-items');
+    if (!el || !cActiva) return;
     const items = cActiva.items;
 
-    if (items.length === 0) {
-        cartItemsEl.innerHTML = `<p class="empty-cart">
-            <span style="font-size:1.5rem">🛒</span><br>
-            <strong style="color:#fff">${cActiva.nombre}</strong> está vacía<br>
-            <span style="font-size:.8rem;color:#555">Agrega productos desde el menú</span>
-        </p>`;
-    } else {
-        cartItemsEl.innerHTML = items.map((item, idx) => {
-            const otherCuentas = CS.cuentas.filter(c => c.id !== CS.activa);
-            const moveBtns = otherCuentas.map(c =>
-                `<button class="item-move-btn"
-                    style="color:${c.color};border-color:${c.color}44"
-                    onclick="moverItemCuenta(${idx},${c.id})">
-                    → ${c.nombre}
-                </button>`
-            ).join('');
+    // ── Header cuenta label
+    const lbl = document.getElementById('cuenta-label-active');
+    if (lbl) lbl.textContent = cActiva.nombre;
 
-            const splitBtn = CS.cuentas.length > 1
-                ? `<button class="item-split-btn" onclick="splitItemEntreTodas(${idx})">÷ Split</button>`
-                : '';
+    // ── Total
+    const total = items.reduce((s, i) => s + (parseFloat(i.precio)||0), 0);
+    const totalEl = document.getElementById('cart-total-amount');
+    if (totalEl) totalEl.textContent = '$' + total.toFixed(2);
 
-            // Solo mostrar botón editar si es torta (tiene id de producto)
-            const editBtn = item.id
-                ? `<button class="item-edit-btn" onclick="editarItemCuenta(${idx})">✏️ Editar</button>`
-                : '';
-
-            return `<div class="cart-item" id="cart-item-${idx}">
-                <div class="item-info">
-                    <div class="item-name">${item.nombre}</div>
-                    ${item.modificaciones?.length
-                        ? `<div class="item-mods">${item.modificaciones.join(' · ')}</div>`
-                        : '<div class="item-mods" style="color:#555;font-size:.72rem;">Sin modificaciones</div>'}
-                </div>
-                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.25rem;flex-shrink:0;">
-                    <div class="item-price">$${item.precio.toFixed(2)}</div>
-                    ${editBtn}
-                </div>
-                <button class="remove-item" onclick="removeItemCuenta(${idx})">✕</button>
-                ${(moveBtns || splitBtn)
-                    ? `<div class="item-move-row">${moveBtns}${splitBtn}</div>`
-                    : ''}
+    // ── Tabs de cuentas
+    const tabsEl = document.getElementById('cuentas-tabs');
+    if (tabsEl) {
+        tabsEl.innerHTML = CS.cuentas.map(c => {
+            const tot = c.items.reduce((s,i) => s+(parseFloat(i.precio)||0), 0);
+            const active = c.id === CS.activa ? 'active' : '';
+            return `<div class="ctab ${active}" onclick="window.cambiarCuenta(${c.id})">
+                <span class="ctab-nom">${c.nombre}</span>
+                <span class="ctab-tot">$${tot.toFixed(2)}</span>
             </div>`;
-        }).join('');
+        }).join('') +
+        `<div class="ctab ctab-add" onclick="window.agregarNuevaCuenta()">+ Nueva cuenta</div>`;
     }
 
-    // Update totals
-    const total = items.reduce((s, i) => s + i.precio, 0);
-    const cartTotalEl = document.getElementById('cart-total');
-    if (cartTotalEl) cartTotalEl.textContent = `$${total.toFixed(2)}`;
-    const cartCountEl = document.getElementById('cart-count');
-    if (cartCountEl) {
-        const totalItems = CS.cuentas.reduce((s, c) => s + c.items.length, 0);
-        cartCountEl.textContent = totalItems;
+    // ── Lista de productos
+    if (items.length === 0) {
+        el.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                    padding:3rem 1rem;gap:.75rem;color:#555;">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="rgba(255,90,0,.3)"
+                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+            </svg>
+            <div style="font-size:.9rem;font-weight:700;color:#666;">${cActiva.nombre} está vacía</div>
+            <div style="font-size:.78rem;color:#444;">Agrega productos desde el menú</div>
+        </div>`;
+        return;
     }
-    const clearBtn = document.getElementById('clear-cart-btn');
-    if (clearBtn) clearBtn.style.display = total > 0 ? 'inline-flex' : 'none';
 
-    // Sync POS total
-    const posTotal = document.getElementById('pos-total-amount');
-    if (posTotal) {
-        const allTotal = CS.cuentas.reduce((s, c) =>
-            s + c.items.reduce((ss, i) => ss + i.precio, 0), 0);
-        posTotal.textContent = `$${allTotal.toFixed(2)}`;
-    }
-};
+    el.innerHTML = items.map((item, idx) => {
+        const precio  = parseFloat(item.precio) || 0;
+        const mods    = (item.modificaciones || []).filter(m => m && m.trim()).join(' · ');
+        const varHtml = item.variante
+            ? `<div style="font-size:.7rem;color:#FF5A00;margin:.1rem 0;">${item.variante}</div>`
+            : '';
+        const modsHtml = mods
+            ? `<div style="font-size:.7rem;color:#888;margin:.1rem 0;">${mods}</div>`
+            : '';
 
-// ── Acciones de cuenta ────────────────────────────────────────
-window.switchCuenta = function(cid) {
-    CS.activa = cid;
-    renderCuentasTabs();
-    renderCartItems();
-};
+        return `
+        <div style="display:flex;align-items:center;gap:.75rem;
+                    padding:.75rem .9rem;border-bottom:1px solid rgba(255,255,255,.05);">
+            <!-- Número -->
+            <div style="width:24px;height:24px;background:rgba(255,90,0,.15);border-radius:50%;
+                        display:flex;align-items:center;justify-content:center;
+                        font-size:.7rem;font-weight:800;color:#FF5A00;flex-shrink:0;">${idx+1}</div>
+            <!-- Info -->
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:.88rem;font-weight:700;color:#fff;
+                            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.nombre||'Producto'}</div>
+                ${varHtml}${modsHtml}
+            </div>
+            <!-- Precio -->
+            <div style="font-size:.9rem;font-weight:800;color:#25D366;flex-shrink:0;">$${precio.toFixed(2)}</div>
+            <!-- Acciones -->
+            <div style="display:flex;gap:.3rem;flex-shrink:0;">
+                <button onclick="window.removeItemCuenta(${idx})"
+                    style="width:28px;height:28px;background:rgba(244,67,54,.12);
+                           border:1px solid rgba(244,67,54,.25);color:#F44336;
+                           border-radius:8px;font-size:.8rem;cursor:pointer;
+                           display:flex;align-items:center;justify-content:center;">✕</button>
+            </div>
+        </div>`;
+    }).join('');
+
 
 window.agregarNuevaCuenta = function() {
     CS.counter++;
