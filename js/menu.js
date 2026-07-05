@@ -249,6 +249,8 @@ export async function eliminarProducto(id) {
     await deleteDoc(doc(db, COL, id));
 }
 
+
+
 // ── MENÚ EN TIEMPO REAL ──────────────────────────────────────────────────────
 let _menuUnsub = null;
 
