@@ -249,231 +249,109 @@ export async function eliminarProducto(id) {
     await deleteDoc(doc(db, COL, id));
 }
 
-// Listener en tiempo real de Firestore
-let _menuUnsubscribe = null;
+// ── MENÚ EN TIEMPO REAL ──────────────────────────────────────────────────────
+let _menuUnsub  = null;
+let _menuActive = false;
 
-function iniciarMenuEnVivo() {
-    if (_menuUnsubscribe) try { _menuUnsubscribe(); } catch(e) {}
-    // Limpiar todos los contenedores antes de empezar
-    ['menu-container','drinks-container','botanas-container'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;font-size:.85rem;">Cargando menú...</div>';
-    });
-    try {
-        _menuUnsubscribe = onSnapshot(
-            collection(db, 'productos'),
-            (snapshot) => {
-                if (snapshot.empty) {
-                    // Sin productos en Firestore — usar datos estáticos
-                    renderMenuEstatico();
-                    return;
-                }
-                const fsProds = snapshot.docs.map(d => {
-                    const data = d.data();
-                    // Normalizar precio
-                    let pr = parseFloat(data.precio || data._precio || 0);
-                    if (!pr && data.variantes && data.variantes.length) {
-                        pr = parseFloat(data.variantes[0].precio || 0);
-                    }
-                    // Mapear a formato del menú
-                    const base = PRODUCTOS_INICIALES.find(p =>
-                        p.nombre.toLowerCase().includes((data.nombre||'').toLowerCase().slice(0,10)) ||
-                        (data.nombre||'').toLowerCase().includes(p.nombre.toLowerCase().slice(0,10))
-                    ) || {};
-                    return Object.assign({}, base, {
-                        productId:   d.id,
-                        nombre:      data.nombre || base.nombre || '',
-                        descripcion: data.descripcion || base.descripcion || '',
-                        categoria:   data.categoria || base.categoria || 'tortas',
-                        precio:      pr || (base.variantes ? base.variantes[0]?.precio : 0) || 0,
-                        variantes:   data.variantes || base.variantes || [{ label: 'Precio base', precio: pr }],
-                        imagen:      base.imagen || 'img/torta-original.png',
-                        badge:       base.badge   || null,
-                        disponible:  data.activo !== false,
-                        orden:       data.orden || base.orden || 99,
-                        tipo:        base.tipo || 'torta',
-                        incluye:     base.incluye || null,
-                    });
-                });
-                renderMenuConDatos(fsProds);
-            },
-            (error) => {
-                console.warn('Menu Firestore error, usando estático:', error.code);
-                renderMenuEstatico();
-            }
-        );
-    } catch(e) {
-        renderMenuEstatico();
-    }
-}
-
-function renderMenuEstatico() {
-    renderMenuConDatos([...PRODUCTOS_INICIALES]);
-}
-
-export function renderMenu() {
-    iniciarMenuEnVivo();
-}
-
-function renderMenuConDatos(productos) {
-    const containers = {
-        tortas:  document.getElementById('menu-container'),
-        drinks:  document.getElementById('drinks-container'),
-        botanas: document.getElementById('botanas-container'),
-        bebidas: document.getElementById('drinks-container'),
-        extras:  document.getElementById('botanas-container'),
-        combos:  document.getElementById('botanas-container'),
-        especiales: document.getElementById('botanas-container'),
-    };
-    // Limpiar solo los 3 contenedores únicos para evitar duplicados
-    ['menu-container','drinks-container','botanas-container'].forEach(id => {
+function _limpiarMenuContainers() {
+    ['menu-container','drinks-container','botanas-container'].forEach(function(id) {
         const el = document.getElementById(id);
         if (el) el.innerHTML = '';
     });
+}
 
-    // Deduplicar por nombre antes de renderizar
+function _renderProductos(productos) {
+    _limpiarMenuContainers();
+
+    const containers = {
+        tortas:     document.getElementById('menu-container'),
+        drinks:     document.getElementById('drinks-container'),
+        botanas:    document.getElementById('botanas-container'),
+        bebidas:    document.getElementById('drinks-container'),
+        extras:     document.getElementById('botanas-container'),
+        combos:     document.getElementById('botanas-container'),
+        especiales: document.getElementById('botanas-container'),
+    };
+
+    // Deduplicar por nombre
     const seen = new Set();
-    productos = productos.filter(p => {
-        const key = (p.nombre||'').toLowerCase().trim();
+    const uniq = productos.filter(function(p) {
+        const key = (p.nombre || '').toLowerCase().trim();
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
     });
-    productos.sort((a, b) => (a.orden||99) - (b.orden||99));
+    uniq.sort(function(a, b) { return (a.orden||99) - (b.orden||99); });
 
-    productos.forEach(p => {
-        if (!p.disponible) return;
+    uniq.forEach(function(p) {
+        if (!p.disponible && p.disponible !== undefined) return;
         const card = crearCard(p);
-        const container = containers[p.categoria];
-        if (container) container.appendChild(card);
+        const cat  = (p.categoria || 'tortas').toLowerCase();
+        const cont = containers[cat] || containers.tortas;
+        if (cont) cont.appendChild(card);
     });
 }
 
-function escapeAttr(str) {
-    if (!str) return '';
-    return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-}
+export function renderMenu() {
+    // Prevenir múltiples listeners
+    if (_menuActive) return;
+    _menuActive = true;
 
-function crearCard(p) {
-    const card = document.createElement('div');
-    card.className = 'product-card';
-    if (!p.imagen) card.classList.add('drink-card');
+    if (_menuUnsub) { try { _menuUnsub(); } catch(e) {} }
 
-    let html = '';
+    _limpiarMenuContainers();
 
-    if (p.imagen) {
-        html += `<div class="card-img-wrap">
-            <img src="${p.imagen}" alt="${escapeAttr(p.nombre)}" class="card-img" loading="lazy" onerror="this.style.display='none'">`;
-        if (p.badge) {
-            html += `<div class="card-badge ${p.badge.clase}">${p.badge.texto}</div>`;
-        }
-        html += `</div>`;
-    }
+    // Usar datos estáticos de inmediato mientras carga Firestore
+    _renderProductos([...PRODUCTOS_INICIALES]);
 
-    const isTorta = p.tipo === 'torta';
-    const pid = p.productId;
+    // Actualizar desde Firestore
+    try {
+        _menuUnsub = onSnapshot(
+            collection(db, 'productos'),
+            function(snapshot) {
+                if (snapshot.empty) return; // mantener estático
 
-    html += `<div class="card-body">
-        <h3 class="product-title">${p.nombre}</h3>`;
-    if (p.descripcion) {
-        html += `<p class="product-desc">${p.descripcion}</p>`;
-    }
-    if (p.incluye) {
-        html += `<div class="product-includes">${p.incluye}</div>`;
-    }
-    if (p.variantes && p.variantes.length) {
-        html += `<select class="size-selector" id="select-${pid}">`;
-        p.variantes.forEach(v => {
-            html += `<option value="${v.precio}">${escapeAttr(v.label)}</option>`;
-        });
-        html += `</select>`;
-    }
-
-    // Selector de cantidad (solo +/-) — agregar al carrito via FAB flotante
-    html += `
-    <div class="qty-add-row" style="justify-content:center;">
-        <div class="qty-selector">
-            <button class="qty-btn qty-minus" data-pid="${pid}" type="button">−</button>
-            <span class="qty-num" id="qty-${pid}">0</span>
-            <button class="qty-btn qty-plus" data-pid="${pid}" type="button">+</button>
-        </div>
-    </div>
-    </div>`;
-
-    card.innerHTML = html;
-
-    // Botones − y +
-    const minusBtn = card.querySelector('.qty-minus');
-    const plusBtn  = card.querySelector('.qty-plus');
-    const qtyEl   = card.querySelector(`#qty-${pid}`);
-
-    if (minusBtn && plusBtn && qtyEl) {
-        const updateAddBtn = () => {
-            const cur = parseInt(qtyEl.textContent) || 0;
-            const addBtn = card.querySelector('.add-to-cart');
-            if (addBtn) addBtn.style.display = cur > 0 ? 'flex' : 'none';
-            actualizarBotonAgregarTodo();
-        };
-        minusBtn.addEventListener('click', () => {
-            const cur = parseInt(qtyEl.textContent) || 0;
-            if (cur > 0) qtyEl.textContent = cur - 1;
-            qtyEl.style.transform = 'scale(1.3)';
-            setTimeout(() => qtyEl.style.transform = '', 150);
-            updateAddBtn();
-        });
-        plusBtn.addEventListener('click', () => {
-            const cur = parseInt(qtyEl.textContent) || 0;
-            if (cur < 20) qtyEl.textContent = cur + 1;
-            qtyEl.style.transform = 'scale(1.3)';
-            setTimeout(() => qtyEl.style.transform = '', 150);
-            updateAddBtn();
-        });
-    }
-
-    // Botón agregar — respeta la cantidad
-    const btn = card.querySelector('.add-to-cart');
-    if (btn) {
-        btn.addEventListener('click', () => {
-            const sel   = document.getElementById(`select-${pid}`);
-            // Get price from select if available, fallback to first variante or 0
-            let precio = 0;
-            let label  = '';
-            if (sel && sel.value) {
-                precio = parseFloat(sel.value) || 0;
-                label  = sel.options[sel.selectedIndex]?.text || '';
-            } else if (p.variantes && p.variantes.length) {
-                precio = parseFloat(p.variantes[0].precio) || 0;
-                label  = p.variantes[0].label || '';
+                const fsProds = snapshot.docs.map(function(d) {
+                    const data = d.data();
+                    let pr = parseFloat(data.precio || data._precio || 0);
+                    if (!pr && data.variantes && data.variantes.length) {
+                        pr = parseFloat(data.variantes[0].precio || 0);
+                    }
+                    // Buscar base estático para imagen y badge
+                    const base = PRODUCTOS_INICIALES.find(function(p) {
+                        return p.nombre.toLowerCase().slice(0,8) ===
+                               (data.nombre||'').toLowerCase().slice(0,8);
+                    }) || {};
+                    return {
+                        productId:   d.id,
+                        nombre:      data.nombre      || base.nombre      || '',
+                        descripcion: data.descripcion || base.descripcion || '',
+                        categoria:   data.categoria   || base.categoria   || 'tortas',
+                        precio:      pr,
+                        variantes:   (data.variantes && data.variantes.length)
+                                        ? data.variantes
+                                        : (base.variantes || [{ label:'Precio base', precio: pr }]),
+                        imagen:      base.imagen  || 'img/torta-original.png',
+                        badge:       base.badge   || null,
+                        incluye:     base.incluye || null,
+                        tipo:        base.tipo    || 'torta',
+                        disponible:  data.activo  !== false,
+                        orden:       data.orden   || base.orden || 99,
+                    };
+                });
+                _renderProductos(fsProds);
+            },
+            function(err) {
+                console.warn('Menu Firestore error:', err.code);
+                // Mantener datos estáticos ya renderizados
             }
-            const qty = parseInt(qtyEl ? qtyEl.textContent : 1) || 1;
-
-            if (isTorta) {
-                window.addToCart(pid, p.nombre, precio, qty);
-            } else {
-                for (let i = 0; i < qty; i++) {
-                    window.addDrink(p.nombre, precio, label);
-                }
-            }
-
-            // Feedback visual en el botón
-            const orig = btn.textContent;
-            btn.textContent = qty > 1 ? `✅ ${qty} agregados` : '✅ Agregado';
-            btn.style.background = 'var(--success, #25D366)';
-            btn.disabled = true;
-            setTimeout(() => {
-                btn.textContent = orig;
-                btn.style.background = '';
-                btn.disabled = false;
-                if (qtyEl) qtyEl.textContent = '1'; // reset cantidad
-            }, 1500);
-        });
+        );
+    } catch(e) {
+        console.warn('Menu listener error:', e);
     }
-
-    return card;
 }
 
 
-// ── BOTÓN FLOTANTE: AGREGAR TODO AL CARRITO ──────────────────
 export function actualizarBotonAgregarTodo() {
     let totalItems = 0;
     let totalProductos = 0;
