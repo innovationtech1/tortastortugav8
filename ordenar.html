@@ -1350,7 +1350,10 @@ function cerrarOrdenModal() {
 
         <!-- BOTONES CUENTA -->
         <div style="display:flex;gap:.4rem;padding:.5rem .9rem;flex-shrink:0;">
-            <button onclick="window.setCuentaNombre()"
+            <button onclick="(function(){
+                    var n=prompt('Nombre para esta cuenta:',window._cuentasSys&&window._cuentasSys.cuentas.find(function(c){return c.id===(window._cuentasSys.activa);})&&window._cuentasSys.cuentas.find(function(c){return c.id===(window._cuentasSys.activa);}).nombre||'');
+                    if(n&&window._cuentasSys){var c=window._cuentasSys.cuentas.find(function(x){return x.id===window._cuentasSys.activa;});if(c){c.nombre=n;if(window.renderCartItems)window.renderCartItems();}}
+                })()"
                 style="flex:1;padding:.4rem;background:rgba(255,255,255,.05);
                        border:1px solid rgba(255,255,255,.1);color:#aaa;
                        border-radius:8px;font-family:inherit;font-size:.75rem;cursor:pointer;">
@@ -1631,7 +1634,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783291167';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783291421';
     (async () => {
         try {
             await seedProductos();
