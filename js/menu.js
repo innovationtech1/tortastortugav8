@@ -299,14 +299,15 @@ function crearCard(p) {
             '<p style="font-size:.7rem;color:#888;margin:0;line-height:1.4;">' + (p.descripcion||'') + '</p>' +
             incluyeEl +
             varEl +
-            '<div style="display:flex;justify-content:center;margin-top:auto;padding-top:.45rem;">' +
-                '<div class="qty-selector">' +
-                    '<button class="qty-btn qty-minus" data-pid="' + pid + '" type="button">−</button>' +
-                    '<span class="qty-num" id="qty-' + pid + '" style="min-width:32px;text-align:center;font-weight:800;font-size:.95rem;color:#fff;">0</span>' +
-                    '<button class="qty-btn qty-plus" data-pid="' + pid + '" type="button">+</button>' +
-                '</div>' +
+            '<div style="display:flex;align-items:center;gap:.4rem;margin-top:auto;padding-top:.5rem;">' +
+            '<button class="btn-agregar-card" style="flex:1;padding:.6rem;background:linear-gradient(135deg,#FF5A00,#FF8C00);border:none;color:#fff;border-radius:10px;font-family:inherit;font-size:.82rem;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 3px 8px rgba(255,90,0,.35);">🛒 Agregar</button>' +
+            '<div style="display:flex;align-items:center;flex-shrink:0;">' +
+                '<button class="qty-btn qty-minus" data-pid="' + pid + '" type="button" style="width:28px;height:28px;border-radius:7px 0 0 7px;">−</button>' +
+                '<span class="qty-num" id="qty-' + pid + '" style="min-width:26px;text-align:center;font-weight:800;font-size:.85rem;color:#fff;background:rgba(255,255,255,.06);height:28px;line-height:28px;">0</span>' +
+                '<button class="qty-btn qty-plus" data-pid="' + pid + '" type="button" style="width:28px;height:28px;border-radius:0 7px 7px 0;">+</button>' +
             '</div>' +
-        '</div>';
+        '</div>' +
+        '</div>'
 
     const qtyEl   = card.querySelector('.qty-num');
     const btnAgr  = card.querySelector('.btn-agregar-card');
