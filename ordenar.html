@@ -1287,17 +1287,17 @@ function cerrarOrdenModal() {
 
     <!-- TORTAS -->
     <section class="app-menu-section menu-tab-content" id="tab-tortas">
-        <div class="app-menu-grid" id="menu-container"></div>
+        <div class="app-menu-grid" id="menu-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;padding:.5rem 0;"></div>
     </section>
 
     <!-- DRINKS -->
     <section class="app-menu-section menu-tab-content" id="tab-drinks" style="display:none;">
-        <div class="app-menu-grid drinks-grid" id="drinks-container"></div>
+        <div class="app-menu-grid drinks-grid" id="drinks-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;padding:.5rem 0;"></div>
     </section>
 
     <!-- BOTANAS -->
     <section class="app-menu-section menu-tab-content" id="tab-botanas" style="display:none;">
-        <div class="app-menu-grid drinks-grid" id="botanas-container"></div>
+        <div class="app-menu-grid drinks-grid" id="botanas-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;padding:.5rem 0;"></div>
     </section>
 </main>
 
@@ -1630,7 +1630,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783288003';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783288262';
     (async () => {
         try {
             await seedProductos();
