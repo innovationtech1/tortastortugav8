@@ -259,85 +259,76 @@ let _menuUnsub = null;
 function crearCard(p) {
     const pid  = p.productId || p.id || Math.random().toString(36).slice(2);
     const card = document.createElement('div');
-    card.className = 'menu-card';
+    card.className = 'product-card';
 
-    // Badge
+    const imgSrc = p.imagen || 'img/torta-original.png';
+    const vars   = p.variantes || [];
+
+    // Badge HTML
     let badgeHTML = '';
-    if (p.badge) {
-        badgeHTML = `<div class="badge ${p.badge.clase||''}">${p.badge.texto||''}</div>`;
+    if (p.badge && p.badge.texto) {
+        badgeHTML = `<span class="product-badge ${p.badge.clase||'badge-special'}">${p.badge.texto}</span>`;
     }
 
-    // Imagen
-    const imgSrc = p.imagen || 'img/torta-original.png';
-    let html = `<div class="card-img-wrap">${badgeHTML}
-        <img src="${imgSrc}" alt="${p.nombre}" loading="lazy" class="card-img">
-    </div>
-    <div class="card-body">
-        <h3 class="card-title">${p.nombre||''}</h3>
-        <p class="card-desc">${p.descripcion||''}</p>`;
+    // Variantes HTML
+    let varHTML = '';
+    if (vars.length > 1) {
+        varHTML = `<select class="var-select" id="var-${pid}"
+            style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,90,0,.3);
+                   color:#fff;border-radius:10px;padding:.42rem .65rem;font-family:inherit;
+                   font-size:.78rem;margin:.4rem 0;cursor:pointer;">`;
+        vars.forEach((v, i) => {
+            varHTML += `<option value="${i}">${v.label||('Opción '+(i+1))} — $${v.precio||0}</option>`;
+        });
+        varHTML += '</select>';
+    } else if (vars.length === 1) {
+        varHTML = `<div style="font-size:.8rem;color:var(--primary,#FF5A00);font-weight:700;
+                               margin:.2rem 0;">${vars[0].label||'Precio'} — $${vars[0].precio||p.precio||0}</div>`;
+    } else if (p.precio) {
+        varHTML = `<div style="font-size:.8rem;color:var(--primary,#FF5A00);font-weight:700;">$${p.precio}</div>`;
+    }
 
     // Incluye
-    if (p.incluye) {
-        html += `<div class="card-incluye">✅ ${p.incluye}</div>`;
-    }
+    const incluyeHTML = p.incluye
+        ? `<div style="font-size:.72rem;color:#25D366;margin:.2rem 0;">✅ ${p.incluye}</div>`
+        : '';
 
-    // Variantes — select o radio
-    const vars = p.variantes || [];
-    if (vars.length > 1) {
-        html += `<select class="var-select" id="var-${pid}" style="width:100%;background:#1a1a1a;border:1px solid rgba(255,90,0,.3);color:#fff;border-radius:8px;padding:.4rem .6rem;font-family:inherit;font-size:.78rem;margin:.4rem 0;">`;
-        vars.forEach(function(v, i) {
-            html += `<option value="${i}">${v.label||v.nombre||('Opción '+(i+1))} — $${v.precio||0}</option>`;
-        });
-        html += '</select>';
-    } else if (vars.length === 1) {
-        html += `<div class="card-precio" style="font-size:.82rem;color:#FF5A00;font-weight:700;margin:.25rem 0;">${vars[0].label||'Precio'} — $${vars[0].precio||p.precio||0}</div>`;
-    } else if (p.precio) {
-        html += `<div class="card-precio" style="font-size:.82rem;color:#FF5A00;font-weight:700;margin:.25rem 0;">$${p.precio}</div>`;
-    }
-
-    // Selector cantidad
-    html += `<div class="qty-add-row" style="justify-content:center;">
-        <div class="qty-selector">
-            <button class="qty-btn qty-minus" data-pid="${pid}" type="button">−</button>
-            <span class="qty-num" id="qty-${pid}">0</span>
-            <button class="qty-btn qty-plus" data-pid="${pid}" type="button">+</button>
+    card.innerHTML = `
+    <div class="card-img-wrap" style="position:relative;">
+        ${badgeHTML}
+        <img src="${imgSrc}" alt="${p.nombre}" loading="lazy"
+             style="width:100%;height:140px;object-fit:cover;border-radius:12px;display:block;">
+    </div>
+    <div class="product-card card-body" style="flex:1;display:flex;flex-direction:column;padding:.5rem 0 0;">
+        <h3 style="font-size:1rem;font-weight:800;margin:0 0 .25rem;color:#fff;">${p.nombre||''}</h3>
+        <p style="font-size:.75rem;color:#888;margin:0 0 .25rem;line-height:1.4;">${p.descripcion||''}</p>
+        ${incluyeHTML}
+        ${varHTML}
+        <div class="qty-add-row" style="justify-content:center;margin-top:auto;padding-top:.4rem;">
+            <div class="qty-selector">
+                <button class="qty-btn qty-minus" data-pid="${pid}" type="button">−</button>
+                <span class="qty-num" id="qty-${pid}" style="min-width:28px;text-align:center;font-weight:700;">0</span>
+                <button class="qty-btn qty-plus" data-pid="${pid}" type="button">+</button>
+            </div>
         </div>
-    </div></div>`;
-
-    card.innerHTML = html;
+    </div>`;
 
     // Botones − y +
-    const minusBtn = card.querySelector('.qty-minus');
-    const plusBtn  = card.querySelector('.qty-plus');
-    const qtyEl    = card.querySelector('.qty-num');
+    const qtyEl = card.querySelector('.qty-num');
+    card.querySelector('.qty-plus').onclick  = () => { qtyEl.textContent = parseInt(qtyEl.textContent)+1; actualizarBotonAgregarTodo(); };
+    card.querySelector('.qty-minus').onclick = () => { qtyEl.textContent = Math.max(0,parseInt(qtyEl.textContent)-1); actualizarBotonAgregarTodo(); };
 
-    plusBtn.onclick = function() {
-        const n = parseInt(qtyEl.textContent) + 1;
-        qtyEl.textContent = n;
-        actualizarBotonAgregarTodo();
-    };
-    minusBtn.onclick = function() {
-        const n = Math.max(0, parseInt(qtyEl.textContent) - 1);
-        qtyEl.textContent = n;
-        actualizarBotonAgregarTodo();
-    };
-
-    // Exponer datos del producto
     card._productoData = p;
     card._pid = pid;
-    card._getQty = function() { return parseInt(qtyEl.textContent) || 0; };
-    card._getVariante = function() {
+    card._getQty = () => parseInt(qtyEl.textContent) || 0;
+    card._getVariante = () => {
         const sel = card.querySelector('.var-select');
-        if (sel && vars.length > 1) {
-            return vars[parseInt(sel.value)] || vars[0];
-        }
+        if (sel && vars.length > 1) return vars[parseInt(sel.value)] || vars[0];
         return vars[0] || { label: p.nombre, precio: p.precio || 0 };
     };
 
-    // Registrar en window para el FAB
     if (!window._menuCards) window._menuCards = {};
     window._menuCards[pid] = card;
-
     return card;
 }
 
