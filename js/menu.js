@@ -326,9 +326,24 @@ function crearCard(p) {
         const nameEl = document.getElementById('mods-item-name');
         if (nameEl) nameEl.textContent = (p.nombre||'') + (variante.label ? ' · ' + variante.label : '');
         const isTorta = p.tipo === 'torta' || (p.categoria||'').toLowerCase() === 'tortas';
-        document.querySelectorAll('.mods-section').forEach(function(s, i) {
-            s.style.display = (!isTorta && (i===1||i===2)) ? 'none' : 'block';
+        // Mostrar secciones según tipo de producto
+        document.querySelectorAll('.mods-torta').forEach(function(s) {
+            s.style.display = isTorta ? 'block' : 'none';
         });
+        var isDrink  = (p.categoria||'').toLowerCase().includes('drink') || (p.categoria||'').toLowerCase().includes('bebida');
+        var isBotana = (p.categoria||'').toLowerCase().includes('botana') || (p.categoria||'').toLowerCase().includes('extra');
+        document.querySelectorAll('.mods-drink').forEach(function(s) {
+            s.style.display = isDrink ? 'block' : 'none';
+        });
+        document.querySelectorAll('.mods-botana').forEach(function(s) {
+            s.style.display = isBotana ? 'block' : 'none';
+        });
+        // Si no es ninguno de los anteriores, mostrar todas
+        if (!isTorta && !isDrink && !isBotana) {
+            document.querySelectorAll('.mods-torta,.mods-drink,.mods-botana').forEach(function(s) {
+                s.style.display = 'block';
+            });
+        }
         document.querySelectorAll('.mod-chip input').forEach(function(cb) {
             cb.checked = false;
             if (cb.closest) cb.closest('.mod-chip').classList.remove('selected');
