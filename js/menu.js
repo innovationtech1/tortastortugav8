@@ -257,7 +257,12 @@ let _menuUnsub = null;
 
 /* ── CREAR TARJETA DE PRODUCTO ──────────────────────── */
 function crearCard(p) {
-    const pid  = p.productId || p.id || Math.random().toString(36).slice(2);
+    // PID único: docId de Firestore, o slug del nombre + índice global
+    if (!window._cardCounter) window._cardCounter = 0;
+    window._cardCounter++;
+    const _slug = (p.nombre||'prod').toLowerCase()
+        .replace(/[^a-z0-9]/g,'').slice(0,12);
+    const pid   = (p.productId || p._docId || _slug) + '_' + window._cardCounter;
     const vars = p.variantes || [];
 
     /* Badge */
@@ -398,6 +403,7 @@ function crearCard(p) {
     return card;
 }
 function _limpiarMenuContainers() {
+    window._cardCounter = 0; // Reset counter en cada re-render
     ['menu-container','drinks-container','botanas-container'].forEach(function(id) {
         const el = document.getElementById(id);
         if (el) el.innerHTML = '';
