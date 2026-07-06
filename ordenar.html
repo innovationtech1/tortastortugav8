@@ -1357,7 +1357,7 @@ function cerrarOrdenModal() {
 
         <!-- BOTONES CUENTA -->
         <div style="display:flex;gap:.4rem;padding:.5rem .9rem;flex-shrink:0;">
-            <input id="nombre-cuenta-input" type="text"
+            <input id="nombre-cuenta-input" type="text" aria-label="Nombre de la cuenta o cliente"
                     placeholder="✏️ Nombre cliente..."
                     inputmode="text" autocomplete="off" autocorrect="off"
                     style="flex:1;box-sizing:border-box;padding:.42rem .65rem;
@@ -1416,7 +1416,7 @@ function cerrarOrdenModal() {
             <div class="mods-section mods-torta">
                 <p class="mods-section-title">🥤 Opciones de Combo</p>
                 <div class="mods-chips">
-                    <label class="mod-chip" data-price="-1"><input type="checkbox" value="Solo Torta sin soda ni chips (-$1)" data-price="-1"> Solo Torta <span class="chip-price">-$1</span></label>
+                    <label class="mod-chip" data-price="-1"><input type="checkbox" value="Solo Torta sin soda ni chips (-$1)" data-price="-1" aria-label="Solo Torta sin soda ni chips (-$1)"> Solo Torta <span class="chip-price">-$1</span></label>
                 </div>
             </div>
 
@@ -1424,15 +1424,15 @@ function cerrarOrdenModal() {
             <div class="mods-section mods-torta">
                 <p class="mods-section-title">❌ Quitar ingrediente</p>
                 <div class="mods-chips">
-                    <label class="mod-chip"><input type="checkbox" value="Sin cebolla"> Sin cebolla</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin cebolla roja"> Sin cebolla roja</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin tomate"> Sin tomate</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin mayonesa"> Sin mayonesa</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin aguacate"> Sin aguacate</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin queso"> Sin queso fresco</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin jalapeños"> Sin jalapeños</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin lechuga"> Sin lechuga</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin frijoles"> Sin frijoles</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin cebolla" aria-label="Sin cebolla"> Sin cebolla</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin cebolla roja" aria-label="Sin cebolla roja"> Sin cebolla roja</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin tomate" aria-label="Sin tomate"> Sin tomate</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin mayonesa" aria-label="Sin mayonesa"> Sin mayonesa</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin aguacate" aria-label="Sin aguacate"> Sin aguacate</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin queso" aria-label="Sin queso"> Sin queso fresco</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin jalapeños" aria-label="Sin jalapeños"> Sin jalapeños</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin lechuga" aria-label="Sin lechuga"> Sin lechuga</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin frijoles" aria-label="Sin frijoles"> Sin frijoles</label>
                 </div>
             </div>
 
@@ -1440,12 +1440,12 @@ function cerrarOrdenModal() {
             <div class="mods-section mods-torta">
                 <p class="mods-section-title">🔽 Poquito de...</p>
                 <div class="mods-chips">
-                    <label class="mod-chip"><input type="checkbox" value="Poca mayonesa"> Poca mayo</label>
-                    <label class="mod-chip"><input type="checkbox" value="Poca cebolla"> Poca cebolla</label>
-                    <label class="mod-chip"><input type="checkbox" value="Poco aguacate"> Poco aguacate</label>
-                    <label class="mod-chip"><input type="checkbox" value="Poco tomate"> Poco tomate</label>
-                    <label class="mod-chip"><input type="checkbox" value="Poco queso"> Poco queso</label>
-                    <label class="mod-chip"><input type="checkbox" value="Poco jalapeño"> Poco jalapeño</label>
+                    <label class="mod-chip"><input type="checkbox" value="Poca mayonesa" aria-label="Poca mayonesa"> Poca mayo</label>
+                    <label class="mod-chip"><input type="checkbox" value="Poca cebolla" aria-label="Poca cebolla"> Poca cebolla</label>
+                    <label class="mod-chip"><input type="checkbox" value="Poco aguacate" aria-label="Poco aguacate"> Poco aguacate</label>
+                    <label class="mod-chip"><input type="checkbox" value="Poco tomate" aria-label="Poco tomate"> Poco tomate</label>
+                    <label class="mod-chip"><input type="checkbox" value="Poco queso" aria-label="Poco queso"> Poco queso</label>
+                    <label class="mod-chip"><input type="checkbox" value="Poco jalapeño" aria-label="Poco jalapeño"> Poco jalapeño</label>
                 </div>
             </div>
 
@@ -1453,15 +1453,15 @@ function cerrarOrdenModal() {
             <div class="mods-section mods-torta">
                 <p class="mods-section-title">⬆️ Extras</p>
                 <div class="mods-chips">
-                    <label class="mod-chip" data-price="1"><input type="checkbox" value="Extra meat slice +$1" data-price="1"> Extra Meat Slice <span class="chip-price">+$1</span></label>
-                    <label class="mod-chip" data-price="5"><input type="checkbox" value="6 Shrimp +$5" data-price="5"> 6 Shrimp <span class="chip-price">+$5</span></label>
-                    <label class="mod-chip"><input type="checkbox" value="Extra aguacate"> Extra aguacate</label>
-                    <label class="mod-chip"><input type="checkbox" value="Extra queso"> Extra queso</label>
-                    <label class="mod-chip"><input type="checkbox" value="Extra mayonesa"> Extra mayo</label>
-                    <label class="mod-chip"><input type="checkbox" value="Extra picante"> Extra picante</label>
-                    <label class="mod-chip"><input type="checkbox" value="Pan bien tostado"> Pan bien tostado</label>
-                    <label class="mod-chip"><input type="checkbox" value="Pan suave"> Pan suave</label>
-                    <label class="mod-chip"><input type="checkbox" value="Partida a la mitad"> Partir a la mitad</label>
+                    <label class="mod-chip" data-price="1"><input type="checkbox" value="Extra meat slice +$1" data-price="1" aria-label="Extra meat slice +$1"> Extra Meat Slice <span class="chip-price">+$1</span></label>
+                    <label class="mod-chip" data-price="5"><input type="checkbox" value="6 Shrimp +$5" data-price="5" aria-label="6 Shrimp +$5"> 6 Shrimp <span class="chip-price">+$5</span></label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra aguacate" aria-label="Extra aguacate"> Extra aguacate</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra queso" aria-label="Extra queso"> Extra queso</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra mayonesa" aria-label="Extra mayonesa"> Extra mayo</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra picante" aria-label="Extra picante"> Extra picante</label>
+                    <label class="mod-chip"><input type="checkbox" value="Pan bien tostado" aria-label="Pan bien tostado"> Pan bien tostado</label>
+                    <label class="mod-chip"><input type="checkbox" value="Pan suave" aria-label="Pan suave"> Pan suave</label>
+                    <label class="mod-chip"><input type="checkbox" value="Partida a la mitad" aria-label="Partida a la mitad"> Partir a la mitad</label>
                 </div>
             </div>
 
@@ -1469,18 +1469,18 @@ function cerrarOrdenModal() {
             <div class="mods-section mods-drink" style="display:none;">
                 <p class="mods-section-title">🍹 Personalizar bebida</p>
                 <div class="mods-chips">
-                    <label class="mod-chip"><input type="checkbox" value="Sin chamoy"> Sin chamoy</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin Tajín"> Sin Tajín</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin salsa Valentina"> Sin Valentina</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin clamato"> Sin clamato</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin limón"> Sin limón</label>
-                    <label class="mod-chip"><input type="checkbox" value="Poco picante"> Poco picante</label>
-                    <label class="mod-chip"><input type="checkbox" value="Extra chamoy"> Extra chamoy</label>
-                    <label class="mod-chip"><input type="checkbox" value="Extra Tajín"> Extra Tajín</label>
-                    <label class="mod-chip"><input type="checkbox" value="Extra limón"> Extra limón</label>
-                    <label class="mod-chip"><input type="checkbox" value="Extra picante"> Bien picante</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin hielo"> Sin hielo</label>
-                    <label class="mod-chip"><input type="checkbox" value="Mucho hielo"> Mucho hielo</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin chamoy" aria-label="Sin chamoy"> Sin chamoy</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin Tajín" aria-label="Sin Tajín"> Sin Tajín</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin salsa Valentina" aria-label="Sin salsa Valentina"> Sin Valentina</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin clamato" aria-label="Sin clamato"> Sin clamato</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin limón" aria-label="Sin limón"> Sin limón</label>
+                    <label class="mod-chip"><input type="checkbox" value="Poco picante" aria-label="Poco picante"> Poco picante</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra chamoy" aria-label="Extra chamoy"> Extra chamoy</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra Tajín" aria-label="Extra Tajín"> Extra Tajín</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra limón" aria-label="Extra limón"> Extra limón</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra picante" aria-label="Extra picante"> Bien picante</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin hielo" aria-label="Sin hielo"> Sin hielo</label>
+                    <label class="mod-chip"><input type="checkbox" value="Mucho hielo" aria-label="Mucho hielo"> Mucho hielo</label>
                 </div>
             </div>
 
@@ -1488,21 +1488,21 @@ function cerrarOrdenModal() {
             <div class="mods-section mods-botana" style="display:none;">
                 <p class="mods-section-title">🍿 Personalizar botana</p>
                 <div class="mods-chips">
-                    <label class="mod-chip"><input type="checkbox" value="Sin chamoy"> Sin chamoy</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin Tajín"> Sin Tajín</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin Valentina"> Sin Valentina</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin cacahuates japoneses"> Sin japoneses</label>
-                    <label class="mod-chip"><input type="checkbox" value="Extra chamoy"> Extra chamoy</label>
-                    <label class="mod-chip"><input type="checkbox" value="Extra Tajín"> Extra Tajín</label>
-                    <label class="mod-chip"><input type="checkbox" value="Extra picante"> Extra picante</label>
-                    <label class="mod-chip"><input type="checkbox" value="Poco picante"> Poco picante</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin chamoy" aria-label="Sin chamoy"> Sin chamoy</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin Tajín" aria-label="Sin Tajín"> Sin Tajín</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin Valentina" aria-label="Sin Valentina"> Sin Valentina</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin cacahuates japoneses" aria-label="Sin cacahuates japoneses"> Sin japoneses</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra chamoy" aria-label="Extra chamoy"> Extra chamoy</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra Tajín" aria-label="Extra Tajín"> Extra Tajín</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra picante" aria-label="Extra picante"> Extra picante</label>
+                    <label class="mod-chip"><input type="checkbox" value="Poco picante" aria-label="Poco picante"> Poco picante</label>
                 </div>
             </div>
 
             <!-- TODOS: Nota especial -->
             <div class="mods-section">
                 <p class="mods-section-title">📝 Nota especial</p>
-                <textarea class="mods-notes" id="mods-notes"
+                <textarea class="mods-notes" id="mods-notes" aria-label="Nota especial para el pedido"
                     placeholder="Ej: sin sal, bien caliente, para niño..."
                     style="width:100%;box-sizing:border-box;background:#111;
                            border:1.5px solid rgba(255,255,255,.1);color:#fff;
@@ -1602,7 +1602,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1783335847"></script>
+<script type="module" src="js/app.js?v=1783336000"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -1708,7 +1708,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783335847';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783336000';
     (async () => {
         try {
             await seedProductos();
