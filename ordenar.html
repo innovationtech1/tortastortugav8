@@ -70,7 +70,7 @@ window._pendingItem = window._pendingItem || null;
 window._editingItem = window._editingItem || null;
 
 function confirmarMods(conMods) {
-    console.log('🔔 confirmarMods llamado, conMods=', conMods);
+    if(window._dbg) window._dbg('🔔 confirmarMods conMods=' + conMods);
 
     // 1. Recolectar modificaciones seleccionadas
     var mods = [], extra = 0;
@@ -118,7 +118,7 @@ function confirmarMods(conMods) {
     var pi = window._pendingItem;
     console.log('📦 pendingItem:', pi);
     if (!pi) {
-        console.warn('❌ No hay pendingItem');
+        if(window._dbg) window._dbg('❌ No hay pendingItem');
         cerrarModal();
         return;
     }
@@ -143,7 +143,7 @@ function confirmarMods(conMods) {
             modificaciones: itemBase.modificaciones.slice(),
         });
     }
-    console.log('✅ Agregados', qty, 'items. Total en cuenta:', ca.items.length);
+    if(window._dbg) window._dbg('✅ Agregados ' + qty + ' items. Total: ' + ca.items.length);
 
     // Resetear contador de la tarjeta
     if (window._pendingResetQty) { window._pendingResetQty(); window._pendingResetQty = null; }
@@ -1619,7 +1619,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1783339123"></script>
+<script type="module" src="js/app.js?v=1783339324"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -1725,7 +1725,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783339123';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783339324';
     (async () => {
         try {
             await seedProductos();
@@ -2567,5 +2567,39 @@ document.addEventListener('click', function(e) {
     e.preventDefault();
 });
 </script>
+
+<!-- DEBUG PANEL -->
+<div id="debug-panel" style="position:fixed;bottom:0;left:0;right:0;max-height:150px;overflow-y:auto;
+     background:rgba(0,0,0,.9);color:#0f0;font-family:monospace;font-size:11px;padding:.5rem;z-index:99999;
+     border-top:2px solid #0f0;">
+  <div style="color:#FF5A00;font-weight:bold;">🔧 DEBUG (toca para cerrar)</div>
+  <div id="debug-log"></div>
+</div>
+<script>
+window._dbg = function(msg) {
+    var el = document.getElementById('debug-log');
+    if (el) {
+        var line = document.createElement('div');
+        line.textContent = new Date().toLocaleTimeString() + ' → ' + msg;
+        el.appendChild(line);
+        el.scrollTop = el.scrollHeight;
+    }
+    console.log(msg);
+};
+document.getElementById('debug-panel').addEventListener('click', function(){
+    this.style.display = 'none';
+});
+// Verificar estado al cargar
+setTimeout(function() {
+    window._dbg('confirmarMods existe: ' + (typeof window.confirmarMods === 'function'));
+    window._dbg('renderCartItems existe: ' + (typeof window.renderCartItems === 'function'));
+    window._dbg('_cuentasSys existe: ' + (!!window._cuentasSys));
+    window._dbg('_menuCards existe: ' + (!!window._menuCards));
+    if (window._cuentasSys) {
+        window._dbg('Cuentas: ' + window._cuentasSys.cuentas.length + ', activa: ' + window._cuentasSys.activa);
+    }
+}, 1500);
+</script>
+
 </body>
 </html>
