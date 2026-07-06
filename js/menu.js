@@ -332,57 +332,62 @@ function crearCard(p) {
         qtyEl.textContent = Math.max(0, (parseInt(qtyEl.textContent)||0) - 1);
     };
 
-    // ── AGREGAR: valida cantidad y abre modal de modificaciones ──
+    // ── AGREGAR: mete al carrito directamente + abre modal para editar ──
     btnAgr.onclick = function() {
         const cantidad = parseInt(qtyEl.textContent) || 0;
 
-        // Si cantidad es 0, avisar al usuario
         if (cantidad < 1) {
-            // Feedback visual: resaltar el contador
-            qtyEl.style.background = 'rgba(244,67,54,.3)';
+            qtyEl.style.background = 'rgba(244,67,54,.4)';
             setTimeout(function(){ qtyEl.style.background = 'rgba(255,255,255,.06)'; }, 600);
-            alert('Selecciona al menos 1 producto con el botón +');
+            alert('⚠️ Primero presiona + para elegir la cantidad');
             return;
         }
 
         const variante = getVariante();
         const precio   = parseFloat(variante.precio) || parseFloat(p.precio) || 0;
 
-        // Guardar item pendiente
-        window._pendingItem = {
-            id: pid, nombre: p.nombre || 'Producto',
-            precio: precio, variante: variante.label || '',
-            modificaciones: [], _qty: cantidad,
-        };
-        window._pendingItemCard = card;
-        window._pendingResetQty = function(){ qtyEl.textContent = '0'; };
-
-        // Configurar modal
-        const nameEl = document.getElementById('mods-item-name');
-        if (nameEl) nameEl.textContent = (cantidad>1?cantidad+'x ':'')+(p.nombre||'')+(variante.label?' \u00b7 '+variante.label:'');
-
-        // Secciones por tipo
-        const cat = (p.categoria||'').toLowerCase();
-        const isTorta  = p.tipo==='torta' || cat==='tortas';
-        const isDrink  = cat.indexOf('drink')>=0 || cat.indexOf('bebida')>=0;
-        const isBotana = cat.indexOf('botana')>=0 || cat.indexOf('extra')>=0;
-        document.querySelectorAll('.mods-torta').forEach(function(s){ s.style.display = isTorta?'block':'none'; });
-        document.querySelectorAll('.mods-drink').forEach(function(s){ s.style.display = isDrink?'block':'none'; });
-        document.querySelectorAll('.mods-botana').forEach(function(s){ s.style.display = isBotana?'block':'none'; });
-        if (!isTorta && !isDrink && !isBotana) {
-            document.querySelectorAll('.mods-torta,.mods-drink,.mods-botana').forEach(function(s){ s.style.display='block'; });
+        // Garantizar _cuentasSys
+        if (!window._cuentasSys) {
+            window._cuentasSys = {
+                cuentas: [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }],
+                activa: 1, counter: 1
+            };
         }
+        var CS = window._cuentasSys;
+        var ca = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+        if (!ca) { ca = CS.cuentas[0]; CS.activa = ca.id; }
 
-        // Limpiar chips
-        document.querySelectorAll('.mod-chip').forEach(function(chip){
-            chip.classList.remove('selected');
-            const cb = chip.querySelector('input'); if (cb) cb.checked = false;
-        });
-        const notas = document.getElementById('mods-notes');
-        if (notas) notas.value = '';
+        // Agregar los items DIRECTAMENTE al carrito
+        for (var i = 0; i < cantidad; i++) {
+            ca.items.push({
+                id:             pid,
+                nombre:         p.nombre || 'Producto',
+                precio:         precio,
+                variante:       variante.label || '',
+                modificaciones: [],
+            });
+        }
+        if (window._dbg) window._dbg('✅ ' + cantidad + 'x ' + (p.nombre||'') + ' agregado. Total: ' + ca.items.length);
 
-        const modal = document.getElementById('mods-modal');
-        if (modal) modal.classList.add('active');
+        // Guardar referencia al último item para editar desde el modal
+        window._lastAddedIndices = [];
+        for (var j = ca.items.length - cantidad; j < ca.items.length; j++) {
+            window._lastAddedIndices.push(j);
+        }
+        window._lastAddedCuenta = ca.id;
+
+        // Resetear contador
+        qtyEl.textContent = '0';
+
+        // Renderizar carrito
+        if (window.renderCuentasTabs) window.renderCuentasTabs();
+        if (window.renderCartItems)   window.renderCartItems();
+
+        // Abrir carrito
+        var cm = document.getElementById('cart-modal');
+        if (cm) cm.classList.add('active');
+        var ci = document.getElementById('cart-icon');
+        if (ci) { ci.style.transform = 'scale(1.3)'; setTimeout(function(){ ci.style.transform = ''; }, 250); }
     };
 
     // Callback cuando el modal confirma
