@@ -355,7 +355,7 @@ function crearCard(p) {
         });
         var notasEl = document.getElementById('mods-notes');
         if (notasEl) notasEl.value = '';
-        if (modal) modal.classList.add('open');
+        if (modal) modal.classList.add('active');
     }
 
     /* Botón Agregar — abre modificaciones */
