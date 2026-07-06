@@ -255,6 +255,144 @@ export async function eliminarProducto(id) {
 let _menuUnsub = null;
 
 
+/* ── CREAR TARJETA DE PRODUCTO (POS) ──────────────── */
+function crearCard(p) {
+    if (!window._cardCounter) window._cardCounter = 0;
+    window._cardCounter++;
+    const _slug = (p.nombre||'prod').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,12);
+    const pid   = (p.productId || p._docId || _slug) + '_' + window._cardCounter;
+    const vars  = p.variantes || [];
+
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#1E1E1E;border-radius:18px;border:1px solid rgba(255,255,255,.07);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 4px 20px rgba(0,0,0,.45);';
+
+    // Badge
+    const badgeTxt = p.badge ? p.badge.texto : '';
+    const badgeEl = badgeTxt
+        ? '<span style="position:absolute;top:.55rem;left:.55rem;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);color:#FBB724;font-size:.68rem;font-weight:900;letter-spacing:.05em;padding:.22rem .65rem;border-radius:20px;pointer-events:none;">' + badgeTxt + '</span>'
+        : '';
+
+    // Incluye
+    const incluyeRaw = (p.incluye || '').replace(/^[✅ ]+/, '').trim();
+    const incluyeEl = incluyeRaw
+        ? '<div style="font-size:.7rem;color:#25D366;font-weight:600;margin:.2rem 0;">✅ ' + incluyeRaw + '</div>'
+        : '';
+
+    // Variantes
+    let varEl = '';
+    if (vars.length > 1) {
+        const opts = vars.map(function(v,i){
+            return '<option value="'+i+'">'+(v.label||('Combo '+String.fromCharCode(65+i)))+'</option>';
+        }).join('');
+        varEl = '<select id="var-'+pid+'" class="var-select" style="width:100%;background:#0d0d0d;border:1.5px solid rgba(255,90,0,.5);color:#fff;border-radius:10px;padding:.42rem .65rem;font-family:inherit;font-size:.78rem;margin:.3rem 0;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;">'+opts+'</select>';
+    } else if (vars.length === 1) {
+        varEl = '<div style="font-size:.78rem;color:#FF5A00;font-weight:700;margin:.2rem 0;">'+(vars[0].label||('$'+(vars[0].precio||p.precio||0)))+'</div>';
+    } else if (p.precio) {
+        varEl = '<div style="font-size:.88rem;color:#FF5A00;font-weight:800;">$'+p.precio+'</div>';
+    }
+
+    const imgSrc = p.imagen || 'img/torta-original.png';
+
+    card.innerHTML =
+        '<div style="position:relative;width:100%;height:170px;overflow:hidden;flex-shrink:0;">' +
+            '<img src="'+imgSrc+'" alt="'+(p.nombre||'')+'" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;">' +
+            badgeEl +
+        '</div>' +
+        '<div style="padding:.75rem .9rem .9rem;display:flex;flex-direction:column;flex:1;gap:.15rem;">' +
+            '<h3 style="font-size:.9rem;font-weight:800;color:#fff;margin:0;line-height:1.25;">'+(p.nombre||'')+'</h3>' +
+            '<p style="font-size:.7rem;color:#888;margin:0;line-height:1.4;">'+(p.descripcion||'')+'</p>' +
+            incluyeEl +
+            varEl +
+            '<div style="display:flex;align-items:center;gap:.4rem;margin-top:auto;padding-top:.5rem;">' +
+                '<button class="btn-agregar-card" style="flex:1;padding:.6rem;background:linear-gradient(135deg,#FF5A00,#FF8C00);border:none;color:#fff;border-radius:10px;font-family:inherit;font-size:.82rem;font-weight:800;cursor:pointer;box-shadow:0 3px 8px rgba(255,90,0,.35);">🛒 Agregar</button>' +
+                '<div style="display:flex;align-items:center;flex-shrink:0;">' +
+                    '<button class="qty-btn qty-minus" type="button" style="width:30px;height:30px;border-radius:8px 0 0 8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,90,0,.3);color:#FF5A00;font-size:1.1rem;font-weight:800;cursor:pointer;">−</button>' +
+                    '<span class="qty-num" style="min-width:30px;height:30px;line-height:30px;text-align:center;font-weight:800;font-size:.9rem;color:#fff;background:rgba(255,255,255,.06);">0</span>' +
+                    '<button class="qty-btn qty-plus" type="button" style="width:30px;height:30px;border-radius:0 8px 8px 0;background:rgba(255,255,255,.08);border:1px solid rgba(255,90,0,.3);color:#FF5A00;font-size:1.1rem;font-weight:800;cursor:pointer;">+</button>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+    // ── ELEMENTOS ──
+    const qtyEl    = card.querySelector('.qty-num');
+    const btnAgr   = card.querySelector('.btn-agregar-card');
+    const btnPlus  = card.querySelector('.qty-plus');
+    const btnMinus = card.querySelector('.qty-minus');
+
+    // Helper: obtener variante seleccionada
+    function getVariante() {
+        const sel = card.querySelector('.var-select');
+        if (sel && vars.length > 1) return vars[parseInt(sel.value)] || vars[0];
+        return vars[0] || { label: p.nombre, precio: p.precio || 0 };
+    }
+
+    // ── + incrementa contador ──
+    btnPlus.onclick = function() {
+        qtyEl.textContent = (parseInt(qtyEl.textContent)||0) + 1;
+    };
+
+    // ── − decrementa contador ──
+    btnMinus.onclick = function() {
+        qtyEl.textContent = Math.max(0, (parseInt(qtyEl.textContent)||0) - 1);
+    };
+
+    // ── Agregar: abre modal de modificaciones ──
+    btnAgr.onclick = function() {
+        const cantidad = Math.max(1, parseInt(qtyEl.textContent)||1);
+        const variante = getVariante();
+        const precio   = parseFloat(variante.precio) || parseFloat(p.precio) || 0;
+
+        window._pendingItem = {
+            id: pid, nombre: p.nombre || 'Producto',
+            precio: precio, variante: variante.label || '',
+            modificaciones: [], _qty: cantidad,
+        };
+        window._pendingItemCard = card;
+        window._pendingResetQty = function(){ qtyEl.textContent = '0'; };
+
+        const nameEl = document.getElementById('mods-item-name');
+        if (nameEl) nameEl.textContent = (cantidad>1?cantidad+'x ':'')+(p.nombre||'')+(variante.label?' · '+variante.label:'');
+
+        // Secciones por tipo
+        const cat = (p.categoria||'').toLowerCase();
+        const isTorta  = p.tipo==='torta' || cat==='tortas';
+        const isDrink  = cat.indexOf('drink')>=0 || cat.indexOf('bebida')>=0;
+        const isBotana = cat.indexOf('botana')>=0 || cat.indexOf('extra')>=0;
+        document.querySelectorAll('.mods-torta').forEach(function(s){ s.style.display = isTorta?'block':'none'; });
+        document.querySelectorAll('.mods-drink').forEach(function(s){ s.style.display = isDrink?'block':'none'; });
+        document.querySelectorAll('.mods-botana').forEach(function(s){ s.style.display = isBotana?'block':'none'; });
+        if (!isTorta && !isDrink && !isBotana) {
+            document.querySelectorAll('.mods-torta,.mods-drink,.mods-botana').forEach(function(s){ s.style.display='block'; });
+        }
+
+        // Limpiar chips
+        document.querySelectorAll('.mod-chip').forEach(function(chip){
+            chip.classList.remove('selected');
+            const cb = chip.querySelector('input'); if (cb) cb.checked = false;
+        });
+        const notas = document.getElementById('mods-notes');
+        if (notas) notas.value = '';
+
+        const modal = document.getElementById('mods-modal');
+        if (modal) modal.classList.add('active');
+    };
+
+    // Callback cuando el modal confirma
+    card._onItemAdded = function(){ qtyEl.textContent = '0'; };
+    card._pid = pid;
+    card._productoData = p;
+    card._getQty = function(){ return parseInt(qtyEl.textContent)||0; };
+    card._getVariante = getVariante;
+
+    if (!window._menuCards) window._menuCards = {};
+    window._menuCards[pid] = card;
+    return card;
+}
+
+// ── MENÚ EN TIEMPO REAL ──────────────────────────────────────────────────────
+let _menuUnsub = null;
+
+
 /* ── CREAR TARJETA DE PRODUCTO ──────────────────────── */
 function crearCard(p) {
     // PID único: docId de Firestore, o slug del nombre + índice global
