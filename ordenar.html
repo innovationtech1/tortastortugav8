@@ -133,6 +133,12 @@ function confirmarMods(conMods) {
     window._pendingItem = null;
     cerrarModal();
 
+    // Notificar a la tarjeta que se agregó un item (actualiza contador)
+    if (window._pendingItemCard && window._pendingItemCard._onItemAdded) {
+        window._pendingItemCard._onItemAdded();
+    }
+    window._pendingItemCard = null;
+
     if (window.renderCuentasTabs) window.renderCuentasTabs();
     if (window.renderCartItems) window.renderCartItems();
 
@@ -1595,7 +1601,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1782798720">
+<script type="module" src="js/app.js?v=1783303378">
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
@@ -1700,7 +1706,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783302904';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783303378';
     (async () => {
         try {
             await seedProductos();
