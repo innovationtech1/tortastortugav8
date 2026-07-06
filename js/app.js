@@ -1061,6 +1061,11 @@ window.renderCartItems = function() {
             <div style="font-size:.9rem;font-weight:800;color:#25D366;flex-shrink:0;">$${precio.toFixed(2)}</div>
             <!-- Acciones -->
             <div style="display:flex;gap:.3rem;flex-shrink:0;">
+                <button onclick="window.editarItemDelCarrito(${idx})"
+                    style="width:28px;height:28px;background:rgba(167,139,250,.15);
+                           border:1px solid rgba(167,139,250,.35);color:#A78BFA;
+                           border-radius:8px;font-size:.75rem;cursor:pointer;
+                           display:flex;align-items:center;justify-content:center;">✏️</button>
                 <button onclick="window.removeItemCuenta(${idx})"
                     style="width:28px;height:28px;background:rgba(244,67,54,.12);
                            border:1px solid rgba(244,67,54,.25);color:#F44336;
