@@ -1700,7 +1700,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783302664';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783302681';
     (async () => {
         try {
             await seedProductos();
@@ -1870,10 +1870,7 @@ function enviarOrdenModal() {
 <div id="nombre-modal-overlay" onclick="if(event.target===this)cerrarNombreModal()">
   <div id="nombre-modal">
     <div style="font-weight:800;font-size:.95rem;margin-bottom:.85rem;color:#fff;">✏️ Nombre de la cuenta</div>
-    <input type="text" id="nombre-cuenta-input" placeholder="Ej: Juan, Mesa 5, Familia..."
-      style="width:100%;padding:.7rem .9rem;background:#222;border:1.5px solid rgba(255,255,255,.15);
-             border-radius:10px;color:#fff;font-family:inherit;font-size:.95rem;outline:none;margin-bottom:.85rem;"
-      onkeydown="if(event.key==='Enter')guardarNombreCuenta()">
+    
     <div style="display:flex;gap:.5rem;">
       <button onclick="guardarNombreCuenta()" style="flex:1;padding:.7rem;background:linear-gradient(135deg,#FF5A00,#FF8800);
         color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;">
