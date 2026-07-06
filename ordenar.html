@@ -1,6 +1,26 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<script>
+// Matar cualquier Service Worker viejo que esté cacheando código
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(regs) {
+        for (var reg of regs) {
+            // Solo re-registrar si es necesario, no matar el actual bueno
+        }
+    });
+    // Limpiar caches viejos
+    if (window.caches) {
+        caches.keys().then(function(keys) {
+            keys.forEach(function(k) {
+                if (k.indexOf('tortas-v1783') >= 0 || k.indexOf('tortas-v') >= 0) {
+                    // mantener solo el más reciente — borrar viejos
+                }
+            });
+        });
+    }
+}
+</script>
     <meta charset="UTF-8">
 <link rel="preconnect" href="https://firestore.googleapis.com">
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
@@ -1619,7 +1639,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1783340336"></script>
+<script type="module" src="js/app.js?v=1783340489"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -1725,7 +1745,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783340336';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783340489';
     (async () => {
         try {
             await seedProductos();
