@@ -363,7 +363,10 @@ function crearCard(p) {
                 id:             pid,
                 nombre:         p.nombre || 'Producto',
                 precio:         precio,
+                precioBase:     precio,
                 variante:       variante.label || '',
+                categoria:      p.categoria || 'tortas',
+                tipo:           p.tipo || 'torta',
                 modificaciones: [],
             });
         }
