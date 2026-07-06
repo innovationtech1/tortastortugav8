@@ -109,7 +109,8 @@ function confirmarMods(conMods) {
 
     // MODO AGREGAR
     var pi = window._pendingItem;
-    if (!pi) { cerrarModal(); return; }
+    console.log('📦 confirmarMods MODO AGREGAR, pendingItem:', pi);
+    if (!pi) { console.warn('❌ No hay pendingItem'); cerrarModal(); return; }
 
     if (conMods) {
         var rr = getMods();
@@ -123,12 +124,18 @@ function confirmarMods(conMods) {
     delete itemBase._splitMode;
 
     var CS2 = window._cuentasSys;
+    console.log('💳 _cuentasSys:', CS2 ? 'existe, activa=' + CS2.activa : 'NO EXISTE');
     if (CS2) {
         var ca = CS2.cuentas.find(function(x){ return x.id === CS2.activa; });
-        if (ca) { for (var i = 0; i < qty; i++) ca.items.push(Object.assign({}, itemBase)); }
+        console.log('🔍 cuenta activa encontrada:', ca ? ca.nombre : 'NO');
+        if (ca) {
+            for (var i = 0; i < qty; i++) ca.items.push(Object.assign({}, itemBase));
+            console.log('✅ Item agregado. Total items en cuenta:', ca.items.length);
+        }
     } else {
         if (!window._cart) window._cart = [];
         for (var j = 0; j < qty; j++) window._cart.push(Object.assign({}, itemBase));
+        console.log('✅ Item agregado a _cart. Total:', window._cart.length);
     }
 
     window._pendingItem = null;
@@ -1602,7 +1609,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1783336341"></script>
+<script type="module" src="js/app.js?v=1783336534"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -1708,7 +1715,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783336341';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783336534';
     (async () => {
         try {
             await seedProductos();
