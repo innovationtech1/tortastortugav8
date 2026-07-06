@@ -1426,7 +1426,9 @@ window.editarItemDelCarrito = function(idx) {
     if (!ca || !ca.items[idx]) { console.warn('Item no encontrado', idx); return; }
 
     var item = ca.items[idx];
-    console.log('✏️ Editando item:', item.nombre, 'tipo:', item.tipo, 'cat:', item.categoria);
+    var modal0 = document.getElementById('mods-modal');
+    var secciones = document.querySelectorAll('.mods-torta,.mods-drink,.mods-botana').length;
+    alert('EDIT: ' + item.nombre + '\ntipo=' + item.tipo + ' cat=' + item.categoria + '\nmodal existe=' + (!!modal0) + '\nsecciones=' + secciones);
 
     // Guardar referencia del item que se edita
     window._editingItem = {
