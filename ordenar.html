@@ -69,6 +69,15 @@ window._pendingItem = window._pendingItem || null;
 
 window._editingItem = window._editingItem || null;
 
+// ── GARANTIZAR que _cuentasSys existe (POS core) ──
+if (!window._cuentasSys) {
+    window._cuentasSys = {
+        cuentas: [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }],
+        activa: 1,
+        counter: 1
+    };
+}
+
 function confirmarMods(conMods) {
     // Recolectar modificaciones seleccionadas (chips con clase .selected)
     function getMods() {
@@ -1609,7 +1618,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1783336534"></script>
+<script type="module" src="js/app.js?v=1783336860"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -1715,7 +1724,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783336534';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783336860';
     (async () => {
         try {
             await seedProductos();
