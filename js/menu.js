@@ -332,12 +332,23 @@ function crearCard(p) {
         qtyEl.textContent = Math.max(0, (parseInt(qtyEl.textContent)||0) - 1);
     };
 
-    // ── Agregar: abre modal de modificaciones ──
+    // ── AGREGAR: valida cantidad y abre modal de modificaciones ──
     btnAgr.onclick = function() {
-        const cantidad = Math.max(1, parseInt(qtyEl.textContent)||1);
+        const cantidad = parseInt(qtyEl.textContent) || 0;
+
+        // Si cantidad es 0, avisar al usuario
+        if (cantidad < 1) {
+            // Feedback visual: resaltar el contador
+            qtyEl.style.background = 'rgba(244,67,54,.3)';
+            setTimeout(function(){ qtyEl.style.background = 'rgba(255,255,255,.06)'; }, 600);
+            alert('Selecciona al menos 1 producto con el botón +');
+            return;
+        }
+
         const variante = getVariante();
         const precio   = parseFloat(variante.precio) || parseFloat(p.precio) || 0;
 
+        // Guardar item pendiente
         window._pendingItem = {
             id: pid, nombre: p.nombre || 'Producto',
             precio: precio, variante: variante.label || '',
@@ -346,8 +357,9 @@ function crearCard(p) {
         window._pendingItemCard = card;
         window._pendingResetQty = function(){ qtyEl.textContent = '0'; };
 
+        // Configurar modal
         const nameEl = document.getElementById('mods-item-name');
-        if (nameEl) nameEl.textContent = (cantidad>1?cantidad+'x ':'')+(p.nombre||'')+(variante.label?' · '+variante.label:'');
+        if (nameEl) nameEl.textContent = (cantidad>1?cantidad+'x ':'')+(p.nombre||'')+(variante.label?' \u00b7 '+variante.label:'');
 
         // Secciones por tipo
         const cat = (p.categoria||'').toLowerCase();
