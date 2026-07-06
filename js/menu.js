@@ -355,14 +355,34 @@ function crearCard(p) {
         });
         var notasEl = document.getElementById('mods-notes');
         if (notasEl) notasEl.value = '';
-        if (modal) modal.classList.add('active');
+        if (modal) {
+            modal.classList.add('active');
+            console.log('✅ Modal abierto (active añadido)');
+        } else {
+            console.error('❌ mods-modal NO existe en el DOM');
+        }
     }
 
     /* Botón Agregar — abre modificaciones */
-    if (btnAgr) btnAgr.onclick = abrirModsParaEsteProducto;
+    if (btnAgr) {
+        btnAgr.onclick = function() {
+            console.log('🛒 Agregar clicked:', p.nombre);
+            abrirModsParaEsteProducto();
+        };
+    } else {
+        console.warn('❌ btn-agregar-card NO encontrado en tarjeta', p.nombre);
+    }
 
     /* Botón + — también abre modificaciones (atajo rápido) */
-    card.querySelector('.qty-plus').onclick = abrirModsParaEsteProducto;
+    var btnPlus = card.querySelector('.qty-plus');
+    if (btnPlus) {
+        btnPlus.onclick = function() {
+            console.log('➕ Plus clicked:', p.nombre);
+            abrirModsParaEsteProducto();
+        };
+    } else {
+        console.warn('❌ qty-plus NO encontrado', p.nombre);
+    }
 
     /* Botón − — quita el último item de este producto del carrito */
     card.querySelector('.qty-minus').onclick = function() {
