@@ -251,10 +251,6 @@ export async function eliminarProducto(id) {
 
 
 
-// ── MENÚ EN TIEMPO REAL ──────────────────────────────────────────────────────
-let _menuUnsub = null;
-
-
 /* ── CREAR TARJETA DE PRODUCTO (POS) ──────────────── */
 function crearCard(p) {
     if (!window._cardCounter) window._cardCounter = 0;
