@@ -314,99 +314,77 @@ function crearCard(p) {
         '</div>' +
         '</div>'
 
-    const qtyEl   = card.querySelector('.qty-num');
-    const btnAgr  = card.querySelector('.btn-agregar-card');
+    const qtyEl  = card.querySelector('.qty-num');
+    const btnAgr = card.querySelector('.btn-agregar-card');
+    const btnPlus  = card.querySelector('.qty-plus');
+    const btnMinus = card.querySelector('.qty-minus');
 
-    /* Función para abrir el modal de modificaciones */
-    function abrirModsParaEsteProducto() {
-        const variante = card._getVariante();
-        const precio   = parseFloat(variante.precio) || parseFloat(p.precio) || 0;
-        window._pendingItem = {
-            id: pid, nombre: p.nombre || 'Producto',
-            precio: precio, variante: variante.label || '',
-            modificaciones: [], _qty: 1,
-        };
-        window._pendingItemCard = card;
-        const modal  = document.getElementById('mods-modal');
-        const nameEl = document.getElementById('mods-item-name');
-        if (nameEl) nameEl.textContent = (p.nombre||'') + (variante.label ? ' · ' + variante.label : '');
-        const isTorta = p.tipo === 'torta' || (p.categoria||'').toLowerCase() === 'tortas';
-        // Mostrar secciones según tipo de producto
-        document.querySelectorAll('.mods-torta').forEach(function(s) {
-            s.style.display = isTorta ? 'block' : 'none';
-        });
-        var isDrink  = (p.categoria||'').toLowerCase().includes('drink') || (p.categoria||'').toLowerCase().includes('bebida');
-        var isBotana = (p.categoria||'').toLowerCase().includes('botana') || (p.categoria||'').toLowerCase().includes('extra');
-        document.querySelectorAll('.mods-drink').forEach(function(s) {
-            s.style.display = isDrink ? 'block' : 'none';
-        });
-        document.querySelectorAll('.mods-botana').forEach(function(s) {
-            s.style.display = isBotana ? 'block' : 'none';
-        });
-        // Si no es ninguno de los anteriores, mostrar todas
-        if (!isTorta && !isDrink && !isBotana) {
-            document.querySelectorAll('.mods-torta,.mods-drink,.mods-botana').forEach(function(s) {
-                s.style.display = 'block';
-            });
-        }
-        document.querySelectorAll('.mod-chip input').forEach(function(cb) {
-            cb.checked = false;
-            if (cb.closest) cb.closest('.mod-chip').classList.remove('selected');
-        });
-        var notasEl = document.getElementById('mods-notes');
-        if (notasEl) notasEl.value = '';
-        if (modal) {
-            modal.classList.add('active');
-            console.log('✅ Modal abierto (active añadido)');
-        } else {
-            console.error('❌ mods-modal NO existe en el DOM');
-        }
-    }
-
-    /* Botón Agregar — abre modificaciones */
-    if (btnAgr) {
-        btnAgr.onclick = function() {
-            console.log('🛒 Agregar clicked:', p.nombre);
-            abrirModsParaEsteProducto();
-        };
-    } else {
-        console.warn('❌ btn-agregar-card NO encontrado en tarjeta', p.nombre);
-    }
-
-    /* Botón + — también abre modificaciones (atajo rápido) */
-    var btnPlus = card.querySelector('.qty-plus');
-    if (btnPlus) {
-        btnPlus.onclick = function() {
-            console.log('➕ Plus clicked:', p.nombre);
-            abrirModsParaEsteProducto();
-        };
-    } else {
-        console.warn('❌ qty-plus NO encontrado', p.nombre);
-    }
-
-    /* Botón − — quita el último item de este producto del carrito */
-    card.querySelector('.qty-minus').onclick = function() {
-        var cs = window._cuentasSys;
-        if (!cs) return;
-        var c = cs.cuentas.find(function(x){ return x.id === cs.activa; });
-        if (!c || !c.items.length) return;
-        var items = c.items;
-        var lastIdx = -1;
-        for (var i = items.length-1; i >= 0; i--) {
-            if (items[i].id === pid) { lastIdx = i; break; }
-        }
-        if (lastIdx >= 0) {
-            items.splice(lastIdx, 1);
-            var cur = parseInt(qtyEl.textContent) || 0;
-            qtyEl.textContent = Math.max(0, cur - 1);
-            if (window.renderCartItems)   window.renderCartItems();
-            if (window.renderCuentasTabs) window.renderCuentasTabs();
-        }
+    // ── + : incrementa el contador visual (cantidad a ordenar) ──
+    if (btnPlus) btnPlus.onclick = function() {
+        qtyEl.textContent = (parseInt(qtyEl.textContent) || 0) + 1;
     };
 
-    /* Callback cuando se confirma agregar desde el modal */
+    // ── − : decrementa el contador visual ──
+    if (btnMinus) btnMinus.onclick = function() {
+        qtyEl.textContent = Math.max(0, (parseInt(qtyEl.textContent) || 0) - 1);
+    };
+
+    // ── AGREGAR : abre modal de modificaciones ──
+    if (btnAgr) btnAgr.onclick = function() {
+        const cantidad = Math.max(1, parseInt(qtyEl.textContent) || 1);
+        const variante = card._getVariante();
+        const precio   = parseFloat(variante.precio) || parseFloat(p.precio) || 0;
+
+        // Configurar el item pendiente con la cantidad seleccionada
+        window._pendingItem = {
+            id:             pid,
+            nombre:         p.nombre || 'Producto',
+            precio:         precio,
+            variante:       variante.label || '',
+            modificaciones: [],
+            _qty:           cantidad,
+        };
+        window._pendingItemCard = card;
+
+        // Configurar el modal
+        const modal  = document.getElementById('mods-modal');
+        const nameEl = document.getElementById('mods-item-name');
+        if (nameEl) {
+            nameEl.textContent = (cantidad > 1 ? cantidad + 'x ' : '') +
+                                 (p.nombre || '') +
+                                 (variante.label ? ' · ' + variante.label : '');
+        }
+
+        // Mostrar secciones según tipo
+        const cat = (p.categoria || '').toLowerCase();
+        const isTorta  = p.tipo === 'torta' || cat === 'tortas';
+        const isDrink  = cat.includes('drink') || cat.includes('bebida');
+        const isBotana = cat.includes('botana') || cat.includes('extra');
+        document.querySelectorAll('.mods-torta').forEach(function(s){ s.style.display = isTorta ? 'block' : 'none'; });
+        document.querySelectorAll('.mods-drink').forEach(function(s){ s.style.display = isDrink ? 'block' : 'none'; });
+        document.querySelectorAll('.mods-botana').forEach(function(s){ s.style.display = isBotana ? 'block' : 'none'; });
+        if (!isTorta && !isDrink && !isBotana) {
+            document.querySelectorAll('.mods-torta,.mods-drink,.mods-botana').forEach(function(s){ s.style.display = 'block'; });
+        }
+
+        // Limpiar selecciones previas
+        document.querySelectorAll('.mod-chip').forEach(function(chip){
+            chip.classList.remove('selected');
+            const cb = chip.querySelector('input');
+            if (cb) cb.checked = false;
+        });
+        const notasEl = document.getElementById('mods-notes');
+        if (notasEl) notasEl.value = '';
+
+        if (modal) modal.classList.add('active');
+    };
+
+    // ── + también actúa como agregar rápido si prefieres — comentado ──
+    // (dejamos + solo como contador)
+
+    // ── Callback cuando el modal confirma: resetea el contador visual ──
     card._onItemAdded = function() {
-        qtyEl.textContent = parseInt(qtyEl.textContent) + 1;
+        qtyEl.textContent = '0';
     };
 
     card._pid = pid;
@@ -414,8 +392,8 @@ function crearCard(p) {
     card._getQty      = function() { return parseInt(qtyEl.textContent) || 0; };
     card._getVariante = function() {
         const sel = card.querySelector('.var-select');
-        if (sel && vars.length > 1) return vars[parseInt(sel.value)] || vars[0];
-        return vars[0] || { label: p.nombre, precio: p.precio || 0 };
+        if (sel && (p.variantes||[]).length > 1) return p.variantes[parseInt(sel.value)] || p.variantes[0];
+        return (p.variantes||[])[0] || { label: p.nombre, precio: p.precio || 0 };
     };
 
     if (!window._menuCards) window._menuCards = {};
