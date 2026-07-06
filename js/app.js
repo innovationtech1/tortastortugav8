@@ -1416,3 +1416,61 @@ window._getOrdenesCajero = async function(cajeroId) {
         })
         .sort((a, b) => (b.creado?.seconds || 0) - (a.creado?.seconds || 0));
 };
+
+
+// ══════════════ EDITAR ITEM DEL CARRITO ══════════════
+window.editarItemDelCarrito = function(idx) {
+    var CS = window._cuentasSys;
+    if (!CS) { console.warn('No _cuentasSys'); return; }
+    var ca = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+    if (!ca || !ca.items[idx]) { console.warn('Item no encontrado', idx); return; }
+
+    var item = ca.items[idx];
+    console.log('✏️ Editando item:', item.nombre, 'tipo:', item.tipo, 'cat:', item.categoria);
+
+    // Guardar referencia del item que se edita
+    window._editingItem = {
+        cuentaId:   CS.activa,
+        itemIdx:    idx,
+        precioBase: item.precioBase || item.precio || 0,
+    };
+
+    // Título del modal
+    var nameEl = document.getElementById('mods-item-name');
+    if (nameEl) nameEl.textContent = (item.nombre||'') + (item.variante ? ' \u00b7 ' + item.variante : '');
+
+    // Determinar tipo de producto
+    var cat = (item.categoria || '').toLowerCase();
+    var isTorta  = item.tipo === 'torta' || cat === 'tortas' || cat === '';
+    var isDrink  = cat.indexOf('drink') >= 0 || cat.indexOf('bebida') >= 0;
+    var isBotana = cat.indexOf('botana') >= 0 || cat.indexOf('extra') >= 0;
+
+    // Mostrar/ocultar secciones
+    document.querySelectorAll('.mods-torta').forEach(function(s){ s.style.display = isTorta?'block':'none'; });
+    document.querySelectorAll('.mods-drink').forEach(function(s){ s.style.display = isDrink?'block':'none'; });
+    document.querySelectorAll('.mods-botana').forEach(function(s){ s.style.display = isBotana?'block':'none'; });
+    if (!isTorta && !isDrink && !isBotana) {
+        document.querySelectorAll('.mods-torta,.mods-drink,.mods-botana').forEach(function(s){ s.style.display='block'; });
+    }
+
+    // Pre-seleccionar modificaciones actuales
+    document.querySelectorAll('.mod-chip').forEach(function(chip){
+        var cb = chip.querySelector('input');
+        var val = cb ? cb.value : '';
+        var yaTiene = (item.modificaciones || []).indexOf(val) >= 0;
+        chip.classList.toggle('selected', yaTiene);
+        if (cb) cb.checked = yaTiene;
+    });
+
+    // Cargar nota especial
+    var notaExistente = (item.modificaciones || []).find(function(m){ return m.indexOf('\ud83d\udcdd') === 0; });
+    var notasEl = document.getElementById('mods-notes');
+    if (notasEl) notasEl.value = notaExistente ? notaExistente.replace('\ud83d\udcdd ', '') : '';
+
+    // Abrir modal
+    var modal = document.getElementById('mods-modal');
+    if (modal) {
+        modal.classList.add('active');
+        console.log('✅ Modal de edición abierto');
+    }
+};
