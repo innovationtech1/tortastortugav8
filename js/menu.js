@@ -367,7 +367,7 @@ function crearCard(p) {
                 modificaciones: [],
             });
         }
-        if (window._dbg) window._dbg('✅ ' + cantidad + 'x ' + (p.nombre||'') + ' agregado. Total: ' + ca.items.length);
+        
 
         // Guardar referencia al último item para editar desde el modal
         window._lastAddedIndices = [];
