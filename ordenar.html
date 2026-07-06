@@ -1602,7 +1602,8 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1783303378">
+<script type="module" src="js/app.js?v=1783335847"></script>
+<script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
@@ -1707,7 +1708,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783303378';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783335847';
     (async () => {
         try {
             await seedProductos();
