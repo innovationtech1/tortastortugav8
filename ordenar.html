@@ -70,10 +70,11 @@ window._pendingItem = window._pendingItem || null;
 window._editingItem = window._editingItem || null;
 
 function confirmarMods(conMods) {
-    console.log('🔔 confirmarMods LLAMADO con conMods=', conMods);
-    // Recolectar modificaciones seleccionadas (chips con clase .selected)
-    function getMods() {
-        var mods = [], extra = 0;
+    console.log('🔔 confirmarMods llamado, conMods=', conMods);
+
+    // 1. Recolectar modificaciones seleccionadas
+    var mods = [], extra = 0;
+    if (conMods) {
         document.querySelectorAll('.mod-chip.selected input').forEach(function(cb) {
             if (cb.value) mods.push(cb.value);
             extra += parseFloat(cb.getAttribute('data-price') || 0);
@@ -81,86 +82,87 @@ function confirmarMods(conMods) {
         var nota = (document.getElementById('mods-notes') || {}).value || '';
         nota = nota.trim();
         if (nota) mods.push('📝 ' + nota);
-        return { mods: mods, extra: extra };
     }
 
+    // 2. Cerrar modal helper
     function cerrarModal() {
         var m = document.getElementById('mods-modal');
         if (m) m.classList.remove('active');
-        var cb = document.getElementById('mods-confirm');
-        if (cb) cb.textContent = 'Agregar al Pedido';
     }
 
-    // MODO EDICIÓN
+    // 3. Asegurar que _cuentasSys existe
+    if (!window._cuentasSys) {
+        window._cuentasSys = {
+            cuentas: [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }],
+            activa: 1, counter: 1
+        };
+    }
+    var CS = window._cuentasSys;
+
+    // ── MODO EDICIÓN ──
     if (window._editingItem) {
         var ei = window._editingItem;
-        var CS = window._cuentasSys;
-        var c = CS ? CS.cuentas.find(function(x){ return x.id === ei.cuentaId; }) : null;
-        if (c && c.items[ei.itemIdx] !== undefined && conMods) {
-            var r = getMods();
-            c.items[ei.itemIdx].modificaciones = r.mods;
-            c.items[ei.itemIdx].precio = ei.precioBase + r.extra;
+        var ce = CS.cuentas.find(function(x){ return x.id === ei.cuentaId; });
+        if (ce && ce.items[ei.itemIdx] !== undefined) {
+            ce.items[ei.itemIdx].modificaciones = mods;
+            ce.items[ei.itemIdx].precio = ei.precioBase + extra;
         }
         window._editingItem = null;
         cerrarModal();
+        if (window.renderCartItems)   window.renderCartItems();
         if (window.renderCuentasTabs) window.renderCuentasTabs();
-        if (window.renderCartItems) window.renderCartItems();
         return;
     }
 
-    // MODO AGREGAR
+    // ── MODO AGREGAR ──
     var pi = window._pendingItem;
-    console.log('📦 confirmarMods MODO AGREGAR, pendingItem:', pi);
-    if (!pi) { console.warn('❌ No hay pendingItem'); cerrarModal(); return; }
-
-    if (conMods) {
-        var rr = getMods();
-        pi.modificaciones = rr.mods;
-        pi.precio += rr.extra;
+    console.log('📦 pendingItem:', pi);
+    if (!pi) {
+        console.warn('❌ No hay pendingItem');
+        cerrarModal();
+        return;
     }
 
     var qty = pi._qty || 1;
-    var itemBase = Object.assign({}, pi);
-    delete itemBase._qty;
-    delete itemBase._splitMode;
+    var itemBase = {
+        id:             pi.id,
+        nombre:         pi.nombre,
+        precio:         (parseFloat(pi.precio) || 0) + extra,
+        variante:       pi.variante || '',
+        modificaciones: mods.slice(),
+    };
 
-    var CS2 = window._cuentasSys;
-    console.log('💳 _cuentasSys:', CS2 ? 'existe, activa=' + CS2.activa : 'NO EXISTE');
-    if (CS2) {
-        var ca = CS2.cuentas.find(function(x){ return x.id === CS2.activa; });
-        console.log('🔍 cuenta activa encontrada:', ca ? ca.nombre : 'NO');
-        if (ca) {
-            for (var i = 0; i < qty; i++) ca.items.push(Object.assign({}, itemBase));
-            console.log('✅ Item agregado. Total items en cuenta:', ca.items.length);
-        }
-    } else {
-        if (!window._cart) window._cart = [];
-        for (var j = 0; j < qty; j++) window._cart.push(Object.assign({}, itemBase));
-        console.log('✅ Item agregado a _cart. Total:', window._cart.length);
+    // Agregar a la cuenta activa
+    var ca = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+    if (!ca) { ca = CS.cuentas[0]; CS.activa = ca.id; }
+
+    for (var i = 0; i < qty; i++) {
+        ca.items.push({
+            id: itemBase.id, nombre: itemBase.nombre,
+            precio: itemBase.precio, variante: itemBase.variante,
+            modificaciones: itemBase.modificaciones.slice(),
+        });
     }
+    console.log('✅ Agregados', qty, 'items. Total en cuenta:', ca.items.length);
 
+    // Resetear contador de la tarjeta
+    if (window._pendingResetQty) { window._pendingResetQty(); window._pendingResetQty = null; }
     window._pendingItem = null;
-    cerrarModal();
-
-    // Notificar a la tarjeta que se agregó un item (actualiza contador)
-    if (window._pendingItemCard && window._pendingItemCard._onItemAdded) {
-        window._pendingItemCard._onItemAdded();
-    }
     window._pendingItemCard = null;
 
-    // Renderizar carrito (con reintentos si las funciones no están listas)
-    function _refreshCart() {
-        if (window.renderCuentasTabs) window.renderCuentasTabs();
-        if (window.renderCartItems)   window.renderCartItems();
-    }
-    _refreshCart();
-    setTimeout(_refreshCart, 100);
+    cerrarModal();
 
-    var ci = document.getElementById('cart-icon');
-    if (ci) { ci.style.transform = 'scale(1.3)'; setTimeout(function(){ ci.style.transform = ''; }, 250); }
+    // Renderizar
+    if (window.renderCuentasTabs) window.renderCuentasTabs();
+    if (window.renderCartItems)   window.renderCartItems();
+
+    // Abrir carrito
     var cm = document.getElementById('cart-modal');
     if (cm) cm.classList.add('active');
-    console.log('🎉 Producto agregado y carrito abierto');
+    var ci = document.getElementById('cart-icon');
+    if (ci) { ci.style.transform = 'scale(1.3)'; setTimeout(function(){ ci.style.transform = ''; }, 250); }
+
+    console.log('🎉 Listo — carrito abierto');
 }
 window.confirmarMods = confirmarMods;
 
@@ -1617,7 +1619,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1783338807"></script>
+<script type="module" src="js/app.js?v=1783339123"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -1723,7 +1725,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783338807';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783339123';
     (async () => {
         try {
             await seedProductos();
