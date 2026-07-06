@@ -1387,7 +1387,7 @@ function cerrarOrdenModal() {
                 <span id="cart-total-amount"
                       style="font-size:1.4rem;font-weight:900;color:#25D366;">$0.00</span>
             </div>
-            <button onclick="enviarOrden()"
+            <button onclick="window.enviarTodasLasCuentas()"
                 style="width:100%;padding:.85rem;background:linear-gradient(135deg,#FF5A00,#FF8C00);
                        border:none;color:#fff;border-radius:14px;font-family:inherit;
                        font-size:1rem;font-weight:800;cursor:pointer;
@@ -1602,7 +1602,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1783336154"></script>
+<script type="module" src="js/app.js?v=1783336341"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -1708,7 +1708,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783336154';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783336341';
     (async () => {
         try {
             await seedProductos();
