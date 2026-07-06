@@ -953,6 +953,8 @@ function addItemToCuentaActiva(item) {
 
 // ── Render tabs de cuentas ────────────────────────────────────
 window.renderCuentasTabs = function() {
+    const CS = window._cuentasSys;
+    if (!CS) return;
     const tabs = document.getElementById('cuentas-tabs');
     if (!tabs) return;
 
@@ -983,6 +985,8 @@ window.renderCuentasTabs = function() {
 
 // ── Render items de cuenta activa ─────────────────────────────
 window.renderCartItems = function() {
+    const CS = window._cuentasSys;
+    if (!CS) return;
     const cActiva = CS.cuentas.find(c => c.id === CS.activa);
     const el = document.getElementById('cart-items');
     if (!el || !cActiva) return;
