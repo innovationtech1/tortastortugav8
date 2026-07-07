@@ -626,7 +626,11 @@ function iniciarKDS(){
     }
 
     renderGrid();
-});
+  });
+}
+
+// Iniciar el KDS (conectar a Firebase)
+iniciarKDS();
 
 // Actualizar timers cada 15s
 setInterval(renderGrid, 15000);
