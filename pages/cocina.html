@@ -594,16 +594,6 @@ function iniciarKDS(){
   if(_kdsUnsub) try{_kdsUnsub();}catch(e){}
   _kdsUnsub = onSnapshot(collection(db,'pedidos'), snap => {
     todos = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-    console.log('🍳 COCINA recibió', todos.length, 'pedidos totales');
-    if (todos.length > 0) {
-        var ultimo = todos[todos.length-1];
-        console.log('Último pedido:', {
-            estado: ultimo.estado,
-            cliente: ultimo.cliente,
-            creado: ultimo.creado ? 'tiene timestamp' : 'SIN timestamp',
-            items: ultimo.items ? ultimo.items.slice(0,50) : 'sin items'
-        });
-    }
 
     const hoy = new Date(); hoy.setHours(0,0,0,0);
     const nuevas = todos.filter(p => {
