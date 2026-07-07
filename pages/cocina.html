@@ -235,9 +235,14 @@ let timerInterval;
 
 /* ── REST API de Cocina ─────────────────────────────────────── */
 const KitchenAPI = {
-    // Cambiar estado de un pedido
+    // Cambiar estado de un pedido (registra timestamp del cambio)
     setEstado: async (id, estado) => {
-        await updateDoc(doc(db,'pedidos',id), { estado });
+        const updates = { estado };
+        // Registrar cuándo pasó a cada estado
+        if (estado.includes('preparación'))  updates['tiempos.enCocina']  = Date.now();
+        else if (estado.includes('Listo'))    updates['tiempos.lista']     = Date.now();
+        else if (estado.includes('Entregado')) updates['tiempos.entregada'] = Date.now();
+        await updateDoc(doc(db,'pedidos',id), updates);
     },
     // Actualizar items y modificaciones de un pedido
     updateItems: async (id, itemsData) => {
@@ -315,7 +320,7 @@ function renderCard(p) {
                  : est.includes('Listo')       ? 'listo'
                  : est.includes('Entregado')   ? 'entregado'
                  : 'nuevo';
-    const ticket = (p.id||'').slice(-4).toUpperCase();
+    const ticket = p.folioStr || ('#' + (p.id||'').slice(-4).toUpperCase());
     const hora   = new Date(ts).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
     const items  = parseItems(p);
 
@@ -405,7 +410,7 @@ window.setEstado = async (id, estado) => {
 window.abrirEditor = (id) => {
     editPedido = todos.find(p => p.id === id);
     if (!editPedido) return;
-    const ticket = id.slice(-4).toUpperCase();
+    const ticket = (todos.find(p=>p.id===id)||{}).folioStr || ('#'+id.slice(-4).toUpperCase());
     document.getElementById('edit-modal-title').textContent = '✏️ Orden #' + ticket;
     renderEditor();
     document.getElementById('edit-modal').classList.add('open');
