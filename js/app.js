@@ -1521,3 +1521,130 @@ window.editarItemDelCarrito = function(idx) {
         console.log('✅ Modal de edición abierto');
     }
 };
+
+
+// ═══════════════════════════════════════════════════════════
+//  GESTIÓN COMPLETA DE CUENTAS (nombrar, eliminar, split)
+// ═══════════════════════════════════════════════════════════
+
+function _CS() {
+    if (!window._cuentasSys) {
+        window._cuentasSys = {
+            cuentas: [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }],
+            activa: 1, counter: 1
+        };
+    }
+    return window._cuentasSys;
+}
+
+const _CUENTA_COLORS = ['#FF5A00','#25D366','#3B82F6','#A78BFA','#F59E0B','#EC4899','#14B8A6','#EF4444'];
+
+// ── Cambiar de cuenta activa ──
+window.switchCuenta = function(id) {
+    var CS = _CS();
+    var existe = CS.cuentas.find(function(c){ return c.id === id; });
+    if (!existe) return;
+    CS.activa = id;
+    window.renderCuentasTabs();
+    window.renderCartItems();
+};
+window.cambiarCuenta = window.switchCuenta;
+
+// ── Nueva cuenta ──
+window.agregarNuevaCuenta = function() {
+    var CS = _CS();
+    if (CS.cuentas.length >= 8) {
+        alert('⚠️ Máximo 8 cuentas por orden');
+        return;
+    }
+    CS.counter++;
+    var color = _CUENTA_COLORS[(CS.cuentas.length) % _CUENTA_COLORS.length];
+    CS.cuentas.push({ id: CS.counter, nombre: 'Cuenta ' + CS.counter, items: [], color: color });
+    CS.activa = CS.counter;
+    window.renderCuentasTabs();
+    window.renderCartItems();
+};
+
+// ── Poner nombre a la cuenta activa (desde el input) ──
+window.guardarNombreCuenta = function(valor) {
+    var CS = _CS();
+    var c = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+    if (!c) return;
+    var nombre = (valor || '').trim();
+    c.nombre = nombre || ('Cuenta ' + c.id);
+    window.renderCuentasTabs();
+};
+
+// ── Eliminar la cuenta activa (con validación) ──
+window.eliminarCuentaActiva = function() {
+    var CS = _CS();
+    if (CS.cuentas.length <= 1) {
+        alert('⚠️ Debe existir al menos una cuenta');
+        return;
+    }
+    var c = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+    if (!c) return;
+
+    var msg = c.items.length > 0
+        ? '¿Eliminar "' + c.nombre + '" con ' + c.items.length + ' producto(s)?'
+        : '¿Eliminar "' + c.nombre + '"?';
+    if (!confirm(msg)) return;
+
+    CS.cuentas = CS.cuentas.filter(function(x){ return x.id !== CS.activa; });
+    CS.activa = CS.cuentas[0].id;
+    window.renderCuentasTabs();
+    window.renderCartItems();
+};
+window.eliminarCuenta = window.eliminarCuentaActiva;
+
+// ── Limpiar la cuenta activa (vaciar productos) ──
+window.limpiarCuentaActiva = function() {
+    var CS = _CS();
+    var c = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+    if (!c || !c.items.length) return;
+    if (!confirm('¿Vaciar todos los productos de "' + c.nombre + '"?')) return;
+    c.items = [];
+    window.renderCuentasTabs();
+    window.renderCartItems();
+};
+
+// ── SPLIT: mover un item a otra cuenta ──
+window.moverItemACuenta = function(itemIdx, destinoCuentaId) {
+    var CS = _CS();
+    var origen = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+    var destino = CS.cuentas.find(function(x){ return x.id === destinoCuentaId; });
+    if (!origen || !destino || !origen.items[itemIdx]) return;
+
+    var item = origen.items.splice(itemIdx, 1)[0];
+    destino.items.push(item);
+    window.renderCuentasTabs();
+    window.renderCartItems();
+};
+
+// ── Mostrar selector de cuenta destino para un item ──
+window.abrirSplitItem = function(itemIdx) {
+    var CS = _CS();
+    if (CS.cuentas.length < 2) {
+        alert('Crea otra cuenta primero con "+ Nueva cuenta" para poder mover productos');
+        return;
+    }
+    var origen = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+    if (!origen || !origen.items[itemIdx]) return;
+
+    var item = origen.items[itemIdx];
+    var otras = CS.cuentas.filter(function(c){ return c.id !== CS.activa; });
+
+    // Construir opciones
+    var opciones = otras.map(function(c, i){
+        return (i+1) + '. ' + c.nombre;
+    }).join('\n');
+
+    var eleccion = prompt('Mover "' + item.nombre + '" a:\n\n' + opciones + '\n\nEscribe el número:');
+    if (!eleccion) return;
+    var idx = parseInt(eleccion) - 1;
+    if (idx >= 0 && idx < otras.length) {
+        window.moverItemACuenta(itemIdx, otras[idx].id);
+    }
+};
+
+console.log('✅ Gestión de cuentas cargada');
