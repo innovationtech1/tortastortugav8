@@ -1525,7 +1525,6 @@ window.editarItemDelCarrito = function(idx) {
     var modal = document.getElementById('mods-modal');
     if (modal) {
         modal.classList.add('active');
-        console.log('✅ Modal de edición abierto');
     }
 };
 
