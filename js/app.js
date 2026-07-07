@@ -1653,4 +1653,44 @@ window.abrirSplitItem = function(itemIdx) {
     }
 };
 
+
+// ── Render de tabs de cuentas (con botón eliminar visible) ──
+window.renderCuentasTabs = function() {
+    var CS = _CS();
+    var tabs = document.getElementById('cuentas-tabs');
+    if (!tabs) return;
+
+    var html = '';
+    CS.cuentas.forEach(function(c) {
+        var tot = c.items.reduce(function(s, i){ return s + (parseFloat(i.precio)||0); }, 0);
+        var active = c.id === CS.activa;
+        html += '<div class="ctab ' + (active?'active':'') + '" onclick="window.switchCuenta(' + c.id + ')" ' +
+            'style="border-color:' + (active ? c.color : 'rgba(255,255,255,.12)') + ';cursor:pointer;">' +
+            '<span class="ctab-nom" style="color:' + (active ? c.color : '#fff') + ';display:block;">' + c.nombre + '</span>' +
+            '<span class="ctab-tot" style="display:block;">$' + tot.toFixed(2) + ' · ' + c.items.length + ' item(s)</span>' +
+        '</div>';
+    });
+    html += '<button onclick="window.agregarNuevaCuenta()" class="ctab-add">+ Nueva cuenta</button>';
+    tabs.innerHTML = html;
+
+    // Mostrar botón eliminar solo si hay más de 1 cuenta
+    var btnDel = document.getElementById('btn-eliminar-cuenta');
+    if (btnDel) btnDel.style.display = CS.cuentas.length > 1 ? 'block' : 'none';
+
+    // Actualizar label de cuenta activa
+    var lbl = document.getElementById('cuenta-label-active');
+    var cActiva = CS.cuentas.find(function(c){ return c.id === CS.activa; });
+    if (lbl && cActiva) {
+        lbl.textContent = cActiva.nombre.toUpperCase();
+        lbl.style.color = cActiva.color;
+    }
+
+    // Sincronizar input de nombre
+    var inp = document.getElementById('nombre-cuenta-input');
+    if (inp && cActiva && document.activeElement !== inp) {
+        var esDefault = cActiva.nombre === ('Cuenta ' + cActiva.id);
+        inp.value = esDefault ? '' : cActiva.nombre;
+    }
+};
+
 console.log('✅ Gestión de cuentas cargada');
