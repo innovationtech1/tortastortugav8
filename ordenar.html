@@ -1393,21 +1393,31 @@ function cerrarOrdenModal() {
              border-bottom:1px solid rgba(255,255,255,.06);"></div>
 
         <!-- BOTONES CUENTA -->
-        <div style="display:flex;gap:.4rem;padding:.5rem .9rem;flex-shrink:0;">
+        <div style="display:flex;gap:.4rem;padding:.5rem .9rem;flex-shrink:0;align-items:center;">
             <input id="nombre-cuenta-input" type="text" aria-label="Nombre de la cuenta o cliente"
                     placeholder="✏️ Nombre cliente..."
                     inputmode="text" autocomplete="off" autocorrect="off"
-                    style="flex:1;box-sizing:border-box;padding:.42rem .65rem;
+                    oninput="window.guardarNombreCuenta(this.value)"
+                    style="flex:2;box-sizing:border-box;padding:.45rem .65rem;
                            background:rgba(255,255,255,.06);
-                           border:1.5px solid rgba(255,255,255,.12);
+                           border:1.5px solid rgba(255,90,0,.3);
                            color:#fff;border-radius:8px;font-family:inherit;
                            font-size:.82rem;outline:none;min-width:0;
                            -webkit-appearance:none;appearance:none;">
-            <button onclick="window.limpiarCuentaActual()"
-                style="flex:1;padding:.4rem;background:rgba(255,255,255,.05);
+            <button onclick="window.limpiarCuentaActiva()"
+                title="Vaciar productos de esta cuenta"
+                style="flex-shrink:0;padding:.45rem .6rem;background:rgba(255,255,255,.05);
                        border:1px solid rgba(255,255,255,.1);color:#aaa;
                        border-radius:8px;font-family:inherit;font-size:.75rem;cursor:pointer;">
-                🗑 Limpiar
+                🗑
+            </button>
+            <button id="btn-eliminar-cuenta" onclick="window.eliminarCuentaActiva()"
+                title="Eliminar esta cuenta"
+                style="flex-shrink:0;padding:.45rem .6rem;background:rgba(244,67,54,.1);
+                       border:1px solid rgba(244,67,54,.3);color:#F44336;
+                       border-radius:8px;font-family:inherit;font-size:.75rem;cursor:pointer;
+                       display:none;">
+                ❌
             </button>
         </div>
 
@@ -1639,7 +1649,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1783388944"></script>
+<script type="module" src="js/app.js?v=1783389570"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -1745,7 +1755,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783388944';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783389570';
     (async () => {
         try {
             await seedProductos();
