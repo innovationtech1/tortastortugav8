@@ -1264,39 +1264,88 @@ window.enviarOrdenModal = function() {
     window.open('https://wa.me/12108678210?text=' + encodeURIComponent(msg), '_blank');
 };
 
-window.enviarTodasLasCuentas = function() {
+window.enviarTodasLasCuentas = async function() {
     const nombre   = (document.getElementById('customer-name')?.value || '').trim() || 'Cliente';
     const telefono = (document.getElementById('customer-phone')?.value || '').trim();
     const tipo     = document.querySelector('input[name="order-type"]:checked')?.value || 'pickup';
     const CS       = window._cuentasSys;
     if (!CS) return;
+
+    // Validar que haya productos
+    const hayProductos = CS.cuentas.some(c => c.items.length > 0);
+    if (!hayProductos) {
+        alert('⚠️ Agrega productos antes de enviar la orden');
+        return;
+    }
+
     const totalGen = CS.cuentas.reduce((s, c) => s + c.items.reduce((ss, i) => ss + i.precio, 0), 0);
 
-    let lineas = [
-        '🐢 *TORTAS TORTUGA — ORDEN COMPLETA*',
-        '━━━━━━━━━━━━━━━━━━━━',
-        '👤 ' + nombre + (telefono ? ' · 📞 ' + telefono : ''),
-        (tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Domicilio'),
-        ''
-    ];
+    // Construir lista de productos para cocina
+    const productos = [];
     CS.cuentas.forEach(c => {
-        if (!c.items.length) return;
-        const tot = c.items.reduce((s, i) => s + i.precio, 0);
-        lineas.push('━ *' + c.nombre + '* ($' + tot.toFixed(2) + ') ━');
-        c.items.forEach((item, i) => {
-            let linea = (i+1) + '. *' + item.nombre + '*';
-            if (item.modificaciones && item.modificaciones.length) {
-                linea += ' · ' + item.modificaciones.join(', ');
-            }
-            linea += ' — $' + item.precio.toFixed(2);
-            lineas.push(linea);
+        c.items.forEach(item => {
+            productos.push({
+                nombre:         item.nombre,
+                variante:       item.variante || '',
+                precio:         item.precio,
+                modificaciones: item.modificaciones || [],
+                cuenta:         c.nombre,
+            });
         });
-        lineas.push('');
     });
-    lineas.push('💰 *TOTAL GENERAL: $' + totalGen.toFixed(2) + '*');
 
+    // Datos del pedido para Firebase (cocina lo lee)
+    const data = {
+        cliente:    nombre,
+        telefono:   telefono,
+        tipoEntrega: tipo === 'pickup' ? 'Recoger' : 'Domicilio',
+        productos:  productos,
+        items:      productos,
+        total:      '$' + totalGen.toFixed(2),
+        totalNum:   totalGen,
+        cuentas:    CS.cuentas.filter(c => c.items.length).map(c => ({
+            nombre: c.nombre,
+            items:  c.items,
+            total:  c.items.reduce((s,i) => s + i.precio, 0),
+        })),
+    };
+
+    // Botón feedback
+    const btn = document.querySelector('[onclick*="enviarTodasLasCuentas"]');
+    const btnTxtOrig = btn ? btn.innerHTML : '';
+    if (btn) { btn.innerHTML = '⏳ Enviando...'; btn.disabled = true; }
+
+    try {
+        const result = await guardarPedidoFirebase(data, 'cocina');
+        const ticket = result && result.ticket ? result.ticket : (result && result.id ? result.id.slice(-4).toUpperCase() : '----');
+
+        // Limpiar el carrito
+        CS.cuentas = [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }];
+        CS.activa = 1;
+        CS.counter = 1;
+        if (window.renderCuentasTabs) window.renderCuentasTabs();
+        if (window.renderCartItems)   window.renderCartItems();
+
+        // Cerrar carrito
+        const cm = document.getElementById('cart-modal');
+        if (cm) cm.classList.remove('active');
+
+        alert('✅ ¡Orden enviada a cocina!\n\nTicket #' + ticket + '\nCliente: ' + nombre);
+    } catch (e) {
+        console.error('Error al enviar orden:', e);
+        alert('❌ Error al enviar la orden. Intenta de nuevo.');
+    } finally {
+        if (btn) { btn.innerHTML = btnTxtOrig; btn.disabled = false; }
+    }
+
+    /* ── ENVÍO POR WHATSAPP DESACTIVADO (por implementar después) ──
+    let lineas = [
+        '🐢 TORTAS TORTUGA — ORDEN COMPLETA',
+        '👤 ' + nombre + (telefono ? ' · 📞 ' + telefono : ''),
+    ];
     const msg = lineas.join('\n');
     window.open('https://wa.me/12108678210?text=' + encodeURIComponent(msg), '_blank');
+    ─────────────────────────────────────────────────────────── */
 };
 
 // ── Patch addToCart confirmarMods → nueva cuenta ───────────────
