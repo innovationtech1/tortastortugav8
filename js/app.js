@@ -1280,13 +1280,12 @@ window.enviarTodasLasCuentas = async function() {
 
     const totalGen = CS.cuentas.reduce((s, c) => s + c.items.reduce((ss, i) => ss + i.precio, 0), 0);
 
-    // Construir lista de productos para cocina
-    const productos = [];
+    // Construir itemsData (array) que cocina espera
+    const itemsData = [];
     CS.cuentas.forEach(c => {
         c.items.forEach(item => {
-            productos.push({
-                nombre:         item.nombre,
-                variante:       item.variante || '',
+            itemsData.push({
+                nombre:         item.nombre + (item.variante ? ' (' + item.variante + ')' : ''),
                 precio:         item.precio,
                 modificaciones: item.modificaciones || [],
                 cuenta:         c.nombre,
@@ -1294,20 +1293,20 @@ window.enviarTodasLasCuentas = async function() {
         });
     });
 
+    // String de respaldo (formato: "Nombre (mods) - $precio | ...")
+    const itemsStr = itemsData.map(i =>
+        i.nombre + (i.modificaciones && i.modificaciones.length ? ' (' + i.modificaciones.join(', ') + ')' : '') + ' - $' + (i.precio||0).toFixed(2)
+    ).join(' | ');
+
     // Datos del pedido para Firebase (cocina lo lee)
     const data = {
-        cliente:    nombre,
-        telefono:   telefono,
+        cliente:     nombre,
+        telefono:    telefono,
         tipoEntrega: tipo === 'pickup' ? 'Recoger' : 'Domicilio',
-        productos:  productos,
-        items:      productos,
-        total:      '$' + totalGen.toFixed(2),
-        totalNum:   totalGen,
-        cuentas:    CS.cuentas.filter(c => c.items.length).map(c => ({
-            nombre: c.nombre,
-            items:  c.items,
-            total:  c.items.reduce((s,i) => s + i.precio, 0),
-        })),
+        itemsData:   itemsData,
+        items:       itemsStr,
+        total:       '$' + totalGen.toFixed(2),
+        totalNum:    totalGen,
     };
 
     // Botón feedback
