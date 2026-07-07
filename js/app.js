@@ -316,6 +316,7 @@ async function guardarPedidoFirebase(data, metodoPago) {
         return null;
     }
 }
+window.guardarPedidoFirebase = guardarPedidoFirebase;
 
 // ─── GUARDAR EN GOOGLE SHEETS ────────────────────────────────────
 async function guardarEnSheets(data) {
@@ -1338,7 +1339,7 @@ window.enviarTodasLasCuentas = async function() {
         alert('✅ ¡Orden enviada a cocina!\n\nTicket #' + ticket + '\nCliente: ' + nombre);
     } catch (e) {
         console.error('Error al enviar orden:', e);
-        alert('❌ Error al enviar la orden. Intenta de nuevo.');
+        alert('❌ Error al enviar la orden:\n' + (e.message || e) + '\n\nRevisa que tengas conexión a internet.');
     } finally {
         if (btn) { btn.innerHTML = btnTxtOrig; btn.disabled = false; }
     }
