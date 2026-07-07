@@ -593,5 +593,4 @@ window.agregarTodoAlCarrito = function() {
         fab.style.background = '#25D366';
         setTimeout(() => { fab.style.background = ''; }, 1000);
     }
-    console.log('✅ Agregados', totalAgregados, 'productos al carrito');
 };
