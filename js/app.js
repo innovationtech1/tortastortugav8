@@ -2,7 +2,7 @@
 import { db, auth } from './firebase-config.js';
 import {
     collection, addDoc, serverTimestamp, query, where, getDocs, orderBy,
-    doc, updateDoc, increment
+    doc, updateDoc, increment, getDoc, setDoc, runTransaction
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ─── CONFIG ─────────────────────────────────────────────────────
@@ -275,6 +275,40 @@ function obtenerDireccionTexto() {
 }
 
 // ─── GUARDAR EN FIREBASE ─────────────────────────────────────────
+
+// ═══════════════ FOLIO SECUENCIAL DIARIO ═══════════════
+// Genera número de orden #001, #002... que se reinicia cada día
+async function obtenerFolioDiario() {
+    const hoy = new Date();
+    const fechaKey = hoy.getFullYear() + '-' +
+                     String(hoy.getMonth()+1).padStart(2,'0') + '-' +
+                     String(hoy.getDate()).padStart(2,'0');
+    const contadorRef = doc(db, 'contadores', 'folio_' + fechaKey);
+
+    try {
+        const nuevoFolio = await runTransaction(db, async (transaction) => {
+            const snap = await transaction.get(contadorRef);
+            let actual = 0;
+            if (snap.exists()) {
+                actual = snap.data().valor || 0;
+            }
+            const siguiente = actual + 1;
+            transaction.set(contadorRef, { valor: siguiente, fecha: fechaKey }, { merge: true });
+            return siguiente;
+        });
+        return nuevoFolio;
+    } catch (e) {
+        console.warn('Error al obtener folio, usando timestamp:', e);
+        // Fallback: usar los últimos 3 dígitos del timestamp
+        return parseInt(String(Date.now()).slice(-3));
+    }
+}
+
+// Formatea el folio como #001
+function formatearFolio(n) {
+    return '#' + String(n).padStart(3, '0');
+}
+
 async function guardarPedidoFirebase(data, metodoPago) {
     try {
         const ref = await addDoc(collection(db, 'pedidos'), {
