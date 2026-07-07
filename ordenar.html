@@ -1647,7 +1647,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1783393026"></script>
+<script type="module" src="js/app.js?v=1783393397"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -1753,7 +1753,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783393026';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783393397';
     (async () => {
         try {
             await seedProductos();
@@ -2597,6 +2597,87 @@ document.addEventListener('click', function(e) {
 </script>
 
 
+
+
+<!-- ══════ MODAL ROBUSTO: NOMBRE/MESA DE CUENTA ══════ -->
+<div id="nombre-cuenta-modal" class="modal-overlay" style="z-index:6000;">
+    <div style="background:#1A1A1A;width:100%;max-width:480px;border-radius:20px 20px 0 0;
+                max-height:85vh;overflow-y:auto;padding:1.2rem;box-sizing:border-box;">
+
+        <!-- Header -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+            <h3 style="margin:0;font-size:1.05rem;color:#fff;font-weight:800;">🏷️ Identificar cuenta</h3>
+            <button onclick="window.cerrarModalNombreCuenta()"
+                style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+                       color:#888;border-radius:8px;width:32px;height:32px;font-size:1rem;cursor:pointer;">✕</button>
+        </div>
+
+        <!-- Tipo de servicio -->
+        <div style="margin-bottom:1.1rem;">
+            <p style="font-size:.78rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.05em;">Tipo de servicio</p>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;">
+                <button class="tipo-serv-btn" data-tipo="Comer aquí" onclick="window.seleccionarTipoServicio(this,'Comer aquí')"
+                    style="padding:.7rem .4rem;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);
+                           color:#fff;border-radius:12px;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;
+                           display:flex;flex-direction:column;align-items:center;gap:.25rem;">
+                    <span style="font-size:1.3rem;">🍽️</span>Comer aquí
+                </button>
+                <button class="tipo-serv-btn" data-tipo="Para llevar" onclick="window.seleccionarTipoServicio(this,'Para llevar')"
+                    style="padding:.7rem .4rem;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);
+                           color:#fff;border-radius:12px;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;
+                           display:flex;flex-direction:column;align-items:center;gap:.25rem;">
+                    <span style="font-size:1.3rem;">🥡</span>Para llevar
+                </button>
+                <button class="tipo-serv-btn" data-tipo="Domicilio" onclick="window.seleccionarTipoServicio(this,'Domicilio')"
+                    style="padding:.7rem .4rem;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);
+                           color:#fff;border-radius:12px;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;
+                           display:flex;flex-direction:column;align-items:center;gap:.25rem;">
+                    <span style="font-size:1.3rem;">🚗</span>Domicilio
+                </button>
+            </div>
+        </div>
+
+        <!-- Mesas (solo si es Comer aquí) -->
+        <div id="mesas-section" style="margin-bottom:1.1rem;">
+            <p style="font-size:.78rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.05em;">Número de mesa</p>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.45rem;">
+                <!-- Mesas 1-10 generadas por JS -->
+            </div>
+        </div>
+
+        <!-- Nombre del cliente -->
+        <div style="margin-bottom:1.2rem;">
+            <p style="font-size:.78rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.05em;">O nombre del cliente</p>
+            <input id="input-nombre-cliente" type="text" placeholder="Ej: Juan, Familia López..."
+                autocomplete="off"
+                style="width:100%;box-sizing:border-box;padding:.7rem .8rem;background:#0d0d0d;
+                       border:1.5px solid rgba(255,90,0,.4);color:#fff;border-radius:12px;
+                       font-family:inherit;font-size:.9rem;outline:none;">
+        </div>
+
+        <!-- Vista previa -->
+        <div style="background:rgba(255,90,0,.08);border-radius:12px;padding:.7rem .9rem;margin-bottom:1rem;
+                    display:flex;align-items:center;gap:.5rem;">
+            <span style="font-size:.75rem;color:#888;">Se guardará como:</span>
+            <span id="preview-nombre-cuenta" style="font-size:.9rem;color:#FF5A00;font-weight:800;">Cuenta 1</span>
+        </div>
+
+        <!-- Acciones -->
+        <div style="display:flex;gap:.6rem;">
+            <button onclick="window.cerrarModalNombreCuenta()"
+                style="flex:1;padding:.85rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+                       color:#aaa;border-radius:12px;font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;">
+                Cancelar
+            </button>
+            <button onclick="window.confirmarNombreCuenta()"
+                style="flex:2;padding:.85rem;background:linear-gradient(135deg,#FF5A00,#FF8C00);border:none;
+                       color:#fff;border-radius:12px;font-family:inherit;font-size:.9rem;font-weight:800;cursor:pointer;
+                       box-shadow:0 4px 12px rgba(255,90,0,.3);">
+                ✅ Guardar
+            </button>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>
