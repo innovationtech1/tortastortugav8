@@ -1647,7 +1647,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1783393397"></script>
+<script type="module" src="js/app.js?v=1783393442"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -1753,7 +1753,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1783393397';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1783393442';
     (async () => {
         try {
             await seedProductos();
@@ -2678,6 +2678,186 @@ document.addEventListener('click', function(e) {
         </div>
     </div>
 </div>
+
+
+<script>
+/* ══════ LÓGICA MODAL NOMBRE/MESA DE CUENTA ══════ */
+(function() {
+    // Estado temporal mientras el modal está abierto
+    var _seleccion = { tipo: '', mesa: '', nombre: '' };
+
+    // Generar botones de mesas 1-10
+    function generarMesas() {
+        var cont = document.querySelector('#mesas-section > div');
+        if (!cont) return;
+        var html = '';
+        for (var i = 1; i <= 10; i++) {
+            html += '<button class="mesa-btn" data-mesa="' + i + '" onclick="window.seleccionarMesa(this,' + i + ')" ' +
+                'style="aspect-ratio:1;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);' +
+                'color:#fff;border-radius:10px;font-family:inherit;font-size:1rem;font-weight:800;cursor:pointer;">' +
+                i + '</button>';
+        }
+        cont.innerHTML = html;
+    }
+
+    function actualizarPreview() {
+        var preview = document.getElementById('preview-nombre-cuenta');
+        if (!preview) return;
+        var texto = '';
+        if (_seleccion.nombre) {
+            texto = _seleccion.nombre;
+        } else if (_seleccion.mesa) {
+            texto = 'Mesa ' + _seleccion.mesa;
+        } else if (_seleccion.tipo) {
+            texto = _seleccion.tipo;
+        } else {
+            var CS = window._cuentasSys;
+            var c = CS ? CS.cuentas.find(function(x){ return x.id === CS.activa; }) : null;
+            texto = c ? c.nombre : 'Cuenta 1';
+        }
+        // Añadir tipo como prefijo si hay mesa o nombre
+        if (_seleccion.tipo && (_seleccion.mesa || _seleccion.nombre)) {
+            var iconos = { 'Comer aquí':'🍽️', 'Para llevar':'🥡', 'Domicilio':'🚗' };
+            texto = (iconos[_seleccion.tipo]||'') + ' ' + texto;
+        }
+        preview.textContent = texto;
+    }
+
+    window.abrirModalNombreCuenta = function() {
+        _seleccion = { tipo: '', mesa: '', nombre: '' };
+        generarMesas();
+
+        // Pre-cargar el nombre actual si no es el default
+        var CS = window._cuentasSys;
+        var c = CS ? CS.cuentas.find(function(x){ return x.id === CS.activa; }) : null;
+        var inp = document.getElementById('input-nombre-cliente');
+        if (inp) {
+            var esDefault = c && c.nombre === ('Cuenta ' + c.id);
+            inp.value = (c && !esDefault) ? c.nombre : '';
+        }
+
+        // Limpiar selecciones visuales
+        document.querySelectorAll('.tipo-serv-btn, .mesa-btn').forEach(function(b){
+            b.style.background = 'rgba(255,255,255,.05)';
+            b.style.borderColor = 'rgba(255,255,255,.12)';
+        });
+
+        actualizarPreview();
+        var modal = document.getElementById('nombre-cuenta-modal');
+        if (modal) modal.classList.add('active');
+        setTimeout(function(){ if (inp) inp.focus(); }, 200);
+    };
+
+    window.cerrarModalNombreCuenta = function() {
+        var modal = document.getElementById('nombre-cuenta-modal');
+        if (modal) modal.classList.remove('active');
+    };
+
+    window.seleccionarTipoServicio = function(btn, tipo) {
+        _seleccion.tipo = tipo;
+        // Resaltar el seleccionado
+        document.querySelectorAll('.tipo-serv-btn').forEach(function(b){
+            b.style.background = 'rgba(255,255,255,.05)';
+            b.style.borderColor = 'rgba(255,255,255,.12)';
+        });
+        btn.style.background = 'rgba(255,90,0,.15)';
+        btn.style.borderColor = '#FF5A00';
+
+        // Mostrar/ocultar mesas según tipo
+        var mesasSec = document.getElementById('mesas-section');
+        if (mesasSec) mesasSec.style.display = (tipo === 'Comer aquí') ? 'block' : 'none';
+        if (tipo !== 'Comer aquí') _seleccion.mesa = '';
+
+        actualizarPreview();
+    };
+
+    window.seleccionarMesa = function(btn, num) {
+        _seleccion.mesa = num;
+        _seleccion.nombre = ''; // mesa y nombre son excluyentes
+        var inp = document.getElementById('input-nombre-cliente');
+        if (inp) inp.value = '';
+        document.querySelectorAll('.mesa-btn').forEach(function(b){
+            b.style.background = 'rgba(255,255,255,.05)';
+            b.style.borderColor = 'rgba(255,255,255,.12)';
+            b.style.color = '#fff';
+        });
+        btn.style.background = 'rgba(255,90,0,.2)';
+        btn.style.borderColor = '#FF5A00';
+        btn.style.color = '#FF5A00';
+        actualizarPreview();
+    };
+
+    // Actualizar preview al escribir nombre
+    document.addEventListener('input', function(e) {
+        if (e.target && e.target.id === 'input-nombre-cliente') {
+            _seleccion.nombre = e.target.value.trim();
+            if (_seleccion.nombre) {
+                // Al escribir nombre, deseleccionar mesa
+                _seleccion.mesa = '';
+                document.querySelectorAll('.mesa-btn').forEach(function(b){
+                    b.style.background = 'rgba(255,255,255,.05)';
+                    b.style.borderColor = 'rgba(255,255,255,.12)';
+                    b.style.color = '#fff';
+                });
+            }
+            actualizarPreview();
+        }
+    });
+
+    window.confirmarNombreCuenta = function() {
+        var CS = window._cuentasSys;
+        if (!CS) return;
+        var c = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+        if (!c) return;
+
+        // Construir el nombre final
+        var nombre = '';
+        var iconos = { 'Comer aquí':'🍽️', 'Para llevar':'🥡', 'Domicilio':'🚗' };
+        if (_seleccion.nombre) {
+            nombre = _seleccion.nombre;
+        } else if (_seleccion.mesa) {
+            nombre = 'Mesa ' + _seleccion.mesa;
+        } else if (_seleccion.tipo) {
+            nombre = _seleccion.tipo;
+        }
+        if (_seleccion.tipo && (_seleccion.mesa || _seleccion.nombre)) {
+            nombre = (iconos[_seleccion.tipo]||'') + ' ' + nombre;
+        }
+
+        // Validar que se eligió algo
+        if (!nombre) {
+            alert('Elige una mesa, un tipo de servicio, o escribe un nombre');
+            return;
+        }
+
+        c.nombre = nombre;
+        // Guardar el tipo de servicio en la cuenta para usarlo al enviar
+        c.tipoServicio = _seleccion.tipo || 'Comer aquí';
+
+        // Actualizar UI
+        var display = document.getElementById('nombre-cuenta-display');
+        if (display) display.textContent = nombre;
+
+        if (window.renderCuentasTabs) window.renderCuentasTabs();
+        if (window.renderCartItems)   window.renderCartItems();
+
+        window.cerrarModalNombreCuenta();
+    };
+
+    // Sincronizar el display cuando cambia de cuenta
+    var _origRenderTabs = window.renderCuentasTabs;
+    window.renderCuentasTabs = function() {
+        if (_origRenderTabs) _origRenderTabs();
+        var CS = window._cuentasSys;
+        var c = CS ? CS.cuentas.find(function(x){ return x.id === CS.activa; }) : null;
+        var display = document.getElementById('nombre-cuenta-display');
+        if (display && c) {
+            var esDefault = c.nombre === ('Cuenta ' + c.id);
+            display.textContent = esDefault ? 'Asignar mesa / nombre' : c.nombre;
+        }
+    };
+})();
+</script>
 
 </body>
 </html>
