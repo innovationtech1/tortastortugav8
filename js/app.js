@@ -311,16 +311,28 @@ function formatearFolio(n) {
 
 async function guardarPedidoFirebase(data, metodoPago) {
     try {
+        // Obtener folio secuencial del día
+        const folio = await obtenerFolioDiario();
+
         const ref = await addDoc(collection(db, 'pedidos'), {
             ...data,
+            folio: folio,
+            folioStr: formatearFolio(folio),
             metodoPago: metodoPago || 'pendiente',
             estadoPago: 'Por pagar',
             estado: 'Nuevo 🆕',
+            // Timestamps de trazabilidad (cuándo pasó a cada estado)
+            tiempos: {
+                recibida: Date.now(),
+                enCocina: null,
+                lista:    null,
+                entregada: null,
+            },
             uid: window._firebaseUser?.uid || 'anonimo',
             creado: serverTimestamp()
         });
-        
-        const ticketId = ref.id.slice(-4).toUpperCase();
+
+        const ticketId = formatearFolio(folio);
         console.log('✅ Pedido guardado:', ref.id);
 
         // ── SUMAR PUNTOS AL CLIENTE REGISTRADO ──────────────
