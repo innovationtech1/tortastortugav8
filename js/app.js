@@ -1061,6 +1061,12 @@ window.renderCartItems = function() {
             <div style="font-size:.9rem;font-weight:800;color:#25D366;flex-shrink:0;">$${precio.toFixed(2)}</div>
             <!-- Acciones -->
             <div style="display:flex;gap:.3rem;flex-shrink:0;">
+                ${CS.cuentas.length > 1 ? `<button onclick="window.abrirSplitItem(${idx})"
+                    style="width:28px;height:28px;background:rgba(59,130,246,.15);
+                           border:1px solid rgba(59,130,246,.35);color:#3B82F6;
+                           border-radius:8px;font-size:.75rem;cursor:pointer;
+                           display:flex;align-items:center;justify-content:center;"
+                    title="Mover a otra cuenta">⇄</button>` : ''}
                 <button onclick="window.editarItemDelCarrito(${idx})"
                     style="width:28px;height:28px;background:rgba(167,139,250,.15);
                            border:1px solid rgba(167,139,250,.35);color:#A78BFA;
