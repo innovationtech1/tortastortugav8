@@ -307,6 +307,12 @@ function crearCard(p) {
         varEl = '<div style="font-size:.88rem;color:#FF5A00;font-weight:800;margin:.2rem 0;">$'+(parseFloat(p.precio)||0).toFixed(2)+'</div>';
     }
 
+    // Diagnóstico: ver qué imagen llega de Firestore
+    if (p.nombre && p.nombre.indexOf('Cerveza') >= 0) {
+        console.log('🖼️ ' + p.nombre + ' → imagen:',
+            p.imagen ? (p.imagen.slice(0,60) + '... (' + p.imagen.length + ' chars)') : 'VACÍA/undefined',
+            '| campos:', Object.keys(p).join(', '));
+    }
     const imgSrc = p.imagen || 'img/torta-original.png';
 
     card.innerHTML =
