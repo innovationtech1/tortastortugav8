@@ -1034,7 +1034,13 @@ window.guardarProducto = async function(id) {
     var nombre = (elNombre.value || '').trim();
     var cat    = elCat    ? elCat.value    : 'tortas';
     var desc   = elDesc   ? (elDesc.value || '').trim() : '';
-    var imagen = elImg    ? (elImg.value || '').trim()  : '';
+    // Prioridad: almacén global (imagen recién subida) → campo oculto (imagen existente)
+    var imagen = '';
+    if (window._imagenesPendientes && window._imagenesPendientes[id]) {
+        imagen = window._imagenesPendientes[id];
+    } else if (elImg) {
+        imagen = (elImg.value || '').trim();
+    }
 
     console.log('💾 Guardando producto:', nombre, '| imagen:', imagen ? (imagen.startsWith('data:') ? 'base64 ('+Math.round(imagen.length/1024)+'KB)' : imagen.slice(0,30)) : 'sin imagen');
 
@@ -1072,6 +1078,8 @@ window.guardarProducto = async function(id) {
         });
         await window._adminUpdateDoc(id, datosGuardar, 'productos');
         console.log('✅ Firestore confirmó el guardado');
+        // Limpiar el almacén para este producto
+        if (window._imagenesPendientes) delete window._imagenesPendientes[id];
 
         // Refrescar lista
         await cargarListaProductos();
@@ -2041,6 +2049,11 @@ window._saveAE = async function() {
         setInfo('⏳ Procesando...', '#FBB724');
         try {
             const r = await comprimirImagen(file);
+            // Guardar en el almacén global (a prueba de re-renders del DOM)
+            if (!window._imagenesPendientes) window._imagenesPendientes = {};
+            window._imagenesPendientes[pid] = r.dataUrl;
+            console.log('🖼️ Imagen lista para producto', pid, '→', Math.round(r.bytes/1024)+'KB');
+
             const hidden = document.getElementById('pe-imagen-' + pid);
             const prev   = document.getElementById('pe-imgprev-' + pid);
             const wrap   = document.getElementById('pe-imgwrap-' + pid);
@@ -2055,6 +2068,7 @@ window._saveAE = async function() {
     };
 
     window.quitarImagenEditor = function(pid) {
+        if (window._imagenesPendientes) window._imagenesPendientes[pid] = '';
         const hidden = document.getElementById('pe-imagen-' + pid);
         const wrap   = document.getElementById('pe-imgwrap-' + pid);
         const file   = document.getElementById('pe-imgfile-' + pid);
