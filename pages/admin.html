@@ -1617,9 +1617,11 @@ window.cargarListaProductos = async function() {
 
             var imgBox = document.createElement('div');
             imgBox.style.cssText = 'margin-bottom:.5rem;';
+            // El valor de la imagen (base64 largo) NO va en innerHTML — rompe el HTML.
+            // Se asigna por JS tras crear los elementos.
             imgBox.innerHTML =
-                '<div id="pe-imgwrap-' + p.id + '" style="display:' + (p.imagen ? 'block' : 'none') + ';position:relative;margin-bottom:.4rem;">' +
-                    '<img id="pe-imgprev-' + p.id + '" src="' + (window.normalizarRutaImagen ? window.normalizarRutaImagen(p.imagen) : (p.imagen||'')) + '" alt="" ' +
+                '<div id="pe-imgwrap-' + p.id + '" style="display:none;position:relative;margin-bottom:.4rem;">' +
+                    '<img id="pe-imgprev-' + p.id + '" alt="" ' +
                         'style="width:100%;height:120px;object-fit:cover;border-radius:8px;border:1.5px solid rgba(255,90,0,.3);display:block;">' +
                     '<button type="button" data-pid="' + p.id + '" class="pe-img-remove" ' +
                         'style="position:absolute;top:.3rem;right:.3rem;width:26px;height:26px;background:rgba(0,0,0,.75);' +
@@ -1630,9 +1632,21 @@ window.cargarListaProductos = async function() {
                     'color:#FF5A00;border-radius:8px;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;">' +
                     '📷 ' + (p.imagen ? 'Cambiar imagen' : 'Elegir imagen') + '</button>' +
                 '<input type="file" id="pe-imgfile-' + p.id + '" accept="image/*" style="display:none;">' +
-                '<input type="hidden" id="pe-imagen-' + p.id + '" value="' + (p.imagen || '') + '">' +
+                '<input type="hidden" id="pe-imagen-' + p.id + '">' +
                 '<div id="pe-imginfo-' + p.id + '" style="font-size:.68rem;color:#666;margin-top:.3rem;"></div>';
             editDiv.appendChild(imgBox);
+
+            // Asignar la imagen por JS (seguro para base64)
+            (function(prod, box) {
+                var hidden = box.querySelector('#pe-imagen-' + prod.id);
+                var prev   = box.querySelector('#pe-imgprev-' + prod.id);
+                var wrap   = box.querySelector('#pe-imgwrap-' + prod.id);
+                if (hidden) hidden.value = prod.imagen || '';
+                if (prod.imagen) {
+                    if (prev) prev.src = window.normalizarRutaImagen ? window.normalizarRutaImagen(prod.imagen) : prod.imagen;
+                    if (wrap) wrap.style.display = 'block';
+                }
+            })(p, imgBox);
 
             // Conectar eventos del uploader
             (function(pid) {
