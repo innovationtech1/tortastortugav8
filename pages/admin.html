@@ -1764,12 +1764,14 @@ window.crearProducto = async function() {
     var elPr   = document.getElementById('prod-precio');
     var elCat  = document.getElementById('prod-categoria');
     var elDesc = document.getElementById('prod-descripcion');
+    var elImg  = document.getElementById('prod-imagen');
     var msgEl  = document.getElementById('prod-nuevo-msg');
 
     var nombre = (elNom?.value || '').trim();
     var precio = parseFloat(elPr?.value || '0') || 0;
     var cat    = elCat?.value || 'tortas';
     var desc   = (elDesc?.value || '').trim();
+    var imagen = (elImg?.value || '').trim();
 
     var showMsg = function(txt, ok) {
         if (!msgEl) return;
@@ -1789,6 +1791,7 @@ window.crearProducto = async function() {
             _precio:     precio,
             categoria:   cat,
             descripcion: desc,
+            imagen:      imagen,
             variantes:   [{ label: 'Precio base', precio: precio }],
             activo:      true,
             creado:      new Date().toISOString()
@@ -1796,6 +1799,7 @@ window.crearProducto = async function() {
         if (elNom)  elNom.value  = '';
         if (elPr)   elPr.value   = '';
         if (elDesc) elDesc.value = '';
+        if (window.quitarImagenProducto) window.quitarImagenProducto();
         showMsg('✅ Producto agregado correctamente', true);
         await cargarListaProductos();
     } catch(e) {
