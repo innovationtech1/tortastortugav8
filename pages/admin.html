@@ -1050,6 +1050,44 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
         if (info) info.textContent = '';
     };
 
+    // ── EDITOR DINÁMICO: procesar imagen por producto ──
+    window.procesarImagenEditor = async function(input, pid) {
+        const file = input.files && input.files[0];
+        if (!file) return;
+        const info = document.getElementById('pe-imginfo-' + pid);
+        const setInfo = function(t, c) { if (info) { info.textContent = t; info.style.color = c || '#666'; } };
+
+        if (!file.type.startsWith('image/')) {
+            setInfo('⚠️ Elige un archivo de imagen', '#F44336');
+            input.value = ''; return;
+        }
+        setInfo('⏳ Procesando...', '#FBB724');
+        try {
+            const r = await comprimirImagen(file);
+            const hidden = document.getElementById('pe-imagen-' + pid);
+            const prev   = document.getElementById('pe-imgprev-' + pid);
+            const wrap   = document.getElementById('pe-imgwrap-' + pid);
+            if (hidden) hidden.value = r.dataUrl;
+            if (prev) prev.src = r.dataUrl;
+            if (wrap) wrap.style.display = 'block';
+            setInfo('✅ ' + r.w + '×' + r.h + 'px · ' + Math.round(r.bytes/1024) + ' KB', '#25D366');
+        } catch (err) {
+            setInfo('⚠️ ' + err.message, '#F44336');
+            input.value = '';
+        }
+    };
+
+    window.quitarImagenEditor = function(pid) {
+        const hidden = document.getElementById('pe-imagen-' + pid);
+        const wrap   = document.getElementById('pe-imgwrap-' + pid);
+        const file   = document.getElementById('pe-imgfile-' + pid);
+        const info   = document.getElementById('pe-imginfo-' + pid);
+        if (hidden) hidden.value = '';
+        if (wrap) wrap.style.display = 'none';
+        if (file) file.value = '';
+        if (info) info.textContent = '';
+    };
+
     // Al editar un producto existente, mostrar su imagen actual
     window.cargarImagenEnFormulario = function(url) {
         const hidden = document.getElementById('prod-imagen');
