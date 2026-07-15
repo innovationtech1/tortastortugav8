@@ -278,13 +278,33 @@ function crearCard(p) {
     let varEl = '';
     if (vars.length > 1) {
         const opts = vars.map(function(v,i){
-            return '<option value="'+i+'">'+(v.label||('Combo '+String.fromCharCode(65+i)))+'</option>';
+            var lbl = (v.label || '').trim() || ('Opción ' + String.fromCharCode(65+i));
+            var pr  = parseFloat(v.precio) || 0;
+            // Si el label ya trae precio, no duplicarlo
+            var txt = /\$\s*\d/.test(lbl) ? lbl : (lbl + ' — $' + pr.toFixed(2));
+            return '<option value="'+i+'">'+txt+'</option>';
         }).join('');
         varEl = '<select id="var-'+pid+'" class="var-select" style="width:100%;background:#0d0d0d;border:1.5px solid rgba(255,90,0,.5);color:#fff;border-radius:10px;padding:.42rem .65rem;font-family:inherit;font-size:.78rem;margin:.3rem 0;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;">'+opts+'</select>';
     } else if (vars.length === 1) {
-        varEl = '<div style="font-size:.78rem;color:#FF5A00;font-weight:700;margin:.2rem 0;">'+(vars[0].label||('$'+(vars[0].precio||p.precio||0)))+'</div>';
+        // Una sola variante: mostrar SIEMPRE el precio.
+        // Si el label es genérico ("Precio base"), mostrar solo el precio.
+        var _v   = vars[0];
+        var _pr  = parseFloat(_v.precio) || parseFloat(p.precio) || 0;
+        var _lbl = (_v.label || '').trim();
+        var _generico = !_lbl || /^precio base$/i.test(_lbl);
+        // Si el label ya trae el precio (ej "COMBO A — $17"), no duplicarlo
+        var _labelTraePrecio = /\$\s*\d/.test(_lbl);
+        var _texto;
+        if (_generico) {
+            _texto = '$' + _pr.toFixed(2);
+        } else if (_labelTraePrecio) {
+            _texto = _lbl;
+        } else {
+            _texto = _lbl + ' — $' + _pr.toFixed(2);
+        }
+        varEl = '<div style="font-size:.88rem;color:#FF5A00;font-weight:800;margin:.2rem 0;">'+_texto+'</div>';
     } else if (p.precio) {
-        varEl = '<div style="font-size:.88rem;color:#FF5A00;font-weight:800;">$'+p.precio+'</div>';
+        varEl = '<div style="font-size:.88rem;color:#FF5A00;font-weight:800;margin:.2rem 0;">$'+(parseFloat(p.precio)||0).toFixed(2)+'</div>';
     }
 
     const imgSrc = p.imagen || 'img/torta-original.png';
