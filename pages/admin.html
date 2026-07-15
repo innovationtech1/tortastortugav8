@@ -1055,7 +1055,7 @@ window.guardarProducto = async function(id) {
     var precioBase = variantes.length > 0 ? variantes[0].precio : 0;
 
     try {
-        await window._adminUpdateDoc(id, {
+        var datosGuardar = {
             nombre: nombre,
             precio: precioBase,
             _precio: precioBase,
@@ -1063,7 +1063,15 @@ window.guardarProducto = async function(id) {
             descripcion: desc,
             imagen: imagen,
             variantes: variantes
-        }, 'productos');
+        };
+        console.log('📤 Enviando a Firestore:', {
+            id: id,
+            imagenLength: (datosGuardar.imagen||'').length,
+            imagenTipo: (datosGuardar.imagen||'').startsWith('data:') ? 'BASE64' : 'ruta',
+            pesoTotalKB: Math.round(JSON.stringify(datosGuardar).length / 1024)
+        });
+        await window._adminUpdateDoc(id, datosGuardar, 'productos');
+        console.log('✅ Firestore confirmó el guardado');
 
         // Refrescar lista
         await cargarListaProductos();
@@ -1075,7 +1083,8 @@ window.guardarProducto = async function(id) {
         document.body.appendChild(t);
         setTimeout(function(){ t.remove(); }, 2500);
     } catch(e) {
-        alert('Error al guardar: ' + e.message);
+        console.error('❌ ERROR AL GUARDAR:', e);
+        alert('❌ Error al guardar:\n' + e.message + '\n\nCódigo: ' + (e.code || 'desconocido'));
     }
 };
 </script>
