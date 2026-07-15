@@ -17,6 +17,8 @@
   .keep{color:#25D366;}
   .del{color:#F44336;}
   .warn{background:rgba(251,183,36,.1);border:1px solid rgba(251,183,36,.4);border-radius:8px;padding:.8rem;color:#FBB724;font-size:.85rem;}
+  .btn-nav{background:rgba(255,255,255,.06);border:1.5px solid rgba(255,90,0,.4);color:#FF5A00;}
+  .btn-nav:hover{background:rgba(255,90,0,.12);}
 </style>
 </head>
 <body>
@@ -30,6 +32,18 @@
 <div class="card">
   <button class="btn-scan" onclick="escanear()">1. Escanear duplicados</button>
   <button class="btn-clean" id="btn-limpiar" onclick="limpiar()" disabled>2. Eliminar duplicados</button>
+</div>
+
+<div class="card" style="display:flex;gap:.5rem;flex-wrap:wrap;">
+  <button class="btn-nav" onclick="window.open('ordenar.html?v=' + Date.now(), '_blank')">
+    Ver Tienda / Menu
+  </button>
+  <button class="btn-nav" onclick="window.open('pages/admin.html?v=' + Date.now(), '_blank')">
+    Ir a Admin
+  </button>
+  <button class="btn-nav" onclick="window.open('pages/cocina.html?v=' + Date.now(), '_blank')">
+    Ir a Cocina
+  </button>
 </div>
 
 <div class="card">
