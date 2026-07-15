@@ -1164,12 +1164,14 @@ window.guardarProducto = async function(id) {
     var elNombre = document.getElementById('pe-nombre-' + id);
     var elCat    = document.getElementById('pe-cat-'    + id);
     var elDesc   = document.getElementById('pe-desc-'   + id);
+    var elImg    = document.getElementById('pe-imagen-' + id);
 
     if (!elNombre) { alert('Error: formulario no encontrado (ID: ' + id + ')'); return; }
 
     var nombre = (elNombre.value || '').trim();
     var cat    = elCat    ? elCat.value    : 'tortas';
     var desc   = elDesc   ? (elDesc.value || '').trim() : '';
+    var imagen = elImg    ? (elImg.value || '').trim()  : '';
 
     if (!nombre) { alert('El nombre es obligatorio'); return; }
 
@@ -1194,6 +1196,7 @@ window.guardarProducto = async function(id) {
             _precio: precioBase,
             categoria: cat,
             descripcion: desc,
+            imagen: imagen,
             variantes: variantes
         }, 'productos');
 
