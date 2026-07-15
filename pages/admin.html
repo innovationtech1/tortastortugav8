@@ -1712,6 +1712,12 @@ window.crearProducto = async function() {
     var desc   = (elDesc?.value || '').trim();
     var imagen = (elImg?.value || '').trim();
 
+    console.log('🖼️ DEBUG crearProducto:', {
+        campoImagenExiste: !!elImg,
+        imagenLength: imagen.length,
+        imagenPreview: imagen ? imagen.slice(0,50) + '...' : 'VACÍA'
+    });
+
     var showMsg = function(txt, ok) {
         if (!msgEl) return;
         msgEl.style.color = ok ? '#25D366' : '#FF4444';
@@ -1898,6 +1904,7 @@ window._saveAE = async function() {
    quepa en Firestore (límite 1MB por documento).
    ═══════════════════════════════════════════════════ */
 (function() {
+    console.log('✅ Script de imágenes cargado');
     const MAX_DIM      = 600;    // px máximo (ancho o alto)
     const MAX_BYTES    = 700000; // ~700KB, deja margen bajo el límite de 1MB de Firestore
     const CALIDAD_INI  = 0.82;
@@ -1944,8 +1951,10 @@ window._saveAE = async function() {
     }
 
     window.procesarImagenProducto = async function(input) {
+        console.log('📷 procesarImagenProducto llamado');
         const file = input.files && input.files[0];
-        if (!file) return;
+        if (!file) { console.warn('No hay archivo'); return; }
+        console.log('Archivo:', file.name, file.type, Math.round(file.size/1024)+'KB');
 
         const info = document.getElementById('prod-img-info');
         const setInfo = function(txt, color) {
