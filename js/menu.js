@@ -487,15 +487,41 @@ export async function renderMenu() {
             return;
         }
 
-        // Deduplicar por nombre — quedarse con el que tiene variantes actualizado
+        // Deduplicar por nombre — preferir el documento MÁS COMPLETO
         const byNombre = {};
+        const duplicados = {};
         snapshot.docs.forEach(function(d) {
             const data = d.data();
             const key = (data.nombre || '').toLowerCase().trim();
+            if (!key) return;
+
+            duplicados[key] = (duplicados[key] || 0) + 1;
             const existing = byNombre[key];
-            // Preferir el que tiene variantes con precio actualizado
-            if (!existing || (data.variantes && data.variantes.length > 0)) {
+
+            if (!existing) {
                 byNombre[key] = Object.assign({}, data, { _docId: d.id });
+                return;
+            }
+
+            // Puntuar cada versión: gana la que tenga imagen propia y variantes
+            function puntuar(p) {
+                var pts = 0;
+                if (p.imagen && p.imagen.indexOf('data:') === 0) pts += 10; // imagen subida
+                else if (p.imagen) pts += 3;                                 // imagen por ruta
+                if (p.variantes && p.variantes.length) pts += 2;
+                if (p.descripcion) pts += 1;
+                return pts;
+            }
+            const nuevo = Object.assign({}, data, { _docId: d.id });
+            if (puntuar(nuevo) >= puntuar(existing)) {
+                byNombre[key] = nuevo;
+            }
+        });
+
+        // Avisar de duplicados en Firestore
+        Object.keys(duplicados).forEach(function(k) {
+            if (duplicados[k] > 1) {
+                console.warn('⚠️ "' + k + '" tiene ' + duplicados[k] + ' documentos duplicados en Firestore');
             }
         });
 
