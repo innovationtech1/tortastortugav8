@@ -1036,12 +1036,7 @@ window.guardarProducto = async function(id) {
     var desc   = elDesc   ? (elDesc.value || '').trim() : '';
     var imagen = elImg    ? (elImg.value || '').trim()  : '';
 
-    // DIAGNÓSTICO VISIBLE
-    alert('GUARDANDO:\n' +
-          'Campo imagen existe: ' + (!!elImg) + '\n' +
-          'ID buscado: pe-imagen-' + id + '\n' +
-          'Longitud imagen: ' + imagen.length + '\n' +
-          'Tipo: ' + (imagen.startsWith('data:') ? 'BASE64 nueva' : (imagen ? 'ruta: '+imagen.slice(0,40) : 'VACÍA')));
+    console.log('💾 Guardando producto:', nombre, '| imagen:', imagen ? (imagen.startsWith('data:') ? 'base64 ('+Math.round(imagen.length/1024)+'KB)' : imagen.slice(0,30)) : 'sin imagen');
 
     if (!nombre) { alert('El nombre es obligatorio'); return; }
 
