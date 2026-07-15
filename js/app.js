@@ -283,24 +283,40 @@ async function obtenerFolioDiario() {
     const fechaKey = hoy.getFullYear() + '-' +
                      String(hoy.getMonth()+1).padStart(2,'0') + '-' +
                      String(hoy.getDate()).padStart(2,'0');
-    const contadorRef = doc(db, 'contadores', 'folio_' + fechaKey);
 
+    // ── Intento 1: contador en Firestore (compartido entre dispositivos) ──
     try {
+        const contadorRef = doc(db, 'contadores', 'folio_' + fechaKey);
         const nuevoFolio = await runTransaction(db, async (transaction) => {
             const snap = await transaction.get(contadorRef);
-            let actual = 0;
-            if (snap.exists()) {
-                actual = snap.data().valor || 0;
-            }
+            const actual = snap.exists() ? (snap.data().valor || 0) : 0;
             const siguiente = actual + 1;
             transaction.set(contadorRef, { valor: siguiente, fecha: fechaKey }, { merge: true });
             return siguiente;
         });
+        // Sincronizar el respaldo local
+        try { localStorage.setItem('folio_' + fechaKey, String(nuevoFolio)); } catch(_) {}
         return nuevoFolio;
     } catch (e) {
-        console.warn('Error al obtener folio, usando timestamp:', e);
-        // Fallback: usar los últimos 3 dígitos del timestamp
-        return parseInt(String(Date.now()).slice(-3));
+        // Firestore no disponible o sin permisos en 'contadores'
+        console.info('Folio: usando contador local (Firestore no disponible para contadores)');
+    }
+
+    // ── Intento 2: contador local del navegador ──
+    try {
+        const key = 'folio_' + fechaKey;
+        const actual = parseInt(localStorage.getItem(key) || '0') || 0;
+        const siguiente = actual + 1;
+        localStorage.setItem(key, String(siguiente));
+        // Limpiar contadores de días anteriores
+        for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('folio_') && k !== key) localStorage.removeItem(k);
+        }
+        return siguiente;
+    } catch (e2) {
+        // ── Último recurso: número basado en la hora ──
+        return parseInt(String(Date.now()).slice(-3)) || 1;
     }
 }
 
