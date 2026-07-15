@@ -1100,6 +1100,35 @@ window.guardarProducto = async function(id) {
         style="display:block;width:100%;box-sizing:border-box;background:#0d0d0d;border:1.5px solid rgba(255,255,255,.15);color:#fff;
                border-radius:10px;padding:.55rem .8rem;font-family:inherit;font-size:.88rem;margin-bottom:.65rem;
                -webkit-appearance:none;appearance:none;outline:none;">
+      <!-- ══ SUBIR IMAGEN ══ -->
+      <div style="margin-bottom:.65rem;">
+        <div style="font-size:.72rem;color:#888;font-weight:700;margin-bottom:.4rem;">IMAGEN DEL PRODUCTO</div>
+
+        <!-- Preview -->
+        <div id="prod-img-preview-wrap" style="display:none;position:relative;margin-bottom:.5rem;">
+          <img id="prod-img-preview" alt="Vista previa"
+            style="width:100%;height:140px;object-fit:cover;border-radius:10px;border:1.5px solid rgba(255,90,0,.3);display:block;">
+          <button onclick="window.quitarImagenProducto()" type="button"
+            style="position:absolute;top:.4rem;right:.4rem;width:28px;height:28px;
+                   background:rgba(0,0,0,.75);border:1px solid rgba(244,67,54,.5);color:#F44336;
+                   border-radius:8px;font-size:.8rem;cursor:pointer;line-height:1;">✕</button>
+        </div>
+
+        <!-- Botón subir -->
+        <button type="button" onclick="document.getElementById('prod-img-file').click()"
+          style="display:block;width:100%;padding:.6rem;background:rgba(255,255,255,.05);
+                 border:1.5px dashed rgba(255,90,0,.4);color:#FF5A00;border-radius:10px;
+                 font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
+          📷 Elegir imagen
+        </button>
+        <input type="file" id="prod-img-file" accept="image/*" style="display:none;"
+          onchange="window.procesarImagenProducto(this)">
+
+        <!-- Campo oculto que guarda el base64 -->
+        <input type="hidden" id="prod-imagen" value="">
+        <div id="prod-img-info" style="font-size:.7rem;color:#666;margin-top:.35rem;"></div>
+      </div>
+
       <div id="prod-nuevo-msg" style="font-size:.78rem;margin-bottom:.4rem;min-height:1.2rem;"></div>
       <button onclick="crearProducto()"
         style="display:block;width:100%;padding:.7rem;background:linear-gradient(135deg,#FF5A00,#FF8C00);
