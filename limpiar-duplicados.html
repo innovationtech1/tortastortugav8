@@ -34,6 +34,12 @@
   <button class="btn-clean" id="btn-limpiar" onclick="limpiar()" disabled>2. Eliminar duplicados</button>
 </div>
 
+<div class="card">
+  <input id="buscar-prod" placeholder="Escribe el nombre de un producto (ej: cerveza)"
+    style="width:100%;box-sizing:border-box;padding:.6rem;background:#0d0d0d;border:1.5px solid rgba(255,90,0,.4);color:#fff;border-radius:8px;font-family:inherit;font-size:.85rem;margin-bottom:.5rem;">
+  <button class="btn-scan" onclick="inspeccionar()">Inspeccionar producto</button>
+</div>
+
 <div class="card" style="display:flex;gap:.5rem;flex-wrap:wrap;">
   <button class="btn-nav" onclick="window.open('ordenar.html?v=' + Date.now(), '_blank')">
     Ver Tienda / Menu
@@ -126,6 +132,61 @@ window.escanear = async function() {
     document.getElementById('btn-limpiar').disabled = aBorrar.length === 0;
   } catch(e) {
     out.innerHTML = '<span class="del">Error: ' + e.message + '</span>';
+  }
+};
+
+window.inspeccionar = async function() {
+  const termino = (document.getElementById('buscar-prod').value || '').toLowerCase().trim();
+  const out = document.getElementById('resultado');
+  if (!termino) { out.innerHTML = 'Escribe parte del nombre de un producto'; return; }
+
+  out.innerHTML = 'Buscando...';
+  try {
+    const snap = await getDocs(collection(db, 'productos'));
+    let html = '';
+    let encontrados = 0;
+
+    snap.docs.forEach(d => {
+      const data = d.data();
+      const nombre = (data.nombre || '').toLowerCase();
+      if (nombre.indexOf(termino) < 0) return;
+      encontrados++;
+
+      const img = data.imagen || '';
+      let imgDesc, imgColor;
+      if (!img) { imgDesc = 'SIN IMAGEN'; imgColor = '#F44336'; }
+      else if (img.startsWith('data:')) { imgDesc = 'IMAGEN SUBIDA (' + Math.round(img.length/1024) + ' KB)'; imgColor = '#25D366'; }
+      else { imgDesc = 'RUTA: ' + img; imgColor = '#FBB724'; }
+
+      html += '<div class="grupo">';
+      html += '<b>' + (data.nombre||'?') + '</b><br>';
+      html += 'docId: <code>' + d.id + '</code><br>';
+      html += 'imagen: <span style="color:' + imgColor + '">' + imgDesc + '</span><br>';
+      html += 'categoria: ' + (data.categoria||'?') + ' | precio: $' + (data.precio||0) + '<br>';
+      html += 'puntaje: ' + puntuar(data) + '<br>';
+      if (img.startsWith('data:')) {
+        html += '<img src="' + img + '" style="width:120px;height:80px;object-fit:cover;border-radius:6px;margin-top:.4rem;">';
+      }
+      html += '<br><button class="btn-nav" style="margin-top:.4rem;padding:.35rem .7rem;font-size:.75rem;" onclick="borrarUno(\'' + d.id + '\')">Borrar este</button>';
+      html += '</div>';
+    });
+
+    out.innerHTML = encontrados
+      ? '<b>' + encontrados + ' documento(s) encontrados para "' + termino + '"</b><br>' + html
+      : 'No se encontro ningun producto con "' + termino + '"';
+  } catch(e) {
+    out.innerHTML = '<span class="del">Error: ' + e.message + '</span>';
+  }
+};
+
+window.borrarUno = async function(id) {
+  if (!confirm('Borrar el documento ' + id + '?')) return;
+  try {
+    await deleteDoc(doc(db, 'productos', id));
+    alert('Borrado. Presiona "Inspeccionar" de nuevo para ver el estado actual.');
+    window.inspeccionar();
+  } catch(e) {
+    alert('Error al borrar: ' + e.message);
   }
 };
 
