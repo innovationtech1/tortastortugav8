@@ -1698,6 +1698,41 @@ window.cargarListaProductos = async function() {
             // Descripción
             editDiv.appendChild(inp('pe-desc-'+p.id, p.descripcion||'', 'Descripcion (opcional)'));
 
+            // ── IMAGEN DEL PRODUCTO ──
+            var imgLabel = document.createElement('div');
+            imgLabel.style.cssText = 'font-size:.7rem;color:#FF5A00;font-weight:700;margin:.5rem 0 .3rem;letter-spacing:.05em;';
+            imgLabel.textContent = 'IMAGEN DEL PRODUCTO';
+            editDiv.appendChild(imgLabel);
+
+            var imgBox = document.createElement('div');
+            imgBox.style.cssText = 'margin-bottom:.5rem;';
+            imgBox.innerHTML =
+                '<div id="pe-imgwrap-' + p.id + '" style="display:' + (p.imagen ? 'block' : 'none') + ';position:relative;margin-bottom:.4rem;">' +
+                    '<img id="pe-imgprev-' + p.id + '" src="' + (p.imagen || '') + '" alt="" ' +
+                        'style="width:100%;height:120px;object-fit:cover;border-radius:8px;border:1.5px solid rgba(255,90,0,.3);display:block;">' +
+                    '<button type="button" data-pid="' + p.id + '" class="pe-img-remove" ' +
+                        'style="position:absolute;top:.3rem;right:.3rem;width:26px;height:26px;background:rgba(0,0,0,.75);' +
+                        'border:1px solid rgba(244,67,54,.5);color:#F44336;border-radius:6px;font-size:.75rem;cursor:pointer;line-height:1;">✕</button>' +
+                '</div>' +
+                '<button type="button" data-pid="' + p.id + '" class="pe-img-pick" ' +
+                    'style="width:100%;padding:.5rem;background:rgba(255,255,255,.05);border:1.5px dashed rgba(255,90,0,.4);' +
+                    'color:#FF5A00;border-radius:8px;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;">' +
+                    '📷 ' + (p.imagen ? 'Cambiar imagen' : 'Elegir imagen') + '</button>' +
+                '<input type="file" id="pe-imgfile-' + p.id + '" accept="image/*" style="display:none;">' +
+                '<input type="hidden" id="pe-imagen-' + p.id + '" value="' + (p.imagen || '') + '">' +
+                '<div id="pe-imginfo-' + p.id + '" style="font-size:.68rem;color:#666;margin-top:.3rem;"></div>';
+            editDiv.appendChild(imgBox);
+
+            // Conectar eventos del uploader
+            (function(pid) {
+                var pick   = imgBox.querySelector('.pe-img-pick');
+                var remove = imgBox.querySelector('.pe-img-remove');
+                var file   = imgBox.querySelector('#pe-imgfile-' + pid);
+                if (pick) pick.onclick = function(){ file.click(); };
+                if (file) file.onchange = function(){ window.procesarImagenEditor(this, pid); };
+                if (remove) remove.onclick = function(){ window.quitarImagenEditor(pid); };
+            })(p.id);
+
             // ── VARIANTES DE PRECIO ──
             var varLabel = document.createElement('div');
             varLabel.style.cssText = 'font-size:.7rem;color:#A78BFA;font-weight:700;margin:.4rem 0 .3rem;letter-spacing:.05em;';
