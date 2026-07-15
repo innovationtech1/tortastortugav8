@@ -1,6 +1,22 @@
 <!DOCTYPE html><!-- v1782798034 -->
 <html lang="es">
 <head>
+<script>
+/* ── Normaliza rutas de imagen para páginas dentro de /pages/ ──
+   Los productos guardan rutas como 'img/foto.png' (relativas a la raíz).
+   Desde /pages/admin.html eso resuelve a /pages/img/foto.png (404).
+   Esta función las convierte a '../img/foto.png'.
+   Las imágenes base64 (data:) y URLs absolutas se dejan intactas. */
+window.normalizarRutaImagen = function(src) {
+    if (!src) return '';
+    if (src.startsWith('data:') || src.startsWith('http://') || src.startsWith('https://') || src.startsWith('../')) {
+        return src;
+    }
+    if (src.startsWith('img/')) return '../' + src;
+    if (src.startsWith('/')) return src;
+    return src;
+};
+</script>
     <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes"><!-- v1782798034 -->
@@ -1874,22 +1890,7 @@ window._saveAE = async function() {
 };
 </script>
 
-<script>
-/* ── Normaliza rutas de imagen para páginas dentro de /pages/ ──
-   Los productos guardan rutas como 'img/foto.png' (relativas a la raíz).
-   Desde /pages/admin.html eso resuelve a /pages/img/foto.png (404).
-   Esta función las convierte a '../img/foto.png'.
-   Las imágenes base64 (data:) y URLs absolutas se dejan intactas. */
-window.normalizarRutaImagen = function(src) {
-    if (!src) return '';
-    if (src.startsWith('data:') || src.startsWith('http://') || src.startsWith('https://') || src.startsWith('../')) {
-        return src;
-    }
-    if (src.startsWith('img/')) return '../' + src;
-    if (src.startsWith('/')) return src;
-    return src;
-};
-</script>
+
 
 <script>
 /* ══════════ COMPRESIÓN Y CARGA DE IMÁGENES ══════════
