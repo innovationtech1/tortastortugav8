@@ -308,6 +308,9 @@ function crearCard(p) {
     }
 
     const imgSrc = p.imagen || 'img/torta-original.png';
+    console.log('[MENU]', p.nombre, '| docId:', p._docId || '?', '| imagen:',
+        !p.imagen ? 'SIN IMAGEN (usa fallback torta)' :
+        (p.imagen.indexOf('data:') === 0 ? 'BASE64 ' + Math.round(p.imagen.length/1024) + 'KB' : p.imagen));
 
     card.innerHTML =
         '<div style="position:relative;width:100%;height:170px;overflow:hidden;flex-shrink:0;">' +
