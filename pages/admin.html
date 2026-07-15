@@ -1596,7 +1596,7 @@ window.cargarListaProductos = async function() {
             imgBox.style.cssText = 'margin-bottom:.5rem;';
             imgBox.innerHTML =
                 '<div id="pe-imgwrap-' + p.id + '" style="display:' + (p.imagen ? 'block' : 'none') + ';position:relative;margin-bottom:.4rem;">' +
-                    '<img id="pe-imgprev-' + p.id + '" src="' + (p.imagen || '') + '" alt="" ' +
+                    '<img id="pe-imgprev-' + p.id + '" src="' + (window.normalizarRutaImagen ? window.normalizarRutaImagen(p.imagen) : (p.imagen||'')) + '" alt="" ' +
                         'style="width:100%;height:120px;object-fit:cover;border-radius:8px;border:1.5px solid rgba(255,90,0,.3);display:block;">' +
                     '<button type="button" data-pid="' + p.id + '" class="pe-img-remove" ' +
                         'style="position:absolute;top:.3rem;right:.3rem;width:26px;height:26px;background:rgba(0,0,0,.75);' +
@@ -1873,6 +1873,24 @@ window._saveAE = async function() {
     } catch(e){ alert('Error: '+e.message); }
 };
 </script>
+
+<script>
+/* ── Normaliza rutas de imagen para páginas dentro de /pages/ ──
+   Los productos guardan rutas como 'img/foto.png' (relativas a la raíz).
+   Desde /pages/admin.html eso resuelve a /pages/img/foto.png (404).
+   Esta función las convierte a '../img/foto.png'.
+   Las imágenes base64 (data:) y URLs absolutas se dejan intactas. */
+window.normalizarRutaImagen = function(src) {
+    if (!src) return '';
+    if (src.startsWith('data:') || src.startsWith('http://') || src.startsWith('https://') || src.startsWith('../')) {
+        return src;
+    }
+    if (src.startsWith('img/')) return '../' + src;
+    if (src.startsWith('/')) return src;
+    return src;
+};
+</script>
+
 <script>
 /* ══════════ COMPRESIÓN Y CARGA DE IMÁGENES ══════════
    Redimensiona a máx 600px y comprime a JPEG para que
