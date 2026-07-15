@@ -308,7 +308,7 @@ function crearCard(p) {
     }
 
     const imgSrc = p.imagen || 'img/torta-original.png';
-    console.log('[MENU]', p.nombre, '| docId:', p._docId || '?', '| imagen:',
+    console.log('[MENU]', p.nombre, '| docId:', p.productId || p._docId || '?', '| imagen:',
         !p.imagen ? 'SIN IMAGEN (usa fallback torta)' :
         (p.imagen.indexOf('data:') === 0 ? 'BASE64 ' + Math.round(p.imagen.length/1024) + 'KB' : p.imagen));
 
@@ -546,10 +546,11 @@ export async function renderMenu() {
                 variantes:   (data.variantes && data.variantes.length)
                                 ? data.variantes
                                 : (base.variantes || [{ label:'Precio base', precio: pr }]),
-                imagen:      base.imagen  || 'img/torta-original.png',
-                badge:       base.badge   || null,
-                incluye:     base.incluye || null,
-                tipo:        base.tipo    || 'torta',
+                // PRIORIDAD: imagen de Firestore (la que subió el usuario) → estática → fallback
+                imagen:      data.imagen  || base.imagen  || 'img/torta-original.png',
+                badge:       data.badge   || base.badge   || null,
+                incluye:     data.incluye || base.incluye || null,
+                tipo:        data.tipo    || base.tipo    || 'torta',
                 disponible:  data.activo  !== false,
                 orden:       data.orden   || base.orden || 99,
             };
