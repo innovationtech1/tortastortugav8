@@ -1116,7 +1116,7 @@ function cerrarOrdenModal() {
 }
 </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=1784177420">
+    <link rel="stylesheet" href="css/style.css?v=1784177881">
     <script type="module">
         import { auth, db } from './js/firebase-config.js';
         import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -1503,6 +1503,12 @@ function cerrarOrdenModal() {
         </div>
         <div class="mods-body">
 
+            <!-- VARIANTES: solo aparece al editar un item que tiene opciones -->
+            <div class="mods-section" id="mods-variantes-section" style="display:none;">
+                <p class="mods-section-title">🍽️ Opción / Tamaño</p>
+                <div id="mods-variantes-lista" style="display:flex;flex-direction:column;gap:.4rem;"></div>
+            </div>
+
             <!-- TORTAS: Combo options -->
             <div class="mods-section mods-torta">
                 <p class="mods-section-title">🥤 Opciones de Combo</p>
@@ -1693,7 +1699,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1784177420"></script>
+<script type="module" src="js/app.js?v=1784177881"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -1799,7 +1805,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1784177420';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1784177881';
     (async () => {
         try {
             await seedProductos();
