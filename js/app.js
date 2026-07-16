@@ -2036,12 +2036,14 @@ window.quitarPropina = function() {
     window.cerrarModalPropina();
 };
 
-// Hook: cada vez que se renderiza el carrito, actualizar el desglose
+// Hook UNICO: tras renderizar el carrito, actualizar desglose y contador.
+// Se hace en un solo lugar para evitar cadenas de overrides fragiles.
 (function() {
     var _origRender = window.renderCartItems;
     window.renderCartItems = function() {
         if (_origRender) _origRender.apply(this, arguments);
-        if (window.actualizarDesglose) window.actualizarDesglose();
+        if (window.actualizarDesglose)        window.actualizarDesglose();
+        if (window.actualizarContadorVerTodo) window.actualizarContadorVerTodo();
     };
 })();
 
@@ -2197,22 +2199,15 @@ window.lcMoverItem = function(idx) {
     setTimeout(function(){ window.abrirSplitItem(idx); }, 150);
 };
 
-// ── Actualizar el contador del boton "Ver todo" ──
-(function() {
-    var _origRender = window.renderCartItems;
-    window.renderCartItems = function() {
-        if (_origRender) _origRender.apply(this, arguments);
-        var CS = window._cuentasSys;
-        var c = CS ? CS.cuentas.find(function(x){ return x.id === CS.activa; }) : null;
-        var btn = document.getElementById('btn-expandir-count');
-        var btnWrap = document.getElementById('btn-expandir-lista');
-        if (btn && c) {
-            var n = c.items.length;
-            btn.textContent = n > 0 ? ('Ver ' + n) : 'Ver todo';
-        }
-        // Ocultar el boton si no hay productos
-        if (btnWrap && c) {
-            btnWrap.style.display = c.items.length ? 'flex' : 'none';
-        }
-    };
-})();
+// ── Contador del boton "Ver todo" ──
+// El boton SIEMPRE es visible (si no hay productos, avisa al presionarlo).
+// No se oculta para evitar que desaparezca por errores de timing.
+window.actualizarContadorVerTodo = function() {
+    var CS = window._cuentasSys;
+    var c = CS ? CS.cuentas.find(function(x){ return x.id === CS.activa; }) : null;
+    var btn = document.getElementById('btn-expandir-count');
+    if (btn) {
+        var n = c ? c.items.length : 0;
+        btn.textContent = n > 0 ? ('Ver ' + n) : 'Ver todo';
+    }
+};
