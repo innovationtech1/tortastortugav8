@@ -1734,3 +1734,44 @@ h1 {
     border-color: #FF5A00;
     box-shadow: 0 0 0 2px rgba(255,90,0,.2);
 }
+
+
+/* ══ CARRITO: mejoras responsive ══ */
+
+/* El footer (desglose + boton) no se estira mas alla de lo comodo */
+@media (min-width: 900px) {
+    #cart-modal .cart-container > div:last-child {
+        max-width: 520px;
+        margin: 0 auto;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    /* El grid de items necesita separador vertical entre columnas */
+    #cart-items > div {
+        border-right: 1px solid rgba(255,255,255,.04);
+    }
+    #cart-items > div:nth-child(even) {
+        border-right: none;
+    }
+}
+
+/* En pantallas muy anchas, centrar el contenido del carrito */
+@media (min-width: 1400px) {
+    .cart-container { max-width: 1000px; }
+}
+
+/* Tabs de cuentas: scroll horizontal en movil, wrap en escritorio */
+@media (min-width: 900px) {
+    #cuentas-tabs {
+        flex-wrap: wrap;
+        overflow-x: visible;
+    }
+}
+
+/* Items del carrito: area de toque comoda en tactil */
+@media (hover: none) {
+    #cart-items button {
+        min-width: 36px;
+        min-height: 36px;
+    }
+}
