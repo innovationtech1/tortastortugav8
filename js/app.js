@@ -1573,6 +1573,39 @@ window.editarItemDelCarrito = function(idx) {
     var nameEl = document.getElementById('mods-item-name');
     if (nameEl) nameEl.textContent = (item.nombre||'') + (item.variante ? ' \u00b7 ' + item.variante : '');
 
+    // ── VARIANTES: mostrar opciones si el producto tiene mas de una ──
+    window._varianteSeleccionada = null;
+    var vSec   = document.getElementById('mods-variantes-section');
+    var vLista = document.getElementById('mods-variantes-lista');
+    var vars   = item.variantesDisp || [];
+
+    if (vSec && vLista && vars.length > 1) {
+        var idxActual = (typeof item.varianteIdx === 'number') ? item.varianteIdx : 0;
+        window._varianteSeleccionada = idxActual;
+
+        vLista.innerHTML = vars.map(function(v, i) {
+            var activa = i === idxActual;
+            var lbl = v.label || ('Opción ' + String.fromCharCode(65+i));
+            var pr  = parseFloat(v.precio) || 0;
+            // Si el label ya trae el precio, no duplicarlo
+            var traePrecio = /\$\s*\d/.test(lbl);
+            return '<button type="button" class="var-opt" data-idx="' + i + '" ' +
+                'onclick="window.seleccionarVarianteItem(' + i + ')" ' +
+                'style="display:flex;justify-content:space-between;align-items:center;' +
+                'padding:.7rem .85rem;border-radius:10px;cursor:pointer;font-family:inherit;' +
+                'background:' + (activa ? 'rgba(255,90,0,.15)' : 'rgba(255,255,255,.04)') + ';' +
+                'border:1.5px solid ' + (activa ? '#FF5A00' : 'rgba(255,255,255,.1)') + ';' +
+                'color:' + (activa ? '#FF5A00' : '#ddd') + ';">' +
+                '<span style="font-size:.85rem;font-weight:' + (activa ? '800' : '600') + ';text-align:left;">' +
+                    (activa ? '\u25CF ' : '\u25CB ') + lbl + '</span>' +
+                (traePrecio ? '' : '<span style="font-size:.85rem;font-weight:800;">$' + pr.toFixed(2) + '</span>') +
+            '</button>';
+        }).join('');
+        vSec.style.display = 'block';
+    } else if (vSec) {
+        vSec.style.display = 'none';
+    }
+
     // Determinar tipo de producto
     var cat = (item.categoria || '').toLowerCase();
     var isTorta  = item.tipo === 'torta' || cat === 'tortas' || cat === '';
