@@ -2099,5 +2099,72 @@ window._saveAE = async function() {
     };
 })();
 </script>
+<!-- MODAL EDITAR COBRO -->
+<div id="editar-cobro-modal" class="modal-overlay" style="z-index:7000;">
+  <div style="background:#1A1A1A;width:100%;max-width:440px;border-radius:16px;padding:1.3rem;box-sizing:border-box;margin:auto;">
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <div>
+        <h3 style="margin:0;font-size:1.05rem;color:#fff;font-weight:800;">Editar cobro</h3>
+        <div id="ec-ticket" style="font-size:.85rem;color:#FBB724;font-weight:700;margin-top:.2rem;"></div>
+      </div>
+      <button onclick="cerrarEditarCobro()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#888;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:1rem;">&times;</button>
+    </div>
+
+    <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:.7rem .85rem;margin-bottom:1rem;">
+      <div style="display:flex;justify-content:space-between;font-size:.85rem;">
+        <span style="color:#888;">Metodo actual</span>
+        <span id="ec-metodo-actual" style="color:#25D366;font-weight:700;">—</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-top:.3rem;">
+        <span style="color:#888;">Total</span>
+        <span id="ec-total" style="color:#fff;font-weight:800;">—</span>
+      </div>
+    </div>
+
+    <p style="font-size:.75rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.05em;">Nuevo metodo de pago</p>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem;margin-bottom:1rem;">
+      <button class="ec-metodo" data-metodo="Efectivo" onclick="ecSelect(this)"
+        style="padding:.7rem;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);color:#fff;border-radius:10px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
+        💵 Efectivo</button>
+      <button class="ec-metodo" data-metodo="Tarjeta" onclick="ecSelect(this)"
+        style="padding:.7rem;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);color:#fff;border-radius:10px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
+        💳 Tarjeta</button>
+      <button class="ec-metodo" data-metodo="Zelle" onclick="ecSelect(this)"
+        style="padding:.7rem;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);color:#fff;border-radius:10px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
+        🟣 Zelle</button>
+      <button class="ec-metodo" data-metodo="Cash App" onclick="ecSelect(this)"
+        style="padding:.7rem;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);color:#fff;border-radius:10px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
+        🟢 Cash App</button>
+      <button class="ec-metodo" data-metodo="Venmo" onclick="ecSelect(this)"
+        style="padding:.7rem;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);color:#fff;border-radius:10px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
+        🔵 Venmo</button>
+      <button class="ec-metodo" data-metodo="Por pagar" onclick="ecSelect(this)"
+        style="padding:.7rem;background:rgba(244,67,54,.08);border:1.5px solid rgba(244,67,54,.3);color:#F44336;border-radius:10px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
+        ⚠️ Revertir a por pagar</button>
+    </div>
+
+    <p style="font-size:.75rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.05em;">Motivo del cambio (requerido)</p>
+    <input id="ec-motivo" type="text" placeholder="Ej: el cliente cambio de metodo, error de captura"
+      style="width:100%;box-sizing:border-box;padding:.65rem;background:#0d0d0d;border:1.5px solid rgba(255,255,255,.15);color:#fff;border-radius:10px;font-family:inherit;font-size:.85rem;margin-bottom:.5rem;">
+
+    <div style="background:rgba(251,183,36,.08);border:1px solid rgba(251,183,36,.25);border-radius:8px;padding:.6rem .75rem;margin-bottom:1rem;">
+      <div style="font-size:.72rem;color:#FBB724;line-height:1.5;">
+        El cambio queda registrado con fecha, hora y motivo para el corte de caja.
+      </div>
+    </div>
+
+    <div id="ec-historial" style="display:none;margin-bottom:1rem;">
+      <p style="font-size:.75rem;color:#888;font-weight:700;margin:0 0 .4rem;text-transform:uppercase;">Cambios previos</p>
+      <div id="ec-historial-lista" style="background:rgba(255,255,255,.03);border-radius:8px;padding:.5rem .7rem;font-size:.72rem;color:#888;max-height:100px;overflow-y:auto;"></div>
+    </div>
+
+    <div style="display:flex;gap:.5rem;">
+      <button onclick="cerrarEditarCobro()" style="flex:1;padding:.8rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#aaa;border-radius:12px;font-family:inherit;font-weight:700;cursor:pointer;">Cancelar</button>
+      <button onclick="guardarEditarCobro()" style="flex:2;padding:.8rem;background:linear-gradient(135deg,#FBB724,#F59E0B);border:none;color:#000;border-radius:12px;font-family:inherit;font-weight:800;cursor:pointer;">Guardar cambio</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
