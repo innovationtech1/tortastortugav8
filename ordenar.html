@@ -120,30 +120,16 @@ function confirmarMods(conMods) {
     var CS = window._cuentasSys;
 
     // ── MODO EDICIÓN ──
+    // La variante ya se aplico al instante (ver seleccionarVarianteItem).
+    // Aqui solo guardamos las modificaciones y recalculamos el precio.
     if (window._editingItem) {
         var ei = window._editingItem;
         var ce = CS.cuentas.find(function(x){ return x.id === ei.cuentaId; });
         if (ce && ce.items[ei.itemIdx] !== undefined) {
             var it = ce.items[ei.itemIdx];
-
-            // Si se cambio la variante, actualizar label y precio base
-            var vIdx = window._varianteSeleccionada;
-            alert('DIAGNOSTICO\n\n' +
-                  'Variante que elegiste: ' + (vIdx === null || vIdx === undefined ? 'NINGUNA' : vIdx) + '\n' +
-                  'Item tiene lista de variantes: ' + (it.variantesDisp ? 'SI (' + it.variantesDisp.length + ')' : 'NO') + '\n' +
-                  'Variante actual: ' + (it.variante || 'ninguna') + '\n' +
-                  'Precio actual: $' + (it.precio || 0));
-            var precioBase = ei.precioBase;
-            if (vIdx !== null && vIdx !== undefined && it.variantesDisp && it.variantesDisp[vIdx]) {
-                var nuevaVar = it.variantesDisp[vIdx];
-                it.variante    = nuevaVar.label || '';
-                it.varianteIdx = vIdx;
-                precioBase     = parseFloat(nuevaVar.precio) || 0;
-                it.precioBase  = precioBase;
-            }
-
             it.modificaciones = mods;
-            it.precio = precioBase + extra;
+            // precioBase ya refleja la variante elegida
+            it.precio = (it.precioBase || ei.precioBase || 0) + extra;
         }
         window._editingItem = null;
         window._varianteSeleccionada = null;
@@ -151,6 +137,7 @@ function confirmarMods(conMods) {
         if (window.renderCartItems)      window.renderCartItems();
         if (window.renderCuentasTabs)    window.renderCuentasTabs();
         if (window.renderListaCompleta)  window.renderListaCompleta();
+        if (window.actualizarDesglose)   window.actualizarDesglose();
         return;
     }
 
@@ -1136,7 +1123,7 @@ function cerrarOrdenModal() {
 }
 </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=1784179114">
+    <link rel="stylesheet" href="css/style.css?v=1784179423">
     <script type="module">
         import { auth, db } from './js/firebase-config.js';
         import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -1719,7 +1706,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1784179114"></script>
+<script type="module" src="js/app.js?v=1784179423"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -1825,7 +1812,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1784179114';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1784179423';
     (async () => {
         try {
             await seedProductos();
