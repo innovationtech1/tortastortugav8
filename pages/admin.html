@@ -531,7 +531,15 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
             const ticketId = p.id.slice(-4).toUpperCase();
             const isPaid = p.estadoPago === 'Pagado';
             let pagoHTML = '';
-            if (isPaid) { pagoHTML = `<div class="pagado-badge">✅ Pagado (${p.metodoPagoReal || 'Caja'})<br><strong style="color:white">${p.total}</strong></div>`; }
+            if (isPaid) {
+                pagoHTML = `<div class="pagado-badge">✅ Pagado (${p.metodoPagoReal || 'Caja'})<br><strong style="color:white">${p.total}</strong></div>
+                <button onclick="abrirEditarCobro('${p.id}', '${ticketId}', '${p.total}', '${(p.metodoPagoReal||'').replace(/'/g,"")}')"
+                    style="margin-top:6px;width:100%;padding:5px 8px;background:rgba(251,183,36,.12);
+                           border:1px solid rgba(251,183,36,.4);color:#FBB724;border-radius:6px;
+                           font-family:inherit;font-size:0.75rem;font-weight:700;cursor:pointer;">
+                    ✏️ Editar cobro
+                </button>`;
+            }
             else { pagoHTML = `<button class="btn-cobrar-grid" onclick="abrirCaja('${p.id}', '${ticketId}', '${p.total}')">🔴 Cobrar ${p.total}</button><br><span class="pay-badge" style="margin-top:4px;display:inline-block">Pide: ${p.metodoPago || '?'}</span>`; }
             const searchText = (document.getElementById('admin-search')?.value || '').trim();
             let displayTicket = ticketId, displayNombre = p.cliente || p.nombre || '—', displayTel = p.telefono || 'En tienda', displayItems = p.items || '—', displayTipo = tipo;
