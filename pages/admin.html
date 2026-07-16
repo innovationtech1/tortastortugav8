@@ -2166,5 +2166,133 @@ window._saveAE = async function() {
   </div>
 </div>
 
+<script>
+/* ══════════ EDITAR COBRO DE UNA ORDEN ══════════
+   Permite corregir el metodo de pago despues de cobrado.
+   Cada cambio queda registrado con fecha, hora y motivo. */
+(function() {
+    var _ecOrderId = null;
+    var _ecMetodoSel = null;
+    var _ecMetodoAnterior = null;
+
+    window.abrirEditarCobro = async function(id, ticket, total, metodoActual) {
+        _ecOrderId = id;
+        _ecMetodoSel = null;
+        _ecMetodoAnterior = metodoActual || 'Caja';
+
+        var t = document.getElementById('ec-ticket');
+        var m = document.getElementById('ec-metodo-actual');
+        var tot = document.getElementById('ec-total');
+        var mot = document.getElementById('ec-motivo');
+        if (t) t.textContent = '#' + ticket;
+        if (m) m.textContent = _ecMetodoAnterior;
+        if (tot) tot.textContent = total;
+        if (mot) mot.value = '';
+
+        // Limpiar seleccion visual
+        document.querySelectorAll('.ec-metodo').forEach(function(b) {
+            b.style.background = b.dataset.metodo === 'Por pagar' ? 'rgba(244,67,54,.08)' : 'rgba(255,255,255,.05)';
+            b.style.borderColor = b.dataset.metodo === 'Por pagar' ? 'rgba(244,67,54,.3)' : 'rgba(255,255,255,.12)';
+        });
+
+        // Cargar historial de cambios previos
+        try {
+            var snap = await window._adminGetDoc(id);
+            var hist = (snap && snap.historialPago) || [];
+            var cont = document.getElementById('ec-historial');
+            var lista = document.getElementById('ec-historial-lista');
+            if (hist.length && cont && lista) {
+                lista.innerHTML = hist.map(function(h) {
+                    var f = h.fecha ? new Date(h.fecha).toLocaleString('es-MX', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '?';
+                    return '<div style="padding:.2rem 0;border-bottom:1px solid rgba(255,255,255,.05);">' +
+                           f + ' — ' + (h.de||'?') + ' \u2192 ' + (h.a||'?') +
+                           (h.motivo ? '<br><span style="color:#666;">' + h.motivo + '</span>' : '') +
+                           '</div>';
+                }).join('');
+                cont.style.display = 'block';
+            } else if (cont) {
+                cont.style.display = 'none';
+            }
+        } catch(e) {
+            console.warn('No se pudo cargar historial:', e);
+        }
+
+        var modal = document.getElementById('editar-cobro-modal');
+        if (modal) modal.classList.add('active');
+    };
+
+    window.cerrarEditarCobro = function() {
+        var m = document.getElementById('editar-cobro-modal');
+        if (m) m.classList.remove('active');
+        _ecOrderId = null;
+        _ecMetodoSel = null;
+    };
+
+    window.ecSelect = function(btn) {
+        _ecMetodoSel = btn.dataset.metodo;
+        document.querySelectorAll('.ec-metodo').forEach(function(b) {
+            var esRevertir = b.dataset.metodo === 'Por pagar';
+            b.style.background = esRevertir ? 'rgba(244,67,54,.08)' : 'rgba(255,255,255,.05)';
+            b.style.borderColor = esRevertir ? 'rgba(244,67,54,.3)' : 'rgba(255,255,255,.12)';
+        });
+        var esRev = _ecMetodoSel === 'Por pagar';
+        btn.style.background = esRev ? 'rgba(244,67,54,.2)' : 'rgba(251,183,36,.15)';
+        btn.style.borderColor = esRev ? '#F44336' : '#FBB724';
+    };
+
+    window.guardarEditarCobro = async function() {
+        if (!_ecOrderId) return;
+
+        if (!_ecMetodoSel) {
+            alert('Selecciona el nuevo metodo de pago');
+            return;
+        }
+        var motivo = (document.getElementById('ec-motivo').value || '').trim();
+        if (!motivo) {
+            alert('El motivo del cambio es requerido para el registro');
+            return;
+        }
+        if (_ecMetodoSel === _ecMetodoAnterior) {
+            alert('El metodo seleccionado es el mismo que el actual');
+            return;
+        }
+
+        // Registro de auditoria
+        var entrada = {
+            fecha:  new Date().toISOString(),
+            de:     _ecMetodoAnterior,
+            a:      _ecMetodoSel,
+            motivo: motivo,
+            usuario: (window._usuarioActual && window._usuarioActual.nombre) || 'admin',
+        };
+
+        try {
+            var snap = await window._adminGetDoc(_ecOrderId);
+            var hist = (snap && snap.historialPago) || [];
+            hist.push(entrada);
+
+            var updates = {
+                historialPago: hist,
+                pagoEditadoEn: new Date().toISOString(),
+            };
+
+            if (_ecMetodoSel === 'Por pagar') {
+                updates.estadoPago = 'Por pagar';
+                updates.metodoPagoReal = null;
+            } else {
+                updates.estadoPago = 'Pagado';
+                updates.metodoPagoReal = _ecMetodoSel;
+            }
+
+            await window._adminUpdateDoc(_ecOrderId, updates, 'pedidos');
+            window.cerrarEditarCobro();
+        } catch(e) {
+            console.error('Error al editar cobro:', e);
+            alert('Error al guardar: ' + e.message);
+        }
+    };
+})();
+</script>
+
 </body>
 </html>
