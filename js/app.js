@@ -1835,3 +1835,194 @@ window.fmtMoneda = function(n) {
 };
 
 console.log('Modulo de dinero cargado — impuesto:', (window._POS_CONFIG.impuestoTasa*100).toFixed(2) + '%');
+
+
+// ═══════════════ UI: DESCUENTOS Y PROPINAS ═══════════════
+
+// Cada cuenta guarda sus ajustes de dinero
+function _ajustesCuenta(cuentaId) {
+    if (!window._ajustesDinero) window._ajustesDinero = {};
+    if (!window._ajustesDinero[cuentaId]) {
+        window._ajustesDinero[cuentaId] = {
+            descuento: 0, descuentoTipo: 'porcentaje', descuentoMotivo: '',
+            propina: 0, propinaTipo: 'porcentaje',
+        };
+    }
+    return window._ajustesDinero[cuentaId];
+}
+
+// ── Actualiza el desglose visible en el carrito ──
+window.actualizarDesglose = function() {
+    var CS = window._cuentasSys;
+    if (!CS) return;
+    var c = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+    if (!c) return;
+
+    var aj = _ajustesCuenta(c.id);
+    var t = window.calcularTotales(c.items, {
+        descuento:     aj.descuento,
+        descuentoTipo: aj.descuentoTipo,
+        propina:       aj.propina,
+        propinaTipo:   aj.propinaTipo,
+    });
+
+    function set(id, val) { var e = document.getElementById(id); if (e) e.textContent = val; }
+    function show(id, visible) { var e = document.getElementById(id); if (e) e.style.display = visible ? 'flex' : 'none'; }
+
+    set('dsg-subtotal', window.fmtMoneda(t.subtotal));
+    set('dsg-impuesto', window.fmtMoneda(t.impuesto));
+    set('dsg-impuesto-label', window._POS_CONFIG.impuestoNombre + ' (' + (t.impuestoTasa*100).toFixed(2) + '%)');
+    set('cart-total-amount', window.fmtMoneda(t.total));
+
+    show('dsg-row-descuento', t.descuento > 0);
+    if (t.descuento > 0) {
+        set('dsg-descuento', '-' + window.fmtMoneda(t.descuento));
+        var lbl = 'Descuento';
+        if (aj.descuentoTipo === 'porcentaje') lbl += ' (' + aj.descuento + '%)';
+        if (aj.descuentoMotivo) lbl += ' · ' + aj.descuentoMotivo;
+        set('dsg-descuento-label', lbl);
+    }
+
+    show('dsg-row-propina', t.propina > 0);
+    if (t.propina > 0) {
+        set('dsg-propina', window.fmtMoneda(t.propina));
+        set('dsg-propina-label', 'Propina' + (aj.propinaTipo === 'porcentaje' ? ' (' + aj.propina + '%)' : ''));
+    }
+};
+
+// ── Modal descuento ──
+window.abrirModalDescuento = function() {
+    var CS = window._cuentasSys;
+    if (!CS) return;
+    var c = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+    if (!c || !c.items.length) { alert('Agrega productos antes de aplicar un descuento'); return; }
+
+    var aj = _ajustesCuenta(c.id);
+    var v = document.getElementById('desc-valor');
+    var t = document.getElementById('desc-tipo');
+    var m = document.getElementById('desc-motivo');
+    if (v) v.value = aj.descuento || '';
+    if (t) t.value = aj.descuentoTipo || 'porcentaje';
+    if (m) m.value = aj.descuentoMotivo || '';
+
+    var modal = document.getElementById('modal-descuento');
+    if (modal) modal.classList.add('active');
+};
+window.cerrarModalDescuento = function() {
+    var m = document.getElementById('modal-descuento');
+    if (m) m.classList.remove('active');
+};
+window.setDescuentoRapido = function(pct) {
+    var v = document.getElementById('desc-valor');
+    var t = document.getElementById('desc-tipo');
+    if (t) t.value = 'porcentaje';
+    if (v) v.value = pct;
+    if (pct === 100) {
+        var m = document.getElementById('desc-motivo');
+        if (m && !m.value) m.value = 'Cortesia';
+    }
+};
+window.aplicarDescuento = function() {
+    var CS = window._cuentasSys;
+    var c = CS ? CS.cuentas.find(function(x){ return x.id === CS.activa; }) : null;
+    if (!c) return;
+
+    var valor  = parseFloat((document.getElementById('desc-valor')||{}).value || 0) || 0;
+    var tipo   = (document.getElementById('desc-tipo')||{}).value || 'porcentaje';
+    var motivo = ((document.getElementById('desc-motivo')||{}).value || '').trim();
+
+    if (valor <= 0) { alert('Ingresa un valor mayor a 0'); return; }
+    if (tipo === 'porcentaje' && valor > 100) { alert('El descuento no puede ser mayor a 100%'); return; }
+    if (!motivo) { alert('El motivo del descuento es requerido para el registro'); return; }
+
+    var aj = _ajustesCuenta(c.id);
+    aj.descuento = valor;
+    aj.descuentoTipo = tipo;
+    aj.descuentoMotivo = motivo;
+
+    window.actualizarDesglose();
+    window.cerrarModalDescuento();
+};
+window.quitarDescuento = function() {
+    var CS = window._cuentasSys;
+    var c = CS ? CS.cuentas.find(function(x){ return x.id === CS.activa; }) : null;
+    if (!c) return;
+    var aj = _ajustesCuenta(c.id);
+    aj.descuento = 0; aj.descuentoMotivo = '';
+    window.actualizarDesglose();
+    window.cerrarModalDescuento();
+};
+
+// ── Modal propina ──
+window.abrirModalPropina = function() {
+    var CS = window._cuentasSys;
+    if (!CS) return;
+    var c = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+    if (!c || !c.items.length) { alert('Agrega productos antes de agregar propina'); return; }
+
+    // Generar botones de sugerencia con el monto calculado
+    var aj = _ajustesCuenta(c.id);
+    var base = window.calcularTotales(c.items, { descuento: aj.descuento, descuentoTipo: aj.descuentoTipo });
+    var cont = document.getElementById('propina-sugerencias');
+    if (cont) {
+        cont.innerHTML = window._POS_CONFIG.propinasSugeridas.map(function(p) {
+            var monto = base.baseGravable * p;
+            return '<button onclick="window.setPropinaRapida(' + (p*100) + ')" ' +
+                'style="padding:.7rem .4rem;background:rgba(37,211,102,.1);border:1.5px solid rgba(37,211,102,.3);' +
+                'color:#25D366;border-radius:10px;font-family:inherit;cursor:pointer;">' +
+                '<div style="font-weight:800;font-size:1rem;">' + (p*100).toFixed(0) + '%</div>' +
+                '<div style="font-size:.7rem;opacity:.8;">' + window.fmtMoneda(monto) + '</div></button>';
+        }).join('');
+    }
+
+    var v = document.getElementById('prop-valor');
+    var t = document.getElementById('prop-tipo');
+    if (v) v.value = aj.propina || '';
+    if (t) t.value = aj.propinaTipo || 'porcentaje';
+
+    var modal = document.getElementById('modal-propina');
+    if (modal) modal.classList.add('active');
+};
+window.cerrarModalPropina = function() {
+    var m = document.getElementById('modal-propina');
+    if (m) m.classList.remove('active');
+};
+window.setPropinaRapida = function(pct) {
+    var v = document.getElementById('prop-valor');
+    var t = document.getElementById('prop-tipo');
+    if (t) t.value = 'porcentaje';
+    if (v) v.value = pct;
+};
+window.aplicarPropina = function() {
+    var CS = window._cuentasSys;
+    var c = CS ? CS.cuentas.find(function(x){ return x.id === CS.activa; }) : null;
+    if (!c) return;
+
+    var valor = parseFloat((document.getElementById('prop-valor')||{}).value || 0) || 0;
+    var tipo  = (document.getElementById('prop-tipo')||{}).value || 'porcentaje';
+    if (valor < 0) { alert('El valor no puede ser negativo'); return; }
+
+    var aj = _ajustesCuenta(c.id);
+    aj.propina = valor;
+    aj.propinaTipo = tipo;
+
+    window.actualizarDesglose();
+    window.cerrarModalPropina();
+};
+window.quitarPropina = function() {
+    var CS = window._cuentasSys;
+    var c = CS ? CS.cuentas.find(function(x){ return x.id === CS.activa; }) : null;
+    if (!c) return;
+    _ajustesCuenta(c.id).propina = 0;
+    window.actualizarDesglose();
+    window.cerrarModalPropina();
+};
+
+// Hook: cada vez que se renderiza el carrito, actualizar el desglose
+(function() {
+    var _origRender = window.renderCartItems;
+    window.renderCartItems = function() {
+        if (_origRender) _origRender.apply(this, arguments);
+        if (window.actualizarDesglose) window.actualizarDesglose();
+    };
+})();
