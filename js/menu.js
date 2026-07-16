@@ -382,12 +382,21 @@ function crearCard(p) {
 
         // Agregar los items DIRECTAMENTE al carrito
         for (var i = 0; i < cantidad; i++) {
+            // Guardar el indice y la lista completa de variantes para poder
+            // cambiarla despues desde el carrito sin volver al menu.
+            var varIdx = vars.indexOf(variante);
+            if (varIdx < 0) varIdx = 0;
+
             ca.items.push({
                 id:             pid,
                 nombre:         p.nombre || 'Producto',
                 precio:         precio,
                 precioBase:     precio,
                 variante:       variante.label || '',
+                varianteIdx:    varIdx,
+                variantesDisp:  vars.map(function(v){
+                                    return { label: v.label || '', precio: parseFloat(v.precio) || 0 };
+                                }),
                 categoria:      p.categoria || 'tortas',
                 tipo:           p.tipo || 'torta',
                 modificaciones: [],
