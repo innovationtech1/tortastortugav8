@@ -1681,7 +1681,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1784173976"></script>
+<script type="module" src="js/app.js?v=1784174010"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -1787,7 +1787,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1784173976';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1784174010';
     (async () => {
         try {
             await seedProductos();
@@ -2892,6 +2892,70 @@ document.addEventListener('click', function(e) {
     };
 })();
 </script>
+
+<!-- MODAL DESCUENTO -->
+<div id="modal-descuento" class="modal-overlay" style="z-index:6000;">
+  <div style="background:#1A1A1A;width:100%;max-width:420px;border-radius:20px 20px 0 0;padding:1.2rem;box-sizing:border-box;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <h3 style="margin:0;font-size:1.05rem;color:#fff;font-weight:800;">Aplicar descuento</h3>
+      <button onclick="window.cerrarModalDescuento()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#888;border-radius:8px;width:32px;height:32px;cursor:pointer;">&times;</button>
+    </div>
+
+    <p style="font-size:.75rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;">Descuentos rapidos</p>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem;margin-bottom:1rem;">
+      <button class="desc-quick" onclick="window.setDescuentoRapido(10)" style="padding:.6rem;background:rgba(167,139,250,.1);border:1.5px solid rgba(167,139,250,.3);color:#A78BFA;border-radius:10px;font-family:inherit;font-weight:800;cursor:pointer;">10%</button>
+      <button class="desc-quick" onclick="window.setDescuentoRapido(15)" style="padding:.6rem;background:rgba(167,139,250,.1);border:1.5px solid rgba(167,139,250,.3);color:#A78BFA;border-radius:10px;font-family:inherit;font-weight:800;cursor:pointer;">15%</button>
+      <button class="desc-quick" onclick="window.setDescuentoRapido(20)" style="padding:.6rem;background:rgba(167,139,250,.1);border:1.5px solid rgba(167,139,250,.3);color:#A78BFA;border-radius:10px;font-family:inherit;font-weight:800;cursor:pointer;">20%</button>
+      <button class="desc-quick" onclick="window.setDescuentoRapido(100)" style="padding:.6rem;background:rgba(244,67,54,.1);border:1.5px solid rgba(244,67,54,.3);color:#F44336;border-radius:10px;font-family:inherit;font-size:.7rem;font-weight:800;cursor:pointer;">Cortesia</button>
+    </div>
+
+    <p style="font-size:.75rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;">Monto personalizado</p>
+    <div style="display:flex;gap:.4rem;margin-bottom:.8rem;">
+      <select id="desc-tipo" style="background:#0d0d0d;border:1.5px solid rgba(167,139,250,.4);color:#fff;border-radius:10px;padding:.6rem;font-family:inherit;font-size:.85rem;">
+        <option value="porcentaje">%</option>
+        <option value="monto">$</option>
+      </select>
+      <input id="desc-valor" type="number" min="0" step="0.01" placeholder="0"
+        style="flex:1;box-sizing:border-box;padding:.6rem;background:#0d0d0d;border:1.5px solid rgba(167,139,250,.4);color:#fff;border-radius:10px;font-family:inherit;font-size:.9rem;">
+    </div>
+
+    <p style="font-size:.75rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;">Motivo (requerido)</p>
+    <input id="desc-motivo" type="text" placeholder="Ej: empleado, cliente frecuente, error de cocina"
+      style="width:100%;box-sizing:border-box;padding:.6rem;background:#0d0d0d;border:1.5px solid rgba(255,255,255,.15);color:#fff;border-radius:10px;font-family:inherit;font-size:.85rem;margin-bottom:1rem;">
+
+    <div style="display:flex;gap:.5rem;">
+      <button onclick="window.quitarDescuento()" style="flex:1;padding:.8rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#aaa;border-radius:12px;font-family:inherit;font-weight:700;cursor:pointer;">Quitar</button>
+      <button onclick="window.aplicarDescuento()" style="flex:2;padding:.8rem;background:linear-gradient(135deg,#A78BFA,#8B5CF6);border:none;color:#fff;border-radius:12px;font-family:inherit;font-weight:800;cursor:pointer;">Aplicar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PROPINA -->
+<div id="modal-propina" class="modal-overlay" style="z-index:6000;">
+  <div style="background:#1A1A1A;width:100%;max-width:420px;border-radius:20px 20px 0 0;padding:1.2rem;box-sizing:border-box;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <h3 style="margin:0;font-size:1.05rem;color:#fff;font-weight:800;">Agregar propina</h3>
+      <button onclick="window.cerrarModalPropina()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#888;border-radius:8px;width:32px;height:32px;cursor:pointer;">&times;</button>
+    </div>
+
+    <div id="propina-sugerencias" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:1rem;"></div>
+
+    <p style="font-size:.75rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;">Monto personalizado</p>
+    <div style="display:flex;gap:.4rem;margin-bottom:1rem;">
+      <select id="prop-tipo" style="background:#0d0d0d;border:1.5px solid rgba(37,211,102,.4);color:#fff;border-radius:10px;padding:.6rem;font-family:inherit;font-size:.85rem;">
+        <option value="porcentaje">%</option>
+        <option value="monto">$</option>
+      </select>
+      <input id="prop-valor" type="number" min="0" step="0.01" placeholder="0"
+        style="flex:1;box-sizing:border-box;padding:.6rem;background:#0d0d0d;border:1.5px solid rgba(37,211,102,.4);color:#fff;border-radius:10px;font-family:inherit;font-size:.9rem;">
+    </div>
+
+    <div style="display:flex;gap:.5rem;">
+      <button onclick="window.quitarPropina()" style="flex:1;padding:.8rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#aaa;border-radius:12px;font-family:inherit;font-weight:700;cursor:pointer;">Sin propina</button>
+      <button onclick="window.aplicarPropina()" style="flex:2;padding:.8rem;background:linear-gradient(135deg,#25D366,#1DB954);border:none;color:#fff;border-radius:12px;font-family:inherit;font-weight:800;cursor:pointer;">Aplicar</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
