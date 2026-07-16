@@ -1099,47 +1099,65 @@ window.renderCartItems = function() {
 
     el.innerHTML = items.map((item, idx) => {
         const precio  = parseFloat(item.precio) || 0;
-        const mods    = (item.modificaciones || []).filter(m => m && m.trim()).join(' · ');
+        const modsArr = (item.modificaciones || []).filter(m => m && m.trim());
+
+        // Variante en su propia linea
         const varHtml = item.variante
-            ? `<div style="font-size:.7rem;color:#FF5A00;margin:.1rem 0;">${item.variante}</div>`
+            ? `<div style="font-size:.78rem;color:#FF5A00;font-weight:600;margin-top:.15rem;">${item.variante}</div>`
             : '';
-        const modsHtml = mods
-            ? `<div style="font-size:.7rem;color:#888;margin:.1rem 0;">${mods}</div>`
+
+        // Modificaciones como chips (mas legibles que texto corrido)
+        const modsHtml = modsArr.length
+            ? `<div style="display:flex;flex-wrap:wrap;gap:.25rem;margin-top:.35rem;">` +
+              modsArr.map(m => {
+                  const esNota = m.indexOf('\u{1F4DD}') === 0;
+                  return `<span style="font-size:.68rem;padding:.15rem .45rem;border-radius:6px;
+                      background:${esNota ? 'rgba(251,183,36,.12)' : 'rgba(255,255,255,.06)'};
+                      color:${esNota ? '#FBB724' : '#aaa'};
+                      border:1px solid ${esNota ? 'rgba(251,183,36,.25)' : 'rgba(255,255,255,.1)'};
+                      white-space:nowrap;">${m}</span>`;
+              }).join('') +
+              `</div>`
             : '';
 
         return `
-        <div style="display:flex;align-items:center;gap:.75rem;
-                    padding:.75rem .9rem;border-bottom:1px solid rgba(255,255,255,.05);">
-            <!-- Número -->
-            <div style="width:24px;height:24px;background:rgba(255,90,0,.15);border-radius:50%;
+        <div style="display:flex;align-items:flex-start;gap:.65rem;
+                    padding:.85rem .9rem;border-bottom:1px solid rgba(255,255,255,.05);">
+            <!-- Numero -->
+            <div style="width:26px;height:26px;background:rgba(255,90,0,.15);border-radius:50%;
                         display:flex;align-items:center;justify-content:center;
-                        font-size:.7rem;font-weight:800;color:#FF5A00;flex-shrink:0;">${idx+1}</div>
-            <!-- Info -->
+                        font-size:.72rem;font-weight:800;color:#FF5A00;flex-shrink:0;margin-top:.1rem;">${idx+1}</div>
+
+            <!-- Info: se expande, el nombre puede ocupar 2 lineas -->
             <div style="flex:1;min-width:0;">
-                <div style="font-size:.88rem;font-weight:700;color:#fff;
-                            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.nombre||'Producto'}</div>
+                <div style="font-size:.92rem;font-weight:700;color:#fff;line-height:1.3;
+                            word-break:break-word;">${item.nombre||'Producto'}</div>
                 ${varHtml}${modsHtml}
             </div>
-            <!-- Precio -->
-            <div style="font-size:.9rem;font-weight:800;color:#25D366;flex-shrink:0;">$${precio.toFixed(2)}</div>
-            <!-- Acciones -->
-            <div style="display:flex;gap:.3rem;flex-shrink:0;">
-                ${CS.cuentas.length > 1 ? `<button onclick="window.abrirSplitItem(${idx})"
-                    style="width:28px;height:28px;background:rgba(59,130,246,.15);
-                           border:1px solid rgba(59,130,246,.35);color:#3B82F6;
-                           border-radius:8px;font-size:.75rem;cursor:pointer;
-                           display:flex;align-items:center;justify-content:center;"
-                    title="Mover a otra cuenta">⇄</button>` : ''}
-                <button onclick="window.editarItemDelCarrito(${idx})"
-                    style="width:28px;height:28px;background:rgba(167,139,250,.15);
-                           border:1px solid rgba(167,139,250,.35);color:#A78BFA;
-                           border-radius:8px;font-size:.75rem;cursor:pointer;
-                           display:flex;align-items:center;justify-content:center;">✏️</button>
-                <button onclick="window.removeItemCuenta(${idx})"
-                    style="width:28px;height:28px;background:rgba(244,67,54,.12);
-                           border:1px solid rgba(244,67,54,.25);color:#F44336;
-                           border-radius:8px;font-size:.8rem;cursor:pointer;
-                           display:flex;align-items:center;justify-content:center;">✕</button>
+
+            <!-- Precio + acciones en columna -->
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.4rem;flex-shrink:0;">
+                <div style="font-size:.95rem;font-weight:800;color:#25D366;">$${precio.toFixed(2)}</div>
+                <div style="display:flex;gap:.3rem;">
+                    ${CS.cuentas.length > 1 ? `<button onclick="window.abrirSplitItem(${idx})"
+                        style="width:32px;height:32px;background:rgba(59,130,246,.15);
+                               border:1px solid rgba(59,130,246,.35);color:#3B82F6;
+                               border-radius:8px;font-size:.8rem;cursor:pointer;
+                               display:flex;align-items:center;justify-content:center;"
+                        title="Mover a otra cuenta">\u21C4</button>` : ''}
+                    <button onclick="window.editarItemDelCarrito(${idx})"
+                        style="width:32px;height:32px;background:rgba(167,139,250,.15);
+                               border:1px solid rgba(167,139,250,.35);color:#A78BFA;
+                               border-radius:8px;font-size:.8rem;cursor:pointer;
+                               display:flex;align-items:center;justify-content:center;"
+                        title="Editar modificaciones">\u270F\uFE0F</button>
+                    <button onclick="window.removeItemCuenta(${idx})"
+                        style="width:32px;height:32px;background:rgba(244,67,54,.12);
+                               border:1px solid rgba(244,67,54,.25);color:#F44336;
+                               border-radius:8px;font-size:.85rem;cursor:pointer;
+                               display:flex;align-items:center;justify-content:center;"
+                        title="Quitar del pedido">\u2715</button>
+                </div>
             </div>
         </div>`;
     }).join('');
