@@ -124,13 +124,28 @@ function confirmarMods(conMods) {
         var ei = window._editingItem;
         var ce = CS.cuentas.find(function(x){ return x.id === ei.cuentaId; });
         if (ce && ce.items[ei.itemIdx] !== undefined) {
-            ce.items[ei.itemIdx].modificaciones = mods;
-            ce.items[ei.itemIdx].precio = ei.precioBase + extra;
+            var it = ce.items[ei.itemIdx];
+
+            // Si se cambio la variante, actualizar label y precio base
+            var vIdx = window._varianteSeleccionada;
+            var precioBase = ei.precioBase;
+            if (vIdx !== null && vIdx !== undefined && it.variantesDisp && it.variantesDisp[vIdx]) {
+                var nuevaVar = it.variantesDisp[vIdx];
+                it.variante    = nuevaVar.label || '';
+                it.varianteIdx = vIdx;
+                precioBase     = parseFloat(nuevaVar.precio) || 0;
+                it.precioBase  = precioBase;
+            }
+
+            it.modificaciones = mods;
+            it.precio = precioBase + extra;
         }
         window._editingItem = null;
+        window._varianteSeleccionada = null;
         cerrarModal();
-        if (window.renderCartItems)   window.renderCartItems();
-        if (window.renderCuentasTabs) window.renderCuentasTabs();
+        if (window.renderCartItems)      window.renderCartItems();
+        if (window.renderCuentasTabs)    window.renderCuentasTabs();
+        if (window.renderListaCompleta)  window.renderListaCompleta();
         return;
     }
 
@@ -1116,7 +1131,7 @@ function cerrarOrdenModal() {
 }
 </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=1784177881">
+    <link rel="stylesheet" href="css/style.css?v=1784177930">
     <script type="module">
         import { auth, db } from './js/firebase-config.js';
         import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -1699,7 +1714,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1784177881"></script>
+<script type="module" src="js/app.js?v=1784177930"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -1805,7 +1820,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1784177881';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1784177930';
     (async () => {
         try {
             await seedProductos();
