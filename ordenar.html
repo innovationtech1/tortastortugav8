@@ -128,6 +128,13 @@ function confirmarMods(conMods) {
 
             // Si se cambio la variante, actualizar label y precio base
             var vIdx = window._varianteSeleccionada;
+            console.log('EDITAR:', {
+                varianteSeleccionada: vIdx,
+                tieneVariantesDisp: !!it.variantesDisp,
+                cuantasVariantes: it.variantesDisp ? it.variantesDisp.length : 0,
+                varianteActual: it.variante,
+                precioActual: it.precio
+            });
             var precioBase = ei.precioBase;
             if (vIdx !== null && vIdx !== undefined && it.variantesDisp && it.variantesDisp[vIdx]) {
                 var nuevaVar = it.variantesDisp[vIdx];
@@ -1131,7 +1138,7 @@ function cerrarOrdenModal() {
 }
 </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=1784179362">
+    <link rel="stylesheet" href="css/style.css?v=1784178826">
     <script type="module">
         import { auth, db } from './js/firebase-config.js';
         import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -1714,7 +1721,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1784179362"></script>
+<script type="module" src="js/app.js?v=1784178826"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -1820,7 +1827,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1784179362';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1784178826';
     (async () => {
         try {
             await seedProductos();
