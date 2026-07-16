@@ -2244,3 +2244,26 @@ window.actualizarContadorVerTodo = function() {
         btn.textContent = n > 0 ? ('Ver ' + n) : 'Ver todo';
     }
 };
+
+
+// ── Seleccionar variante desde el modal de modificaciones ──
+window.seleccionarVarianteItem = function(idx) {
+    window._varianteSeleccionada = idx;
+    var botones = document.querySelectorAll('.var-opt');
+    for (var i = 0; i < botones.length; i++) {
+        var btn = botones[i];
+        var bIdx = parseInt(btn.getAttribute('data-idx'));
+        var activa = (bIdx === idx);
+        btn.style.background  = activa ? 'rgba(255,90,0,.15)' : 'rgba(255,255,255,.04)';
+        btn.style.borderColor = activa ? '#FF5A00' : 'rgba(255,255,255,.1)';
+        btn.style.color       = activa ? '#FF5A00' : '#ddd';
+        var span = btn.querySelector('span');
+        if (span) {
+            span.style.fontWeight = activa ? '800' : '600';
+            var txt = span.textContent;
+            // Quitar el marcador anterior y poner el nuevo
+            txt = txt.replace(/^[\u25CF\u25CB]\s*/, '');
+            span.textContent = (activa ? '\u25CF ' : '\u25CB ') + txt;
+        }
+    }
+};
