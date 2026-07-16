@@ -1427,7 +1427,41 @@ function cerrarOrdenModal() {
         <!-- TOTAL + ENVIAR -->
         <div style="padding:.85rem 1rem;border-top:1px solid rgba(255,255,255,.07);flex-shrink:0;
                     background:#1A1A1A;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+            <!-- Acciones de dinero -->
+            <div style="display:flex;gap:.4rem;margin-bottom:.6rem;">
+                <button onclick="window.abrirModalDescuento()"
+                    style="flex:1;padding:.45rem;background:rgba(167,139,250,.12);
+                           border:1px solid rgba(167,139,250,.3);color:#A78BFA;
+                           border-radius:8px;font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer;">
+                    % Descuento
+                </button>
+                <button onclick="window.abrirModalPropina()"
+                    style="flex:1;padding:.45rem;background:rgba(37,211,102,.12);
+                           border:1px solid rgba(37,211,102,.3);color:#25D366;
+                           border-radius:8px;font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer;">
+                    Propina
+                </button>
+            </div>
+
+            <!-- Desglose -->
+            <div id="cart-desglose" style="background:rgba(255,255,255,.03);border-radius:10px;padding:.6rem .75rem;margin-bottom:.6rem;font-size:.8rem;">
+                <div style="display:flex;justify-content:space-between;padding:.15rem 0;color:#aaa;">
+                    <span>Subtotal</span><span id="dsg-subtotal">$0.00</span>
+                </div>
+                <div id="dsg-row-descuento" style="display:none;justify-content:space-between;padding:.15rem 0;color:#A78BFA;">
+                    <span id="dsg-descuento-label">Descuento</span>
+                    <span id="dsg-descuento">-$0.00</span>
+                </div>
+                <div id="dsg-row-impuesto" style="display:flex;justify-content:space-between;padding:.15rem 0;color:#aaa;">
+                    <span id="dsg-impuesto-label">Sales Tax</span><span id="dsg-impuesto">$0.00</span>
+                </div>
+                <div id="dsg-row-propina" style="display:none;justify-content:space-between;padding:.15rem 0;color:#25D366;">
+                    <span id="dsg-propina-label">Propina</span><span id="dsg-propina">$0.00</span>
+                </div>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;
+                        padding-top:.5rem;border-top:1.5px solid rgba(255,255,255,.1);">
                 <span style="font-size:1rem;font-weight:700;color:#fff;">Total:</span>
                 <span id="cart-total-amount"
                       style="font-size:1.4rem;font-weight:900;color:#25D366;">$0.00</span>
@@ -1647,7 +1681,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1784090545"></script>
+<script type="module" src="js/app.js?v=1784173976"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -1753,7 +1787,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1784090545';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1784173976';
     (async () => {
         try {
             await seedProductos();
