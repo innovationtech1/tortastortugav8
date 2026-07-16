@@ -1554,9 +1554,46 @@ window._getOrdenesCajero = async function(cajeroId) {
 
 
 
-// ── Seleccionar variante desde el modal de modificaciones ──
+// ── Seleccionar variante: aplica el cambio AL INSTANTE ──
+// Igual que el <select> de las tarjetas del menu: eliges y se guarda solo.
 window.seleccionarVarianteItem = function(idx) {
     window._varianteSeleccionada = idx;
+
+    var ei = window._editingItem;
+    if (!ei) return;
+
+    var CS = window._cuentasSys;
+    if (!CS) return;
+    var c = CS.cuentas.find(function(x){ return x.id === ei.cuentaId; });
+    if (!c || !c.items[ei.itemIdx]) return;
+
+    var it = c.items[ei.itemIdx];
+    var vars = it.variantesDisp || [];
+    if (!vars[idx]) return;
+
+    // Aplicar la variante nueva al item
+    var nueva = vars[idx];
+    var precioBase = parseFloat(nueva.precio) || 0;
+    it.variante    = nueva.label || '';
+    it.varianteIdx = idx;
+    it.precioBase  = precioBase;
+
+    // Recalcular el precio: base + extras de las modificaciones ya elegidas
+    var extra = 0;
+    document.querySelectorAll('.mod-chip.selected input').forEach(function(cb) {
+        extra += parseFloat(cb.getAttribute('data-price') || 0);
+    });
+    it.precio = precioBase + extra;
+
+    // Actualizar la referencia de edicion para que confirmarMods no lo revierta
+    ei.precioBase = precioBase;
+
+    // ── Refrescar TODO en tiempo real ──
+    // 1. Titulo del modal
+    var nameEl = document.getElementById('mods-item-name');
+    if (nameEl) nameEl.textContent = (it.nombre||'') + (it.variante ? ' \u00b7 ' + it.variante : '');
+
+    // 2. Resaltado de los botones
     var botones = document.querySelectorAll('.var-opt');
     for (var i = 0; i < botones.length; i++) {
         var btn = botones[i];
@@ -1568,12 +1605,16 @@ window.seleccionarVarianteItem = function(idx) {
         var span = btn.querySelector('span');
         if (span) {
             span.style.fontWeight = activa ? '800' : '600';
-            var txt = span.textContent;
-            // Quitar el marcador anterior y poner el nuevo
-            txt = txt.replace(/^[\u25CF\u25CB]\s*/, '');
+            var txt = span.textContent.replace(/^[\u25CF\u25CB]\s*/, '');
             span.textContent = (activa ? '\u25CF ' : '\u25CB ') + txt;
         }
     }
+
+    // 3. Carrito, tabs y lista completa — en tiempo real
+    if (window.renderCartItems)     window.renderCartItems();
+    if (window.renderCuentasTabs)   window.renderCuentasTabs();
+    if (window.renderListaCompleta) window.renderListaCompleta();
+    if (window.actualizarDesglose)  window.actualizarDesglose();
 };
 
 // ══════════════ EDITAR ITEM DEL CARRITO ══════════════
