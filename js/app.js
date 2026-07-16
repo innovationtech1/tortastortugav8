@@ -2044,3 +2044,169 @@ window.quitarPropina = function() {
         if (window.actualizarDesglose) window.actualizarDesglose();
     };
 })();
+
+
+// ═══════════════════════════════════════════════════════════
+//  PANTALLA COMPLETA: LISTA DE PRODUCTOS DEL PEDIDO
+//  Reutiliza las funciones existentes (editar, quitar, mover)
+//  No duplica logica — solo cambia la presentacion.
+// ═══════════════════════════════════════════════════════════
+
+window.abrirListaCompleta = function() {
+    var CS = window._cuentasSys;
+    if (!CS) return;
+    var c = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+    if (!c) return;
+
+    if (!c.items.length) {
+        alert('No hay productos en esta cuenta');
+        return;
+    }
+
+    window.renderListaCompleta();
+    var modal = document.getElementById('lista-completa-modal');
+    if (modal) modal.classList.add('active');
+};
+
+window.cerrarListaCompleta = function() {
+    var modal = document.getElementById('lista-completa-modal');
+    if (modal) modal.classList.remove('active');
+    // Refrescar el carrito por si hubo cambios
+    if (window.renderCartItems) window.renderCartItems();
+    if (window.renderCuentasTabs) window.renderCuentasTabs();
+};
+
+window.renderListaCompleta = function() {
+    var CS = window._cuentasSys;
+    if (!CS) return;
+    var c = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+    if (!c) return;
+
+    var cont = document.getElementById('lc-items');
+    if (!cont) return;
+
+    // Badge de cuenta y resumen
+    var badge = document.getElementById('lc-cuenta-badge');
+    if (badge) badge.textContent = c.nombre;
+
+    var resumen = document.getElementById('lc-resumen');
+    if (resumen) {
+        resumen.textContent = c.items.length + (c.items.length === 1 ? ' producto' : ' productos');
+    }
+
+    // Si esta vacio
+    if (!c.items.length) {
+        cont.innerHTML = '<div style="text-align:center;padding:3rem 1rem;color:#666;">' +
+            '<div style="font-size:2rem;margin-bottom:.5rem;">🛒</div>' +
+            '<div style="font-size:.9rem;">No hay productos en esta cuenta</div></div>';
+        var totEl = document.getElementById('lc-total');
+        if (totEl) totEl.textContent = window.fmtMoneda ? window.fmtMoneda(0) : '$0.00';
+        return;
+    }
+
+    // Render de cada producto — filas grandes y comodas
+    cont.innerHTML = c.items.map(function(item, idx) {
+        var precio  = parseFloat(item.precio) || 0;
+        var modsArr = (item.modificaciones || []).filter(function(m){ return m && m.trim(); });
+
+        var varHtml = item.variante
+            ? '<div style="font-size:.85rem;color:#FF5A00;font-weight:600;margin-top:.25rem;">' + item.variante + '</div>'
+            : '';
+
+        var modsHtml = '';
+        if (modsArr.length) {
+            modsHtml = '<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.5rem;">' +
+                modsArr.map(function(m) {
+                    var esNota = m.indexOf('\u{1F4DD}') === 0;
+                    return '<span style="font-size:.75rem;padding:.25rem .6rem;border-radius:8px;' +
+                        'background:' + (esNota ? 'rgba(251,183,36,.12)' : 'rgba(255,255,255,.06)') + ';' +
+                        'color:' + (esNota ? '#FBB724' : '#bbb') + ';' +
+                        'border:1px solid ' + (esNota ? 'rgba(251,183,36,.25)' : 'rgba(255,255,255,.1)') + ';">' +
+                        m + '</span>';
+                }).join('') + '</div>';
+        }
+
+        var btnMover = CS.cuentas.length > 1
+            ? '<button onclick="window.lcMoverItem(' + idx + ')" ' +
+              'style="padding:.5rem .8rem;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.35);' +
+              'color:#3B82F6;border-radius:8px;font-family:inherit;font-size:.78rem;font-weight:700;cursor:pointer;">' +
+              '\u21C4 Mover</button>'
+            : '';
+
+        return '<div style="display:flex;align-items:flex-start;gap:1rem;padding:1rem 1.2rem;' +
+            'border-bottom:1px solid rgba(255,255,255,.05);">' +
+
+            '<div style="width:32px;height:32px;background:rgba(255,90,0,.15);border-radius:50%;' +
+            'display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:800;' +
+            'color:#FF5A00;flex-shrink:0;">' + (idx+1) + '</div>' +
+
+            '<div style="flex:1;min-width:0;">' +
+                '<div style="font-size:1rem;font-weight:700;color:#fff;line-height:1.35;">' +
+                    (item.nombre || 'Producto') + '</div>' +
+                varHtml + modsHtml +
+            '</div>' +
+
+            '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:.6rem;flex-shrink:0;">' +
+                '<div style="font-size:1.05rem;font-weight:800;color:#25D366;">$' + precio.toFixed(2) + '</div>' +
+                '<div style="display:flex;gap:.4rem;">' +
+                    btnMover +
+                    '<button onclick="window.lcEditarItem(' + idx + ')" ' +
+                    'style="padding:.5rem .8rem;background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.35);' +
+                    'color:#A78BFA;border-radius:8px;font-family:inherit;font-size:.78rem;font-weight:700;cursor:pointer;">' +
+                    '\u270F\uFE0F Editar</button>' +
+                    '<button onclick="window.lcQuitarItem(' + idx + ')" ' +
+                    'style="padding:.5rem .8rem;background:rgba(244,67,54,.12);border:1px solid rgba(244,67,54,.3);' +
+                    'color:#F44336;border-radius:8px;font-family:inherit;font-size:.78rem;font-weight:700;cursor:pointer;">' +
+                    '\u2715 Quitar</button>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    }).join('');
+
+    // Total con desglose
+    var totEl = document.getElementById('lc-total');
+    if (totEl && window.calcularTotales) {
+        var aj = (window._ajustesDinero && window._ajustesDinero[c.id]) || {};
+        var t = window.calcularTotales(c.items, {
+            descuento: aj.descuento, descuentoTipo: aj.descuentoTipo,
+            propina: aj.propina, propinaTipo: aj.propinaTipo,
+        });
+        totEl.textContent = window.fmtMoneda(t.total);
+    }
+};
+
+// ── Acciones dentro del panel (reutilizan las funciones existentes) ──
+window.lcEditarItem = function(idx) {
+    window.cerrarListaCompleta();
+    setTimeout(function(){ window.editarItemDelCarrito(idx); }, 150);
+};
+
+window.lcQuitarItem = function(idx) {
+    if (window.removeItemCuenta) window.removeItemCuenta(idx);
+    window.renderListaCompleta();
+};
+
+window.lcMoverItem = function(idx) {
+    window.cerrarListaCompleta();
+    setTimeout(function(){ window.abrirSplitItem(idx); }, 150);
+};
+
+// ── Actualizar el contador del boton "Ver todo" ──
+(function() {
+    var _origRender = window.renderCartItems;
+    window.renderCartItems = function() {
+        if (_origRender) _origRender.apply(this, arguments);
+        var CS = window._cuentasSys;
+        var c = CS ? CS.cuentas.find(function(x){ return x.id === CS.activa; }) : null;
+        var btn = document.getElementById('btn-expandir-count');
+        var btnWrap = document.getElementById('btn-expandir-lista');
+        if (btn && c) {
+            var n = c.items.length;
+            btn.textContent = n > 0 ? ('Ver ' + n) : 'Ver todo';
+        }
+        // Ocultar el boton si no hay productos
+        if (btnWrap && c) {
+            btnWrap.style.display = c.items.length ? 'flex' : 'none';
+        }
+    };
+})();
