@@ -1790,3 +1790,26 @@ h1 {
         min-height: 36px;
     }
 }
+
+
+/* ══ PANTALLA COMPLETA DE PRODUCTOS ══ */
+#lista-completa-modal {
+    justify-content: center !important;
+}
+#lista-completa-container {
+    max-height: 100dvh;
+}
+/* En escritorio: 2 columnas para ver mas productos */
+@media (min-width: 1000px) {
+    #lc-items {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        align-content: start;
+    }
+    #lc-items > div {
+        border-right: 1px solid rgba(255,255,255,.04);
+    }
+    #lc-items > div:nth-child(even) {
+        border-right: none;
+    }
+}
