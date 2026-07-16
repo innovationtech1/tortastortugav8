@@ -2053,8 +2053,9 @@ window.quitarPropina = function() {
 // ═══════════════════════════════════════════════════════════
 
 window.abrirListaCompleta = function() {
+    console.log('abrirListaCompleta llamado');
     var CS = window._cuentasSys;
-    if (!CS) return;
+    if (!CS) { console.warn('No hay _cuentasSys'); return; }
     var c = CS.cuentas.find(function(x){ return x.id === CS.activa; });
     if (!c) return;
 
@@ -2065,7 +2066,12 @@ window.abrirListaCompleta = function() {
 
     window.renderListaCompleta();
     var modal = document.getElementById('lista-completa-modal');
-    if (modal) modal.classList.add('active');
+    if (modal) {
+        modal.classList.add('active');
+        console.log('Modal abierto, clases:', modal.className);
+    } else {
+        console.error('No existe #lista-completa-modal en el DOM');
+    }
 };
 
 window.cerrarListaCompleta = function() {
