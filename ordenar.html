@@ -1116,7 +1116,7 @@ function cerrarOrdenModal() {
 }
 </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=1784175977">
+    <link rel="stylesheet" href="css/style.css?v=1784175995">
     <script type="module">
         import { auth, db } from './js/firebase-config.js';
         import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -1391,7 +1391,7 @@ function cerrarOrdenModal() {
              border-bottom:1px solid rgba(255,255,255,.06);"></div>
 
         <!-- BOTONES CUENTA -->
-        <div style="display:flex;gap:.4rem;padding:.5rem .9rem;flex-shrink:0;align-items:center;">
+        <div style="display:flex;gap:.4rem;padding:.4rem .9rem;flex-shrink:0;align-items:center;">
             <button onclick="window.abrirModalNombreCuenta()"
                 style="flex:2;box-sizing:border-box;padding:.55rem .7rem;
                        background:rgba(255,90,0,.1);
@@ -1428,7 +1428,7 @@ function cerrarOrdenModal() {
         <div style="padding:.85rem 1rem;border-top:1px solid rgba(255,255,255,.07);flex-shrink:0;
                     background:#1A1A1A;">
             <!-- Acciones de dinero -->
-            <div style="display:flex;gap:.4rem;margin-bottom:.6rem;">
+            <div style="display:flex;gap:.4rem;margin-bottom:.5rem;">
                 <button onclick="window.abrirModalDescuento()"
                     style="flex:1;padding:.45rem;background:rgba(167,139,250,.12);
                            border:1px solid rgba(167,139,250,.3);color:#A78BFA;
@@ -1444,7 +1444,7 @@ function cerrarOrdenModal() {
             </div>
 
             <!-- Desglose -->
-            <div id="cart-desglose" style="background:rgba(255,255,255,.03);border-radius:10px;padding:.6rem .75rem;margin-bottom:.6rem;font-size:.8rem;">
+            <div id="cart-desglose" style="background:rgba(255,255,255,.03);border-radius:10px;padding:.5rem .7rem;margin-bottom:.5rem;font-size:.78rem;">
                 <div style="display:flex;justify-content:space-between;padding:.15rem 0;color:#aaa;">
                     <span>Subtotal</span><span id="dsg-subtotal">$0.00</span>
                 </div>
@@ -1681,7 +1681,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1784175977"></script>
+<script type="module" src="js/app.js?v=1784175995"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -1787,7 +1787,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1784175977';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1784175995';
     (async () => {
         try {
             await seedProductos();
