@@ -860,12 +860,19 @@ h1 {
     .cart-container { max-width: 900px; }
 }
 
-/* Items del carrito: 2 columnas en pantallas anchas */
-@media (min-width: 900px) {
+/* Lista de productos: siempre debe crecer y ocupar el espacio disponible */
+#cart-items {
+    flex: 1 1 auto !important;
+    min-height: 200px;
+    overflow-y: auto;
+}
+
+/* En pantallas anchas: 2 columnas, pero sin romper el flex del contenedor */
+@media (min-width: 950px) {
     #cart-items {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 0 1rem;
+        gap: 0;
         align-content: start;
     }
 }
@@ -1739,20 +1746,24 @@ h1 {
 /* ══ CARRITO: mejoras responsive ══ */
 
 /* El footer (desglose + boton) no se estira mas alla de lo comodo */
-@media (min-width: 900px) {
-    #cart-modal .cart-container > div:last-child {
-        max-width: 520px;
-        margin: 0 auto;
-        width: 100%;
-        box-sizing: border-box;
-    }
-    /* El grid de items necesita separador vertical entre columnas */
+/* El footer (desglose + boton) no crece, se mantiene compacto */
+#cart-modal .cart-container > div:last-child {
+    flex-shrink: 0;
+}
+
+@media (min-width: 950px) {
+    /* Separador entre columnas del grid */
     #cart-items > div {
         border-right: 1px solid rgba(255,255,255,.04);
     }
     #cart-items > div:nth-child(even) {
         border-right: none;
     }
+}
+
+/* Desglose compacto: no debe robar espacio a los productos */
+#cart-desglose {
+    flex-shrink: 0;
 }
 
 /* En pantallas muy anchas, centrar el contenido del carrito */
