@@ -1756,3 +1756,82 @@ window.renderCuentasTabs = function() {
 };
 
 console.log('✅ Gestión de cuentas cargada');
+
+
+// ═══════════════════════════════════════════════════════════
+//  MODULO DE DINERO — impuestos, propinas, descuentos
+//  IMPORTANTE: la tasa de impuesto debe validarla un contador.
+//  8.25% es la tasa combinada tipica en San Antonio TX (2024),
+//  pero puede variar por direccion y tipo de producto.
+// ═══════════════════════════════════════════════════════════
+
+window._POS_CONFIG = {
+    impuestoTasa:    0.0825,   // 8.25% — CONFIGURABLE, validar con contador
+    impuestoActivo:  true,
+    impuestoNombre:  'Sales Tax',
+    propinasSugeridas: [0.15, 0.18, 0.20],
+    moneda: '$',
+};
+
+// Calcula el desglose completo de una cuenta
+window.calcularTotales = function(items, opciones) {
+    opciones = opciones || {};
+    var cfg = window._POS_CONFIG;
+
+    // Subtotal: suma de los productos
+    var subtotal = (items || []).reduce(function(s, i) {
+        return s + (parseFloat(i.precio) || 0);
+    }, 0);
+
+    // Descuento (monto fijo o porcentaje)
+    var descuento = 0;
+    if (opciones.descuento) {
+        if (opciones.descuentoTipo === 'porcentaje') {
+            descuento = subtotal * (parseFloat(opciones.descuento) / 100);
+        } else {
+            descuento = parseFloat(opciones.descuento) || 0;
+        }
+        descuento = Math.min(descuento, subtotal); // nunca mas que el subtotal
+    }
+
+    var baseGravable = subtotal - descuento;
+
+    // Impuesto sobre la base ya con descuento
+    var impuesto = 0;
+    if (cfg.impuestoActivo && opciones.aplicarImpuesto !== false) {
+        impuesto = baseGravable * cfg.impuestoTasa;
+    }
+
+    // Propina (se calcula sobre el subtotal sin impuesto — practica comun)
+    var propina = 0;
+    if (opciones.propina) {
+        if (opciones.propinaTipo === 'porcentaje') {
+            propina = baseGravable * (parseFloat(opciones.propina) / 100);
+        } else {
+            propina = parseFloat(opciones.propina) || 0;
+        }
+    }
+
+    var total = baseGravable + impuesto + propina;
+
+    return {
+        subtotal:     round2(subtotal),
+        descuento:    round2(descuento),
+        baseGravable: round2(baseGravable),
+        impuesto:     round2(impuesto),
+        impuestoTasa: cfg.impuestoTasa,
+        propina:      round2(propina),
+        total:        round2(total),
+    };
+};
+
+function round2(n) {
+    return Math.round((parseFloat(n) || 0) * 100) / 100;
+}
+
+// Formatea un monto como moneda
+window.fmtMoneda = function(n) {
+    return window._POS_CONFIG.moneda + (parseFloat(n) || 0).toFixed(2);
+};
+
+console.log('Modulo de dinero cargado — impuesto:', (window._POS_CONFIG.impuestoTasa*100).toFixed(2) + '%');
