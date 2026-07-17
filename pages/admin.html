@@ -120,6 +120,32 @@ window.normalizarRutaImagen = function(src) {
         .btn-cobrar-grid:hover { background: #F44336; color: white; }
         .pagado-badge { background: rgba(37,211,102,0.15); color: #25D366; border-radius: 8px; padding: 0.4rem 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.4rem; }
     </style>
+
+<style>
+/* ══ CSS para el modal de editar cobro ══
+   admin.html no carga style.css, asi que definimos aqui
+   las clases que necesita el modal. */
+#editar-cobro-modal.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    box-sizing: border-box;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+    z-index: 7000;
+}
+#editar-cobro-modal.modal-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+</style>
 </head>
 <body>
 
@@ -540,7 +566,7 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
             let pagoHTML = '';
             if (isPaid) {
                 pagoHTML = `<div class="pagado-badge">✅ Pagado (${p.metodoPagoReal || 'Caja'})<br><strong style="color:white">${p.total}</strong></div>
-                <button onclick="abrirEditarCobro('${p.id}', '${ticketId}', '${p.total}', '${(p.metodoPagoReal||'').replace(/'/g,"")}')"
+                <button onclick="abrirEditarCobro('${p.id}', '${ticketId}', '${String(p.total||'').replace(/'/g,'')}', '${String(p.metodoPagoReal||'').replace(/'/g,'')}')"
                     style="margin-top:6px;width:100%;padding:5px 8px;background:rgba(251,183,36,.12);
                            border:1px solid rgba(251,183,36,.4);color:#FBB724;border-radius:6px;
                            font-family:inherit;font-size:0.75rem;font-weight:700;cursor:pointer;">
