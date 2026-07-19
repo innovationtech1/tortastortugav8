@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Compartir ubicacion - Tortas Tortuga</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: linear-gradient(160deg,#1a1a1a,#0d0d0d);
+    color:#fff; font-family:system-ui,-apple-system,sans-serif;
+    min-height:100vh; min-height:100dvh;
+    display:flex; align-items:center; justify-content:center; padding:1.5rem;
+  }
+  .card {
+    background:#1e1e1e; border-radius:24px; padding:2rem 1.5rem;
+    max-width:420px; width:100%; text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,.5);
+  }
+  .logo { font-size:3rem; margin-bottom:.5rem; }
+  h1 { font-size:1.4rem; color:#FF5A00; margin-bottom:.5rem; }
+  .sub { color:#aaa; font-size:.95rem; line-height:1.5; margin-bottom:1.5rem; }
+  .pedido-info {
+    background:rgba(255,90,0,.08); border-radius:12px; padding:.8rem;
+    margin-bottom:1.5rem; font-size:.85rem; color:#FF5A00;
+  }
+  button {
+    width:100%; padding:1.1rem; border:none; border-radius:16px;
+    font-family:inherit; font-size:1.05rem; font-weight:800; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:.5rem;
+  }
+  .btn-share {
+    background:linear-gradient(135deg,#25D366,#1DB954); color:#fff;
+    box-shadow:0 6px 20px rgba(37,211,102,.35);
+  }
+  .btn-share:active { transform:scale(.98); }
+  .status { margin-top:1.2rem; font-size:.9rem; min-height:1.5rem; line-height:1.5; }
+  .spinner {
+    display:inline-block; width:18px; height:18px; border:2.5px solid rgba(255,255,255,.3);
+    border-top-color:#fff; border-radius:50%; animation:spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .exito { color:#25D366; }
+  .error { color:#F44336; }
+  .mapa {
+    margin-top:1rem; border-radius:12px; overflow:hidden; display:none;
+    border:1px solid rgba(255,255,255,.1);
+  }
+  .mapa iframe { width:100%; height:180px; border:0; display:block; }
+  .privacidad { margin-top:1.2rem; font-size:.72rem; color:#666; line-height:1.5; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">🐢</div>
+    <h1>Tortas Tortuga</h1>
+    <p class="sub">Comparte tu ubicacion para que podamos entregarte tu pedido a domicilio.</p>
+
+    <div class="pedido-info" id="pedido-info">Cargando pedido...</div>
+
+    <button class="btn-share" id="btn-share" onclick="compartirUbicacion()">
+      <span>📍</span> Compartir mi ubicacion
+    </button>
+
+    <div class="status" id="status"></div>
+
+    <div class="mapa" id="mapa"></div>
+
+    <p class="privacidad">
+      Tu ubicacion solo se usa para entregar este pedido. No se comparte con terceros.
+    </p>
+  </div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, updateDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const app = initializeApp({
+  apiKey: "AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k",
+  authDomain: "tortas-tortuga.firebaseapp.com",
+  projectId: "tortas-tortuga",
+  storageBucket: "tortas-tortuga.firebasestorage.app",
+  messagingSenderId: "586554873297",
+  appId: "1:586554873297:web:c0e0e2fbe1a29b0b3ed83e"
+});
+const db = getFirestore(app);
+
+// Leer el id del pedido de la URL: ?pedido=XXXX
+const params = new URLSearchParams(window.location.search);
+const pedidoId = params.get('pedido');
+
+const infoEl = document.getElementById('pedido-info');
+const statusEl = document.getElementById('status');
+const btnEl = document.getElementById('btn-share');
+
+if (!pedidoId) {
+    infoEl.textContent = 'Link invalido. Pide al restaurante un nuevo enlace.';
+    btnEl.style.display = 'none';
+} else {
+    // Cargar info del pedido
+    (async function() {
+        try {
+            const snap = await getDoc(doc(db, 'pedidos', pedidoId));
+            if (snap.exists()) {
+                const p = snap.data();
+                infoEl.textContent = 'Pedido ' + (p.folioStr || '') + (p.cliente ? ' - ' + p.cliente : '');
+                if (p.ubicacionCliente) {
+                    statusEl.innerHTML = '<span class="exito">Ya compartiste tu ubicacion. Gracias!</span>';
+                }
+            } else {
+                infoEl.textContent = 'Pedido no encontrado.';
+            }
+        } catch(e) {
+            infoEl.textContent = 'Pedido a domicilio';
+        }
+    })();
+}
+
+window.compartirUbicacion = function() {
+    if (!pedidoId) return;
+    if (!navigator.geolocation) {
+        statusEl.innerHTML = '<span class="error">Tu navegador no soporta ubicacion.</span>';
+        return;
+    }
+
+    statusEl.innerHTML = '<span class="spinner"></span> Obteniendo tu ubicacion...';
+    btnEl.disabled = true;
+
+    navigator.geolocation.getCurrentPosition(
+        async function(pos) {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            const precision = Math.round(pos.coords.accuracy);
+
+            try {
+                await updateDoc(doc(db, 'pedidos', pedidoId), {
+                    ubicacionCliente: {
+                        lat: lat,
+                        lng: lng,
+                        precision: precision,
+                        compartidaEn: new Date().toISOString(),
+                    }
+                });
+
+                statusEl.innerHTML = '<span class="exito">Ubicacion enviada! El repartidor ya puede verte. Gracias!</span>';
+
+                // Mostrar mini mapa de confirmacion
+                const mapa = document.getElementById('mapa');
+                mapa.innerHTML = '<iframe src="https://maps.google.com/maps?q=' + lat + ',' + lng + '&z=16&output=embed"></iframe>';
+                mapa.style.display = 'block';
+
+                btnEl.innerHTML = '<span>\u2705</span> Ubicacion compartida';
+            } catch(e) {
+                statusEl.innerHTML = '<span class="error">Error al enviar: ' + e.message + '. Intenta de nuevo.</span>';
+                btnEl.disabled = false;
+            }
+        },
+        function(err) {
+            var msg = 'No pudimos obtener tu ubicacion.';
+            if (err.code === 1) msg = 'Debes permitir el acceso a tu ubicacion. Toca el candado en la barra y activa Ubicacion.';
+            else if (err.code === 2) msg = 'Ubicacion no disponible. Activa el GPS de tu telefono.';
+            else if (err.code === 3) msg = 'Tardo demasiado. Intenta de nuevo.';
+            statusEl.innerHTML = '<span class="error">' + msg + '</span>';
+            btnEl.disabled = false;
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+};
+</script>
+</body>
+</html>
