@@ -2138,7 +2138,7 @@ window._saveAE = async function() {
 
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
       <div>
-        <h3 style="margin:0;font-size:1.05rem;color:#fff;font-weight:800;">Editar cobro</h3>
+        <h3 style="margin:0;font-size:1.05rem;color:#fff;font-weight:800;">Cambiar metodo de pago</h3>
         <div id="ec-ticket" style="font-size:.85rem;color:#FBB724;font-weight:700;margin-top:.2rem;"></div>
       </div>
       <button onclick="cerrarEditarCobro()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#888;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:1rem;">&times;</button>
@@ -2177,13 +2177,12 @@ window._saveAE = async function() {
         ⚠️ Revertir a por pagar</button>
     </div>
 
-    <p style="font-size:.75rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.05em;">Motivo del cambio (requerido)</p>
-    <input id="ec-motivo" type="text" placeholder="Ej: el cliente cambio de metodo, error de captura"
-      style="width:100%;box-sizing:border-box;padding:.65rem;background:#0d0d0d;border:1.5px solid rgba(255,255,255,.15);color:#fff;border-radius:10px;font-family:inherit;font-size:.85rem;margin-bottom:.5rem;">
+    <!-- Indicador de guardado en tiempo real -->
+    <div id="ec-status" style="min-height:1.3rem;font-size:.82rem;font-weight:700;text-align:center;margin-bottom:.5rem;"></div>
 
-    <div style="background:rgba(251,183,36,.08);border:1px solid rgba(251,183,36,.25);border-radius:8px;padding:.6rem .75rem;margin-bottom:1rem;">
-      <div style="font-size:.72rem;color:#FBB724;line-height:1.5;">
-        El cambio queda registrado con fecha, hora y motivo para el corte de caja.
+    <div style="background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.25);border-radius:8px;padding:.6rem .75rem;margin-bottom:1rem;">
+      <div style="font-size:.72rem;color:#25D366;line-height:1.5;">
+        Toca un metodo y el cambio se guarda al instante. Cada cambio queda registrado con fecha y hora.
       </div>
     </div>
 
@@ -2192,10 +2191,7 @@ window._saveAE = async function() {
       <div id="ec-historial-lista" style="background:rgba(255,255,255,.03);border-radius:8px;padding:.5rem .7rem;font-size:.72rem;color:#888;max-height:100px;overflow-y:auto;"></div>
     </div>
 
-    <div style="display:flex;gap:.5rem;">
-      <button onclick="cerrarEditarCobro()" style="flex:1;padding:.8rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#aaa;border-radius:12px;font-family:inherit;font-weight:700;cursor:pointer;">Cancelar</button>
-      <button onclick="guardarEditarCobro()" style="flex:2;padding:.8rem;background:linear-gradient(135deg,#FBB724,#F59E0B);border:none;color:#000;border-radius:12px;font-family:inherit;font-weight:800;cursor:pointer;">Guardar cambio</button>
-    </div>
+    <button onclick="cerrarEditarCobro()" style="width:100%;padding:.8rem;background:linear-gradient(135deg,#FF5A00,#FF8C00);border:none;color:#fff;border-radius:12px;font-family:inherit;font-weight:800;cursor:pointer;">Listo</button>
   </div>
 </div>
 
