@@ -2317,3 +2317,105 @@ window.actualizarContadorVerTodo = function() {
 };
 
 
+
+
+// ═══════════════════════════════════════════════════════════
+//  SLIDER DE BEBIDAS en la pantalla "Ver todo"
+//  Agrega bebidas rapido sin salir de la lista del pedido.
+// ═══════════════════════════════════════════════════════════
+
+window.renderBebidasSlider = function() {
+    var slider = document.getElementById('lc-bebidas-slider');
+    if (!slider) return;
+
+    var productos = window._menuProductos || [];
+    // Filtrar solo bebidas (categoria drinks/bebidas o tipo drink)
+    var bebidas = productos.filter(function(p) {
+        var cat = (p.categoria || '').toLowerCase();
+        var tipo = (p.tipo || '').toLowerCase();
+        return cat === 'drinks' || cat === 'bebidas' || tipo === 'drink';
+    });
+
+    if (!bebidas.length) {
+        slider.innerHTML = '<div style="font-size:.78rem;color:#666;padding:.5rem;">No hay bebidas en el menú</div>';
+        return;
+    }
+
+    slider.innerHTML = bebidas.map(function(b) {
+        // Precio: primera variante o precio base
+        var vars = b.variantes || [];
+        var precio = vars.length ? (parseFloat(vars[0].precio) || 0) : (parseFloat(b.precio) || 0);
+        var img = b.imagen || 'img/michelada.png';
+        var pid = b.productId || b.id || '';
+
+        return '<button onclick="window.agregarBebidaRapida(\'' + pid + '\')" ' +
+            'style="flex-shrink:0;width:110px;background:rgba(255,255,255,.04);' +
+            'border:1px solid rgba(37,211,102,.25);border-radius:12px;padding:.5rem;' +
+            'cursor:pointer;font-family:inherit;text-align:center;transition:.15s;" ' +
+            'onmouseover="this.style.borderColor=\'#25D366\'" ' +
+            'onmouseout="this.style.borderColor=\'rgba(37,211,102,.25)\'">' +
+            '<img src="' + img + '" style="width:100%;height:60px;object-fit:contain;border-radius:8px;margin-bottom:.35rem;" ' +
+            'onerror="this.style.display=\'none\'">' +
+            '<div style="font-size:.72rem;font-weight:700;color:#fff;line-height:1.2;' +
+            'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (b.nombre || 'Bebida') + '</div>' +
+            '<div style="font-size:.75rem;font-weight:800;color:#25D366;margin-top:.2rem;">$' + precio.toFixed(2) + '</div>' +
+            '</button>';
+    }).join('');
+};
+
+window.agregarBebidaRapida = function(pid) {
+    var productos = window._menuProductos || [];
+    var b = productos.find(function(p){ return (p.productId || p.id) === pid; });
+    if (!b) return;
+
+    var CS = window._cuentasSys;
+    if (!CS) return;
+    var c = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+    if (!c) { c = CS.cuentas[0]; CS.activa = c.id; }
+
+    // Precio y variante (primera por defecto)
+    var vars = b.variantes || [];
+    var variante = vars.length ? vars[0] : { label: '', precio: b.precio || 0 };
+    var precio = parseFloat(variante.precio) || 0;
+
+    // Agregar al carrito con el mismo formato que el menu
+    c.items.push({
+        id:             b.productId || b.id,
+        nombre:         b.nombre || 'Bebida',
+        precio:         precio,
+        precioBase:     precio,
+        variante:       variante.label || '',
+        varianteIdx:    0,
+        variantesDisp:  vars.map(function(v){ return { label: v.label||'', precio: parseFloat(v.precio)||0 }; }),
+        categoria:      b.categoria || 'drinks',
+        tipo:           b.tipo || 'drink',
+        modificaciones: [],
+    });
+
+    // Feedback visual rapido
+    var slider = document.getElementById('lc-bebidas-slider');
+    if (slider) {
+        var toast = document.createElement('div');
+        toast.textContent = '\u2705 ' + (b.nombre || 'Bebida') + ' agregada';
+        toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);' +
+            'background:#25D366;color:#fff;padding:.6rem 1.2rem;border-radius:20px;font-weight:700;' +
+            'font-size:.85rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.4);';
+        document.body.appendChild(toast);
+        setTimeout(function(){ toast.remove(); }, 1500);
+    }
+
+    // Refrescar todo en tiempo real
+    if (window.renderListaCompleta)  window.renderListaCompleta();
+    if (window.renderCartItems)      window.renderCartItems();
+    if (window.renderCuentasTabs)    window.renderCuentasTabs();
+    if (window.actualizarDesglose)   window.actualizarDesglose();
+};
+
+// Hook: cuando se abre "Ver todo", llenar el slider
+(function() {
+    var _origAbrir = window.abrirListaCompleta;
+    window.abrirListaCompleta = function() {
+        if (_origAbrir) _origAbrir.apply(this, arguments);
+        if (window.renderBebidasSlider) window.renderBebidasSlider();
+    };
+})();
