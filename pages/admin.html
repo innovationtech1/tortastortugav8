@@ -2261,16 +2261,61 @@ window._saveAE = async function() {
         _ecMetodoSel = null;
     };
 
-    window.ecSelect = function(btn) {
+    window.ecSelect = async function(btn) {
+        if (!_ecOrderId) return;
         _ecMetodoSel = btn.dataset.metodo;
+
+        // Resaltar el seleccionado
         document.querySelectorAll('.ec-metodo').forEach(function(b) {
             var esRevertir = b.dataset.metodo === 'Por pagar';
             b.style.background = esRevertir ? 'rgba(244,67,54,.08)' : 'rgba(255,255,255,.05)';
             b.style.borderColor = esRevertir ? 'rgba(244,67,54,.3)' : 'rgba(255,255,255,.12)';
         });
         var esRev = _ecMetodoSel === 'Por pagar';
-        btn.style.background = esRev ? 'rgba(244,67,54,.2)' : 'rgba(251,183,36,.15)';
-        btn.style.borderColor = esRev ? '#F44336' : '#FBB724';
+        btn.style.background = esRev ? 'rgba(244,67,54,.2)' : 'rgba(37,211,102,.2)';
+        btn.style.borderColor = esRev ? '#F44336' : '#25D366';
+
+        // Si es el mismo metodo, no hacer nada
+        if (_ecMetodoSel === _ecMetodoAnterior) return;
+
+        // Feedback visual: "Guardando..."
+        var status = document.getElementById('ec-status');
+        if (status) { status.textContent = 'Guardando...'; status.style.color = '#FBB724'; }
+
+        // ── GUARDAR AL INSTANTE en Firebase ──
+        try {
+            var snap = await window._adminGetDoc(_ecOrderId);
+            var hist = (snap && snap.historialPago) || [];
+            hist.push({
+                fecha:  new Date().toISOString(),
+                de:     _ecMetodoAnterior,
+                a:      _ecMetodoSel,
+                motivo: 'Cambio rapido',
+                usuario: (window._usuarioActual && window._usuarioActual.nombre) || 'admin',
+            });
+
+            var updates = { historialPago: hist, pagoEditadoEn: new Date().toISOString() };
+            if (_ecMetodoSel === 'Por pagar') {
+                updates.estadoPago = 'Por pagar';
+                updates.metodoPagoReal = null;
+            } else {
+                updates.estadoPago = 'Pagado';
+                updates.metodoPagoReal = _ecMetodoSel;
+            }
+
+            await window._adminUpdateDoc(_ecOrderId, updates, 'pedidos');
+
+            // Actualizar el "metodo actual" en el modal
+            _ecMetodoAnterior = _ecMetodoSel;
+            var m = document.getElementById('ec-metodo-actual');
+            if (m) m.textContent = _ecMetodoSel === 'Por pagar' ? 'Por pagar' : _ecMetodoSel;
+
+            if (status) { status.textContent = '\u2705 Guardado'; status.style.color = '#25D366'; }
+            setTimeout(function(){ if (status) status.textContent = ''; }, 2000);
+        } catch(e) {
+            console.error('Error al cambiar cobro:', e);
+            if (status) { status.textContent = '\u26A0 Error: ' + e.message; status.style.color = '#F44336'; }
+        }
     };
 
     window.guardarEditarCobro = async function() {
