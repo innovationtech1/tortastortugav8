@@ -66,6 +66,19 @@
 
     <div class="mapa" id="mapa"></div>
 
+    <!-- Referencia opcional para el repartidor -->
+    <div id="ref-section" style="display:none;margin-top:1.2rem;text-align:left;">
+      <label style="font-size:.8rem;color:#aaa;display:block;margin-bottom:.4rem;">
+        Alguna referencia? (opcional)
+      </label>
+      <input id="referencia" type="text" placeholder="Ej: casa azul, porton negro, apto 3"
+        style="width:100%;box-sizing:border-box;padding:.7rem;background:#0d0d0d;border:1.5px solid rgba(255,255,255,.15);color:#fff;border-radius:10px;font-family:inherit;font-size:.9rem;outline:none;">
+      <button onclick="guardarReferencia()" id="btn-ref"
+        style="margin-top:.6rem;padding:.7rem;background:rgba(255,90,0,.15);border:1.5px solid rgba(255,90,0,.4);color:#FF5A00;border-radius:10px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;width:100%;">
+        Guardar referencia
+      </button>
+    </div>
+
     <p class="privacidad">
       Tu ubicacion solo se usa para entregar este pedido. No se comparte con terceros.
     </p>
@@ -116,6 +129,23 @@ if (!pedidoId) {
     })();
 }
 
+window.guardarReferencia = async function() {
+    if (!pedidoId) return;
+    var ref = (document.getElementById('referencia').value || '').trim();
+    if (!ref) return;
+    var btn = document.getElementById('btn-ref');
+    btn.textContent = 'Guardando...';
+    try {
+        await updateDoc(doc(db, 'pedidos', pedidoId), { referenciaCliente: ref });
+        btn.textContent = 'Referencia guardada';
+        btn.style.background = 'rgba(37,211,102,.15)';
+        btn.style.borderColor = '#25D366';
+        btn.style.color = '#25D366';
+    } catch(e) {
+        btn.textContent = 'Error, reintenta';
+    }
+};
+
 window.compartirUbicacion = function() {
     if (!pedidoId) return;
     if (!navigator.geolocation) {
@@ -150,6 +180,10 @@ window.compartirUbicacion = function() {
                 mapa.style.display = 'block';
 
                 btnEl.innerHTML = '<span>\u2705</span> Ubicacion compartida';
+
+                // Mostrar campo de referencia opcional
+                var refSec = document.getElementById('ref-section');
+                if (refSec) refSec.style.display = 'block';
             } catch(e) {
                 statusEl.innerHTML = '<span class="error">Error al enviar: ' + e.message + '. Intenta de nuevo.</span>';
                 btnEl.disabled = false;
