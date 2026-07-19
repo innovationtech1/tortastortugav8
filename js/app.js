@@ -1812,29 +1812,105 @@ window.moverItemACuenta = function(itemIdx, destinoCuentaId) {
 };
 
 // ── Mostrar selector de cuenta destino para un item ──
+// Estado del modal mover/duplicar
+window._moverEstado = { itemIdx: null, modo: 'mover' };
+
 window.abrirSplitItem = function(itemIdx) {
     var CS = _CS();
     if (CS.cuentas.length < 2) {
-        alert('Crea otra cuenta primero con "+ Nueva cuenta" para poder mover productos');
+        alert('Crea otra cuenta primero con "+ Nueva cuenta" para poder mover o duplicar productos');
         return;
     }
     var origen = CS.cuentas.find(function(x){ return x.id === CS.activa; });
     if (!origen || !origen.items[itemIdx]) return;
 
     var item = origen.items[itemIdx];
-    var otras = CS.cuentas.filter(function(c){ return c.id !== CS.activa; });
+    window._moverEstado = { itemIdx: itemIdx, modo: 'mover' };
 
-    // Construir opciones
-    var opciones = otras.map(function(c, i){
-        return (i+1) + '. ' + c.nombre;
-    }).join('\n');
+    // Mostrar info del producto
+    var info = document.getElementById('mover-item-info');
+    if (info) info.textContent = item.nombre + (item.variante ? ' \u00b7 ' + item.variante : '') + ' \u2014 $' + (parseFloat(item.precio)||0).toFixed(2);
 
-    var eleccion = prompt('Mover "' + item.nombre + '" a:\n\n' + opciones + '\n\nEscribe el número:');
-    if (!eleccion) return;
-    var idx = parseInt(eleccion) - 1;
-    if (idx >= 0 && idx < otras.length) {
-        window.moverItemACuenta(itemIdx, otras[idx].id);
+    // Resetear a modo mover
+    window.setModoMover('mover');
+
+    // Llenar las cuentas destino
+    window.renderCuentasDestino();
+
+    var modal = document.getElementById('mover-item-modal');
+    if (modal) modal.classList.add('active');
+};
+
+window.cerrarMoverItem = function() {
+    var modal = document.getElementById('mover-item-modal');
+    if (modal) modal.classList.remove('active');
+};
+
+window.setModoMover = function(modo) {
+    window._moverEstado.modo = modo;
+    var btnM = document.getElementById('mover-modo-mover');
+    var btnD = document.getElementById('mover-modo-duplicar');
+    var hint = document.getElementById('mover-modo-hint');
+
+    if (modo === 'mover') {
+        if (btnM) { btnM.style.background='rgba(59,130,246,.15)'; btnM.style.borderColor='#3B82F6'; btnM.style.color='#3B82F6'; }
+        if (btnD) { btnD.style.background='rgba(255,255,255,.04)'; btnD.style.borderColor='rgba(255,255,255,.12)'; btnD.style.color='#aaa'; }
+        if (hint) hint.innerHTML = '<strong style="color:#3B82F6;">Mover:</strong> el producto se quita de esta cuenta y pasa a la otra.';
+    } else {
+        if (btnD) { btnD.style.background='rgba(167,139,250,.15)'; btnD.style.borderColor='#A78BFA'; btnD.style.color='#A78BFA'; }
+        if (btnM) { btnM.style.background='rgba(255,255,255,.04)'; btnM.style.borderColor='rgba(255,255,255,.12)'; btnM.style.color='#aaa'; }
+        if (hint) hint.innerHTML = '<strong style="color:#A78BFA;">Duplicar:</strong> se crea una copia en la otra cuenta y el original se queda aquí.';
     }
+};
+
+window.renderCuentasDestino = function() {
+    var CS = _CS();
+    var cont = document.getElementById('mover-cuentas-lista');
+    if (!cont) return;
+
+    var otras = CS.cuentas.filter(function(c){ return c.id !== CS.activa; });
+    cont.innerHTML = otras.map(function(c) {
+        var total = c.items.reduce(function(s,i){ return s + (parseFloat(i.precio)||0); }, 0);
+        return '<button onclick="window.ejecutarMoverItem(\'' + c.id + '\')" ' +
+            'style="display:flex;justify-content:space-between;align-items:center;' +
+            'padding:.85rem 1rem;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.12);' +
+            'border-radius:12px;cursor:pointer;font-family:inherit;color:#fff;text-align:left;" ' +
+            'onmouseover="this.style.borderColor=\'#FF5A00\'" ' +
+            'onmouseout="this.style.borderColor=\'rgba(255,255,255,.12)\'">' +
+            '<span style="font-weight:700;font-size:.9rem;">' + c.nombre + '</span>' +
+            '<span style="font-size:.8rem;color:#25D366;font-weight:700;">$' + total.toFixed(2) + ' \u00b7 ' + c.items.length + '</span>' +
+            '</button>';
+    }).join('');
+};
+
+window.ejecutarMoverItem = function(destinoCuentaId) {
+    var CS = _CS();
+    var estado = window._moverEstado;
+    if (estado.itemIdx === null) return;
+
+    var origen = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+    var destino = CS.cuentas.find(function(x){ return x.id === destinoCuentaId; });
+    if (!origen || !destino || !origen.items[estado.itemIdx]) return;
+
+    var item = origen.items[estado.itemIdx];
+
+    if (estado.modo === 'duplicar') {
+        // DUPLICAR: copia profunda a destino, original se queda
+        var copia = JSON.parse(JSON.stringify(item));
+        destino.items.push(copia);
+    } else {
+        // MOVER: quitar del origen, agregar a destino (sin duplicar)
+        var movido = origen.items.splice(estado.itemIdx, 1)[0];
+        destino.items.push(movido);
+    }
+
+    window.cerrarMoverItem();
+
+    // Refrescar todo
+    if (window.renderCartItems)      window.renderCartItems();
+    if (window.renderCuentasTabs)    window.renderCuentasTabs();
+    if (window.renderListaCompleta)  window.renderListaCompleta();
+    if (window.actualizarDesglose)   window.actualizarDesglose();
 };
 
 
