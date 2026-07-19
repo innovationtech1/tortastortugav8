@@ -605,7 +605,13 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
             const searchText = (document.getElementById('admin-search')?.value || '').trim();
             let displayTicket = ticketId, displayNombre = p.cliente || p.nombre || '—', displayTel = p.telefono || 'En tienda', displayItems = p.items || '—', displayTipo = tipo;
             if (searchText) { displayTicket = resaltar(displayTicket, searchText); displayNombre = resaltar(displayNombre, searchText); displayTel = resaltar(displayTel, searchText); displayItems = resaltar(displayItems, searchText); displayTipo = resaltar(displayTipo, searchText); }
+            // Separar cada producto (dividido por " | ") en su propia tarjeta con espacio
             displayItems = displayItems.replace(/\n/g, '<br>');
+            if (displayItems && displayItems.indexOf(' | ') !== -1) {
+                displayItems = displayItems.split(' | ').map(function(prod) {
+                    return '<div style="padding:7px 10px;margin-bottom:6px;background:rgba(255,255,255,.03);border-left:3px solid #FF5A00;border-radius:6px;">' + prod.trim() + '</div>';
+                }).join('');
+            }
             return `<tr>
                 <td><span class="order-id" style="font-size:1.1rem;color:var(--yellow)">#${displayTicket}</span><br><small style="color:var(--muted)">${hora}</small>${timerHTML}<button class="print-btn" onclick="window.imprimirTicket('${ticketId}')" style="margin-top:6px; font-size:0.7rem; padding:2px 5px; background:var(--surface2); color:white; border:1px solid var(--border); border-radius:4px; cursor:pointer; width:100%;">🖨️ Imprimir</button></td>
                 <td>
