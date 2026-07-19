@@ -1123,7 +1123,7 @@ function cerrarOrdenModal() {
 }
 </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=1784459146">
+    <link rel="stylesheet" href="css/style.css?v=1784480177">
     <script type="module">
         import { auth, db } from './js/firebase-config.js';
         import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -1706,7 +1706,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1784459146"></script>
+<script type="module" src="js/app.js?v=1784480177"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -1812,7 +1812,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1784459146';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1784480177';
     (async () => {
         try {
             await seedProductos();
@@ -3038,6 +3038,19 @@ document.addEventListener('click', function(e) {
                padding:0 .8rem;height:36px;cursor:pointer;display:flex;align-items:center;gap:.35rem;">
         <span style="font-size:1rem;">⤡</span> Minimizar
       </button>
+    </div>
+
+    <!-- CONTENEDOR: slider de bebidas para agregar rapido -->
+    <div style="flex-shrink:0;padding:.75rem 1.2rem;border-bottom:1px solid rgba(255,255,255,.08);background:#161616;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
+        <span style="font-size:.8rem;font-weight:700;color:#25D366;">🥤 Agregar bebida rápido</span>
+        <span style="font-size:.68rem;color:#666;">Desliza →</span>
+      </div>
+      <div id="lc-bebidas-slider"
+           style="display:flex;gap:.5rem;overflow-x:auto;padding-bottom:.3rem;
+                  scrollbar-width:thin;scrollbar-color:rgba(37,211,102,.3) transparent;">
+        <!-- Se llena por JS con las bebidas del menu -->
+      </div>
     </div>
 
     <!-- Lista (se llena por JS) -->
