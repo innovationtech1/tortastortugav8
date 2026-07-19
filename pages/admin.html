@@ -627,7 +627,19 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
         <button onclick="window.pedirUbicacionCliente('${p.id}', '${String(p.telefono).replace(/[^0-9+]/g,'')}', '${String(p.cliente||p.nombre||'').replace(/'/g,'')}', '${ticketId}')"
            style="flex:1;min-width:120px;justify-content:center;padding:7px 10px;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.4);color:#25D366;border-radius:8px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">
            <span>📍</span> Ubicación</button>
-    </div>` : ''}
+    </div>` : `
+    <div style="margin-top:10px;">
+        <button onclick="window.pedirUbicacionSinTelefono('${p.id}', '${String(p.cliente||p.nombre||'').replace(/'/g,'')}', '${ticketId}')"
+           style="width:100%;justify-content:center;padding:7px 10px;background:rgba(251,183,36,.12);border:1px solid rgba(251,183,36,.4);color:#FBB724;border-radius:8px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">
+           <span>📍</span> Pedir ubicación</button>
+        <div id="tel-input-${p.id}" style="display:none;margin-top:8px;">
+            <input type="tel" inputmode="tel" id="tel-field-${p.id}" placeholder="Teléfono del cliente"
+               style="width:100%;box-sizing:border-box;padding:8px 10px;background:#0d0d0d;border:1.5px solid rgba(37,211,102,.4);color:#fff;border-radius:8px;font-family:inherit;font-size:0.8rem;outline:none;margin-bottom:6px;">
+            <button onclick="window.enviarUbicacionConTelefono('${p.id}', '${String(p.cliente||p.nombre||'').replace(/'/g,'')}', '${ticketId}')"
+               style="width:100%;justify-content:center;padding:7px 10px;background:#25D366;border:none;color:#fff;border-radius:8px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">
+               <span>💬</span> Enviar por WhatsApp</button>
+        </div>
+    </div>`}
 
     ${p.ubicacionCliente ? `
     <div style="margin-top:8px;padding:9px 11px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px;">
@@ -2467,6 +2479,48 @@ window.abrirWhatsAppUbicacion = function(telefono, nombre, ticket) {
 /* Cuando el cliente comparte su ubicacion, te llega como un mensaje
    en WhatsApp. Al tocarlo, WhatsApp lo abre en Google Maps y desde
    ahi puedes ver la direccion y navegar hacia el cliente. */
+</script>
+
+<script>
+/* ══════════ PEDIR UBICACION A PEDIDOS SIN TELEFONO ══════════ */
+
+// Muestra el campo para escribir el telefono
+window.pedirUbicacionSinTelefono = function(pedidoId, nombre, ticket) {
+    var cont = document.getElementById('tel-input-' + pedidoId);
+    if (cont) {
+        cont.style.display = cont.style.display === 'none' ? 'block' : 'none';
+        if (cont.style.display === 'block') {
+            var field = document.getElementById('tel-field-' + pedidoId);
+            if (field) field.focus();
+        }
+    }
+};
+
+// Toma el telefono escrito, lo guarda en el pedido y manda el WhatsApp
+window.enviarUbicacionConTelefono = async function(pedidoId, nombre, ticket) {
+    var field = document.getElementById('tel-field-' + pedidoId);
+    if (!field) return;
+
+    var tel = (field.value || '').trim();
+    var soloDigitos = tel.replace(/[^0-9]/g, '');
+
+    if (soloDigitos.length < 10) {
+        alert('Escribe un teléfono válido de al menos 10 dígitos');
+        return;
+    }
+
+    // Guardar el telefono en el pedido para futuras veces
+    try {
+        if (window._adminUpdateDoc) {
+            await window._adminUpdateDoc(pedidoId, { telefono: tel }, 'pedidos');
+        }
+    } catch(e) {
+        console.warn('No se pudo guardar el telefono:', e);
+    }
+
+    // Mandar el WhatsApp con el link de ubicacion
+    window.pedirUbicacionCliente(pedidoId, tel, nombre, ticket);
+};
 </script>
 
 </body>
