@@ -2413,12 +2413,16 @@ window.pedirUbicacionCliente = function(pedidoId, telefono, nombre, ticket) {
     var base = window.location.origin + window.location.pathname.replace(/pages\/admin\.html$/, '');
     var linkUbicacion = base + 'ubicacion.html?pedido=' + pedidoId;
 
-    // Mensaje con el link
-    var saludo = nombre ? ('Hola ' + nombre) : 'Hola';
-    var mensaje = saludo + ', somos Tortas Tortuga. ' +
-        'Para entregar tu pedido' + (ticket ? ' (' + ticket + ')' : '') + ', ' +
-        'abre este link y toca "Compartir mi ubicacion":\n\n' + linkUbicacion +
-        '\n\nGracias!';
+    // Mensaje claro, calido y con pasos que cualquier cliente entiende
+    var saludo = nombre ? ('Hola ' + nombre + '!') : 'Hola!';
+    var mensaje =
+        saludo + ' Gracias por tu pedido en Tortas Tortuga \uD83D\uDC22\n\n' +
+        (ticket ? ('Pedido: ' + ticket + '\n') : '') +
+        'Para llevartelo a domicilio necesitamos tu ubicacion exacta.\n\n' +
+        'Es muy facil, solo 2 pasos:\n\n' +
+        '1\uFE0F\u20E3 Abre este link:\n' + linkUbicacion + '\n\n' +
+        '2\uFE0F\u20E3 Toca el boton verde "Compartir mi ubicacion" y acepta el permiso.\n\n' +
+        'Listo! Con eso tu repartidor sabra exactamente donde llegar. \uD83D\uDEF5\uD83D\uDCA8';
 
     var url = 'https://wa.me/' + num + '?text=' + encodeURIComponent(mensaje);
     window.open(url, '_blank');
