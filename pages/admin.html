@@ -599,6 +599,9 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
     <strong>${displayNombre}</strong><br>
     <span style="color:var(--muted);font-size:0.85rem">📞 ${displayTel}</span><br>
     <span class="tipo-badge ${tipoCls}" style="margin-top:4px">${displayTipo}</span>
+    ${window.tieneTelefonoValido(p.telefono) ? `<br><button onclick="window.abrirWhatsAppUbicacion('${String(p.telefono).replace(/[^0-9+]/g,'')}', '${String(p.cliente||p.nombre||'').replace(/'/g,'')}', '${ticketId}')"
+        style="margin-top:6px;padding:5px 10px;background:#25D366;border:none;color:#fff;border-radius:6px;font-family:inherit;font-size:0.75rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+        <span>💬</span> Pedir ubicación</button>` : ''}
     ${p.cajeroNombre ? `<br><span style="color:rgba(255,90,0,.7);font-size:0.72rem;margin-top:3px;display:block;">🏪 ${p.cajeroNombre}</span>` : ''}
 </td>
                 <td>
@@ -2381,6 +2384,47 @@ window._saveAE = async function() {
         }
     };
 })();
+</script>
+
+<script>
+/* ══════════ WHATSAPP: PEDIR UBICACION AL CLIENTE ══════════
+   Abre un chat de WhatsApp con el cliente y le manda un mensaje
+   pre-escrito pidiendo que comparta su ubicacion.
+   NOTA: el cliente debe compartir la ubicacion manualmente desde
+   WhatsApp; ninguna web puede obtenerla automaticamente. */
+
+window.tieneTelefonoValido = function(tel) {
+    if (!tel) return false;
+    // Debe tener al menos 10 digitos
+    var soloDigitos = String(tel).replace(/[^0-9]/g, '');
+    return soloDigitos.length >= 10;
+};
+
+window.abrirWhatsAppUbicacion = function(telefono, nombre, ticket) {
+    // Normalizar el numero: quitar todo menos digitos
+    var num = String(telefono).replace(/[^0-9]/g, '');
+
+    // Si no tiene codigo de pais, asumir USA (+1) por San Antonio TX
+    if (num.length === 10) {
+        num = '1' + num;
+    }
+
+    // Mensaje pre-escrito pidiendo la ubicacion
+    var saludo = nombre ? ('Hola ' + nombre) : 'Hola';
+    var mensaje = saludo + ', somos Tortas Tortuga. ' +
+        'Para entregar tu pedido' + (ticket ? ' (' + ticket + ')' : '') + ' necesitamos tu ubicacion. ' +
+        'Por favor comparte tu ubicacion tocando el clip (adjuntar) y luego "Ubicacion" en este chat. Gracias!';
+
+    // Construir el link de WhatsApp
+    var url = 'https://wa.me/' + num + '?text=' + encodeURIComponent(mensaje);
+
+    // Abrir en nueva pestana
+    window.open(url, '_blank');
+};
+
+/* Cuando el cliente comparte su ubicacion, te llega como un mensaje
+   en WhatsApp. Al tocarlo, WhatsApp lo abre en Google Maps y desde
+   ahi puedes ver la direccion y navegar hacia el cliente. */
 </script>
 
 </body>
