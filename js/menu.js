@@ -451,6 +451,8 @@ function _limpiarMenuContainers() {
 }
 
 function _renderProductos(productos) {
+    // Exponer los productos globalmente para el slider de bebidas
+    window._menuProductos = productos;
     _limpiarMenuContainers();
 
     const containers = {
