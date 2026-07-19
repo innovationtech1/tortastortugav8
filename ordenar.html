@@ -1123,7 +1123,7 @@ function cerrarOrdenModal() {
 }
 </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=1784421452">
+    <link rel="stylesheet" href="css/style.css?v=1784421481">
     <script type="module">
         import { auth, db } from './js/firebase-config.js';
         import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -1706,7 +1706,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1784421452"></script>
+<script type="module" src="js/app.js?v=1784421481"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -1812,7 +1812,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1784421452';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1784421481';
     (async () => {
         try {
             await seedProductos();
@@ -2807,6 +2807,12 @@ document.addEventListener('click', function(e) {
             var esDefault = c && c.nombre === ('Cuenta ' + c.id);
             inp.value = (c && !esDefault) ? c.nombre : '';
         }
+        // Pre-cargar telefono si la cuenta ya tiene uno
+        var telInp = document.getElementById('input-telefono-cliente');
+        if (telInp) telInp.value = (c && c.telefono) ? c.telefono : '';
+        // Mostrar seccion telefono si la cuenta es Domicilio
+        var telSec = document.getElementById('telefono-section');
+        if (telSec) telSec.style.display = (c && c.tipoServicio === 'Domicilio') ? 'block' : 'none';
 
         // Limpiar selecciones visuales
         document.querySelectorAll('.tipo-serv-btn, .mesa-btn').forEach(function(b){
@@ -2839,6 +2845,10 @@ document.addEventListener('click', function(e) {
         var mesasSec = document.getElementById('mesas-section');
         if (mesasSec) mesasSec.style.display = (tipo === 'Comer aquí') ? 'block' : 'none';
         if (tipo !== 'Comer aquí') _seleccion.mesa = '';
+
+        // Mostrar el campo de telefono solo para Domicilio
+        var telSec = document.getElementById('telefono-section');
+        if (telSec) telSec.style.display = (tipo === 'Domicilio') ? 'block' : 'none';
 
         actualizarPreview();
     };
@@ -2905,6 +2915,14 @@ document.addEventListener('click', function(e) {
         c.nombre = nombre;
         // Guardar el tipo de servicio en la cuenta para usarlo al enviar
         c.tipoServicio = _seleccion.tipo || 'Comer aquí';
+
+        // Guardar el telefono (solo relevante para Domicilio)
+        var telInp = document.getElementById('input-telefono-cliente');
+        if (telInp && _seleccion.tipo === 'Domicilio') {
+            c.telefono = (telInp.value || '').trim();
+        } else {
+            c.telefono = '';
+        }
 
         // Actualizar UI
         var display = document.getElementById('nombre-cuenta-display');
