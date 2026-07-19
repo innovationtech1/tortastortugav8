@@ -606,6 +606,7 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
         style="margin-top:6px;padding:5px 10px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.4);color:#3B82F6;border-radius:6px;font-family:inherit;font-size:0.75rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;text-decoration:none;">
         <span>🗺️</span> Ver ubicación en mapa</a>
         <br><span style="font-size:0.68rem;color:#25D366;">✅ Ubicación recibida (±${p.ubicacionCliente.precision||'?'}m)</span>` : ''}
+    ${p.referenciaCliente ? `<br><span style="font-size:0.72rem;color:#FBB724;">📌 ${p.referenciaCliente}</span>` : ''}
     ${p.cajeroNombre ? `<br><span style="color:rgba(255,90,0,.7);font-size:0.72rem;margin-top:3px;display:block;">🏪 ${p.cajeroNombre}</span>` : ''}
 </td>
                 <td>
