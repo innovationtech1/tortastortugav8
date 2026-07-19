@@ -609,27 +609,27 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
             return `<tr>
                 <td><span class="order-id" style="font-size:1.1rem;color:var(--yellow)">#${displayTicket}</span><br><small style="color:var(--muted)">${hora}</small>${timerHTML}<button class="print-btn" onclick="window.imprimirTicket('${ticketId}')" style="margin-top:6px; font-size:0.7rem; padding:2px 5px; background:var(--surface2); color:white; border:1px solid var(--border); border-radius:4px; cursor:pointer; width:100%;">🖨️ Imprimir</button></td>
                 <td>
-    <strong>${displayNombre}</strong><br>
-    <span style="color:var(--muted);font-size:0.85rem">📞 ${displayTel}</span><br>
-    <span class="tipo-badge ${tipoCls}" style="margin-top:4px">${displayTipo}</span>
+    <div style="font-size:1rem;font-weight:700;color:#fff;margin-bottom:2px;">${displayNombre}</div>
+    <div style="color:#25D366;font-size:0.85rem;font-weight:600;margin-bottom:2px;">📞 ${displayTel}</div>
+    <span class="tipo-badge ${tipoCls}" style="margin-top:2px;">${displayTipo}</span>
 
     ${window.tieneTelefonoValido(p.telefono) ? `
-    <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;">
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">
         <a href="tel:${String(p.telefono).replace(/[^0-9+]/g,'')}"
-           style="padding:6px 10px;background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.4);color:#25D366;border-radius:8px;font-family:inherit;font-size:0.75rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;text-decoration:none;">
+           style="flex:1;min-width:90px;justify-content:center;padding:7px 10px;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.4);color:#25D366;border-radius:8px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;text-decoration:none;">
            <span>📞</span> Llamar</a>
         <button onclick="window.pedirUbicacionCliente('${p.id}', '${String(p.telefono).replace(/[^0-9+]/g,'')}', '${String(p.cliente||p.nombre||'').replace(/'/g,'')}', '${ticketId}')"
-           style="padding:6px 10px;background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.4);color:#25D366;border-radius:8px;font-family:inherit;font-size:0.75rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
-           <span>📍</span> Pedir ubicación</button>
+           style="flex:1;min-width:120px;justify-content:center;padding:7px 10px;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.4);color:#25D366;border-radius:8px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">
+           <span>📍</span> Ubicación</button>
     </div>` : ''}
 
     ${p.ubicacionCliente ? `
-    <div style="margin-top:8px;padding:8px 10px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:8px;">
+    <div style="margin-top:8px;padding:9px 11px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px;">
         <a href="https://www.google.com/maps?q=${p.ubicacionCliente.lat},${p.ubicacionCliente.lng}" target="_blank"
-           style="color:#3B82F6;font-family:inherit;font-size:0.78rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
+           style="color:#3B82F6;font-family:inherit;font-size:0.8rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:5px;">
            <span>🗺️</span> Ver ubicación en mapa</a>
-        <div style="font-size:0.68rem;color:#25D366;margin-top:3px;">✅ Recibida (±${p.ubicacionCliente.precision||'?'}m)</div>
-        ${p.referenciaCliente ? `<div style="font-size:0.72rem;color:#FBB724;margin-top:3px;">📌 ${p.referenciaCliente}</div>` : ''}
+        <div style="font-size:0.72rem;color:#25D366;margin-top:5px;font-weight:600;">✅ Recibida (±${p.ubicacionCliente.precision||'?'}m)</div>
+        ${p.referenciaCliente ? `<div style="font-size:0.75rem;color:#FBB724;margin-top:4px;">📌 ${p.referenciaCliente}</div>` : ''}
     </div>` : ''}
     ${p.cajeroNombre ? `<br><span style="color:rgba(255,90,0,.7);font-size:0.72rem;margin-top:3px;display:block;">🏪 ${p.cajeroNombre}</span>` : ''}
 </td>
