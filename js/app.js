@@ -1371,7 +1371,29 @@ window.enviarTodasLasCuentas = async function() {
         return;
     }
 
-    const totalGen = CS.cuentas.reduce((s, c) => s + c.items.reduce((ss, i) => ss + i.precio, 0), 0);
+    // Calcular el total CON impuesto, descuento y propina de cada cuenta.
+    // Antes solo se sumaban los precios (sin impuesto) — esto lo corrige.
+    var subtotalGen = 0, descuentoGen = 0, impuestoGen = 0, propinaGen = 0, totalGen = 0;
+    CS.cuentas.forEach(function(c) {
+        if (!c.items.length) return;
+        var aj = (window._ajustesDinero && window._ajustesDinero[c.id]) || {};
+        if (window.calcularTotales) {
+            var t = window.calcularTotales(c.items, {
+                descuento: aj.descuento, descuentoTipo: aj.descuentoTipo,
+                propina: aj.propina, propinaTipo: aj.propinaTipo,
+            });
+            subtotalGen  += t.subtotal;
+            descuentoGen += t.descuento;
+            impuestoGen  += t.impuesto;
+            propinaGen   += t.propina;
+            totalGen     += t.total;
+        } else {
+            // Respaldo si el modulo de dinero no cargo
+            var sub = c.items.reduce(function(ss, i){ return ss + (parseFloat(i.precio)||0); }, 0);
+            subtotalGen += sub;
+            totalGen    += sub;
+        }
+    });
 
     // Construir itemsData (array) que cocina espera
     const itemsData = [];
@@ -1401,6 +1423,15 @@ window.enviarTodasLasCuentas = async function() {
         items:       itemsStr,
         total:       '$' + totalGen.toFixed(2),
         totalNum:    totalGen,
+        // Desglose completo del dinero (para reportes y cobro correcto)
+        desglose: {
+            subtotal:  Math.round(subtotalGen*100)/100,
+            descuento: Math.round(descuentoGen*100)/100,
+            impuesto:  Math.round(impuestoGen*100)/100,
+            impuestoTasa: (window._POS_CONFIG ? window._POS_CONFIG.impuestoTasa : 0),
+            propina:   Math.round(propinaGen*100)/100,
+            total:     Math.round(totalGen*100)/100,
+        },
     };
 
     // Botón feedback
