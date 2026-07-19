@@ -1352,11 +1352,17 @@ window.enviarOrdenModal = function() {
 };
 
 window.enviarTodasLasCuentas = async function() {
-    const nombre   = (document.getElementById('customer-name')?.value || '').trim() || 'Cliente';
-    const telefono = (document.getElementById('customer-phone')?.value || '').trim();
-    const tipo     = document.querySelector('input[name="order-type"]:checked')?.value || 'pickup';
-    const CS       = window._cuentasSys;
+    const CS = window._cuentasSys;
     if (!CS) return;
+
+    // Tomar nombre, telefono y tipo de la PRIMERA cuenta con productos.
+    // Cada cuenta guarda su propia info (nombre, telefono, tipoServicio).
+    var cuentaPrincipal = CS.cuentas.find(function(c){ return c.items.length > 0; }) || CS.cuentas[0];
+    var nombre   = (cuentaPrincipal && cuentaPrincipal.nombre) ? cuentaPrincipal.nombre : 'Cliente';
+    var telefono = (cuentaPrincipal && cuentaPrincipal.telefono) ? cuentaPrincipal.telefono : '';
+    // Mapear el tipo de servicio a pickup/domicilio
+    var tipoServ = (cuentaPrincipal && cuentaPrincipal.tipoServicio) || 'Comer aquí';
+    var tipo     = (tipoServ === 'Domicilio') ? 'domicilio' : 'pickup';
 
     // Validar que haya productos
     const hayProductos = CS.cuentas.some(c => c.items.length > 0);
@@ -1389,6 +1395,7 @@ window.enviarTodasLasCuentas = async function() {
     const data = {
         cliente:     nombre,
         telefono:    telefono,
+        tipoServicio: tipoServ,
         tipoEntrega: tipo === 'pickup' ? 'Recoger' : 'Domicilio',
         itemsData:   itemsData,
         items:       itemsStr,
