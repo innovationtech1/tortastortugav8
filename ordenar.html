@@ -1123,7 +1123,7 @@ function cerrarOrdenModal() {
 }
 </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=1784179423">
+    <link rel="stylesheet" href="css/style.css?v=1784421452">
     <script type="module">
         import { auth, db } from './js/firebase-config.js';
         import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -1706,7 +1706,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1784179423"></script>
+<script type="module" src="js/app.js?v=1784421452"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -1812,7 +1812,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1784179423';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1784421452';
     (async () => {
         try {
             await seedProductos();
@@ -2712,6 +2712,19 @@ document.addEventListener('click', function(e) {
                 style="width:100%;box-sizing:border-box;padding:.7rem .8rem;background:#0d0d0d;
                        border:1.5px solid rgba(255,90,0,.4);color:#fff;border-radius:12px;
                        font-family:inherit;font-size:.9rem;outline:none;">
+        </div>
+
+        <!-- Telefono: aparece solo para Domicilio -->
+        <div id="telefono-section" style="margin-bottom:1.2rem;display:none;">
+            <p style="font-size:.78rem;color:#25D366;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.05em;">
+                📱 WhatsApp del cliente <span style="color:#666;font-weight:400;text-transform:none;">(para pedir ubicación)</span>
+            </p>
+            <input id="input-telefono-cliente" type="tel" inputmode="tel" placeholder="Ej: 210-555-1234"
+                autocomplete="off"
+                style="width:100%;box-sizing:border-box;padding:.7rem .8rem;background:#0d0d0d;
+                       border:1.5px solid rgba(37,211,102,.4);color:#fff;border-radius:12px;
+                       font-family:inherit;font-size:.9rem;outline:none;">
+            <div style="font-size:.7rem;color:#666;margin-top:.35rem;">Con este número podrás pedirle su ubicación por WhatsApp desde el panel.</div>
         </div>
 
         <!-- Vista previa -->
