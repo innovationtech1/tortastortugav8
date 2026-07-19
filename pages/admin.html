@@ -140,6 +140,21 @@ window.normalizarRutaImagen = function(src) {
     pointer-events: none;
     transition: opacity 0.25s;
     z-index: 7000;
+    overflow-y: auto;
+}
+/* En pantallas bajas (laptops), alinear arriba para que quepa todo */
+@media (max-height: 700px) {
+    #editar-cobro-modal.modal-overlay {
+        align-items: flex-start;
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+}
+/* Metodos de pago: en laptop caben en 3 columnas para ahorrar altura */
+@media (min-width: 500px) {
+    #editar-cobro-modal .ec-metodos-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
 }
 #editar-cobro-modal.modal-overlay.active {
     opacity: 1;
@@ -2134,7 +2149,7 @@ window._saveAE = async function() {
 </script>
 <!-- MODAL EDITAR COBRO -->
 <div id="editar-cobro-modal" class="modal-overlay" style="z-index:7000;">
-  <div style="background:#1A1A1A;width:100%;max-width:440px;border-radius:16px;padding:1.3rem;box-sizing:border-box;margin:auto;">
+  <div style="background:#1A1A1A;width:100%;max-width:440px;border-radius:16px;padding:1.3rem;box-sizing:border-box;margin:auto;max-height:90vh;overflow-y:auto;">
 
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
       <div>
@@ -2156,7 +2171,7 @@ window._saveAE = async function() {
     </div>
 
     <p style="font-size:.75rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.05em;">Nuevo metodo de pago</p>
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem;margin-bottom:1rem;">
+    <div class="ec-metodos-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem;margin-bottom:1rem;">
       <button class="ec-metodo" data-metodo="Efectivo" onclick="ecSelect(this)"
         style="padding:.7rem;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);color:#fff;border-radius:10px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
         💵 Efectivo</button>
