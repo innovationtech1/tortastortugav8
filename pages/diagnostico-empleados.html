@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache">
+<title>Diagnóstico Empleados - Tortas Tortuga</title>
+<style>
+  body { background:#0d0d0d; color:#fff; font-family:system-ui,sans-serif; padding:1.5rem; max-width:700px; margin:0 auto; }
+  h1 { color:#FF5A00; font-size:1.4rem; }
+  .card { background:#1a1a1a; border:1px solid #333; border-radius:14px; padding:1rem 1.2rem; margin-bottom:1rem; }
+  .emp { border-left:3px solid #25D366; padding:.8rem 1rem; margin-bottom:.8rem; background:rgba(255,255,255,.03); border-radius:8px; }
+  .emp-id { font-size:1.1rem; font-weight:800; color:#FBB724; }
+  .emp-row { font-size:.9rem; margin:.3rem 0; color:#ccc; }
+  .cred { background:rgba(37,211,102,.1); border:1px solid rgba(37,211,102,.3); border-radius:8px; padding:.6rem .8rem; margin-top:.5rem; }
+  .cred b { color:#25D366; }
+  .warn { color:#F44336; font-size:.85rem; }
+  button { background:#FF5A00; color:#fff; border:none; padding:.8rem 1.2rem; border-radius:10px; font-weight:700; cursor:pointer; font-family:inherit; font-size:.95rem; }
+  .loading { color:#888; text-align:center; padding:2rem; }
+  code { background:#000; padding:2px 6px; border-radius:4px; color:#25D366; }
+</style>
+</head>
+<body>
+<h1>🔍 Diagnóstico del Portal de Empleados</h1>
+<p style="color:#aaa;font-size:.9rem;">Esta herramienta muestra los empleados registrados y sus credenciales para que puedas entrar.</p>
+
+<div class="card">
+  <button onclick="cargarEmpleados()">🔄 Cargar empleados registrados</button>
+  <div id="resultado"></div>
+</div>
+
+<div class="card">
+  <h3 style="color:#FBB724;margin-top:0;">📋 Cómo funciona el login</h3>
+  <p style="font-size:.88rem;line-height:1.6;color:#ccc;">
+    Para entrar al portal necesitas:<br>
+    • <b style="color:#fff;">Número de empleado</b> (ej: <code>EMP-001</code>)<br>
+    • <b style="color:#fff;">PIN de 4 dígitos</b><br><br>
+    La contraseña interna es: <code>EMP-XXX + PIN</code><br>
+    Ejemplo: EMP-001 con PIN 1234 → contraseña <code>EMP-0011234</code>
+  </p>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const app = initializeApp({
+  apiKey: "AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k",
+  authDomain: "tortas-tortuga.firebaseapp.com",
+  projectId: "tortas-tortuga",
+  storageBucket: "tortas-tortuga.firebasestorage.app",
+  messagingSenderId: "586554873297",
+  appId: "1:586554873297:web:c0e0e2fbe1a29b0b3ed83e"
+});
+const db = getFirestore(app);
+
+window.cargarEmpleados = async function() {
+    const cont = document.getElementById('resultado');
+    cont.innerHTML = '<div class="loading">Cargando...</div>';
+
+    try {
+        const snap = await getDocs(collection(db, 'empleados'));
+
+        if (snap.empty) {
+            cont.innerHTML = '<p class="warn">⚠️ No hay empleados registrados en Firestore.<br>Necesitas registrar al menos uno en el portal de empleados.</p>';
+            return;
+        }
+
+        let html = '<h3 style="color:#25D366;">✅ ' + snap.size + ' empleado(s) encontrado(s):</h3>';
+        snap.forEach(function(doc) {
+            const e = doc.data();
+            const empId = e.empleadoId || 'SIN-ID';
+            const pin = e.pin || '????';
+            const nombre = (e.nombre || '') + ' ' + (e.apellido || '');
+            const rol = e.rol || e.puesto || 'cajero';
+
+            html += '<div class="emp">';
+            html += '<div class="emp-id">' + empId + '</div>';
+            html += '<div class="emp-row">👤 ' + nombre.trim() + ' — <span style="color:#A78BFA;">' + rol + '</span></div>';
+            html += '<div class="emp-row">📧 ' + (e.email || '(sin email)') + '</div>';
+            html += '<div class="emp-row">📞 ' + (e.telefono || '(sin teléfono)') + '</div>';
+            html += '<div class="emp-row">Estado: ' + (e.estado || 'activo') + '</div>';
+            html += '<div class="cred">';
+            html += 'Para entrar usa:<br>';
+            html += 'Número: <b>' + empId + '</b><br>';
+            html += 'PIN: <b>' + pin + '</b>';
+            html += '</div>';
+            html += '</div>';
+        });
+
+        cont.innerHTML = html;
+    } catch(e) {
+        cont.innerHTML = '<p class="warn">Error al cargar: ' + e.message + '<br><br>Puede ser un problema de permisos de Firestore.</p>';
+        console.error(e);
+    }
+};
+</script>
+</body>
+</html>
