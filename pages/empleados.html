@@ -2121,6 +2121,20 @@ window.loginEmp = async function(){
     sessionStorage.setItem('tt_emp_id', empId);
     sessionStorage.setItem('tt_emp_pin', pin);
     sessionStorage.setItem('tt_emp_ts', Date.now().toString());
+    // Guardar nombre y rol para la barra de perfil
+    try {
+      const qN = query(collection(db,'empleados'), where('empleadoId','==', empId));
+      const snN = await getDocs(qN);
+      if (!snN.empty) {
+        const eN = snN.docs[0].data();
+        const nomN = ((eN.nombre||'') + ' ' + (eN.apellido||'')).trim();
+        sessionStorage.setItem('tt_emp_nombre', nomN || empId);
+        sessionStorage.setItem('tt_emp_rol', eN.rol || eN.puesto || 'empleado');
+      } else if (empId === 'EMP-GERENTE') {
+        sessionStorage.setItem('tt_emp_nombre', 'Gerente Principal');
+        sessionStorage.setItem('tt_emp_rol', 'gerente');
+      }
+    } catch(eN) {}
   } catch(e) {
     // Firebase Auth falló — intentar login directo con Firestore (cajeros sin Auth)
     try {
@@ -2146,6 +2160,9 @@ window.loginEmp = async function(){
       sessionStorage.setItem('tt_emp_pin',  pin);
       sessionStorage.setItem('tt_emp_docid', empDoc.id);
       sessionStorage.setItem('tt_emp_ts',   Date.now().toString());
+      // Guardar nombre y rol para la barra de perfil
+      sessionStorage.setItem('tt_emp_nombre', ((empData.nombre||'') + ' ' + (empData.apellido||'')).trim() || empId);
+      sessionStorage.setItem('tt_emp_rol', empData.rol || empData.puesto || 'empleado');
       // user = null para pin-only, pero empData está disponible
       user = null;
       mostrarEmp();
