@@ -38,7 +38,7 @@
                 <li><a href="ordenar.html" class="cta-button" style="padding: 8px 20px; font-size: 0.9rem;">Ordenar</a></li>
                 <li><a href="pages/admin.html" style="padding: 8px 16px; font-size: 0.9rem; border-radius:20px; border:1px solid rgba(255,90,0,.3); color:#FF5A00;">Admin</a></li>
                 <li><a href="pages/cocina.html" target="_blank" style="padding: 8px 16px; font-size: 0.9rem; border-radius:20px; border:1px solid rgba(251,191,36,.3); color:#FBB724;">🧑‍🍳 Cocina</a></li>
-                <li><a href="pages/auth.html" id="nav-login-link" style="padding: 8px 16px; font-size: 0.9rem; border-radius:20px; border:1px solid rgba(37,211,102,.4); color:#25D366; background:rgba(37,211,102,.08);">🔑 <span id="nav-login-text">Iniciar sesión</span></a></li>
+                <li><a href="pages/entrar.html" id="nav-login-link" style="padding: 8px 16px; font-size: 0.9rem; border-radius:20px; border:1px solid rgba(37,211,102,.4); color:#25D366; background:rgba(37,211,102,.08);">🔑 <span id="nav-login-text">Iniciar sesión</span></a></li>
             </ul>
         </nav>
     </header>
@@ -262,7 +262,7 @@ window.addEventListener('appinstalled', function() {
 // Mostrar el cajero activo en el boton de login (si hay sesion)
 (function() {
     function actualizarLoginNav() {
-        var nombre = sessionStorage.getItem('tt_cajero_nombre');
+        var nombre = sessionStorage.getItem('tt_cliente_nombre') || sessionStorage.getItem('tt_cajero_nombre');
         var ts = parseInt(sessionStorage.getItem('tt_cajero_ts') || '0');
         var VEINTE_MIN = 20 * 60 * 1000;
         var link = document.getElementById('nav-login-link');
@@ -281,6 +281,9 @@ window.addEventListener('appinstalled', function() {
                     sessionStorage.removeItem('tt_cajero_nombre');
                     sessionStorage.removeItem('tt_cajero_rol');
                     sessionStorage.removeItem('tt_cajero_ts');
+                    sessionStorage.removeItem('tt_cliente_nombre');
+                    sessionStorage.removeItem('tt_cliente_telefono');
+                    sessionStorage.removeItem('tt_cliente_ts');
                     location.reload();
                 }
             };
