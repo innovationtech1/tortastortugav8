@@ -1432,6 +1432,10 @@ window.enviarTodasLasCuentas = async function() {
             propina:   Math.round(propinaGen*100)/100,
             total:     Math.round(totalGen*100)/100,
         },
+        cajeroId:     (window._cajeroActivo ? window._cajeroActivo.id : 'directo'),
+        cajeroNombre: (window._cajeroActivo ? window._cajeroActivo.nombre : 'Sistema'),
+        cajeroRol:    (window._cajeroActivo ? window._cajeroActivo.rol : ''),
+        tomadaEn:     new Date().toISOString(),
     };
 
     // Botón feedback
