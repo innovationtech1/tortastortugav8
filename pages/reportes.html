@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache">
+<title>Reportes - Tortas Tortuga</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#0d0d0d; color:#fff; font-family:system-ui,-apple-system,sans-serif; padding:1rem; max-width:900px; margin:0 auto; padding-bottom:3rem; }
+  h1 { color:#FF5A00; font-size:1.5rem; margin-bottom:.3rem; }
+  .sub { color:#888; font-size:.88rem; margin-bottom:1.2rem; }
+  .filtros { display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:1.2rem; }
+  .filtro-tab { padding:.6rem 1rem; background:transparent; border:1px solid rgba(255,255,255,.12); border-radius:10px; color:#888; font-family:inherit; font-size:.85rem; font-weight:700; cursor:pointer; transition:.2s; }
+  .filtro-tab.activo { background:rgba(255,90,0,.12); border-color:#FF5A00; color:#FF5A00; }
+  .fecha-row { display:flex; gap:.5rem; align-items:center; margin-bottom:1.2rem; flex-wrap:wrap; }
+  .fecha-row input { padding:.55rem .8rem; background:#1a1a1a; border:1px solid rgba(255,255,255,.15); color:#fff; border-radius:8px; font-family:inherit; }
+  .fecha-row button { padding:.55rem 1rem; background:#FF5A00; border:none; color:#fff; border-radius:8px; font-family:inherit; font-weight:700; cursor:pointer; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:.7rem; margin-bottom:1.2rem; }
+  .card { background:#1a1a1a; border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:1rem; }
+  .card .ico { font-size:1.5rem; }
+  .card .val { font-size:1.4rem; font-weight:800; margin:.3rem 0 .1rem; }
+  .card .lbl { font-size:.72rem; color:#888; text-transform:uppercase; letter-spacing:.04em; }
+  .seccion { background:#1a1a1a; border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:1.1rem; margin-bottom:1rem; }
+  .seccion h3 { font-size:.78rem; color:#888; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.8rem; }
+  .fila { display:flex; justify-content:space-between; align-items:center; padding:.5rem 0; border-bottom:1px solid rgba(255,255,255,.05); font-size:.9rem; }
+  .fila:last-child { border-bottom:none; }
+  .fila .verde { color:#25D366; font-weight:700; }
+  .fila .morado { color:#A78BFA; font-weight:700; }
+  .fila .amarillo { color:#FBB724; font-weight:700; }
+  .barra-prod { background:rgba(255,255,255,.06); border-radius:4px; height:5px; margin-top:.3rem; overflow:hidden; }
+  .barra-prod > div { background:#FF5A00; height:100%; border-radius:4px; }
+  .grafico { display:flex; align-items:flex-end; gap:.35rem; height:120px; margin-top:.5rem; }
+  .grafico .col { flex:1; display:flex; flex-direction:column; align-items:center; gap:.25rem; }
+  .grafico .barra { width:100%; background:linear-gradient(180deg,#FF8C00,#FF5A00); border-radius:4px 4px 0 0; min-height:4px; }
+  .grafico .monto { font-size:.6rem; color:#aaa; }
+  .grafico .dia { font-size:.6rem; color:#888; }
+  .loading { text-align:center; padding:3rem; color:#666; }
+  .volver { display:inline-block; color:#888; text-decoration:none; font-size:.88rem; margin-bottom:1rem; }
+  .exportar { background:#25D366 !important; }
+</style>
+</head>
+<body>
+<a href="admin.html" class="volver">← Volver a Admin</a>
+<h1>📊 Reportes de Ventas</h1>
+<p class="sub">Análisis del flujo de ventas de Tortas Tortuga</p>
+
+<div class="filtros">
+  <button class="filtro-tab activo" data-per="hoy" onclick="setPeriodo('hoy')">Hoy</button>
+  <button class="filtro-tab" data-per="ayer" onclick="setPeriodo('ayer')">Ayer</button>
+  <button class="filtro-tab" data-per="semana" onclick="setPeriodo('semana')">7 días</button>
+  <button class="filtro-tab" data-per="mes" onclick="setPeriodo('mes')">30 días</button>
+  <button class="filtro-tab" data-per="todo" onclick="setPeriodo('todo')">Todo</button>
+</div>
+
+<div class="fecha-row">
+  <span style="font-size:.82rem;color:#888;">O rango:</span>
+  <input type="date" id="fecha-desde">
+  <span style="color:#888;">a</span>
+  <input type="date" id="fecha-hasta">
+  <button onclick="aplicarRango()">Aplicar</button>
+  <button class="exportar" onclick="exportarCSV()">⬇ CSV</button>
+</div>
+
+<div id="contenido"><div class="loading">Cargando datos...</div></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, getDocs, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const app = initializeApp({
+  apiKey: "AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k",
+  authDomain: "tortas-tortuga.firebaseapp.com",
+  projectId: "tortas-tortuga",
+  storageBucket: "tortas-tortuga.firebasestorage.app",
+  messagingSenderId: "586554873297",
+  appId: "1:586554873297:web:c0e0e2fbe1a29b0b3ed83e"
+});
+const db = getFirestore(app);
+
+let _todosPedidos = [];
+let _filtrados = [];
+
+function tsDe(p) {
+  if (p.creado?.seconds) return new Date(p.creado.seconds*1000);
+  if (p.tomadaEn) return new Date(p.tomadaEn);
+  return null;
+}
+function totalDe(p) {
+  if (typeof p.totalNum === 'number') return p.totalNum;
+  var t = p.total;
+  if (typeof t === 'string') return parseFloat(t.replace(/[^0-9.]/g,'')) || 0;
+  return parseFloat(t) || 0;
+}
+
+async function cargar() {
+  try {
+    const snap = await getDocs(collection(db, 'pedidos'));
+    _todosPedidos = [];
+    snap.forEach(d => _todosPedidos.push({ id: d.id, ...d.data() }));
+    setPeriodo('hoy');
+  } catch(e) {
+    document.getElementById('contenido').innerHTML = '<div class="loading">Error al cargar: ' + e.message + '</div>';
+  }
+}
+
+window.setPeriodo = function(per) {
+  document.querySelectorAll('.filtro-tab').forEach(t => {
+    t.classList.toggle('activo', t.dataset.per === per);
+  });
+  const ahora = new Date();
+  let desde = null, hasta = null;
+
+  if (per === 'hoy') { desde = new Date(); desde.setHours(0,0,0,0); }
+  else if (per === 'ayer') {
+    desde = new Date(); desde.setDate(desde.getDate()-1); desde.setHours(0,0,0,0);
+    hasta = new Date(); hasta.setHours(0,0,0,0);
+  }
+  else if (per === 'semana') { desde = new Date(); desde.setDate(desde.getDate()-7); desde.setHours(0,0,0,0); }
+  else if (per === 'mes') { desde = new Date(); desde.setDate(desde.getDate()-30); desde.setHours(0,0,0,0); }
+
+  _filtrados = _todosPedidos.filter(p => {
+    const ts = tsDe(p);
+    if (!ts) return per === 'todo';
+    if (desde && ts < desde) return false;
+    if (hasta && ts >= hasta) return false;
+    return true;
+  });
+  render();
+};
+
+window.aplicarRango = function() {
+  const d = document.getElementById('fecha-desde').value;
+  const h = document.getElementById('fecha-hasta').value;
+  if (!d || !h) { alert('Elige ambas fechas'); return; }
+  document.querySelectorAll('.filtro-tab').forEach(t => t.classList.remove('activo'));
+  const desde = new Date(d + 'T00:00:00');
+  const hasta = new Date(h + 'T23:59:59');
+  _filtrados = _todosPedidos.filter(p => {
+    const ts = tsDe(p);
+    return ts && ts >= desde && ts <= hasta;
+  });
+  render();
+};
+
+function render() {
+  const p = _filtrados;
+  const total = p.reduce((s,x) => s+totalDe(x), 0);
+  const num = p.length;
+  const ticket = num > 0 ? total/num : 0;
+  const entregados = p.filter(x => x.estado?.includes('Entregado')).length;
+  const pagados = p.filter(x => x.estadoPago === 'Pagado').length;
+
+  // Desglose
+  let sub=0, imp=0, prop=0, desc=0;
+  p.forEach(x => {
+    const d = x.desglose;
+    if (d) { sub+=+d.subtotal||0; imp+=+d.impuesto||0; prop+=+d.propina||0; desc+=+d.descuento||0; }
+    else sub += totalDe(x);
+  });
+
+  // Metodos
+  const met = {};
+  p.forEach(x => { const m = x.metodoPagoReal||x.metodoPago||'pendiente'; met[m]=(met[m]||0)+totalDe(x); });
+
+  // Cajeros
+  const caj = {};
+  p.forEach(x => { const c = x.cobradoPor||x.cajeroNombre||'Sin asignar'; if(!caj[c])caj[c]={v:0,o:0}; caj[c].v+=totalDe(x); caj[c].o++; });
+
+  // Top productos
+  const prods = {};
+  p.forEach(x => {
+    if (!x.items) return;
+    (typeof x.items==='string'?x.items:'').split(' | ').forEach(s => {
+      const i = s.lastIndexOf(' - $');
+      const n = i>0 ? s.slice(0,i).split('(')[0].trim() : s.trim();
+      if (n) prods[n]=(prods[n]||0)+1;
+    });
+  });
+  const top = Object.entries(prods).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+  // Por dia
+  const dias = {};
+  p.forEach(x => { const ts=tsDe(x); if(!ts)return; const k=ts.toLocaleDateString('es-MX',{month:'short',day:'numeric'}); dias[k]=(dias[k]||0)+totalDe(x); });
+  const diasE = Object.entries(dias).slice(-10);
+
+  let h = '';
+  // Cards
+  h += '<div class="cards">';
+  h += card('💰','$'+total.toFixed(2),'Ventas Totales');
+  h += card('📦',num,'Órdenes');
+  h += card('🧾','$'+ticket.toFixed(2),'Ticket Prom.');
+  h += card('✅',pagados,'Pagadas');
+  h += '</div>';
+
+  // Desglose
+  h += '<div class="seccion"><h3>💵 Desglose de Dinero</h3>';
+  h += fila('Subtotal (productos)', '$'+sub.toFixed(2), '');
+  if (desc>0) h += fila('Descuentos', '-$'+desc.toFixed(2), '');
+  h += fila('Impuesto (Sales Tax)', '$'+imp.toFixed(2), 'amarillo');
+  if (prop>0) h += fila('Propinas', '$'+prop.toFixed(2), 'verde');
+  h += '<div class="fila" style="border-top:1px solid rgba(255,255,255,.15);margin-top:.3rem;padding-top:.6rem;font-weight:800;font-size:1rem;"><span>TOTAL</span><span class="verde">$'+total.toFixed(2)+'</span></div>';
+  h += '</div>';
+
+  // Metodos
+  h += '<div class="seccion"><h3>💳 Métodos de Pago</h3>';
+  const icons = {efectivo:'💵',tarjeta:'💳',zelle:'🟣',cashapp:'🟢',venmo:'🔵',pendiente:'⏳'};
+  Object.entries(met).sort((a,b)=>b[1]-a[1]).forEach(kv => {
+    h += fila((icons[kv[0].toLowerCase()]||'💰')+' '+kv[0], '$'+kv[1].toFixed(2), 'verde');
+  });
+  h += '</div>';
+
+  // Cajeros
+  const cajE = Object.entries(caj).sort((a,b)=>b[1].v-a[1].v);
+  if (cajE.length) {
+    h += '<div class="seccion"><h3>👤 Ventas por Cajero</h3>';
+    cajE.forEach(kv => {
+      const prom = kv[1].o>0 ? kv[1].v/kv[1].o : 0;
+      h += '<div class="fila"><div><div style="font-weight:600;">'+kv[0]+'</div><div style="font-size:.7rem;color:#888;">'+kv[1].o+' órdenes · prom $'+prom.toFixed(2)+'</div></div><span class="morado">$'+kv[1].v.toFixed(2)+'</span></div>';
+    });
+    h += '</div>';
+  }
+
+  // Top productos
+  if (top.length) {
+    const maxP = top[0][1];
+    h += '<div class="seccion"><h3>🏆 Productos Más Vendidos</h3>';
+    top.forEach((kv,i) => {
+      h += '<div style="padding:.4rem 0;"><div style="display:flex;justify-content:space-between;font-size:.85rem;"><span>'+(i+1)+'. '+kv[0].slice(0,35)+'</span><span class="amarillo">'+kv[1]+'</span></div><div class="barra-prod"><div style="width:'+Math.round(kv[1]/maxP*100)+'%;"></div></div></div>';
+    });
+    h += '</div>';
+  }
+
+  // Grafico por dia
+  if (diasE.length > 1) {
+    const maxV = Math.max(...diasE.map(d=>d[1]));
+    h += '<div class="seccion"><h3>📈 Ventas por Día</h3><div class="grafico">';
+    diasE.forEach(kv => {
+      const pct = maxV>0 ? kv[1]/maxV*100 : 0;
+      h += '<div class="col"><div class="monto">$'+Math.round(kv[1])+'</div><div class="barra" style="height:'+Math.max(pct,3)+'%;"></div><div class="dia">'+kv[0]+'</div></div>';
+    });
+    h += '</div></div>';
+  }
+
+  if (!num) h = '<div class="loading">Sin ventas en este período</div>';
+  document.getElementById('contenido').innerHTML = h;
+}
+
+function card(ico, val, lbl) {
+  return '<div class="card"><div class="ico">'+ico+'</div><div class="val">'+val+'</div><div class="lbl">'+lbl+'</div></div>';
+}
+function fila(label, val, cls) {
+  return '<div class="fila"><span>'+label+'</span><span class="'+cls+'">'+val+'</span></div>';
+}
+
+window.exportarCSV = function() {
+  if (!_filtrados.length) { alert('No hay datos para exportar'); return; }
+  let csv = 'Fecha,Ticket,Cliente,Total,Metodo,Estado,Cajero\n';
+  _filtrados.forEach(p => {
+    const ts = tsDe(p);
+    const fecha = ts ? ts.toLocaleString('es-MX') : '';
+    const row = [
+      fecha,
+      p.ticketId || p.id || '',
+      (p.cliente||p.nombre||'').replace(/,/g,' '),
+      totalDe(p).toFixed(2),
+      p.metodoPagoReal||p.metodoPago||'',
+      (p.estado||'').replace(/,/g,' '),
+      (p.cobradoPor||p.cajeroNombre||'').replace(/,/g,' ')
+    ];
+    csv += row.map(c => '"'+c+'"').join(',') + '\n';
+  });
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'reporte-ventas-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+};
+
+cargar();
+</script>
+<script src="../js/perfil-barra.js"></script>
+</body>
+</html>
