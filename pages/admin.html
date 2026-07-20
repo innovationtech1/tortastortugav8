@@ -613,7 +613,10 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
                 }).join('');
             }
             return `<tr>
-                <td><span class="order-id" style="font-size:1.1rem;color:var(--yellow)">#${displayTicket}</span><br><small style="color:var(--muted)">${hora}</small>${timerHTML}<button class="print-btn" onclick="window.imprimirTicket('${ticketId}')" style="margin-top:6px; font-size:0.7rem; padding:2px 5px; background:var(--surface2); color:white; border:1px solid var(--border); border-radius:4px; cursor:pointer; width:100%;">🖨️ Imprimir</button></td>
+                <td><span class="order-id" style="font-size:1.1rem;color:var(--yellow)">#${displayTicket}</span><br><small style="color:var(--muted)">${hora}</small>${timerHTML}<button class="print-btn" onclick="window.imprimirTicket('${ticketId}')" style="margin-top:6px; font-size:0.7rem; padding:2px 5px; background:var(--surface2); color:white; border:1px solid var(--border); border-radius:4px; cursor:pointer; width:100%;">🖨️ Imprimir</button>
+    ${(p.cajeroNombre && p.cajeroNombre !== 'Sistema') ? `<div style="margin-top:6px;font-size:0.68rem;color:#888;">👤 Tomó: <span style="color:#A78BFA;font-weight:600;">${p.cajeroNombre}</span></div>` : ''}
+    ${p.cobradoPor ? `<div style="font-size:0.68rem;color:#888;margin-top:2px;">💵 Cobró: <span style="color:#25D366;font-weight:600;">${p.cobradoPor}</span></div>` : ''}
+    </td>
                 <td>
     <div style="font-size:1rem;font-weight:700;color:#fff;margin-bottom:2px;">${displayNombre}</div>
     <div style="color:#25D366;font-size:0.85rem;font-weight:600;margin-bottom:2px;">📞 ${displayTel}</div>
