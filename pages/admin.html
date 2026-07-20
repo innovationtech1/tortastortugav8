@@ -688,7 +688,7 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
     window.cerrarCaja = () => { document.getElementById('caja-modal').classList.remove('active'); currentOrderId = null; };
     window.procesarPago = async (metodoReal) => {
         if(!currentOrderId) return;
-        try { await updateDoc(doc(db, 'pedidos', currentOrderId), { estadoPago: 'Pagado', metodoPagoReal: metodoReal, estado: 'En preparación 🧑‍🍳' }); cerrarCaja(); } catch(e) { alert('Error procesando cobro.'); }
+        try { var cobrador='admin';try{var cn=sessionStorage.getItem('tt_cajero_nombre');if(cn)cobrador=cn;}catch(e){} await updateDoc(doc(db, 'pedidos', currentOrderId), { estadoPago: 'Pagado', metodoPagoReal: metodoReal, estado: 'En preparación 🧑‍🍳', cobradoPor: cobrador, cobradoEn: new Date().toISOString() }); cerrarCaja(); } catch(e) { alert('Error procesando cobro.'); }
     };
 
     window.abrirCorteCaja = () => {
