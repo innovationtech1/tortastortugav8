@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Entrar - Tortas Tortuga</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: linear-gradient(160deg,#1a1a1a,#0d0d0d);
+    color:#fff; font-family:system-ui,-apple-system,sans-serif;
+    min-height:100vh; min-height:100dvh;
+    display:flex; align-items:center; justify-content:center; padding:1.5rem;
+  }
+  .card {
+    background:#1e1e1e; border-radius:24px; padding:2rem 1.5rem;
+    max-width:400px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,.5);
+  }
+  .logo { font-size:3rem; text-align:center; margin-bottom:.3rem; }
+  h1 { font-size:1.4rem; color:#FF5A00; text-align:center; margin-bottom:.4rem; }
+  .sub { color:#aaa; font-size:.9rem; text-align:center; line-height:1.5; margin-bottom:1.5rem; }
+  label { font-size:.78rem; color:#888; font-weight:700; text-transform:uppercase; letter-spacing:.05em; display:block; margin-bottom:.5rem; }
+  input {
+    width:100%; box-sizing:border-box; padding:.9rem 1rem; background:#0d0d0d;
+    border:1.5px solid rgba(255,90,0,.4); color:#fff; border-radius:12px;
+    font-family:inherit; font-size:1rem; outline:none; margin-bottom:1rem;
+  }
+  input:focus { border-color:#FF5A00; }
+  input.code-input { text-align:center; font-size:1.8rem; letter-spacing:.5rem; font-weight:800; }
+  button {
+    width:100%; padding:1rem; border:none; border-radius:14px;
+    font-family:inherit; font-size:1rem; font-weight:800; cursor:pointer;
+    background:linear-gradient(135deg,#FF5A00,#FF8C00); color:#fff;
+    box-shadow:0 6px 20px rgba(255,90,0,.3);
+  }
+  button:active { transform:scale(.98); }
+  button:disabled { opacity:.6; cursor:not-allowed; }
+  .status { margin-top:1rem; font-size:.88rem; text-align:center; min-height:1.4rem; line-height:1.5; }
+  .error { color:#F44336; }
+  .exito { color:#25D366; }
+  .info { color:#FBB724; }
+  .paso { display:none; }
+  .paso.activo { display:block; }
+  .codigo-demo {
+    background:rgba(251,183,36,.1); border:1px solid rgba(251,183,36,.3);
+    border-radius:10px; padding:.8rem; margin-bottom:1rem; text-align:center;
+  }
+  .codigo-demo .label { font-size:.7rem; color:#FBB724; text-transform:uppercase; }
+  .codigo-demo .code { font-size:1.6rem; font-weight:900; color:#FBB724; letter-spacing:.3rem; }
+  .volver { margin-top:1rem; background:none; box-shadow:none; color:#888; font-size:.85rem; font-weight:600; }
+  .demo-badge {
+    background:rgba(167,139,250,.12); border:1px solid rgba(167,139,250,.3);
+    color:#A78BFA; font-size:.68rem; padding:.3rem .7rem; border-radius:20px;
+    display:inline-block; margin-bottom:1rem; font-weight:700;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">🐢</div>
+    <h1>Tortas Tortuga</h1>
+    <p class="sub">Entra con tu teléfono para ordenar</p>
+    <div style="text-align:center;"><span class="demo-badge">⚙️ MODO DEMO — código simulado</span></div>
+
+    <!-- PASO 1: Telefono -->
+    <div id="paso-telefono" class="paso activo">
+      <label>Tu nombre</label>
+      <input type="text" id="nombre" placeholder="Ej: Juan" autocomplete="off">
+
+      <label>Tu teléfono</label>
+      <input type="tel" id="telefono" inputmode="tel" placeholder="210-555-1234" autocomplete="off">
+
+      <button onclick="enviarCodigo()" id="btn-enviar">Enviar código</button>
+      <div class="status" id="status-1"></div>
+    </div>
+
+    <!-- PASO 2: Codigo -->
+    <div id="paso-codigo" class="paso">
+      <div class="codigo-demo">
+        <div class="label">Tu código (demo)</div>
+        <div class="code" id="codigo-mostrado">----</div>
+      </div>
+
+      <label>Escribe el código de 4 dígitos</label>
+      <input type="tel" id="codigo-input" class="code-input" inputmode="numeric" maxlength="4" placeholder="----" autocomplete="off">
+
+      <button onclick="verificarCodigo()" id="btn-verificar">Verificar y entrar</button>
+      <button class="volver" onclick="volverPaso1()">← Cambiar teléfono</button>
+      <div class="status" id="status-2"></div>
+    </div>
+  </div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const app = initializeApp({
+  apiKey: "AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k",
+  authDomain: "tortas-tortuga.firebaseapp.com",
+  projectId: "tortas-tortuga",
+  storageBucket: "tortas-tortuga.firebasestorage.app",
+  messagingSenderId: "586554873297",
+  appId: "1:586554873297:web:c0e0e2fbe1a29b0b3ed83e"
+});
+const db = getFirestore(app);
+
+let _codigoGenerado = null;
+let _datosCliente = null;
+
+window.enviarCodigo = function() {
+    const nombre = (document.getElementById('nombre').value || '').trim();
+    const tel = (document.getElementById('telefono').value || '').trim();
+    const soloDigitos = tel.replace(/[^0-9]/g, '');
+    const status = document.getElementById('status-1');
+
+    if (!nombre) { status.className='status error'; status.textContent='Escribe tu nombre'; return; }
+    if (soloDigitos.length < 10) { status.className='status error'; status.textContent='Escribe un teléfono válido de 10 dígitos'; return; }
+
+    // ── MODO DEMO: generar codigo de 4 digitos y mostrarlo ──
+    // Para SMS real: aqui iria signInWithPhoneNumber de Firebase
+    _codigoGenerado = String(Math.floor(1000 + Math.random() * 9000));
+    _datosCliente = { nombre: nombre, telefono: soloDigitos };
+
+    document.getElementById('codigo-mostrado').textContent = _codigoGenerado;
+
+    status.className='status exito';
+    status.textContent='Código generado. (En SMS real llegaría a tu teléfono)';
+
+    // Pasar al paso 2
+    setTimeout(function(){
+        document.getElementById('paso-telefono').classList.remove('activo');
+        document.getElementById('paso-codigo').classList.add('activo');
+        document.getElementById('codigo-input').focus();
+    }, 800);
+};
+
+window.verificarCodigo = async function() {
+    const ingresado = (document.getElementById('codigo-input').value || '').trim();
+    const status = document.getElementById('status-2');
+
+    if (ingresado !== _codigoGenerado) {
+        status.className='status error';
+        status.textContent='Código incorrecto. Revisa e intenta de nuevo.';
+        return;
+    }
+
+    status.className='status info';
+    status.textContent='Verificando...';
+
+    // Guardar/actualizar el cliente en Firestore
+    try {
+        const clienteId = 'cliente_' + _datosCliente.telefono;
+        await setDoc(doc(db, 'clientes', clienteId), {
+            nombre: _datosCliente.nombre,
+            telefono: _datosCliente.telefono,
+            ultimoAcceso: new Date().toISOString(),
+        }, { merge: true });
+    } catch(e) {
+        console.warn('No se pudo guardar el cliente:', e);
+    }
+
+    // Guardar sesion de cliente (sessionStorage)
+    sessionStorage.setItem('tt_cliente_nombre', _datosCliente.nombre);
+    sessionStorage.setItem('tt_cliente_telefono', _datosCliente.telefono);
+    sessionStorage.setItem('tt_cliente_ts', Date.now().toString());
+
+    status.className='status exito';
+    status.textContent='¡Bienvenido ' + _datosCliente.nombre + '!';
+
+    // Redirigir a ordenar
+    setTimeout(function(){
+        window.location.href = '../ordenar.html';
+    }, 900);
+};
+
+window.volverPaso1 = function() {
+    document.getElementById('paso-codigo').classList.remove('activo');
+    document.getElementById('paso-telefono').classList.add('activo');
+    document.getElementById('status-2').textContent = '';
+};
+</script>
+</body>
+</html>
