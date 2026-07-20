@@ -61,6 +61,22 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    // ── EMPLEADOS ──
+    // El login necesita LEER para validar empleadoId + PIN (fallback sin Auth).
+    // Escritura permitida para que el gerente registre empleados.
+    // NOTA: para produccion real, restringir escritura a gerentes autenticados.
+    match /empleados/{empleadoId} {
+      allow read:  if true;
+      allow write: if true;
+    }
+
+    // ── CLIENTES ──
+    // El login de cliente por telefono crea/actualiza su registro.
+    match /clientes/{clienteId} {
+      allow read:  if true;
+      allow write: if true;
+    }
+
     // Todo lo demas: denegado
     match /{document=**} {
       allow read, write: if false;
