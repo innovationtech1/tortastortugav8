@@ -1413,11 +1413,44 @@ window.cargarReporte = function(periodo) {
         filtrados = pedidos;
     }
 
-    var total     = filtrados.reduce(function(s,p){ return s+(parseFloat(p.total)||0); }, 0);
+    // Helper para leer el total de un pedido (usa totalNum o parsea total)
+    function totalDe(p) {
+        if (typeof p.totalNum === 'number') return p.totalNum;
+        var t = p.total;
+        if (typeof t === 'string') return parseFloat(t.replace(/[^0-9.]/g,'')) || 0;
+        return parseFloat(t) || 0;
+    }
+
+    var total     = filtrados.reduce(function(s,p){ return s+totalDe(p); }, 0);
     var numOrds   = filtrados.length;
     var ticket    = numOrds > 0 ? total/numOrds : 0;
     var entregados = filtrados.filter(function(p){ return p.estado?.includes('Entregado'); }).length;
-    var delivery  = filtrados.filter(function(p){ return p.tipo==='delivery'; }).length;
+    var delivery  = filtrados.filter(function(p){ return p.tipo==='delivery' || p.tipoServicio==='Domicilio'; }).length;
+
+    // ── DESGLOSE DE DINERO (subtotal, impuesto, propina, descuento) ──
+    var subtotalT = 0, impuestoT = 0, propinaT = 0, descuentoT = 0;
+    filtrados.forEach(function(p) {
+        var d = p.desglose;
+        if (d) {
+            subtotalT  += parseFloat(d.subtotal)  || 0;
+            impuestoT  += parseFloat(d.impuesto)  || 0;
+            propinaT   += parseFloat(d.propina)   || 0;
+            descuentoT += parseFloat(d.descuento) || 0;
+        } else {
+            // Pedido viejo sin desglose: el total es todo subtotal
+            subtotalT += totalDe(p);
+        }
+    });
+
+    // ── VENTAS POR CAJERO ──
+    var porCajero = {};
+    filtrados.forEach(function(p) {
+        // Quien cobro (prioridad) o quien tomo la orden
+        var caj = p.cobradoPor || p.cajeroNombre || 'Sin asignar';
+        if (!porCajero[caj]) porCajero[caj] = { ventas: 0, ordenes: 0 };
+        porCajero[caj].ventas  += totalDe(p);
+        porCajero[caj].ordenes += 1;
+    });
 
     // Totales por método
     var metodos = {};
@@ -1458,6 +1491,36 @@ window.cargarReporte = function(periodo) {
 
     if (delivery > 0) {
         h += '<div style="background:rgba(255,90,0,.1);border:1px solid rgba(255,90,0,.2);border-radius:8px;padding:.5rem .75rem;font-size:.78rem;margin-bottom:.75rem;">🛵 <strong>' + delivery + '</strong> pedidos a domicilio</div>';
+    }
+
+    // ── DESGLOSE DE DINERO ──
+    h += '<div style="border:1px solid rgba(37,211,102,.2);border-radius:10px;padding:.75rem;margin-bottom:.75rem;background:rgba(37,211,102,.03);">';
+    h += '<div style="font-size:.72rem;color:#888;font-weight:700;margin-bottom:.5rem;">💵 DESGLOSE DE DINERO</div>';
+    h += '<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.25rem 0;"><span>Subtotal (productos)</span><strong>$' + subtotalT.toFixed(2) + '</strong></div>';
+    if (descuentoT > 0)
+        h += '<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.25rem 0;color:#F44336;"><span>Descuentos</span><strong>-$' + descuentoT.toFixed(2) + '</strong></div>';
+    h += '<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.25rem 0;"><span>Impuesto (Sales Tax)</span><strong style="color:#FBB724;">$' + impuestoT.toFixed(2) + '</strong></div>';
+    if (propinaT > 0)
+        h += '<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.25rem 0;"><span>Propinas</span><strong style="color:#25D366;">$' + propinaT.toFixed(2) + '</strong></div>';
+    h += '<div style="display:flex;justify-content:space-between;font-size:.92rem;padding:.5rem 0 0;margin-top:.3rem;border-top:1px solid rgba(255,255,255,.1);font-weight:800;"><span>TOTAL</span><span style="color:#25D366;">$' + total.toFixed(2) + '</span></div>';
+    h += '</div>';
+
+    // ── VENTAS POR CAJERO ──
+    var cajerosEntries = Object.entries(porCajero).sort(function(a,b){ return b[1].ventas - a[1].ventas; });
+    if (cajerosEntries.length) {
+        h += '<div style="border:1px solid rgba(167,139,250,.2);border-radius:10px;padding:.75rem;margin-bottom:.75rem;">';
+        h += '<div style="font-size:.72rem;color:#888;font-weight:700;margin-bottom:.5rem;">👤 VENTAS POR CAJERO</div>';
+        cajerosEntries.forEach(function(kv) {
+            var nombre = kv[0], datos = kv[1];
+            var prom = datos.ordenes > 0 ? datos.ventas/datos.ordenes : 0;
+            h += '<div style="padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05);">';
+            h += '<div style="display:flex;justify-content:space-between;font-size:.85rem;">';
+            h += '<span style="font-weight:600;">' + nombre + '</span>';
+            h += '<strong style="color:#A78BFA;">$' + datos.ventas.toFixed(2) + '</strong></div>';
+            h += '<div style="font-size:.68rem;color:#888;margin-top:.15rem;">' + datos.ordenes + ' órdenes · promedio $' + prom.toFixed(2) + '</div>';
+            h += '</div>';
+        });
+        h += '</div>';
     }
 
     // Métodos de pago
