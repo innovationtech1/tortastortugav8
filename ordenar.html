@@ -1,27 +1,1145 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<script>
+// Matar cualquier Service Worker viejo que esté cacheando código
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(regs) {
+        for (var reg of regs) {
+            // Solo re-registrar si es necesario, no matar el actual bueno
+        }
+    });
+    // Limpiar caches viejos
+    if (window.caches) {
+        caches.keys().then(function(keys) {
+            keys.forEach(function(k) {
+                if (k.indexOf('tortas-v1783') >= 0 || k.indexOf('tortas-v') >= 0) {
+                    // mantener solo el más reciente — borrar viejos
+                }
+            });
+        });
+    }
+}
+</script>
     <meta charset="UTF-8">
+<link rel="preconnect" href="https://firestore.googleapis.com">
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="dns-prefetch" href="//securetoken.googleapis.com">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Tortas Tortuga - Ordenar</title>
     <meta name="description" content="Las mejores tortas de San Antonio, Texas. Pide ahora!">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#FF5A00">
+    <link rel="icon" type="image/x-icon" href="/tortastortugav8/favicon.ico">
+<link rel="apple-touch-icon" href="/tortastortugav8/apple-touch-icon.png">
+<meta name="theme-color" content="#FF5A00">
     <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <link rel="apple-touch-icon" href="icons/icon-apple.png">
+<script>
+/* ── INICIALIZAR ESTADO GLOBAL INMEDIATAMENTE ───────────────── */
+window._cuentasSys = window._cuentasSys || {
+    cuentas: [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }],
+    activa: 1,
+    counter: 1
+};
+window._pendingItem = window._pendingItem || null;
+/* ── SESIÓN DE CAJERO ──────────────────────────────────────── */
+(function() {
+    var cajeroId     = sessionStorage.getItem('tt_cajero_id');
+    var cajeroNombre = sessionStorage.getItem('tt_cajero_nombre');
+    var cajeroRol    = sessionStorage.getItem('tt_cajero_rol');
+    var cajeroTs     = parseInt(sessionStorage.getItem('tt_cajero_ts') || '0');
+    var VEINTE_MIN   = 20 * 60 * 1000;
+
+    if (cajeroId && cajeroNombre && (Date.now() - cajeroTs < VEINTE_MIN)) {
+        window._cajeroActivo = { id: cajeroId, nombre: cajeroNombre, rol: cajeroRol };
+        sessionStorage.setItem('tt_cajero_ts', Date.now().toString());
+
+        // Mostrar UI cajero — funciona con DOM ya cargado o pendiente
+        function mostrarUICajero() {
+            var banner = document.getElementById('cajero-banner');
+            var nomEl  = document.getElementById('cajero-nombre-header');
+            var btnCaj = document.getElementById('btn-cajero-header');
+            if (banner) banner.style.display = 'flex';
+            if (nomEl)  nomEl.textContent = cajeroNombre + ' · ' + cajeroRol;
+            if (btnCaj) {
+                btnCaj.style.display = 'inline-flex';
+                btnCaj.title = cajeroNombre + ' (' + cajeroRol + ')';
+            }
+        }
+
+        // Si DOM ya está listo, ejecutar ahora; si no, esperar
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', mostrarUICajero);
+        } else {
+            mostrarUICajero();
+        }
+    } else if (cajeroId) {
+        // Sesión expirada
+        sessionStorage.removeItem('tt_cajero_id');
+        sessionStorage.removeItem('tt_cajero_nombre');
+        sessionStorage.removeItem('tt_cajero_rol');
+        sessionStorage.removeItem('tt_cajero_ts');
+    }
+})();
+
+window._editingItem = window._editingItem || null;
+
+function confirmarMods(conMods) {
+    
+
+    // 1. Recolectar modificaciones seleccionadas
+    var mods = [], extra = 0;
+    if (conMods) {
+        document.querySelectorAll('.mod-chip.selected input').forEach(function(cb) {
+            if (cb.value) mods.push(cb.value);
+            extra += parseFloat(cb.getAttribute('data-price') || 0);
+        });
+        var nota = (document.getElementById('mods-notes') || {}).value || '';
+        nota = nota.trim();
+        if (nota) mods.push('📝 ' + nota);
+    }
+
+    // 2. Cerrar modal helper
+    function cerrarModal() {
+        var m = document.getElementById('mods-modal');
+        if (m) m.classList.remove('active');
+    }
+
+    // 3. Asegurar que _cuentasSys existe
+    if (!window._cuentasSys) {
+        window._cuentasSys = {
+            cuentas: [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }],
+            activa: 1, counter: 1
+        };
+    }
+    var CS = window._cuentasSys;
+
+    // ── MODO EDICIÓN ──
+    // La variante ya se aplico al instante (ver seleccionarVarianteItem).
+    // Aqui solo guardamos las modificaciones y recalculamos el precio.
+    if (window._editingItem) {
+        var ei = window._editingItem;
+        var ce = CS.cuentas.find(function(x){ return x.id === ei.cuentaId; });
+        if (ce && ce.items[ei.itemIdx] !== undefined) {
+            var it = ce.items[ei.itemIdx];
+            it.modificaciones = mods;
+            // precioBase ya refleja la variante elegida
+            it.precio = (it.precioBase || ei.precioBase || 0) + extra;
+        }
+        window._editingItem = null;
+        window._varianteSeleccionada = null;
+        cerrarModal();
+        if (window.renderCartItems)      window.renderCartItems();
+        if (window.renderCuentasTabs)    window.renderCuentasTabs();
+        if (window.renderListaCompleta)  window.renderListaCompleta();
+        if (window.actualizarDesglose)   window.actualizarDesglose();
+        return;
+    }
+
+    // ── MODO AGREGAR ──
+    var pi = window._pendingItem;
+    if (!pi) {
+        
+        cerrarModal();
+        return;
+    }
+
+    var qty = pi._qty || 1;
+    var itemBase = {
+        id:             pi.id,
+        nombre:         pi.nombre,
+        precio:         (parseFloat(pi.precio) || 0) + extra,
+        variante:       pi.variante || '',
+        modificaciones: mods.slice(),
+    };
+
+    // Agregar a la cuenta activa
+    var ca = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+    if (!ca) { ca = CS.cuentas[0]; CS.activa = ca.id; }
+
+    for (var i = 0; i < qty; i++) {
+        ca.items.push({
+            id: itemBase.id, nombre: itemBase.nombre,
+            precio: itemBase.precio, variante: itemBase.variante,
+            modificaciones: itemBase.modificaciones.slice(),
+        });
+    }
+    
+
+    // Resetear contador de la tarjeta
+    if (window._pendingResetQty) { window._pendingResetQty(); window._pendingResetQty = null; }
+    window._pendingItem = null;
+    window._pendingItemCard = null;
+
+    cerrarModal();
+
+    // Renderizar
+    if (window.renderCuentasTabs) window.renderCuentasTabs();
+    if (window.renderCartItems)   window.renderCartItems();
+
+    // Abrir carrito
+    var cm = document.getElementById('cart-modal');
+    if (cm) cm.classList.add('active');
+    var ci = document.getElementById('cart-icon');
+    if (ci) { ci.style.transform = 'scale(1.3)'; setTimeout(function(){ ci.style.transform = ''; }, 250); }
+
+}
+window.confirmarMods = confirmarMods;
+
+function abrirCarrito() {
+    if (window.renderCuentasTabs) window.renderCuentasTabs();
+    if (window.renderCartItems)   window.renderCartItems();
+    var cm = document.getElementById('cart-modal');
+    if (cm) cm.classList.add('active');
+}
+
+function limpiarCarrito() {
+    if (window._limpiarCarrito) window._limpiarCarrito();
+    else {
+        var CS = window._cuentasSys;
+        if (CS) {
+            CS.cuentas = [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }];
+            CS.activa = 1; CS.counter = 1;
+            if (window.renderCuentasTabs) window.renderCuentasTabs();
+            if (window.renderCartItems) window.renderCartItems();
+        }
+    }
+}
+
+/* addToCart y addDrink — expuestas globalmente para menu.js */
+function addToCart(id, nombre, precio, qty) {
+    var pi = {
+        id: id,
+        nombre: nombre,
+        precio: precio || 0,
+        modificaciones: [],
+        _qty: qty || 1
+    };
+    window._pendingItem = pi;
+
+    /* Reset chips */
+    document.querySelectorAll('.mod-chip').forEach(function(c) {
+        c.classList.remove('selected');
+        var inp = c.querySelector('input');
+        if (inp) inp.checked = false;
+    });
+    var notes = document.getElementById('mods-notes');
+    if (notes) notes.value = '';
+
+    /* Título del modal */
+    var title = document.getElementById('mods-item-name');
+    if (title) title.textContent = (qty && qty > 1) ? nombre + ' ×' + qty : nombre;
+
+    /* Abrir modal */
+    var modal = document.getElementById('mods-modal');
+    if (modal) modal.classList.add('active');
+}
+
+/* Stubs que el módulo sobreescribe al cargar */
+/* renderCuentasTabs definida abajo */
+window.renderCartItems = function() {
+    var cs = window._cuentasSys;
+    var el = document.getElementById('cart-items');
+    var lbl = document.getElementById('cuenta-label-active');
+    if (!cs || !el) return;
+    var c = cs.cuentas.find(function(x){ return x.id === cs.activa; });
+    if (!c) return;
+    if (lbl) { lbl.textContent = c.nombre.toUpperCase(); lbl.style.color = c.color; }
+    if (c.items.length === 0) {
+        el.innerHTML = '<p class="empty-cart">Esta cuenta está vacía 🥺</p>';
+    } else {
+        el.innerHTML = c.items.map(function(item, idx) {
+            return '<div class="cart-item">' +
+                '<div class="item-info">' +
+                '<div class="item-name">' + item.nombre + '</div>' +
+                (item.modificaciones && item.modificaciones.length
+                    ? '<div class="item-mods">' + item.modificaciones.join(' · ') + '</div>' : '') +
+                '</div>' +
+                '<div class="item-price">$' + item.precio.toFixed(2) + '</div>' +
+                '<button class="remove-item" onclick="removeItemCuenta(' + idx + ')">✕</button>' +
+                '</div>';
+        }).join('');
+    }
+    var tot = c.items.reduce(function(s,i){ return s+i.precio; }, 0);
+    var totEl = document.getElementById('cart-total');
+    if (totEl) totEl.textContent = '$' + tot.toFixed(2);
+    var cntEl = document.getElementById('cart-count');
+    var allTot = cs.cuentas.reduce(function(s,c){ return s+c.items.length; }, 0);
+    if (cntEl) {
+        cntEl.textContent = allTot;
+        cntEl.style.display = allTot > 0 ? 'flex' : 'none';
+    }
+    actualizarBotones();
+};
+
+window.renderCuentasTabs = function() {
+    var tabs = document.getElementById('cuentas-tabs');
+    if (!tabs) return;
+    var cs = window._cuentasSys;
+    if (!cs) return;
+    var h = '';
+    cs.cuentas.forEach(function(c) {
+        var tot = c.items.reduce(function(s,i){ return s+i.precio; }, 0);
+        var active = c.id === cs.activa ? 'active' : '';
+        h += '<div class="ctab ' + active + '" onclick="switchCuenta(' + c.id + ')" ' +
+            'style="border-color:' + (active ? c.color : 'rgba(255,255,255,.12)') + ';">' +
+            '<span class="ctab-nom" style="color:' + (active ? c.color : '#fff') + ';display:block;">' + c.nombre + '</span>' +
+            '<span class="ctab-tot" style="display:block;">$' + tot.toFixed(2) + '</span>' +
+            '</div>';
+    });
+    h += '<button onclick="agregarNuevaCuenta()" class="ctab-add">+ Nueva cuenta</button>';
+    tabs.innerHTML = h;
+    var btnDel = document.getElementById('btn-eliminar-cuenta');
+    if (btnDel) btnDel.style.display = cs.cuentas.length > 1 ? 'block' : 'none';
+    var lbl = document.getElementById('cuenta-label-active');
+    var cActiva = cs.cuentas.find(function(x){ return x.id === cs.activa; });
+    if (lbl && cActiva) { lbl.textContent = cActiva.nombre.toUpperCase(); lbl.style.color = cActiva.color; }
+};
+
+function addDrink(nombre, precio, detalle) {
+    var item = { nombre: nombre, precio: precio || 0, modificaciones: detalle ? [detalle] : [] };
+    var CS = window._cuentasSys;
+    if (CS) {
+        var ca = CS.cuentas.find(function(c) { return c.id === CS.activa; });
+        if (ca) ca.items.push(item);
+        window.renderCuentasTabs();
+        window.renderCartItems();
+    }
+    var ci = document.getElementById('cart-icon');
+    if (ci) { ci.style.transform = 'scale(1.3)'; setTimeout(function(){ ci.style.transform=''; }, 250); }
+    var cm = document.getElementById('cart-modal');
+    if (cm) cm.classList.add('active');
+}
+
+/* Funciones de cuenta como globales inmediatas */
+function enviarOrdenAdmin() {
+    var cs = window._cuentasSys;
+    if (!cs) return;
+    var con = cs.cuentas.filter(function(c){ return c.items.length > 0; });
+    if (con.length === 0) { alert('No hay productos en ninguna cuenta.'); return; }
+    var ov = document.getElementById('enviar-admin-overlay');
+    var res = document.getElementById('enviar-admin-resumen');
+    if (res) {
+        var h = ''; var totGen = 0;
+        con.forEach(function(c, ci) {
+            var ct = c.items.reduce(function(s,i){ return s+i.precio; },0);
+            totGen += ct;
+            // Header de cuenta con color
+            h += '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);'
+               + 'border-radius:10px;margin-bottom:.6rem;overflow:hidden;">';
+            // Nombre cuenta + total + botón editar
+            h += '<div style="display:flex;align-items:center;justify-content:space-between;'
+               + 'padding:.55rem .75rem;background:rgba(255,255,255,.05);">'
+               + '<div style="display:flex;align-items:center;gap:.4rem;">'
+               + '<span style="width:10px;height:10px;border-radius:50%;background:' + c.color + ';display:inline-block;flex-shrink:0;"></span>'
+               + '<span style="color:#fff;font-weight:700;font-size:.85rem;">' + c.nombre + '</span>'
+               + '</div>'
+               + '<div style="display:flex;align-items:center;gap:.5rem;">'
+               + '<span style="color:#FF5A00;font-weight:700;font-size:.82rem;">$' + ct.toFixed(2) + '</span>'
+               + '<button onclick="editarCuentaDesdeModal(' + ci + ')" '
+               + 'style="background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.35);'
+               + 'color:#A78BFA;border-radius:6px;padding:.18rem .45rem;font-size:.7rem;'
+               + 'font-weight:700;cursor:pointer;font-family:inherit;">✏️ Editar</button>'
+               + '</div>'
+               + '</div>';
+            // Items de la cuenta
+            c.items.forEach(function(item, idx) {
+                h += '<div style="display:flex;align-items:flex-start;justify-content:space-between;'
+                   + 'padding:.45rem .75rem;border-top:1px solid rgba(255,255,255,.05);">'
+                   + '<div style="flex:1;min-width:0;">'
+                   + '<div style="font-size:.8rem;color:#ddd;">' + item.nombre + '</div>'
+                   + (item.modificaciones && item.modificaciones.length
+                       ? '<div style="font-size:.7rem;color:#888;margin-top:.1rem;">' + item.modificaciones.join(' · ') + '</div>'
+                       : '<div style="font-size:.7rem;color:#555;">Sin modificaciones</div>')
+                   + '</div>'
+                   + '<div style="font-size:.8rem;color:#25D366;font-weight:700;margin-left:.5rem;flex-shrink:0;">$' + item.precio.toFixed(2) + '</div>'
+                   + '</div>';
+            });
+            h += '</div>';
+        });
+        // Total general
+        h += '<div style="display:flex;justify-content:space-between;align-items:center;'
+           + 'padding:.6rem .5rem 0;border-top:1px solid rgba(255,255,255,.1);margin-top:.2rem;">'
+           + '<span style="color:#ccc;font-weight:700;font-size:.88rem;">Total general</span>'
+           + '<span style="color:#FF5A00;font-weight:900;font-size:1rem;">$' + totGen.toFixed(2) + '</span>'
+           + '</div>';
+        res.innerHTML = h;
+    }
+    if (ov) {
+        ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;'
+            + 'background:rgba(0,0,0,.92);z-index:99999;display:flex;'
+            + 'align-items:flex-end;justify-content:center;padding:0;';
+    }
+}
+
+function editarCuentaDesdeModal(cuentaIndex) {
+    // Cerrar modal de envío
+    cerrarEnviarAdminModal();
+    // Ir a la cuenta seleccionada
+    var cs = window._cuentasSys;
+    if (!cs) return;
+    var conItems = cs.cuentas.filter(function(c){ return c.items.length > 0; });
+    if (conItems[cuentaIndex]) {
+        cs.activa = conItems[cuentaIndex].id;
+        // Abrir carrito
+        var cm = document.getElementById('cart-modal');
+        if (cm) cm.classList.add('active');
+        if (window.renderCuentasTabs) window.renderCuentasTabs();
+        if (window.renderCartItems) window.renderCartItems();
+    }
+}
+
+function cerrarEnviarAdminModal() {
+    var ov = document.getElementById('enviar-admin-overlay');
+    if (ov) { ov.style.display = 'none'; ov.style.zIndex = '-1'; }
+}
+
+function confirmarEnvioAdmin() { _doEnvioAdmin(); }
+async function _doEnvioAdmin() {
+    var cs = window._cuentasSys;
+    if (!cs) return;
+    var btn = document.getElementById('btn-confirmar-envio');
+    if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+    try {
+        var con = cs.cuentas.filter(function(c){ return c.items.length > 0; });
+        var ts = Date.now(); var env = 0;
+        for (var i = 0; i < con.length; i++) {
+            var c = con[i];
+            var tot = c.items.reduce(function(s,it){ return s+it.precio; },0);
+            var cajero = window._cajeroActivo || null;
+            var pedido = {
+                ticketId: 'TT-' + ts + '-' + (i+1),
+                cliente: c.nombre,
+                items: c.items.map(function(it){
+                    return it.nombre + (it.modificaciones&&it.modificaciones.length?' ('+it.modificaciones.join(', ')+')'  :'') + ' - $'+it.precio.toFixed(2);
+                }).join(' | '),
+                itemsData: c.items,
+                total: tot,
+                estado: 'Nuevo',
+                tipo: 'local',
+                metodoPago: 'pendiente',
+                cuentaColor: c.color,
+                telefono: c._telefono || '',
+                cajeroId:     cajero ? cajero.id : 'directo',
+                cajeroNombre: cajero ? cajero.nombre : 'Sistema',
+                cajeroRol:    cajero ? cajero.rol : ''
+            };
+            if (window._addPedidoToFirestore) {
+                var id = await window._addPedidoToFirestore(pedido);
+            } else {
+                throw new Error('_addPedidoToFirestore no esta disponible - app.js no cargo correctamente');
+            }
+            env++;
+        }
+        cerrarEnviarAdminModal();
+
+        // Marcar que la orden fue enviada — habilitar pago
+        window._ordenEnviada = true;
+
+        // Mostrar notificación "Ahora puedes pagar"
+        var payToast = document.getElementById('orden-status-toast');
+        if (!payToast) {
+            payToast = document.createElement('div');
+            payToast.id = 'orden-status-toast';
+            payToast.style.cssText = 'position:fixed;top:1rem;left:50%;transform:translateX(-50%);' +
+                'background:#1C1C1C;border:2px solid #25D366;color:#fff;' +
+                'padding:1rem 1.5rem;border-radius:14px;z-index:99999;' +
+                'font-family:inherit;font-size:.9rem;text-align:center;' +
+                'max-width:300px;width:90%;box-shadow:0 4px 20px rgba(0,0,0,.5);';
+            document.body.appendChild(payToast);
+        }
+        payToast.innerHTML = '<div style="font-size:1.4rem;margin-bottom:.4rem;">✅</div>' +
+            '<div style="font-weight:800;color:#25D366;margin-bottom:.3rem;">¡Orden enviada!</div>' +
+            '<div style="font-size:.78rem;color:#aaa;">La cocina recibió tu pedido</div>';
+        payToast.style.display = 'block';
+        clearTimeout(window._toastTimer);
+        window._toastTimer = setTimeout(function(){ payToast.style.display = 'none'; }, 4000);
+
+        // Resetear cuentas mutando el objeto (no reemplazando)
+        resetCuentas();
+
+        // Cerrar carrito
+        var cartModal = document.getElementById('cart-modal');
+        if (cartModal) cartModal.classList.remove('active');
+
+        // Toast de confirmación
+        var toast = document.getElementById('undo-toast');
+        var msg = document.getElementById('undo-toast-msg');
+        if (toast && msg) {
+            msg.textContent = '✅ ' + env + ' orden(es) enviadas — listo para nuevo pedido';
+            toast.style.display = 'flex';
+            clearTimeout(window._undoTimer);
+            window._undoTimer = setTimeout(function(){ toast.style.display='none'; }, 5000);
+        }
+        if (btn) { btn.disabled = false; btn.textContent = 'Confirmar y Enviar'; }
+    } catch(e) {
+        console.error('ERROR enviando al admin:', e);
+        alert('Error al enviar: ' + e.message + '\n\nRevisa la consola para mas detalles.');
+        if (btn) { btn.disabled = false; btn.textContent = 'Confirmar y Enviar'; }
+    }
+}
+
+function simularPago(metodo) {
+    var cs = window._cuentasSys;
+    var total = cs ? cs.cuentas.reduce(function(s,c){
+        return s + c.items.reduce(function(ss,i){ return ss+i.precio; },0);
+    }, 0) : 0;
+
+    var icono  = metodo === 'efectivo' ? '💵' : '💳';
+    var nombre = metodo === 'efectivo' ? 'Efectivo' : 'Tarjeta';
+
+    // Mostrar confirmación de pago simulado
+    var ov = document.getElementById('pago-confirm-overlay');
+    var ico = document.getElementById('pago-confirm-icon');
+    var tit = document.getElementById('pago-confirm-titulo');
+    var tot = document.getElementById('pago-confirm-total');
+    var met = document.getElementById('pago-confirm-metodo');
+
+    if (ico) ico.textContent = icono;
+    if (tit) tit.textContent = 'Confirmar Pago';
+    if (tot) tot.textContent = '$' + total.toFixed(2);
+    if (met) met.textContent = nombre;
+
+    // Guardar método para confirmar
+    window._metodoPagoActual = metodo;
+
+    // Cerrar POS, abrir confirmación
+    var posModal = document.getElementById('pos-modal');
+    if (posModal) posModal.classList.remove('active');
+    if (ov) ov.style.display = 'flex';
+}
+
+function cerrarPagoConfirm() {
+    var ov = document.getElementById('pago-confirm-overlay');
+    if (ov) ov.style.display = 'none';
+    // Regresar al POS
+    var posModal = document.getElementById('pos-modal');
+    if (posModal) posModal.classList.add('active');
+}
+
+async function confirmarPagoSimulado() {
+    var metodo   = window._metodoPagoActual || 'efectivo';
+    var totalGen = window._totalPagoActual || 0;
+    if (!totalGen) {
+        var cs = window._cuentasSys;
+        if (cs) cs.cuentas.forEach(function(c){
+            c.items.forEach(function(i){ totalGen += (i.precio||0); });
+        });
+    }
+
+    // Cerrar modal
+    var ov = document.getElementById('pago-confirm-overlay');
+    if (ov) ov.style.display = 'none';
+
+    // Actualizar estado del pedido en Firestore si existe
+    // (solo si hay pedidos recientes enviados)
+    // Registrar cobro en turno de cajero
+    try {
+        var turnoId = sessionStorage.getItem('tt_turno_caja_id');
+        if (turnoId && totalGen > 0 && window._registrarCobro) {
+            await window._registrarCobro(turnoId, metodo, totalGen);
+        }
+    } catch(e) { console.warn('No se pudo registrar cobro:', e); }
+
+    // Cerrar modales
+    var pagoOv = document.getElementById('pago-confirm-overlay');
+    if (pagoOv) pagoOv.style.display = 'none';
+    var cartModal = document.getElementById('cart-modal');
+    if (cartModal) cartModal.classList.remove('active');
+    var posModal = document.getElementById('pos-modal');
+    if (posModal) posModal.classList.remove('active');
+
+    // Resetear TODAS las cuentas — listo para nuevo pedido
+    window._ordenEnviada = false;
+    resetCuentas();
+
+    // Toast de confirmación
+    var toast = document.getElementById('undo-toast');
+    var msg   = document.getElementById('undo-toast-msg');
+    if (toast && msg) {
+        var icono = metodo === 'efectivo' ? '💵' : '💳';
+        msg.textContent = icono + ' $' + totalGen.toFixed(2) + ' — ' + (metodo === 'efectivo' ? 'Efectivo' : 'Tarjeta') + ' ✅ Listo para nuevo pedido';
+        toast.style.display = 'flex';
+        clearTimeout(window._undoTimer);
+        window._undoTimer = setTimeout(function(){ toast.style.display = 'none'; }, 5000);
+    }
+}
+
+/* Stub — menu.js sobreescribe esta función */
+window.actualizarBotonAgregarTodo = window.actualizarBotonAgregarTodo || function(){};
+
+function mostrarPanelCajero() {
+    var ov = document.getElementById('cajero-panel-overlay');
+    if (!ov) return;
+    ov.style.display = 'flex';
+    cargarPanelCajero();
+}
+
+function cerrarPanelCajero() {
+    var ov = document.getElementById('cajero-panel-overlay');
+    if (ov) ov.style.display = 'none';
+}
+
+function cerrarSesionCajero() {
+    if (!confirm('¿Cerrar sesión de cajero?')) return;
+    sessionStorage.removeItem('tt_cajero_id');
+    sessionStorage.removeItem('tt_cajero_nombre');
+    sessionStorage.removeItem('tt_cajero_rol');
+    sessionStorage.removeItem('tt_cajero_ts');
+    sessionStorage.removeItem('tt_turno_caja_id');
+    window._cajeroActivo = null;
+    var banner = document.getElementById('cajero-banner');
+    var btn    = document.getElementById('btn-cajero-header');
+    if (banner) banner.style.display = 'none';
+    if (btn)    btn.style.display    = 'none';
+    window.location.href = 'pages/auth.html';
+}
+
+async function cargarPanelCajero() {
+    var cs = window._cajeroActivo;
+    if (!cs) return;
+
+    // Tab activo
+    var tab = window._cajeroTabActivo || 'resumen';
+    document.querySelectorAll('.caj-tab').forEach(function(t) {
+        t.classList.toggle('active', t.dataset.tab === tab);
+    });
+    document.querySelectorAll('.caj-pane').forEach(function(p) {
+        p.style.display = p.dataset.pane === tab ? 'block' : 'none';
+    });
+
+    // Cargar datos del turno activo
+    var turnoId = sessionStorage.getItem('tt_turno_caja_id');
+    var turno   = null;
+    if (turnoId && window._getTurnoCaja) {
+        turno = await window._getTurnoCaja(turnoId);
+    }
+
+    renderResumenCajero(cs, turno);
+    if (tab === 'ordenes') await cargarOrdenesCajero(cs);
+}
+
+function switchCajeroTab(tab) {
+    window._cajeroTabActivo = tab;
+    cargarPanelCajero();
+}
+
+function renderResumenCajero(cs, turno) {
+    var r = document.getElementById('caj-resumen-content');
+    if (!r) return;
+
+    var fondoInicial = turno ? (turno.fondoInicial || 0) : 0;
+    var totalEfectivo = turno ? (turno.totalEfectivo || 0) : 0;
+    var totalTarjeta  = turno ? (turno.totalTarjeta  || 0) : 0;
+    var totalOrdenes  = turno ? (turno.totalOrdenes  || 0) : 0;
+    var totalCobrado  = totalEfectivo + totalTarjeta;
+    var balanceCaja   = fondoInicial + totalEfectivo;
+    var inicio        = turno ? new Date(turno.inicio?.seconds * 1000) : null;
+
+    r.innerHTML =
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.85rem;">' +
+            statCard('💵', 'Fondo inicial', '$' + fondoInicial.toFixed(2), '#25D366') +
+            statCard('🧾', 'Órdenes', totalOrdenes, '#3B82F6') +
+            statCard('💵', 'Cobrado efectivo', '$' + totalEfectivo.toFixed(2), '#25D366') +
+            statCard('💳', 'Cobrado tarjeta', '$' + totalTarjeta.toFixed(2), '#A78BFA') +
+            statCard('💰', 'Total cobrado', '$' + totalCobrado.toFixed(2), '#FF5A00') +
+            statCard('🏦', 'Balance en caja', '$' + balanceCaja.toFixed(2), '#F59E0B') +
+        '</div>' +
+        (inicio ? '<div style="font-size:.75rem;color:#888;text-align:center;margin-bottom:.75rem;">Turno iniciado: ' + inicio.toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'}) + '</div>' : '') +
+        (turno
+            ? '<button onclick="hacerCorteCaja()" style="width:100%;padding:.78rem;background:linear-gradient(135deg,#FF5A00,#FF8800);color:#fff;border:none;border-radius:11px;font-family:inherit;font-size:.9rem;font-weight:800;cursor:pointer;margin-bottom:.5rem;">🧾 Hacer Corte de Caja</button>'
+            : '<button onclick="abrirAsignarFondo()" style="width:100%;padding:.78rem;background:linear-gradient(135deg,#25D366,#18a849);color:#fff;border:none;border-radius:11px;font-family:inherit;font-size:.9rem;font-weight:800;cursor:pointer;margin-bottom:.5rem;">💵 Asignar Fondo e Iniciar Turno</button>'
+        ) +
+        '<button onclick="cerrarSesionCajero()" style="width:100%;padding:.65rem;background:transparent;border:1px solid rgba(255,68,68,.3);color:#FF4444;border-radius:11px;font-family:inherit;font-size:.85rem;cursor:pointer;">Cerrar sesión</button>';
+}
+
+function statCard(ico, label, val, color) {
+    return '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.75rem;text-align:center;">' +
+        '<div style="font-size:1.3rem;margin-bottom:.2rem;">' + ico + '</div>' +
+        '<div style="font-size:.68rem;color:#888;margin-bottom:.15rem;">' + label.toUpperCase() + '</div>' +
+        '<div style="font-size:1.1rem;font-weight:900;color:' + color + ';">' + val + '</div>' +
+    '</div>';
+}
+
+function abrirAsignarFondo() {
+    var ov = document.getElementById('fondo-overlay');
+    if (ov) {
+        ov.style.display = 'flex';
+        setTimeout(function(){ document.getElementById('fondo-input')?.focus(); }, 100);
+    }
+}
+
+function cerrarAsignarFondo() {
+    var ov = document.getElementById('fondo-overlay');
+    if (ov) ov.style.display = 'none';
+}
+
+async function confirmarFondo() {
+    var inp = document.getElementById('fondo-input');
+    var fondo = parseFloat(inp?.value || 0);
+    if (isNaN(fondo) || fondo < 0) { alert('Ingresa un monto válido'); return; }
+
+    var cs = window._cajeroActivo;
+    var btn = document.getElementById('btn-confirmar-fondo');
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
+    try {
+        var turnoData = {
+            cajeroId:      cs.id,
+            cajeroNombre:  cs.nombre,
+            cajeroRol:     cs.rol,
+            fondoInicial:  fondo,
+            totalEfectivo: 0,
+            totalTarjeta:  0,
+            totalOrdenes:  0,
+            inicio:        new Date(),
+            estado:        'activo'
+        };
+
+        if (window._crearTurnoCaja) {
+            var id = await window._crearTurnoCaja(turnoData);
+            sessionStorage.setItem('tt_turno_caja_id', id);
+        }
+
+        cerrarAsignarFondo();
+        cargarPanelCajero();
+    } catch(e) {
+        alert('Error: ' + e.message);
+        if (btn) { btn.disabled = false; btn.textContent = 'Iniciar Turno'; }
+    }
+}
+
+async function hacerCorteCaja() {
+    var turnoId = sessionStorage.getItem('tt_turno_caja_id');
+    var cs = window._cajeroActivo;
+    if (!turnoId || !cs) { alert('No hay turno activo'); return; }
+
+    var turno = window._getTurnoCaja ? await window._getTurnoCaja(turnoId) : null;
+    if (!turno) return;
+
+    var fondoInicial  = turno.fondoInicial  || 0;
+    var totalEfectivo = turno.totalEfectivo || 0;
+    var totalTarjeta  = turno.totalTarjeta  || 0;
+    var totalCobrado  = totalEfectivo + totalTarjeta;
+    var balanceCaja   = fondoInicial + totalEfectivo;
+    var inicio = turno.inicio ? new Date(turno.inicio.seconds * 1000) : new Date();
+    var fin    = new Date();
+    var durMin = Math.round((fin - inicio) / 60000);
+
+    var reporte = [
+        '🧾 CORTE DE CAJA — TORTAS TORTUGA',
+        '═══════════════════════════════',
+        'Cajero: ' + cs.nombre + ' (' + cs.rol + ')',
+        'Inicio: ' + inicio.toLocaleString('es-MX'),
+        'Cierre: ' + fin.toLocaleString('es-MX'),
+        'Duración: ' + durMin + ' min',
+        '',
+        '─── RESUMEN ───────────────────',
+        'Órdenes tomadas: ' + (turno.totalOrdenes || 0),
+        'Fondo inicial:   $' + fondoInicial.toFixed(2),
+        'Cobrado efectivo: $' + totalEfectivo.toFixed(2),
+        'Cobrado tarjeta:  $' + totalTarjeta.toFixed(2),
+        'TOTAL COBRADO:    $' + totalCobrado.toFixed(2),
+        '─── BALANCE ───────────────────',
+        'Balance en caja: $' + balanceCaja.toFixed(2),
+        '═══════════════════════════════'
+    ].join('\n');
+
+    var ov = document.getElementById('corte-overlay');
+    var txt = document.getElementById('corte-texto');
+    if (ov && txt) {
+        txt.textContent = reporte;
+        ov.style.display = 'flex';
+    }
+
+    // Marcar turno como cerrado
+    if (window._cerrarTurnoCaja) {
+        await window._cerrarTurnoCaja(turnoId, { fin: fin, estado: 'cerrado', reporte: reporte });
+    }
+    sessionStorage.removeItem('tt_turno_caja_id');
+}
+
+function cerrarCorte() {
+    var ov = document.getElementById('corte-overlay');
+    if (ov) ov.style.display = 'none';
+    cargarPanelCajero();
+}
+
+function imprimirCorte() {
+    var txt = document.getElementById('corte-texto')?.textContent || '';
+    var win = window.open('', '_blank', 'width=400,height=600');
+    win.document.write('<pre style="font-family:monospace;font-size:14px;padding:20px;">' + txt + '</pre>');
+    win.document.close();
+    win.print();
+}
+
+async function cargarOrdenesCajero(cs) {
+    var cont = document.getElementById('caj-ordenes-content');
+    if (!cont) return;
+    cont.innerHTML = '<div style="text-align:center;color:#888;padding:1rem;">Cargando órdenes...</div>';
+
+    if (!window._getOrdenesCajero) {
+        cont.innerHTML = '<div style="text-align:center;color:#555;padding:1rem;">Conectando...</div>';
+        return;
+    }
+
+    try {
+        var ordenes = await window._getOrdenesCajero(cs.id);
+        if (!ordenes || ordenes.length === 0) {
+            cont.innerHTML = '<div style="text-align:center;color:#555;padding:1.5rem;">Sin órdenes en este turno</div>';
+            return;
+        }
+        cont.innerHTML = ordenes.map(function(p) {
+            var tot = parseFloat(p.total || 0);
+            var fecha = p.creado?.seconds ? new Date(p.creado.seconds*1000).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) : '';
+            return '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.65rem .85rem;margin-bottom:.4rem;">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                '<div><div style="font-size:.82rem;font-weight:700;color:#fff;">' + (p.cliente || p.nombre || 'Cliente') + '</div>' +
+                '<div style="font-size:.7rem;color:#888;">' + fecha + ' · ' + (p.metodoPago || 'pendiente') + '</div></div>' +
+                '<div style="font-size:.9rem;font-weight:800;color:#25D366;">$' + tot.toFixed(2) + '</div>' +
+                '</div></div>';
+        }).join('');
+    } catch(e) {
+        cont.innerHTML = '<div style="color:#FF4444;padding:1rem;">Error: ' + e.message + '</div>';
+    }
+}
+
+// Registrar pago cuando se confirma en POS
+var _origConfirmarPagoSimulado = window.confirmarPagoSimulado;
+window.confirmarPagoSimulado = async function() {
+    var metodo = window._metodoPagoActual || 'efectivo';
+    var cs     = window._cuentasSys;
+    var total  = cs ? cs.cuentas.reduce(function(s,c){ return s+c.items.reduce(function(ss,i){return ss+i.precio;},0);},0) : 0;
+    var turnoId = sessionStorage.getItem('tt_turno_caja_id');
+
+    // Registrar cobro en Firestore
+    if (turnoId && total > 0 && window._registrarCobro) {
+        await window._registrarCobro(turnoId, metodo, total);
+    }
+
+    if (_origConfirmarPagoSimulado) await _origConfirmarPagoSimulado();
+};
+
+function abrirPagoDirecto() {
+    // Verificar que la orden fue enviada primero
+    if (!window._ordenEnviada) {
+        var t = document.getElementById('orden-status-toast');
+        if (!t) {
+            t = document.createElement('div');
+            t.id = 'orden-status-toast';
+            t.style.cssText = 'position:fixed;top:1.2rem;left:50%;transform:translateX(-50%);background:#1C1C1C;border:2px solid #FF5A00;color:#fff;padding:1rem 1.5rem;border-radius:14px;z-index:99999;font-family:inherit;font-size:.88rem;text-align:center;max-width:300px;width:90%;box-shadow:0 4px 20px rgba(0,0,0,.5);';
+            document.body.appendChild(t);
+        }
+        t.innerHTML = '<div style="font-size:1.3rem;margin-bottom:.35rem;">⚠️</div><div style="font-weight:800;margin-bottom:.25rem;">Primero envía la orden</div><div style="font-size:.76rem;color:#aaa;">Presiona <strong style="color:#FF5A00;">Enviar Orden</strong> antes de pagar</div>';
+        t.style.display = 'block';
+        clearTimeout(window._toastTimer);
+        window._toastTimer = setTimeout(function(){ t.style.display='none'; }, 3500);
+        return;
+    }
+    var total = 0;
+    var cs = window._cuentasSys;
+    if (cs) {
+        cs.cuentas.forEach(function(c) {
+            c.items.forEach(function(i) { total += (i.precio || 0); });
+        });
+    }
+    if (!total) {
+        var el = document.getElementById('cart-total');
+        if (el) total = parseFloat(el.textContent.replace('$','').trim()) || 0;
+    }
+    if (total <= 0) { alert('No hay productos en el carrito.'); return; }
+
+    window._totalPagoDirecto = total;
+
+    var totEl = document.getElementById('pago-opciones-total');
+    if (totEl) totEl.textContent = '$' + total.toFixed(2);
+
+    var ov = document.getElementById('pago-opciones-overlay');
+    if (ov) ov.style.display = 'flex';
+}
+
+
+function elegirMetodoPago(metodo) {
+    document.getElementById('pago-opciones-overlay').style.display = 'none';
+
+    var total = window._totalPagoDirecto || 0;
+    window._metodoPagoActual = metodo;
+    window._totalPagoActual  = total;
+
+    if (metodo === 'tarjeta') {
+        // Abrir Stripe Payment Link en nueva ventana
+        // El cajero confirma el pago manualmente cuando Stripe lo procese
+        var stripeUrl = 'https://buy.stripe.com/test_cNicN54Gs2Hyd9B3r96Ri00';
+        window.open(stripeUrl, '_blank');
+
+        // Mostrar confirmación manual para que el cajero confirme
+        var ov  = document.getElementById('pago-confirm-overlay');
+        var ico = document.getElementById('pago-confirm-icon');
+        var tit = document.getElementById('pago-confirm-titulo');
+        var tot = document.getElementById('pago-confirm-total');
+        var met = document.getElementById('pago-confirm-metodo');
+        var sub = document.getElementById('pago-confirm-subtxt');
+
+        if (ico) ico.textContent = '💳';
+        if (tit) tit.textContent = 'Pago con Tarjeta';
+        if (tot) tot.textContent = '$' + total.toFixed(2);
+        if (met) met.textContent = 'Stripe — Tarjeta';
+        if (sub) sub.textContent = 'Confirma aquí cuando Stripe complete el cobro.';
+        if (ov) ov.style.display = 'flex';
+
+    } else {
+        // Efectivo — mostrar confirmación directa
+        var ov  = document.getElementById('pago-confirm-overlay');
+        var ico = document.getElementById('pago-confirm-icon');
+        var tit = document.getElementById('pago-confirm-titulo');
+        var tot = document.getElementById('pago-confirm-total');
+        var met = document.getElementById('pago-confirm-metodo');
+        var sub = document.getElementById('pago-confirm-subtxt');
+
+        if (ico) ico.textContent = '💵';
+        if (tit) tit.textContent = 'Pago en Efectivo';
+        if (tot) tot.textContent = '$' + total.toFixed(2);
+        if (met) met.textContent = 'Efectivo';
+        if (sub) sub.textContent = 'Recibe el efectivo y confirma el cobro.';
+        if (ov) ov.style.display = 'flex';
+    }
+}
+
+function resetCuentas() {
+    var cs = window._cuentasSys;
+    if (cs) {
+        // Mutar el objeto existente — no reemplazar
+        // para que app.js (CS) vea los cambios
+        cs.cuentas.length = 0;
+        cs.cuentas.push({ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' });
+        cs.activa   = 1;
+        cs.counter  = 1;
+    }
+    if (window.renderCuentasTabs) window.renderCuentasTabs();
+    if (window.renderCartItems)   window.renderCartItems();
+    // Ocultar botón eliminar cuenta
+    var btnDel = document.getElementById('btn-eliminar-cuenta');
+    if (btnDel) btnDel.style.display = 'none';
+}
+
+function switchCuenta(cid) {
+    var cs = window._cuentasSys;
+    if (cs) { cs.activa = cid; window.renderCuentasTabs(); window.renderCartItems(); }
+}
+function agregarNuevaCuenta() {
+    var cs = window._cuentasSys;
+    if (!cs) return;
+    cs.counter = (cs.counter || 1) + 1;
+    var colors = ['#FF5A00','#25D366','#3B82F6','#A78BFA','#F59E0B','#EC4899'];
+    cs.cuentas.push({ id: cs.counter, nombre: 'Cuenta ' + cs.counter, items: [], color: colors[cs.cuentas.length % colors.length] });
+    cs.activa = cs.counter;
+    window.renderCuentasTabs();
+    window.renderCartItems();
+    mostrarNombreCuenta();
+}
+function eliminarCuentaActiva() {
+    var cs = window._cuentasSys;
+    if (!cs) { alert('Error: sistema de cuentas no disponible'); return; }
+    eliminarCuenta(cs.activa);
+}
+
+function eliminarCuenta(cid) {
+    var cs = window._cuentasSys;
+    if (!cs || cs.cuentas.length <= 1) return;
+    var c = cs.cuentas.find(function(x){ return x.id === cid; });
+    if (!c) return;
+
+    // Guardar copia para deshacer
+    var backup = JSON.parse(JSON.stringify(cs.cuentas));
+    var backupActiva = cs.activa;
+
+    // Mover items a primera cuenta antes de eliminar
+    var idx = cs.cuentas.findIndex(function(x){ return x.id === cid; });
+    if (idx >= 0) {
+        if (cs.cuentas[idx].items.length) {
+            var dest = idx === 0 ? cs.cuentas[1] : cs.cuentas[0];
+            dest.items = dest.items.concat(cs.cuentas[idx].items);
+        }
+        cs.cuentas.splice(idx, 1);
+    }
+    if (cs.activa === cid) cs.activa = cs.cuentas[0].id;
+
+    window.renderCuentasTabs();
+    window.renderCartItems();
+
+    // Mostrar toast con opción de deshacer
+    var toast = document.getElementById('undo-toast');
+    var msg   = document.getElementById('undo-toast-msg');
+    if (toast && msg) {
+        msg.textContent = 'Cuenta "' + c.nombre + '" eliminada';
+        toast.style.display = 'flex';
+        clearTimeout(window._undoTimer);
+        // Botón deshacer
+        var btn = document.getElementById('undo-toast-btn');
+        if (btn) {
+            var newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            newBtn.addEventListener('click', function() {
+                cs.cuentas = backup;
+                cs.activa  = backupActiva;
+                toast.style.display = 'none';
+                window.renderCuentasTabs();
+                window.renderCartItems();
+            });
+        }
+        window._undoTimer = setTimeout(function() {
+            toast.style.display = 'none';
+        }, 4000);
+    }
+}
+
+function cerrarConfirmEliminar() {
+    var o = document.getElementById('confirm-eliminar-overlay');
+    if (o) o.style.display = 'none';
+}
+function removeItemCuenta(idx) {
+    var cs = window._cuentasSys;
+    if (!cs) return;
+    var c = cs.cuentas.find(function(x){ return x.id === cs.activa; });
+    if (c) c.items.splice(idx, 1);
+    window.renderCuentasTabs();
+    window.renderCartItems();
+}
+function mostrarNombreCuenta() {
+    var cs = window._cuentasSys;
+    var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
+    var inp = document.getElementById('nombre-cuenta-input');
+    if (inp && c) { inp.value = c.nombre; setTimeout(function(){ inp.focus(); inp.select(); }, 100); }
+    var ov = document.getElementById('nombre-modal-overlay');
+    if (ov) ov.classList.add('open');
+}
+function cerrarNombreModal() {
+    var ov = document.getElementById('nombre-modal-overlay');
+    if (ov) ov.classList.remove('open');
+}
+function guardarNombreCuenta() {
+    var cs = window._cuentasSys;
+    var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
+    var inp = document.getElementById('nombre-cuenta-input');
+    if (c && inp && inp.value.trim()) c.nombre = inp.value.trim();
+    cerrarNombreModal();
+    window.renderCuentasTabs();
+    window.renderCartItems();
+}
+function limpiarCuentaActual() {
+    var cs = window._cuentasSys;
+    var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
+    if (c && confirm('¿Limpiar ' + c.nombre + '?')) {
+        c.items = [];
+        window.renderCuentasTabs();
+        window.renderCartItems();
+    }
+}
+function ordenarCuentaActiva() {
+    var cs = window._cuentasSys;
+    if (!cs) return;
+    var c = cs.cuentas.find(function(x){ return x.id === cs.activa; });
+    if (!c || c.items.length === 0) {
+        alert('La cuenta "' + (c ? c.nombre : '') + '" está vacía. Agrega productos primero.');
+        return;
+    }
+    abrirOrdenModal(cs.activa);
+}
+
+function ordenarTodasWhatsApp() {
+    var cs = window._cuentasSys;
+    if (!cs) return;
+    var totalItems = cs.cuentas.reduce(function(s,c){ return s + c.items.length; }, 0);
+    if (totalItems === 0) { alert('No hay productos en ninguna cuenta.'); return; }
+
+    var lineas = ['🐢 *TORTAS TORTUGA — ORDEN COMPLETA*', '━━━━━━━━━━━━━━━━━━━━', ''];
+    cs.cuentas.forEach(function(c) {
+        if (!c.items.length) return;
+        var tot = c.items.reduce(function(s,i){ return s+i.precio; }, 0);
+        lineas.push('━ *' + c.nombre + '* — $' + tot.toFixed(2) + ' ━');
+        c.items.forEach(function(item, i) {
+            var linea = (i+1) + '. ' + item.nombre;
+            if (item.modificaciones && item.modificaciones.length) {
+                linea += ' (' + item.modificaciones.join(', ') + ')';
+            }
+            linea += ' — $' + item.precio.toFixed(2);
+            lineas.push(linea);
+        });
+        lineas.push('');
+    });
+    var totalGen = cs.cuentas.reduce(function(s,c){
+        return s + c.items.reduce(function(ss,i){ return ss+i.precio; }, 0);
+    }, 0);
+    lineas.push('💰 *TOTAL GENERAL: $' + totalGen.toFixed(2) + '*');
+    window.open('https://wa.me/12108678210?text=' + encodeURIComponent(lineas.join('\n')), '_blank');
+}
+
+function abrirPago() {
+    var cs = window._cuentasSys;
+    if (!cs) return;
+
+    // Calcular total de TODAS las cuentas con items
+    var totalGen = cs.cuentas.reduce(function(s,c){
+        return s + c.items.reduce(function(ss,i){ return ss+i.precio; }, 0);
+    }, 0);
+
+    if (totalGen === 0) {
+        alert('No hay productos en ninguna cuenta.');
+        return;
+    }
+
+    var total = totalGen;
+    var posModal = document.getElementById('pos-modal');
+    if (posModal) {
+        var totEl = document.getElementById('pos-total-amount');
+        if (totEl) totEl.textContent = '$' + total.toFixed(2);
+        posModal.classList.add('active');
+    }
+    // Cerrar carrito
+    var cartModal = document.getElementById('cart-modal');
+    if (cartModal) cartModal.classList.remove('active');
+}
+
+/* Mostrar botón "Enviar todas" cuando hay más de 1 cuenta con items */
+function actualizarBotones() {
+    var cs = window._cuentasSys;
+    if (!cs) return;
+    var cuentasConItems = cs.cuentas.filter(function(c){ return c.items.length > 0; }).length;
+    var btnTodas = document.getElementById('btn-todas-cuentas');
+    if (btnTodas) btnTodas.style.display = cuentasConItems > 1 ? 'flex' : 'none';
+}
+
+function cerrarOrdenModal() {
+    var ov = document.getElementById('orden-cuenta-overlay');
+    var m = document.getElementById('orden-cuenta-modal');
+    if (ov) { ov.style.opacity='0'; ov.style.pointerEvents='none'; }
+    if (m) m.style.transform='translateY(100%)';
+    window._ordenCuentaId = null;
+}
+</script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=1784498934">
     <script type="module">
         import { auth, db } from './js/firebase-config.js';
         import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
         import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
         onAuthStateChanged(auth, async (user) => {
-            if (!user) { window.location.href = 'pages/auth.html'; return; }
-            window._firebaseUser = user;
+            // El menú es público — no redirigir si no hay sesión
+            window._firebaseUser = user || null;
+            if (!user) {
+                // Sin sesión: mostrar botón de login en header, ocultar puntos
+                const btnPerfil = document.getElementById('btn-perfil');
+                if (btnPerfil) {
+                    btnPerfil.textContent = '🔑 Iniciar sesión';
+                    btnPerfil.onclick = () => window.location.href = 'pages/auth.html';
+                }
+                return; // Permitir usar el menú sin login
+            }
             try {
                 const idx = await getDoc(doc(db, 'uid_index', user.uid));
                 if (idx.exists()) {
@@ -38,19 +1156,171 @@
         });
         window.cerrarSesion = async () => {
             const { signOut } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
-            await signOut(auth); window.location.href = 'pages/auth.html';
+            await signOut(auth); window.location.reload();
         };
     </script>
+
+<style>
+/* ── ORDERS SCREEN TABS ─────────────────────────────────── */
+#cuentas-tabs { -webkit-overflow-scrolling:touch; }
+#cuentas-tabs::-webkit-scrollbar { display:none; }
+.ctab {
+    display:flex;flex-direction:column;align-items:flex-start;gap:.08rem;
+    background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);
+    border-radius:10px;padding:.42rem .72rem;min-width:88px;cursor:pointer;
+    flex-shrink:0;transition:.15s;
+}
+.ctab.active { background:rgba(255,90,0,.12); }
+.ctab-nom {
+    font-size:.78rem;font-weight:700;color:#fff;white-space:nowrap;
+    max-width:100px;overflow:hidden;text-overflow:ellipsis;
+}
+.ctab-tot { font-size:.68rem;color:#888; }
+.ctab-add {
+    background:rgba(255,90,0,.08);border:1.5px dashed rgba(255,90,0,.3);
+    color:#FF5A00;border-radius:10px;padding:.42rem .75rem;cursor:pointer;
+    font-family:inherit;font-size:.78rem;font-weight:700;white-space:nowrap;
+    flex-shrink:0;transition:.15s;align-self:center;
+}
+.ctab-add:hover { background:rgba(255,90,0,.18); }
+.cart-action-btn {
+    flex:1;padding:.38rem .5rem;background:transparent;
+    border:1px solid;border-radius:8px;cursor:pointer;font-family:inherit;
+    font-size:.72rem;font-weight:700;white-space:nowrap;transition:.15s;
+}
+.cart-action-btn:hover { opacity:.8; }
+/* Cart item move button */
+.item-move-row {
+    display:flex;gap:.3rem;margin-top:.35rem;flex-wrap:wrap;
+}
+.item-move-btn {
+    font-size:.68rem;font-weight:700;padding:.15rem .45rem;border-radius:6px;
+    border:1px solid;cursor:pointer;font-family:inherit;white-space:nowrap;
+    background:transparent;transition:.15s;
+}
+.item-move-btn:hover { opacity:.75; }
+.item-split-btn {
+    font-size:.68rem;font-weight:700;padding:.15rem .5rem;border-radius:6px;
+    background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);
+    color:#F59E0B;cursor:pointer;font-family:inherit;
+}
+/* Nombre modal */
+#nombre-modal-overlay {
+    position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:5000;
+    display:flex;align-items:center;justify-content:center;padding:1rem;
+    opacity:0;pointer-events:none;transition:opacity .2s;
+}
+#nombre-modal-overlay.open { opacity:1;pointer-events:all; }
+#nombre-modal {
+    background:#1A1A1A;border:1px solid rgba(255,255,255,.12);
+    border-radius:16px;padding:1.25rem;width:100%;max-width:340px;
+}
+</style>
+
+
+<style>
+.item-edit-btn {
+    background: rgba(167,139,250,.12);
+    border: 1px solid rgba(167,139,250,.35);
+    color: #A78BFA;
+    border-radius: 6px;
+    padding: .18rem .5rem;
+    font-size: .7rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: .15s;
+}
+.item-edit-btn:hover { background: rgba(167,139,250,.22); }
+.cart-item { flex-wrap: wrap; }
+.item-mods { font-size: .72rem; color: #888; margin-top: .15rem; }
+</style>
+
 </head>
 <body>
 <header class="app-header">
-        <a href="index.html" class="app-logo" style="text-decoration:none;">Tortas Tortuga</a>
+        <a href="index.html" class="app-logo" style="text-decoration:none;display:flex;align-items:center;gap:.6rem;">
+          <img loading="lazy" src="/tortastortugav8/icons/icon-192.png" alt="Tortas Tortuga"
+            style="width:46px;height:46px;border-radius:50%;object-fit:cover;
+                   box-shadow:0 0 0 2px rgba(255,90,0,.4);flex-shrink:0;">
+          <span style="display:flex;flex-direction:column;line-height:1.1;">
+            <span style="font-size:1rem;font-weight:900;color:#FF5A00;letter-spacing:.02em;">TORTAS</span>
+            <span style="font-size:1rem;font-weight:900;color:#fff;letter-spacing:.02em;">TORTUGA</span>
+          </span>
+        </a>
+    <!-- Banner cajero (solo visible cuando hay sesión de cajero) -->
+    <div id="cajero-banner" style="display:none;background:rgba(255,90,0,.15);
+        border:1px solid rgba(255,90,0,.3);border-radius:8px;
+        padding:.3rem .65rem;font-size:.72rem;color:#FF5A00;font-weight:700;">
+        🏪 <span id="cajero-nombre-header"></span>
+    </div>
     <div class="header-actions">
         <button class="clear-cart-btn" id="clear-cart-btn" onclick="limpiarCarrito()" style="display:none;">Vaciar</button>
         <button class="signout-btn" onclick="window.location.href='index.html'" title="Ir al inicio"> Inicio</button>
+        <button class="signout-btn" onclick="window.open('pages/cocina.html','_blank')" title="Cocina KDS" style="background:rgba(251,191,36,.15);border-color:rgba(251,191,36,.3);color:#FBB724;">🧑‍🍳 Cocina</button>
+        <button class="signout-btn" onclick="window.location.href='perfil.html'" title="Mi perfil y puntos" style="background:rgba(255,215,0,.15);border-color:rgba(255,215,0,.3);color:#FFD700;" id="btn-perfil">⭐ Mis Puntos</button>
         <button class="signout-btn" onclick="window.location.href='pages/admin.html'" title="Panel de Administrador"> Admin</button>
+        <button id="btn-cajero-header" onclick="mostrarPanelCajero()"
+            style="display:none;background:rgba(255,90,0,.15);border-color:rgba(255,90,0,.4);
+                   color:#FF5A00;font-weight:700;"
+            class="signout-btn">
+            🏪 Cajero
+        </button>
+        <script>
+        /* Mostrar botón cajero si hay sesión activa */
+        (function() {
+            // Leer datos desde URL params (vienen del login cajero)
+            var params = new URLSearchParams(window.location.search);
+            var urlId  = params.get('cj_id');
+            var urlNom = params.get('cj_nom');
+            var urlRol = params.get('cj_rol');
+            var urlTs  = params.get('cj_ts');
+
+            // Si vienen por URL, guardar en sessionStorage
+            if (urlId && urlNom) {
+                sessionStorage.setItem('tt_cajero_id',     urlId);
+                sessionStorage.setItem('tt_cajero_nombre', urlNom);
+                sessionStorage.setItem('tt_cajero_rol',    urlRol || 'cajero');
+                sessionStorage.setItem('tt_cajero_ts',     urlTs || Date.now().toString());
+                // Limpiar URL sin recargar
+                window.history.replaceState({}, '', window.location.pathname);
+            }
+
+            // Leer de sessionStorage
+            var id  = sessionStorage.getItem('tt_cajero_id');
+            var nom = sessionStorage.getItem('tt_cajero_nombre');
+            var rol = sessionStorage.getItem('tt_cajero_rol');
+            var ts  = parseInt(sessionStorage.getItem('tt_cajero_ts') || '0');
+
+            if (id && nom && (Date.now() - ts < 20 * 60 * 1000)) {
+                window._cajeroActivo = { id: id, nombre: nom, rol: rol };
+                sessionStorage.setItem('tt_cajero_ts', Date.now().toString());
+
+                var btn    = document.getElementById('btn-cajero-header');
+                var banner = document.getElementById('cajero-banner');
+                var nomEl  = document.getElementById('cajero-nombre-header');
+
+                if (btn) {
+                    btn.style.display = 'inline-flex';
+                    btn.title   = nom + ' (' + rol + ')';
+                    btn.innerHTML = '🏪 ' + nom.split(' ')[0];
+                }
+                if (banner) banner.style.display = 'flex';
+                if (nomEl)  nomEl.textContent = nom + ' · ' + rol;
+            }
+        })();
+        </script>
         <button class="signout-btn" onclick="cerrarSesion()" title="Cerrar sesion">Salir</button>
-        <div class="cart-icon" id="cart-icon"> <span id="cart-count">0</span></div>
+        <div class="cart-icon" id="cart-icon" onclick="abrirCarrito()" title="Ver orden">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                 style="display:block;">
+                <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+            </svg>
+            <span id="cart-count" style="display:none;">0</span>
+        </div>
     </div>
 </header>
 
@@ -63,175 +1333,302 @@
         <a href="index.html" class="hero-back-btn"> Regresar</a>
     </section>
 
-    <section class="app-menu-section">
-        <h2 class="app-section-title"> Nuestras Tortas</h2>
-        <div class="app-menu-grid" id="menu-container"></div>
+    <!-- TABS DE CATEGORÍAS -->
+    <div id="menu-tabs-bar" style="
+        display:flex;gap:.45rem;padding:.6rem 1rem;
+        overflow-x:auto;-webkit-overflow-scrolling:touch;
+        background:var(--bg-dark,#121212);
+        position:sticky;top:56px;z-index:90;
+        border-bottom:1px solid rgba(255,255,255,.06);
+        scrollbar-width:none;">
+        <button class="menu-tab active" data-tab="tortas" onclick="switchMenuTab('tortas',this)">
+            🌮 Nuestras Tortas
+        </button>
+        <button class="menu-tab" data-tab="drinks" onclick="switchMenuTab('drinks',this)">
+            🍹 Drinks & Micheladas
+        </button>
+        <button class="menu-tab" data-tab="botanas" onclick="switchMenuTab('botanas',this)">
+            🍿 Para Botanear & Sides
+        </button>
+    </div>
+
+    <!-- TORTAS -->
+    <section class="app-menu-section menu-tab-content" id="tab-tortas">
+        <div class="app-menu-grid" id="menu-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;padding:.5rem 0;"></div>
     </section>
 
-    <section class="app-menu-section">
-        <h2 class="app-section-title"> Drinks & Micheladas</h2>
-        <div class="app-menu-grid drinks-grid" id="drinks-container"></div>
+    <!-- DRINKS -->
+    <section class="app-menu-section menu-tab-content" id="tab-drinks" style="display:none;">
+        <div class="app-menu-grid drinks-grid" id="drinks-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;padding:.5rem 0;"></div>
     </section>
 
-    <section class="app-menu-section">
-        <h2 class="app-section-title"> Para Botanear & Sides</h2>
-        <div class="app-menu-grid drinks-grid" id="botanas-container"></div>
+    <!-- BOTANAS -->
+    <section class="app-menu-section menu-tab-content" id="tab-botanas" style="display:none;">
+        <div class="app-menu-grid drinks-grid" id="botanas-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;padding:.5rem 0;"></div>
     </section>
 </main>
 
 <!-- MODAL CARRITO -->
 <div class="modal-overlay" id="cart-modal">
-    <div class="cart-container">
-        <div class="cart-header">
-            <h3>Tu Pedido </h3>
-            <button id="close-cart" class="close-btn">x</button>
+    <div class="cart-container" style="display:flex;flex-direction:column;height:100%;">
+
+        <!-- HEADER -->
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:.9rem 1rem;border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:.5rem;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF5A00"
+                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                </svg>
+                <span style="font-size:1rem;font-weight:800;color:#FF5A00;">Mi Orden</span>
+                <span id="cuenta-label-active"
+                      style="font-size:.75rem;color:#888;background:rgba(255,255,255,.06);
+                             border-radius:6px;padding:.15rem .5rem;"></span>
+            </div>
+            <div style="display:flex;gap:.4rem;align-items:center;">
+                <button id="btn-expandir-lista" type="button" onclick="window.abrirListaCompleta()"
+                    title="Ver todos los productos del pedido"
+                    style="background:rgba(255,90,0,.12);border:1.5px solid rgba(255,90,0,.4);
+                           color:#FF5A00;font-size:.75rem;font-weight:800;border-radius:8px;
+                           padding:0 .7rem;height:34px;cursor:pointer;
+                           display:flex !important;align-items:center;gap:.35rem;white-space:nowrap;
+                           -webkit-tap-highlight-color:transparent;">
+                    <span style="font-size:.95rem;line-height:1;">&#9974;</span>
+                    <span id="btn-expandir-count">Ver todo</span>
+                </button>
+                <button id="close-cart"
+                    style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+                           color:#888;font-size:1.1rem;border-radius:8px;width:32px;height:32px;
+                           cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+            </div>
         </div>
-        <div class="cart-body">
-            <div class="tracker-section" style="margin-bottom: 1.5rem; padding: 1rem; background: var(--surface2); border-radius: 12px; border: 1px solid var(--border);">
-                <p style="font-size:0.9rem; font-weight:700; margin-bottom:0.5rem; display:flex; align-items:center; gap:0.4rem;"> Rastrear Pedido (Ticket)</p>
-                <div style="display:flex; gap:0.5rem;">
-                    <input type="text" id="ticket-search-input" placeholder="Ej. A4B2" style="flex:1; padding:0.6rem; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:white; font-weight:700; text-transform:uppercase;">
-                    <button id="ticket-search-btn" style="background:var(--primary); color:white; border:none; padding:0 1rem; border-radius:8px; font-weight:700; cursor:pointer; transition:0.2s;">Buscar</button>
-                </div>
-                <div id="ticket-search-result" style="margin-top:0.8rem; font-size:0.85rem; display:none; padding:0.8rem; border-radius:8px; background: rgba(0,0,0,0.3);"></div>
+
+        <!-- TABS CUENTAS -->
+        <div id="cuentas-tabs" style="display:flex;gap:.4rem;padding:.6rem .9rem;
+             overflow-x:auto;flex-shrink:0;scrollbar-width:none;
+             border-bottom:1px solid rgba(255,255,255,.06);"></div>
+
+        <!-- BOTONES CUENTA -->
+        <div style="display:flex;gap:.4rem;padding:.4rem .9rem;flex-shrink:0;align-items:center;">
+            <button onclick="window.abrirModalNombreCuenta()"
+                style="flex:2;box-sizing:border-box;padding:.55rem .7rem;
+                       background:rgba(255,90,0,.1);
+                       border:1.5px solid rgba(255,90,0,.35);
+                       color:#fff;border-radius:8px;font-family:inherit;
+                       font-size:.82rem;font-weight:600;cursor:pointer;text-align:left;
+                       display:flex;align-items:center;gap:.5rem;min-width:0;">
+                <span style="flex-shrink:0;">🏷️</span>
+                <span id="nombre-cuenta-display" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Asignar mesa / nombre</span>
+            </button>
+            <button onclick="window.limpiarCuentaActiva()"
+                title="Vaciar productos de esta cuenta"
+                style="flex-shrink:0;padding:.55rem .6rem;background:rgba(255,255,255,.05);
+                       border:1px solid rgba(255,255,255,.1);color:#aaa;
+                       border-radius:8px;font-family:inherit;font-size:.75rem;cursor:pointer;">
+                🗑
+            </button>
+            <button id="btn-eliminar-cuenta" onclick="window.eliminarCuentaActiva()"
+                title="Eliminar esta cuenta"
+                style="flex-shrink:0;padding:.55rem .6rem;background:rgba(244,67,54,.1);
+                       border:1px solid rgba(244,67,54,.3);color:#F44336;
+                       border-radius:8px;font-family:inherit;font-size:.75rem;cursor:pointer;
+                       display:none;">
+                ❌
+            </button>
+        </div>
+
+        <!-- LISTA DE PRODUCTOS -->
+        <div id="cart-items"
+             style="flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:thin;
+                    scrollbar-color:rgba(255,90,0,.3) transparent;"></div>
+
+        <!-- TOTAL + ENVIAR -->
+        <div style="padding:.85rem 1rem;border-top:1px solid rgba(255,255,255,.07);flex-shrink:0;
+                    background:#1A1A1A;">
+            <!-- Acciones de dinero -->
+            <div style="display:flex;gap:.4rem;margin-bottom:.5rem;">
+                <button onclick="window.abrirModalDescuento()"
+                    style="flex:1;padding:.45rem;background:rgba(167,139,250,.12);
+                           border:1px solid rgba(167,139,250,.3);color:#A78BFA;
+                           border-radius:8px;font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer;">
+                    % Descuento
+                </button>
+                <button onclick="window.abrirModalPropina()"
+                    style="flex:1;padding:.45rem;background:rgba(37,211,102,.12);
+                           border:1px solid rgba(37,211,102,.3);color:#25D366;
+                           border-radius:8px;font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer;">
+                    Propina
+                </button>
             </div>
 
-            <div class="cart-items" id="cart-items">
-                <p class="empty-cart">Tu carrito esta vacio </p>
-            </div>
-            <div class="cart-footer">
-                <div class="total-row">
-                    <span>Total:</span>
-                    <span id="cart-total">$0.00</span>
+            <!-- Desglose -->
+            <div id="cart-desglose" style="background:rgba(255,255,255,.03);border-radius:10px;padding:.5rem .7rem;margin-bottom:.5rem;font-size:.78rem;">
+                <div style="display:flex;justify-content:space-between;padding:.15rem 0;color:#aaa;">
+                    <span>Subtotal</span><span id="dsg-subtotal">$0.00</span>
                 </div>
-                <div class="checkout-form">
-                    <div class="form-section-label"> Datos del Cliente</div>
-                    <input type="text" id="customer-name" class="form-input" placeholder="Nombre completo" required>
-                    <div class="phone-field-wrap">
-                        <span class="phone-flag"></span>
-                        <input type="tel" id="customer-phone" class="form-input phone-input" placeholder="Telefono · OBLIGATORIO" inputmode="numeric" required>
-                        <button type="button" id="locate-by-phone-btn" class="locate-phone-btn" title="GPS"></button>
-                    </div>
-                    <p class="phone-hint" id="phone-hint"> Requerido para identificar tu pedido.</p>
-                    <label class="no-phone-check" id="no-phone-label">
-                        <input type="checkbox" id="no-phone-checkbox">
-                        <span> Estoy en la tienda / sin telefono</span>
-                    </label>
-
-                    <div class="form-section-label" style="margin-top:1rem;"> Tipo de Entrega</div>
-                    <div class="delivery-options">
-                        <label class="delivery-label"><input type="radio" name="order-type" value="pickup" checked><span> Recoger</span></label>
-                        <label class="delivery-label"><input type="radio" name="order-type" value="delivery"><span> Domicilio</span></label>
-                    </div>
-
-                    <div class="store-location-card">
-                        <div class="store-loc-header">
-                            <span class="store-loc-icon"></span>
-                            <div>
-                                <div class="store-loc-title">Tortas Tortuga — Tienda</div>
-                                <div class="store-loc-addr">San Antonio, TX 78201</div>
-                            </div>
-                            <a href="https://maps.google.com/?q=29.4241,-98.4936" target="_blank" class="store-map-btn">Ver mapa </a>
-                        </div>
-                        <iframe src="https://www.openstreetmap.org/export/embed.html?bbox=-98.5086,29.4091,-98.4786,29.4391&layer=mapnik&marker=29.4241,-98.4936"
-                            title="Ubicacion tienda" class="store-map-iframe" loading="lazy"></iframe>
-                    </div>
-
-                    <div id="location-section" style="display:none; margin-bottom:1rem;">
-                        <div class="form-section-label"> Tu Ubicacion</div>
-                        <div class="location-tabs">
-                            <button class="loc-tab active" id="tab-gps" type="button"> GPS</button>
-                            <button class="loc-tab" id="tab-address" type="button"> Direccion</button>
-                        </div>
-                        <div id="panel-gps" class="loc-panel">
-                            <button type="button" id="get-location-btn" class="location-btn"> Obtener ubicacion</button>
-                            <p class="live-location-hint"> Comparte tu <strong>ubicacion en vivo</strong> por WhatsApp al repartidor.</p>
-                            <div id="location-status"></div>
-                        </div>
-                        <div id="panel-address" class="loc-panel" style="display:none;">
-                            <input type="text" id="addr-street" class="addr-input" placeholder=" Calle y numero">
-                            <input type="text" id="addr-apt" class="addr-input" placeholder="Apt / Suite (opcional)">
-                            <div class="addr-row">
-                                <input type="text" id="addr-city" class="addr-input" placeholder="Ciudad" value="San Antonio">
-                                <input type="text" id="addr-zip" class="addr-input addr-zip" placeholder="ZIP">
-                            </div>
-                            <button type="button" id="search-address-btn" class="location-btn"> Buscar Direccion</button>
-                            <div id="address-status"></div>
-                        </div>
-                    </div>
-
-                    <div class="wait-time-estimate" id="wait-time-display"> Tiempo estimado: <strong>20 minutos</strong></div>
-
-                    <button id="checkout-btn" class="whatsapp-btn"> Enviar Orden por WhatsApp</button>
-                    <button id="pay-now-btn" class="pay-now-btn"> Pagar Ahora</button>
+                <div id="dsg-row-descuento" style="display:none;justify-content:space-between;padding:.15rem 0;color:#A78BFA;">
+                    <span id="dsg-descuento-label">Descuento</span>
+                    <span id="dsg-descuento">-$0.00</span>
+                </div>
+                <div id="dsg-row-impuesto" style="display:flex;justify-content:space-between;padding:.15rem 0;color:#aaa;">
+                    <span id="dsg-impuesto-label">Sales Tax</span><span id="dsg-impuesto">$0.00</span>
+                </div>
+                <div id="dsg-row-propina" style="display:none;justify-content:space-between;padding:.15rem 0;color:#25D366;">
+                    <span id="dsg-propina-label">Propina</span><span id="dsg-propina">$0.00</span>
                 </div>
             </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;
+                        padding-top:.5rem;border-top:1.5px solid rgba(255,255,255,.1);">
+                <span style="font-size:1rem;font-weight:700;color:#fff;">Total:</span>
+                <span id="cart-total-amount"
+                      style="font-size:1.4rem;font-weight:900;color:#25D366;">$0.00</span>
+            </div>
+            <button onclick="window.enviarTodasLasCuentas()"
+                style="width:100%;padding:.85rem;background:linear-gradient(135deg,#FF5A00,#FF8C00);
+                       border:none;color:#fff;border-radius:14px;font-family:inherit;
+                       font-size:1rem;font-weight:800;cursor:pointer;
+                       box-shadow:0 4px 16px rgba(255,90,0,.35);letter-spacing:.02em;">
+                🚀 Enviar Orden
+            </button>
         </div>
     </div>
-</div>
 
 <!-- MODAL MODIFICACIONES -->
 <div class="mods-overlay" id="mods-modal">
     <div class="mods-container">
         <div class="mods-header">
             <div>
-                <h3>Personaliza tu torta</h3>
-                <p class="mods-subtitle" id="mods-item-name"></p>
+                <h3 id="mods-title">✏️ Personaliza tu pedido</h3>
+                <p class="mods-subtitle" id="mods-item-name"
+                   style="color:#FF5A00;font-weight:700;font-size:.88rem;margin-top:.2rem;"></p>
             </div>
-            <button class="close-btn" id="close-mods">x</button>
+            <button class="close-btn" id="close-mods" onclick="document.getElementById('mods-modal').classList.remove('active')"
+                style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+                       color:#888;border-radius:8px;width:32px;height:32px;font-size:1rem;cursor:pointer;">✕</button>
         </div>
         <div class="mods-body">
-            <div class="mods-section">
-                <p class="mods-section-title"> Opciones de Combo</p>
-                <div class="mods-chips">
-                    <label class="mod-chip chip-beer" data-price="-1"><input type="checkbox" value="Solo Torta (-$1)" data-price="-1"> Solo Torta (Sin Soda ni Chips) <span class="chip-price">-$1</span></label>
-                </div>
+
+            <!-- VARIANTES: solo aparece al editar un item que tiene opciones -->
+            <div class="mods-section" id="mods-variantes-section" style="display:none;">
+                <p class="mods-section-title">🍽️ Opción / Tamaño</p>
+                <div id="mods-variantes-lista" style="display:flex;flex-direction:column;gap:.4rem;"></div>
             </div>
-            <div class="mods-section">
-                <p class="mods-section-title"> Quitar ingrediente</p>
+
+            <!-- TORTAS: Combo options -->
+            <div class="mods-section mods-torta">
+                <p class="mods-section-title">🥤 Opciones de Combo</p>
                 <div class="mods-chips">
-                    <label class="mod-chip"><input type="checkbox" value="Sin cebolla"> Sin cebolla</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin tomate"> Sin tomate</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin mayonesa"> Sin mayonesa</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin lechuga"> Sin lechuga</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin aguacate"> Sin aguacate</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin queso"> Sin queso</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin jalapenos"> Sin jalapenos</label>
-                    <label class="mod-chip"><input type="checkbox" value="Sin frijoles"> Sin frijoles</label>
-                </div>
-            </div>
-            <div class="mods-section">
-                <p class="mods-section-title"> Poquito de...</p>
-                <div class="mods-chips">
-                    <label class="mod-chip"><input type="checkbox" value="Poca mayonesa"> Poca mayo</label>
-                    <label class="mod-chip"><input type="checkbox" value="Poca cebolla"> Poca cebolla</label>
-                    <label class="mod-chip"><input type="checkbox" value="Poco aguacate"> Poco aguacate</label>
-                    <label class="mod-chip"><input type="checkbox" value="Poco tomate"> Poco tomate</label>
-                    <label class="mod-chip"><input type="checkbox" value="Poco queso"> Poco queso</label>
-                </div>
-            </div>
-            <div class="mods-section">
-                <p class="mods-section-title"> Extras</p>
-                <div class="mods-chips">
-                    <label class="mod-chip" data-price="1"><input type="checkbox" value="Extra Slice of Meat +$1" data-price="1"> Extra Meat Slice <span class="chip-price">+$1</span></label>
-                    <label class="mod-chip" data-price="5"><input type="checkbox" value="6 Shrimp +$5" data-price="5"> 6 Shrimp <span class="chip-price">+$5</span></label>
-                    <label class="mod-chip"><input type="checkbox" value="Extra aguacate"> Extra aguacate</label>
-                    <label class="mod-chip"><input type="checkbox" value="Extra queso"> Extra queso</label>
-                    <label class="mod-chip"><input type="checkbox" value="Extra picante">  Extra picante</label>
-                    <label class="mod-chip"><input type="checkbox" value="Bien tostada"> Bien tostada</label>
-                    <label class="mod-chip"><input type="checkbox" value="Pan suave"> Pan suave</label>
-                    <label class="mod-chip"><input type="checkbox" value="Partida a la mitad">  Mitad</label>
+                    <label class="mod-chip" data-price="-1"><input type="checkbox" value="Solo Torta sin soda ni chips (-$1)" data-price="-1" aria-label="Solo Torta sin soda ni chips (-$1)"> Solo Torta <span class="chip-price">-$1</span></label>
                 </div>
             </div>
 
+            <!-- TORTAS: Quitar ingredientes -->
+            <div class="mods-section mods-torta">
+                <p class="mods-section-title">❌ Quitar ingrediente</p>
+                <div class="mods-chips">
+                    <label class="mod-chip"><input type="checkbox" value="Sin cebolla" aria-label="Sin cebolla"> Sin cebolla</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin cebolla roja" aria-label="Sin cebolla roja"> Sin cebolla roja</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin tomate" aria-label="Sin tomate"> Sin tomate</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin mayonesa" aria-label="Sin mayonesa"> Sin mayonesa</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin aguacate" aria-label="Sin aguacate"> Sin aguacate</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin queso" aria-label="Sin queso"> Sin queso fresco</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin jalapeños" aria-label="Sin jalapeños"> Sin jalapeños</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin lechuga" aria-label="Sin lechuga"> Sin lechuga</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin frijoles" aria-label="Sin frijoles"> Sin frijoles</label>
+                </div>
+            </div>
+
+            <!-- TORTAS: Poco de -->
+            <div class="mods-section mods-torta">
+                <p class="mods-section-title">🔽 Poquito de...</p>
+                <div class="mods-chips">
+                    <label class="mod-chip"><input type="checkbox" value="Poca mayonesa" aria-label="Poca mayonesa"> Poca mayo</label>
+                    <label class="mod-chip"><input type="checkbox" value="Poca cebolla" aria-label="Poca cebolla"> Poca cebolla</label>
+                    <label class="mod-chip"><input type="checkbox" value="Poco aguacate" aria-label="Poco aguacate"> Poco aguacate</label>
+                    <label class="mod-chip"><input type="checkbox" value="Poco tomate" aria-label="Poco tomate"> Poco tomate</label>
+                    <label class="mod-chip"><input type="checkbox" value="Poco queso" aria-label="Poco queso"> Poco queso</label>
+                    <label class="mod-chip"><input type="checkbox" value="Poco jalapeño" aria-label="Poco jalapeño"> Poco jalapeño</label>
+                </div>
+            </div>
+
+            <!-- TORTAS: Extras -->
+            <div class="mods-section mods-torta">
+                <p class="mods-section-title">⬆️ Extras</p>
+                <div class="mods-chips">
+                    <label class="mod-chip" data-price="1"><input type="checkbox" value="Extra meat slice +$1" data-price="1" aria-label="Extra meat slice +$1"> Extra Meat Slice <span class="chip-price">+$1</span></label>
+                    <label class="mod-chip" data-price="5"><input type="checkbox" value="6 Shrimp +$5" data-price="5" aria-label="6 Shrimp +$5"> 6 Shrimp <span class="chip-price">+$5</span></label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra aguacate" aria-label="Extra aguacate"> Extra aguacate</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra queso" aria-label="Extra queso"> Extra queso</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra mayonesa" aria-label="Extra mayonesa"> Extra mayo</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra picante" aria-label="Extra picante"> Extra picante</label>
+                    <label class="mod-chip"><input type="checkbox" value="Pan bien tostado" aria-label="Pan bien tostado"> Pan bien tostado</label>
+                    <label class="mod-chip"><input type="checkbox" value="Pan suave" aria-label="Pan suave"> Pan suave</label>
+                    <label class="mod-chip"><input type="checkbox" value="Partida a la mitad" aria-label="Partida a la mitad"> Partir a la mitad</label>
+                </div>
+            </div>
+
+            <!-- BEBIDAS: opciones -->
+            <div class="mods-section mods-drink" style="display:none;">
+                <p class="mods-section-title">🍹 Personalizar bebida</p>
+                <div class="mods-chips">
+                    <label class="mod-chip"><input type="checkbox" value="Sin chamoy" aria-label="Sin chamoy"> Sin chamoy</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin Tajín" aria-label="Sin Tajín"> Sin Tajín</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin salsa Valentina" aria-label="Sin salsa Valentina"> Sin Valentina</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin clamato" aria-label="Sin clamato"> Sin clamato</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin limón" aria-label="Sin limón"> Sin limón</label>
+                    <label class="mod-chip"><input type="checkbox" value="Poco picante" aria-label="Poco picante"> Poco picante</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra chamoy" aria-label="Extra chamoy"> Extra chamoy</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra Tajín" aria-label="Extra Tajín"> Extra Tajín</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra limón" aria-label="Extra limón"> Extra limón</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra picante" aria-label="Extra picante"> Bien picante</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin hielo" aria-label="Sin hielo"> Sin hielo</label>
+                    <label class="mod-chip"><input type="checkbox" value="Mucho hielo" aria-label="Mucho hielo"> Mucho hielo</label>
+                </div>
+            </div>
+
+            <!-- BOTANAS: opciones -->
+            <div class="mods-section mods-botana" style="display:none;">
+                <p class="mods-section-title">🍿 Personalizar botana</p>
+                <div class="mods-chips">
+                    <label class="mod-chip"><input type="checkbox" value="Sin chamoy" aria-label="Sin chamoy"> Sin chamoy</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin Tajín" aria-label="Sin Tajín"> Sin Tajín</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin Valentina" aria-label="Sin Valentina"> Sin Valentina</label>
+                    <label class="mod-chip"><input type="checkbox" value="Sin cacahuates japoneses" aria-label="Sin cacahuates japoneses"> Sin japoneses</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra chamoy" aria-label="Extra chamoy"> Extra chamoy</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra Tajín" aria-label="Extra Tajín"> Extra Tajín</label>
+                    <label class="mod-chip"><input type="checkbox" value="Extra picante" aria-label="Extra picante"> Extra picante</label>
+                    <label class="mod-chip"><input type="checkbox" value="Poco picante" aria-label="Poco picante"> Poco picante</label>
+                </div>
+            </div>
+
+            <!-- TODOS: Nota especial -->
             <div class="mods-section">
-                <p class="mods-section-title"> Nota especial</p>
-                <textarea class="mods-notes" id="mods-notes" placeholder="Ej: calentar bien, sin sal..."></textarea>
+                <p class="mods-section-title">📝 Nota especial</p>
+                <textarea class="mods-notes" id="mods-notes" aria-label="Nota especial para el pedido"
+                    placeholder="Ej: sin sal, bien caliente, para niño..."
+                    style="width:100%;box-sizing:border-box;background:#111;
+                           border:1.5px solid rgba(255,255,255,.1);color:#fff;
+                           border-radius:10px;padding:.6rem .75rem;font-family:inherit;
+                           font-size:.82rem;resize:none;height:60px;outline:none;"></textarea>
             </div>
         </div>
-        <div class="mods-footer">
-            <button class="mods-skip-btn" id="mods-skip">Sin cambios</button>
-            <button class="mods-confirm-btn" id="mods-confirm"> Agregar al Pedido</button>
+        <div class="mods-footer" style="padding:1rem;display:flex;gap:.5rem;position:relative;z-index:10;background:#1A1A1A;">
+            <button class="mods-skip-btn" id="mods-skip" onclick="if(window.confirmarMods){window.confirmarMods(false)}"
+                style="flex:1;padding:.7rem;background:rgba(255,255,255,.06);
+                       border:1px solid rgba(255,255,255,.12);color:#aaa;
+                       border-radius:12px;font-family:inherit;font-size:.85rem;
+                       font-weight:700;cursor:pointer;">
+                Sin cambios
+            </button>
+            <button class="mods-confirm-btn" id="mods-confirm" onclick="if(window.confirmarMods){window.confirmarMods(true)}else{alert('confirmarMods NO existe!')}"
+                style="flex:2;padding:.7rem;background:linear-gradient(135deg,#FF5A00,#FF8C00);
+                       border:none;color:#fff;border-radius:12px;font-family:inherit;
+                       font-size:.85rem;font-weight:800;cursor:pointer;
+                       box-shadow:0 4px 12px rgba(255,90,0,.3);">
+                ✅ Agregar al Pedido
+            </button>
         </div>
     </div>
 </div>
@@ -247,13 +1644,23 @@
             <button class="close-btn" id="close-pos">x</button>
         </div>
         <div class="pos-body">
-            <button class="pos-method" id="pay-stripe" onclick="pagarConStripe()">
-                <span class="pos-method-icon"></span>
+            <!-- SIMULACIÓN: Efectivo -->
+            <button class="pos-method" onclick="simularPago('efectivo')" style="border:2px solid transparent;transition:.15s;" onmouseover="this.style.borderColor='#25D366'" onmouseout="this.style.borderColor='transparent'">
+                <span class="pos-method-icon" style="background:#25D366;font-size:1.2rem;">💵</span>
                 <div class="pos-method-info">
-                    <div class="pos-method-name">Tarjeta de Credito / Debito</div>
-                    <div class="pos-method-sub">Visa · Mastercard · Apple Pay · Google Pay</div>
+                    <div class="pos-method-name">Efectivo</div>
+                    <div class="pos-method-sub">Pago en caja</div>
                 </div>
-                <span class="pos-method-arrow">></span>
+                <span class="pos-method-arrow">›</span>
+            </button>
+            <!-- SIMULACIÓN: Tarjeta -->
+            <button class="pos-method" onclick="simularPago('tarjeta')" style="border:2px solid transparent;transition:.15s;" onmouseover="this.style.borderColor='#3B82F6'" onmouseout="this.style.borderColor='transparent'">
+                <span class="pos-method-icon" style="background:#3B82F6;font-size:1.2rem;">💳</span>
+                <div class="pos-method-info">
+                    <div class="pos-method-name">Tarjeta</div>
+                    <div class="pos-method-sub">Crédito / Débito</div>
+                </div>
+                <span class="pos-method-arrow">›</span>
             </button>
             <button class="pos-method" onclick="mostrarInfoPago('cashapp')">
                 <span class="pos-method-icon" style="background:#00D64F;">$</span>
@@ -299,9 +1706,113 @@
     </div>
 </div>
 
-<script type="module" src="js/app.js"></script>
+<script type="module" src="js/app.js?v=1784498934"></script>
+<script>
+function editarItemCuenta(idx) {
+    var cs = window._cuentasSys;
+    var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
+    if (!c || !c.items[idx]) return;
+    var item = c.items[idx];
+    window._editingItem = { cuentaId: cs.activa, itemIdx: idx, precioBase: item.precio };
+
+    // Reset chips
+    document.querySelectorAll('.mod-chip').forEach(function(chip) {
+        chip.classList.remove('selected');
+        var inp = chip.querySelector('input');
+        if (inp) inp.checked = false;
+    });
+
+    // Pre-select current mods
+    var mods = item.modificaciones || [];
+    document.querySelectorAll('.mod-chip').forEach(function(chip) {
+        var inp = chip.querySelector('input');
+        if (inp && mods.some(function(m){ return m === inp.value; })) {
+            chip.classList.add('selected');
+            inp.checked = true;
+        }
+    });
+
+    // Set nota
+    var nota = mods.find(function(m){ return m.startsWith('📝 '); });
+    var notesEl = document.getElementById('mods-notes');
+    if (notesEl) notesEl.value = nota ? nota.replace('📝 ', '') : '';
+
+    // Set modal title
+    var titleEl = document.getElementById('mods-item-name');
+    if (titleEl) titleEl.textContent = '✏️ ' + item.nombre;
+
+    // Change button text
+    var confirmBtn = document.getElementById('mods-confirm');
+    if (confirmBtn) confirmBtn.textContent = '💾 Guardar cambios';
+
+    // Open modal
+    var modal = document.getElementById('mods-modal');
+    if (modal) modal.classList.add('active');
+}
+
+function abrirOrdenModal(cid) {
+    var cs = window._cuentasSys;
+    var c = cs ? cs.cuentas.find(function(x){ return x.id === cid; }) : null;
+    if (!c) return;
+    window._ordenCuentaId = cid;
+    var total = c.items.reduce(function(s,i){ return s+i.precio; }, 0);
+    var titulo = document.getElementById('orden-modal-titulo');
+    if (titulo) titulo.textContent = '📋 ' + c.nombre;
+    var items = document.getElementById('orden-modal-items');
+    if (items) items.textContent = c.items.length + ' producto' + (c.items.length !== 1 ? 's' : '');
+    var tot = document.getElementById('orden-modal-total');
+    if (tot) tot.textContent = '$' + total.toFixed(2);
+    var nom = document.getElementById('orden-nombre');
+    if (nom) nom.value = '';
+    var tel = document.getElementById('orden-telefono');
+    if (tel) tel.value = c._telefono || '';
+    var pickup = document.getElementById('orden-tipo-pickup');
+    if (pickup) pickup.checked = true;
+    var pl = document.getElementById('orden-tipo-pickup-lbl');
+    if (pl) pl.style.borderColor = '#FF5A00';
+    var dl = document.getElementById('orden-tipo-delivery-lbl');
+    if (dl) dl.style.borderColor = 'rgba(255,255,255,.12)';
+    var ov = document.getElementById('orden-cuenta-overlay');
+    var modal = document.getElementById('orden-cuenta-modal');
+    if (ov) { ov.style.opacity='1'; ov.style.pointerEvents='all'; }
+    if (modal) modal.style.transform = 'translateY(0)';
+}
+
+function enviarOrdenModal() {
+    var cid = window._ordenCuentaId;
+    var cs = window._cuentasSys;
+    var c = cs ? cs.cuentas.find(function(x){ return x.id === cid; }) : null;
+    if (!c) return;
+    var nombre = (document.getElementById('orden-nombre')?.value || '').trim() || c.nombre;
+    var telefono = (document.getElementById('orden-telefono')?.value || '').trim();
+    var tipo = document.querySelector('input[name="orden-tipo"]:checked')?.value || 'pickup';
+    var total = c.items.reduce(function(s,i){ return s+i.precio; }, 0);
+    c._telefono = telefono;
+    var lineas = [
+        '🐢 *TORTAS TORTUGA*',
+        '━━━━━━━━━━━━━━━━━━━━',
+        '📋 *' + c.nombre + '*',
+        '👤 ' + nombre + (telefono ? ' · 📞 ' + telefono : ''),
+        (tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Domicilio'),
+        ''
+    ];
+    c.items.forEach(function(item, i) {
+        var linea = (i+1) + '. *' + item.nombre + '*';
+        if (item.modificaciones && item.modificaciones.length) {
+            linea += ' · ' + item.modificaciones.join(', ');
+        }
+        linea += ' — $' + item.precio.toFixed(2);
+        lineas.push(linea);
+    });
+    lineas.push('');
+    lineas.push('💰 *Total: $' + total.toFixed(2) + '*');
+    cerrarOrdenModal();
+    window.open('https://wa.me/12108678210?text=' + encodeURIComponent(lineas.join('\n')), '_blank');
+}
+
+</script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1784498934';
     (async () => {
         try {
             await seedProductos();
@@ -318,5 +1829,1283 @@
         });
     }
 </script>
+
+<!-- ═══════════════════════════════════════════════════════
+     PANEL SPLIT DE CUENTAS
+     ═══════════════════════════════════════════════════════ -->
+<div id="split-overlay" class="split-overlay" onclick="if(event.target===this)cerrarSplit()">
+<div id="split-panel" class="split-panel">
+
+    <!-- Header -->
+    <div class="split-header">
+        <div style="display:flex;align-items:center;gap:.6rem;">
+            <span style="font-size:1.1rem;">⚡</span>
+            <span style="font-weight:800;font-size:1rem;">Split de Cuentas</span>
+        </div>
+        <div style="display:flex;gap:.5rem;align-items:center;">
+            <button onclick="resetSplit()" style="background:rgba(255,68,68,.12);border:1px solid rgba(255,68,68,.25);color:#FF4444;border-radius:8px;padding:.3rem .65rem;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;">🗑 Limpiar</button>
+            <button onclick="cerrarSplit()" style="background:none;border:1px solid rgba(255,255,255,.15);color:#888;border-radius:8px;padding:.3rem .65rem;font-size:.82rem;cursor:pointer;">✕</button>
+        </div>
+    </div>
+
+    <!-- Instrucciones -->
+    <div style="font-size:.75rem;color:#888;padding:.5rem 1rem;background:rgba(167,139,250,.08);border-bottom:1px solid rgba(255,255,255,.06);">
+        Agrega productos al menú → van a la cuenta activa. Mueve o divide entre cuentas.
+    </div>
+
+    <!-- Contenido dinámico -->
+    <div id="split-content" style="flex:1;overflow-y:auto;padding:.75rem;">
+        <div class="split-empty">Activa el Split y agrega productos al pedido.</div>
+    </div>
+
+</div>
+</div>
+
+<style>
+/* ── SPLIT OVERLAY Y PANEL ─────────────────────────────── */
+.split-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);
+    z-index:3500;display:flex;align-items:flex-end;justify-content:center;
+    opacity:0;pointer-events:none;transition:opacity .25s;
+}
+.split-overlay:has(.split-panel.open){ opacity:1;pointer-events:all; }
+.split-panel{
+    background:#1A1A1A;border:1px solid rgba(255,255,255,.1);
+    border-radius:20px 20px 0 0;width:100%;max-width:580px;
+    max-height:92vh;display:flex;flex-direction:column;
+    transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+}
+.split-panel.open{ transform:translateY(0); }
+.split-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:.85rem 1rem;border-bottom:1px solid rgba(255,255,255,.1);flex-shrink:0;
+}
+/* Tabs de cuentas */
+.split-tabs{
+    display:flex;gap:.4rem;padding:.6rem .75rem;overflow-x:auto;
+    flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.08);
+    scrollbar-width:none;-webkit-overflow-scrolling:touch;
+}
+.split-tabs::-webkit-scrollbar{display:none;}
+.split-tab{
+    display:flex;flex-direction:column;align-items:flex-start;gap:.1rem;
+    background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.1);
+    border-radius:10px;padding:.45rem .65rem;min-width:90px;cursor:pointer;
+    flex-shrink:0;transition:.15s;position:relative;
+}
+.split-tab.active{ background:rgba(167,139,250,.12); }
+.split-tab:hover{ background:rgba(255,255,255,.08); }
+.cuenta-nombre-input{
+    background:none;border:none;color:inherit;font-family:inherit;
+    font-size:.8rem;font-weight:700;width:100%;cursor:pointer;outline:none;
+    padding:0;
+}
+.cuenta-nombre-input:focus{ cursor:text;border-bottom:1px solid currentColor; }
+.split-tab-total{ font-size:.72rem;color:#888;font-weight:600; }
+.split-tab-del{
+    position:absolute;top:.2rem;right:.2rem;background:none;border:none;
+    color:#555;font-size:.7rem;cursor:pointer;padding:.1rem .2rem;
+    line-height:1;border-radius:4px;
+}
+.split-tab-del:hover{ background:rgba(255,68,68,.2);color:#FF4444; }
+.split-add-btn{
+    background:rgba(255,90,0,.12);border:1.5px dashed rgba(255,90,0,.35);
+    color:#FF5A00;border-radius:10px;padding:.45rem .75rem;cursor:pointer;
+    font-family:inherit;font-size:.8rem;font-weight:700;white-space:nowrap;
+    flex-shrink:0;transition:.15s;
+}
+.split-add-btn:hover{ background:rgba(255,90,0,.2); }
+/* Items */
+.split-items{ display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem; }
+.split-item{
+    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+    border-radius:10px;padding:.65rem .75rem;
+}
+.split-item-top{ display:flex;align-items:flex-start;gap:.5rem;margin-bottom:.4rem; }
+.split-item-info{ flex:1;min-width:0; }
+.split-item-name{ font-size:.88rem;font-weight:700;color:#fff; }
+.split-item-mods{ font-size:.72rem;color:#888;margin-top:.15rem; }
+.split-item-precio{ font-size:.9rem;font-weight:800;color:#25D366;white-space:nowrap; }
+.split-item-del{
+    background:none;border:none;color:#555;cursor:pointer;font-size:.8rem;
+    padding:.1rem .25rem;border-radius:4px;flex-shrink:0;
+}
+.split-item-del:hover{ background:rgba(255,68,68,.2);color:#FF4444; }
+.split-item-actions{ display:flex;gap:.35rem;flex-wrap:wrap; }
+.split-move-btn{
+    font-size:.7rem;font-weight:700;padding:.2rem .5rem;border-radius:6px;
+    border:1px solid;cursor:pointer;font-family:inherit;white-space:nowrap;
+}
+.split-divide-btn{
+    font-size:.7rem;font-weight:700;padding:.2rem .55rem;border-radius:6px;
+    background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);
+    color:#F59E0B;cursor:pointer;font-family:inherit;
+}
+.split-empty{ text-align:center;padding:2rem 1rem;color:#555;font-size:.88rem; }
+/* Resumen */
+.split-resumen{
+    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+    border-radius:10px;padding:.75rem;
+}
+.split-resumen-row{
+    display:flex;align-items:center;gap:.5rem;padding:.4rem 0;
+    border-bottom:1px solid rgba(255,255,255,.06);font-size:.83rem;
+}
+.split-resumen-row:last-of-type{ border:none; }
+.split-resumen-dot{ width:10px;height:10px;border-radius:50%;flex-shrink:0; }
+.split-resumen-nom{ flex:1;font-weight:600;color:#fff; }
+.split-resumen-items{ font-size:.72rem;color:#888;white-space:nowrap; }
+.split-resumen-tot{ font-weight:800;white-space:nowrap; }
+.split-orden-btn{
+    background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.3);
+    color:#25D366;border-radius:7px;padding:.25rem .55rem;font-size:.72rem;
+    font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;
+}
+.split-orden-btn:disabled{ opacity:.35;cursor:not-allowed; }
+.split-orden-btn:not(:disabled):hover{ background:rgba(37,211,102,.22); }
+.split-total-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:.6rem 0 .5rem;font-size:.9rem;font-weight:700;color:#ccc;
+    border-top:1px solid rgba(255,255,255,.1);margin-top:.3rem;
+}
+.split-all-btn{
+    width:100%;margin-top:.6rem;padding:.78rem;
+    background:linear-gradient(135deg,#25D366,#18a849);
+    color:#fff;border:none;border-radius:10px;font-family:inherit;
+    font-size:.9rem;font-weight:700;cursor:pointer;transition:.2s;
+}
+.split-all-btn:hover{ filter:brightness(1.08); }
+</style>
+
+
+<!-- MODAL NOMBRE DE CUENTA -->
+<div id="nombre-modal-overlay" onclick="if(event.target===this)cerrarNombreModal()">
+  <div id="nombre-modal">
+    <div style="font-weight:800;font-size:.95rem;margin-bottom:.85rem;color:#fff;">✏️ Nombre de la cuenta</div>
+    
+    <div style="display:flex;gap:.5rem;">
+      <button onclick="guardarNombreCuenta()" style="flex:1;padding:.7rem;background:linear-gradient(135deg,#FF5A00,#FF8800);
+        color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;">
+        Guardar
+      </button>
+      <button onclick="cerrarNombreModal()" style="padding:.7rem 1rem;background:#222;border:1px solid rgba(255,255,255,.15);
+        color:#888;border-radius:10px;font-family:inherit;cursor:pointer;">
+        Cancelar
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL ORDEN POR CUENTA -->
+<div id="orden-cuenta-overlay" onclick="if(event.target===this)cerrarOrdenModal()"
+  style="position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);
+         z-index:4000;display:flex;align-items:flex-end;justify-content:center;
+         opacity:0;pointer-events:none;transition:opacity .25s;">
+  <div id="orden-cuenta-modal"
+    style="background:#1A1A1A;border:1px solid rgba(255,255,255,.12);border-radius:20px 20px 0 0;
+           width:100%;max-width:560px;padding:1.35rem 1.2rem 2rem;
+           transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);">
+    <div style="width:32px;height:4px;background:rgba(255,255,255,.15);border-radius:4px;margin:0 auto .9rem;"></div>
+    <div style="font-size:1rem;font-weight:800;color:#FF5A00;margin-bottom:.15rem;" id="orden-modal-titulo">📋 Orden</div>
+    <div style="font-size:.78rem;color:#888;margin-bottom:1rem;" id="orden-modal-items"></div>
+
+    <!-- Datos del cliente -->
+    <div style="margin-bottom:.7rem;">
+      <label style="display:block;font-size:.72rem;font-weight:700;color:#888;letter-spacing:.04em;margin-bottom:.3rem;">NOMBRE</label>
+      <input type="text" id="orden-nombre"
+        placeholder="Nombre del cliente"
+        style="width:100%;padding:.68rem .88rem;background:#222;border:1.5px solid rgba(255,255,255,.12);
+               border-radius:10px;color:#fff;font-family:inherit;font-size:.92rem;outline:none;"
+        onfocus="this.style.borderColor='#FF5A00'" onblur="this.style.borderColor='rgba(255,255,255,.12)'">
+    </div>
+    <div style="margin-bottom:.7rem;">
+      <label style="display:block;font-size:.72rem;font-weight:700;color:#888;letter-spacing:.04em;margin-bottom:.3rem;">TELÉFONO (opcional)</label>
+      <input type="tel" id="orden-telefono"
+        placeholder="210-000-0000"
+        maxlength="10"
+        oninput="this.value=this.value.replace(/\D/g,'')"
+        style="width:100%;padding:.68rem .88rem;background:#222;border:1.5px solid rgba(255,255,255,.12);
+               border-radius:10px;color:#fff;font-family:inherit;font-size:.92rem;outline:none;"
+        onfocus="this.style.borderColor='#FF5A00'" onblur="this.style.borderColor='rgba(255,255,255,.12)'">
+    </div>
+
+    <!-- Tipo de entrega -->
+    <div style="margin-bottom:1rem;">
+      <label style="display:block;font-size:.72rem;font-weight:700;color:#888;letter-spacing:.04em;margin-bottom:.5rem;">TIPO DE ENTREGA</label>
+      <div style="display:flex;gap:.5rem;">
+        <label style="flex:1;display:flex;align-items:center;gap:.4rem;background:#222;border:1.5px solid rgba(255,255,255,.12);
+               border-radius:10px;padding:.6rem .85rem;cursor:pointer;font-size:.88rem;color:#fff;"
+               id="orden-tipo-pickup-lbl">
+          <input type="radio" name="orden-tipo" value="pickup" id="orden-tipo-pickup" checked
+            onchange="document.getElementById('orden-tipo-pickup-lbl').style.borderColor='#FF5A00';
+                      document.getElementById('orden-tipo-delivery-lbl').style.borderColor='rgba(255,255,255,.12)'">
+          🏪 Recoger
+        </label>
+        <label style="flex:1;display:flex;align-items:center;gap:.4rem;background:#222;border:1.5px solid rgba(255,255,255,.12);
+               border-radius:10px;padding:.6rem .85rem;cursor:pointer;font-size:.88rem;color:#fff;"
+               id="orden-tipo-delivery-lbl">
+          <input type="radio" name="orden-tipo" value="delivery" id="orden-tipo-delivery"
+            onchange="document.getElementById('orden-tipo-delivery-lbl').style.borderColor='#FF5A00';
+                      document.getElementById('orden-tipo-pickup-lbl').style.borderColor='rgba(255,255,255,.12)'">
+          🚗 Domicilio
+        </label>
+      </div>
+    </div>
+
+    <!-- Total -->
+    <div style="display:flex;justify-content:space-between;align-items:center;
+                padding:.75rem .9rem;background:rgba(255,90,0,.1);border:1px solid rgba(255,90,0,.25);
+                border-radius:10px;margin-bottom:1rem;">
+      <span style="font-size:.88rem;color:#888;">Total</span>
+      <span style="font-size:1.1rem;font-weight:900;color:#FF5A00;" id="orden-modal-total">$0.00</span>
+    </div>
+
+    <!-- Botones -->
+    <button onclick="enviarOrdenModal()" style="display:none;" disabled
+      style="width:100%;padding:.85rem;background:linear-gradient(135deg,#25D366,#18a849);
+             color:#fff;border:none;border-radius:12px;font-family:inherit;font-size:.95rem;
+             font-weight:700;cursor:pointer;margin-bottom:.5rem;">
+      <!-- 📱 Enviar por WhatsApp (desactivado) -->
+    </button>
+    <button onclick="cerrarOrdenModal()"
+      style="width:100%;padding:.7rem;background:transparent;border:1px solid rgba(255,255,255,.12);
+             color:#888;border-radius:12px;font-family:inherit;font-size:.88rem;cursor:pointer;">
+      Cancelar
+    </button>
+  </div>
+</div>
+
+
+<!-- MODAL CONFIRMAR ELIMINAR CUENTA -->
+<div id="confirm-eliminar-overlay"
+     onclick="if(event.target===this)cerrarConfirmEliminar()"
+     style="position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(6px);
+            z-index:9999;display:none;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:#1C1C1C;border:1px solid rgba(255,255,255,.15);border-radius:18px;
+              padding:1.5rem 1.25rem;width:100%;max-width:330px;text-align:center;">
+    <div style="font-size:2rem;margin-bottom:.5rem;">⚠️</div>
+    <div id="confirm-eliminar-titulo"
+         style="font-size:.95rem;font-weight:800;color:#fff;margin-bottom:.45rem;"></div>
+    <div id="confirm-eliminar-subtxt"
+         style="font-size:.78rem;color:#888;margin-bottom:1.2rem;line-height:1.45;"></div>
+    <button id="confirm-eliminar-ok"
+        style="width:100%;padding:.78rem;background:rgba(255,68,68,.15);
+               border:1.5px solid rgba(255,68,68,.4);color:#FF4444;
+               border-radius:11px;font-family:inherit;font-size:.9rem;
+               font-weight:700;cursor:pointer;margin-bottom:.4rem;">
+        🗑 Sí, eliminar cuenta
+    </button>
+    <button onclick="cerrarConfirmEliminar()"
+        style="width:100%;padding:.68rem;background:transparent;
+               border:1px solid rgba(255,255,255,.12);color:#888;
+               border-radius:11px;font-family:inherit;font-size:.85rem;cursor:pointer;">
+        Cancelar
+    </button>
+  </div>
+</div>
+
+
+<!-- MODAL ENVIAR ORDEN AL ADMIN -->
+<div id="enviar-admin-overlay"
+     onclick="if(event.target===this)cerrarEnviarAdminModal()"
+     style="position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,.92);z-index:99999;
+            display:none;align-items:flex-end;justify-content:center;">
+  <div style="background:#1C1C1C;border:1px solid rgba(255,255,255,.1);
+              border-radius:20px 20px 0 0;padding:1.2rem 1.1rem 2rem;
+              width:100%;max-width:560px;max-height:88vh;
+              display:flex;flex-direction:column;">
+  <div style="width:32px;height:4px;background:rgba(255,255,255,.15);
+              border-radius:4px;margin:0 auto .85rem;flex-shrink:0;"></div>
+    <div style="font-size:1rem;font-weight:800;color:#FF5A00;margin-bottom:.4rem;">
+      🚀 Enviar al Panel Admin
+    </div>
+    <div style="font-size:.78rem;color:#888;margin-bottom:1rem;">
+      ¿Está seguro que la orden es correcta?
+    </div>
+    <div id="enviar-admin-resumen" style="overflow-y:auto;flex:1;margin-bottom:.85rem;-webkit-overflow-scrolling:touch;"></div>
+    <button id="btn-confirmar-envio" onclick="confirmarEnvioAdmin()"
+        style="width:100%;padding:.82rem;
+               background:linear-gradient(135deg,#FF5A00,#FF8800);
+               color:#fff;border:none;border-radius:11px;
+               font-family:inherit;font-size:.92rem;font-weight:800;
+               cursor:pointer;margin-bottom:.4rem;">
+      🚀 Confirmar y Enviar
+    </button>
+    <button onclick="cerrarEnviarAdminModal()"
+        style="width:100%;padding:.68rem;background:transparent;
+               border:1px solid rgba(255,255,255,.12);color:#888;
+               border-radius:11px;font-family:inherit;font-size:.85rem;cursor:pointer;">
+      Cancelar
+    </button>
+  </div>
+</div>
+
+
+<!-- MODAL CONFIRMACIÓN DE PAGO -->
+<div id="pago-confirm-overlay"
+     style="position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,.92);z-index:99999;
+            display:none;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:#1C1C1C;border:1px solid rgba(255,255,255,.12);
+              border-radius:20px;padding:1.75rem 1.4rem;width:100%;max-width:320px;text-align:center;">
+
+    <div id="pago-confirm-icon" style="font-size:3.5rem;margin-bottom:.5rem;">💵</div>
+    <div id="pago-confirm-titulo" style="font-size:1rem;font-weight:800;color:#fff;margin-bottom:.4rem;">Confirmar Pago</div>
+
+    <!-- Total -->
+    <div style="background:rgba(255,90,0,.1);border:1px solid rgba(255,90,0,.25);
+                border-radius:12px;padding:.85rem;margin:.85rem 0;">
+      <div style="font-size:.75rem;color:#888;margin-bottom:.2rem;">TOTAL A COBRAR</div>
+      <div id="pago-confirm-total" style="font-size:2rem;font-weight:900;color:#FF5A00;">$0.00</div>
+      <div style="font-size:.78rem;color:#888;margin-top:.2rem;">Método: <span id="pago-confirm-metodo" style="color:#fff;font-weight:700;">Efectivo</span></div>
+    </div>
+
+    <!-- Botones -->
+    <button onclick="confirmarPagoSimulado()"
+        style="width:100%;padding:.85rem;background:linear-gradient(135deg,#25D366,#18a849);
+               color:#fff;border:none;border-radius:12px;font-family:inherit;
+               font-size:.95rem;font-weight:800;cursor:pointer;margin-bottom:.5rem;">
+      ✅ Confirmar Pago
+    </button>
+    <button onclick="cerrarPagoConfirm()"
+        style="width:100%;padding:.7rem;background:transparent;
+               border:1px solid rgba(255,255,255,.12);color:#888;
+               border-radius:12px;font-family:inherit;font-size:.88rem;cursor:pointer;">
+      ← Cambiar método
+    </button>
+  </div>
+</div>
+
+
+<!-- FAB: AGREGAR TODO AL CARRITO -->
+
+
+
+<!-- ═══════════════════════════════════════════════════
+     PANEL CAJERO
+     ═══════════════════════════════════════════════════ -->
+<div id="cajero-panel-overlay"
+     onclick="if(event.target===this)cerrarPanelCajero()"
+     style="position:fixed;inset:0;background:rgba(0,0,0,.88);backdrop-filter:blur(6px);
+            z-index:9000;display:none;align-items:flex-end;justify-content:center;">
+  <div style="background:#1A1A1A;border:1px solid rgba(255,255,255,.1);border-radius:20px 20px 0 0;
+              width:100%;max-width:560px;max-height:88vh;display:flex;flex-direction:column;">
+
+    <!-- Handle -->
+    <div style="width:32px;height:4px;background:rgba(255,255,255,.15);border-radius:4px;margin:.85rem auto .5rem;flex-shrink:0;"></div>
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem .75rem;flex-shrink:0;">
+      <div>
+        <div style="font-size:.95rem;font-weight:800;color:#FF5A00;">🏪 Panel Cajero</div>
+        <div style="font-size:.72rem;color:#888;" id="caj-header-nombre"></div>
+      </div>
+      <button onclick="cerrarPanelCajero()"
+          style="background:none;border:1px solid rgba(255,255,255,.12);color:#888;
+                 border-radius:8px;padding:.3rem .65rem;cursor:pointer;font-size:.85rem;">✕</button>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:.4rem;padding:0 1rem .65rem;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.08);">
+      <button class="caj-tab active" data-tab="resumen" onclick="switchCajeroTab('resumen')"
+          style="flex:1;padding:.5rem;background:rgba(255,90,0,.12);border:1px solid rgba(255,90,0,.35);
+                 color:#FF5A00;border-radius:8px;font-family:inherit;font-size:.78rem;font-weight:700;cursor:pointer;">
+        📊 Resumen
+      </button>
+      <button class="caj-tab" data-tab="ordenes" onclick="switchCajeroTab('ordenes')"
+          style="flex:1;padding:.5rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+                 color:#888;border-radius:8px;font-family:inherit;font-size:.78rem;font-weight:700;cursor:pointer;">
+        📋 Mis Órdenes
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div style="flex:1;overflow-y:auto;padding:1rem;-webkit-overflow-scrolling:touch;">
+      <div class="caj-pane" data-pane="resumen">
+        <div id="caj-resumen-content"></div>
+      </div>
+      <div class="caj-pane" data-pane="ordenes" style="display:none;">
+        <div id="caj-ordenes-content"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ASIGNAR FONDO -->
+<div id="fondo-overlay" onclick="if(event.target===this)cerrarAsignarFondo()"
+     style="position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9500;
+            display:none;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:#1C1C1C;border:1px solid rgba(37,211,102,.3);border-radius:18px;
+              padding:1.5rem;width:100%;max-width:340px;text-align:center;">
+    <div style="font-size:2.5rem;margin-bottom:.5rem;">💵</div>
+    <div style="font-size:1rem;font-weight:800;color:#fff;margin-bottom:.3rem;">Fondo de Caja</div>
+    <div style="font-size:.78rem;color:#888;margin-bottom:1.1rem;">Ingresa el efectivo inicial de tu caja</div>
+    <div style="display:flex;align-items:center;gap:.4rem;background:#222;border:1.5px solid rgba(37,211,102,.4);
+                border-radius:12px;padding:.75rem 1rem;margin-bottom:1rem;">
+      <span style="font-size:1.1rem;color:#25D366;font-weight:700;">$</span>
+      <input id="fondo-input" type="number" min="0" step="0.01" placeholder="0.00"
+          style="flex:1;background:none;border:none;color:#fff;font-family:inherit;font-size:1.3rem;
+                 font-weight:700;outline:none;text-align:center;"
+          onkeydown="if(event.key==='Enter')confirmarFondo()">
+    </div>
+    <button id="btn-confirmar-fondo" onclick="confirmarFondo()"
+        style="width:100%;padding:.82rem;background:linear-gradient(135deg,#25D366,#18a849);
+               color:#fff;border:none;border-radius:11px;font-family:inherit;font-size:.92rem;
+               font-weight:800;cursor:pointer;margin-bottom:.4rem;">
+      💵 Iniciar Turno
+    </button>
+    <button onclick="cerrarAsignarFondo()"
+        style="width:100%;padding:.68rem;background:transparent;border:1px solid rgba(255,255,255,.12);
+               color:#888;border-radius:11px;font-family:inherit;font-size:.85rem;cursor:pointer;">
+      Cancelar
+    </button>
+  </div>
+</div>
+
+<!-- MODAL CORTE DE CAJA -->
+<div id="corte-overlay" onclick="if(event.target===this)cerrarCorte()"
+     style="position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9500;
+            display:none;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:#1C1C1C;border:1px solid rgba(255,90,0,.3);border-radius:18px;
+              padding:1.5rem;width:100%;max-width:400px;max-height:85vh;overflow-y:auto;">
+    <div style="text-align:center;margin-bottom:1rem;">
+      <div style="font-size:1rem;font-weight:800;color:#FF5A00;">🧾 Corte de Caja</div>
+    </div>
+    <pre id="corte-texto"
+        style="background:#111;border:1px solid rgba(255,255,255,.1);border-radius:10px;
+               padding:1rem;font-size:.75rem;color:#ccc;font-family:monospace;
+               white-space:pre-wrap;margin-bottom:1rem;"></pre>
+    <button onclick="imprimirCorte()"
+        style="width:100%;padding:.78rem;background:rgba(255,90,0,.15);border:1.5px solid rgba(255,90,0,.4);
+               color:#FF5A00;border-radius:11px;font-family:inherit;font-size:.88rem;font-weight:700;
+               cursor:pointer;margin-bottom:.4rem;">
+      🖨️ Imprimir / Guardar
+    </button>
+    <button onclick="cerrarCorte()"
+        style="width:100%;padding:.68rem;background:transparent;border:1px solid rgba(255,255,255,.12);
+               color:#888;border-radius:11px;font-family:inherit;font-size:.85rem;cursor:pointer;">
+      Cerrar
+    </button>
+  </div>
+</div>
+
+<style>
+.caj-tab.active {
+    background: rgba(255,90,0,.15) !important;
+    border-color: rgba(255,90,0,.5) !important;
+    color: #FF5A00 !important;
+}
+
+    /* ── MENU CATEGORY TABS ─────────────────── */
+    .menu-tab {
+        white-space: nowrap;
+        padding: .5rem 1.1rem;
+        border-radius: 20px;
+        border: 1.5px solid rgba(255,255,255,.12);
+        background: transparent;
+        color: #888;
+        font-family: inherit;
+        font-size: .82rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all .18s;
+        flex-shrink: 0;
+    }
+    .menu-tab.active {
+        background: rgba(255,90,0,.15);
+        border-color: rgba(255,90,0,.6);
+        color: #FF5A00;
+    }
+    #menu-tabs-bar::-webkit-scrollbar { display: none; }
+    .menu-tab-content { animation: fadeTab .2s ease; }
+    @keyframes fadeTab {
+        from { opacity:0; transform:translateY(6px); }
+        to   { opacity:1; transform:translateY(0); }
+    }
+</style>
+
+
+<!-- MODAL OPCIONES DE PAGO -->
+<div id="pago-opciones-overlay"
+     onclick="if(event.target===this)this.style.display='none'"
+     style="position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;
+            display:none;align-items:flex-end;justify-content:center;">
+  <div style="background:#1C1C1C;border:1px solid rgba(255,255,255,.1);
+              border-radius:20px 20px 0 0;padding:1.5rem;width:100%;max-width:480px;">
+    <div style="width:32px;height:4px;background:rgba(255,255,255,.15);
+                border-radius:4px;margin:0 auto .85rem;"></div>
+    <div style="text-align:center;margin-bottom:1.25rem;">
+      <div style="font-size:.78rem;color:#888;margin-bottom:.3rem;">TOTAL A COBRAR</div>
+      <div id="pago-opciones-total" style="font-size:2.2rem;font-weight:900;color:#FF5A00;">$0.00</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.6rem;">
+      <button onclick="elegirMetodoPago('efectivo')"
+          style="width:100%;padding:1rem;background:rgba(37,211,102,.12);
+                 border:1.5px solid rgba(37,211,102,.4);color:#25D366;
+                 border-radius:14px;font-family:inherit;font-size:1rem;
+                 font-weight:800;cursor:pointer;">
+        💵 Pagar con Efectivo
+      </button>
+      <button onclick="elegirMetodoPago('tarjeta')"
+          style="width:100%;padding:1rem;background:rgba(59,130,246,.12);
+                 border:1.5px solid rgba(59,130,246,.4);color:#3B82F6;
+                 border-radius:14px;font-family:inherit;font-size:1rem;
+                 font-weight:800;cursor:pointer;">
+        💳 Pagar con Tarjeta (Stripe)
+      </button>
+      <button onclick="document.getElementById('pago-opciones-overlay').style.display='none'"
+          style="width:100%;padding:.7rem;background:transparent;
+                 border:1px solid rgba(255,255,255,.1);color:#666;
+                 border-radius:12px;font-family:inherit;font-size:.85rem;cursor:pointer;">
+        Cancelar
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL DELIVERY -->
+<div id="delivery-modal"
+     onclick="if(event.target===this)this.style.display='none'"
+     style="position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9998;
+            display:none;align-items:flex-end;justify-content:center;">
+  <div style="background:#1C1C1C;border:1px solid rgba(255,255,255,.1);
+              border-radius:20px 20px 0 0;padding:1.5rem;width:100%;max-width:480px;">
+    <div style="width:32px;height:4px;background:rgba(255,255,255,.15);
+                border-radius:4px;margin:0 auto .85rem;"></div>
+    <div style="font-size:.95rem;font-weight:800;color:#FF5A00;margin-bottom:1rem;">
+      🚀 Tipo de Orden
+    </div>
+
+    <!-- Pickup vs Delivery toggle -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1rem;">
+      <button id="btn-pickup" onclick="setTipoOrden('pickup')"
+        style="padding:.75rem;border-radius:12px;border:2px solid #FF5A00;
+               background:rgba(255,90,0,.15);color:#FF5A00;font-family:inherit;
+               font-size:.9rem;font-weight:800;cursor:pointer;">
+        🏪 Para Llevar
+      </button>
+      <button id="btn-delivery" onclick="setTipoOrden('delivery')"
+        style="padding:.75rem;border-radius:12px;border:2px solid rgba(255,255,255,.1);
+               background:transparent;color:#888;font-family:inherit;
+               font-size:.9rem;font-weight:800;cursor:pointer;">
+        🛵 Delivery
+      </button>
+    </div>
+
+    <!-- Delivery fields (hidden by default) -->
+    <div id="delivery-fields" style="display:none;">
+      <div style="margin-bottom:.65rem;">
+        <label style="font-size:.72rem;color:#888;font-weight:700;display:block;margin-bottom:.3rem;">
+          NOMBRE DEL CLIENTE
+        </label>
+        <input id="del-nombre" placeholder="Nombre completo"
+          style="width:100%;background:#111;border:1px solid rgba(255,255,255,.1);
+                 color:#fff;border-radius:8px;padding:.5rem .75rem;font-family:inherit;font-size:.88rem;">
+      </div>
+      <div style="margin-bottom:.65rem;">
+        <label style="font-size:.72rem;color:#888;font-weight:700;display:block;margin-bottom:.3rem;">
+          TELÉFONO
+        </label>
+        <input id="del-telefono" type="tel" placeholder="(210) 000-0000"
+          style="width:100%;background:#111;border:1px solid rgba(255,255,255,.1);
+                 color:#fff;border-radius:8px;padding:.5rem .75rem;font-family:inherit;font-size:.88rem;">
+      </div>
+      <div style="margin-bottom:.65rem;">
+        <label style="font-size:.72rem;color:#888;font-weight:700;display:block;margin-bottom:.3rem;">
+          DIRECCIÓN
+        </label>
+        <input id="del-direccion" placeholder="Calle, número, colonia"
+          style="width:100%;background:#111;border:1px solid rgba(255,255,255,.1);
+                 color:#fff;border-radius:8px;padding:.5rem .75rem;font-family:inherit;font-size:.88rem;">
+      </div>
+      <div style="margin-bottom:.65rem;">
+        <label style="font-size:.72rem;color:#888;font-weight:700;display:block;margin-bottom:.3rem;">
+          REFERENCIAS / NOTAS
+        </label>
+        <input id="del-notas" placeholder="Casa azul, entre calles X y Y..."
+          style="width:100%;background:#111;border:1px solid rgba(255,255,255,.1);
+                 color:#fff;border-radius:8px;padding:.5rem .75rem;font-family:inherit;font-size:.88rem;">
+      </div>
+    </div>
+
+    <!-- Pickup field -->
+    <div id="pickup-fields">
+      <div style="margin-bottom:.65rem;">
+        <label style="font-size:.72rem;color:#888;font-weight:700;display:block;margin-bottom:.3rem;">
+          NOMBRE (OPCIONAL)
+        </label>
+        <input id="del-nombre-pickup" placeholder="¿A nombre de quién?"
+          style="width:100%;background:#111;border:1px solid rgba(255,255,255,.1);
+                 color:#fff;border-radius:8px;padding:.5rem .75rem;font-family:inherit;font-size:.88rem;">
+      </div>
+      <div style="margin-bottom:.65rem;">
+        <label style="font-size:.72rem;color:#888;font-weight:700;display:block;margin-bottom:.3rem;">
+          TELÉFONO (OPCIONAL)
+        </label>
+        <input id="del-tel-pickup" type="tel" placeholder="(210) 000-0000"
+          style="width:100%;background:#111;border:1px solid rgba(255,255,255,.1);
+                 color:#fff;border-radius:8px;padding:.5rem .75rem;font-family:inherit;font-size:.88rem;">
+      </div>
+    </div>
+
+    <button onclick="confirmarTipoOrden()"
+      style="width:100%;padding:.85rem;background:linear-gradient(135deg,#FF5A00,#FF8800);
+             border:none;color:#fff;border-radius:12px;font-family:inherit;
+             font-size:.95rem;font-weight:800;cursor:pointer;margin-top:.5rem;">
+      Continuar con la Orden →
+    </button>
+  </div>
+</div>
+
+<script>
+
+/* ── DELIVERY / PICKUP ─────────────────────────── */
+window._tipoOrden = 'pickup';
+window._datosTipoOrden = {};
+
+window.setTipoOrden = function(tipo) {
+    window._tipoOrden = tipo;
+    var btnP = document.getElementById('btn-pickup');
+    var btnD = document.getElementById('btn-delivery');
+    var fieldsD = document.getElementById('delivery-fields');
+    var fieldsP = document.getElementById('pickup-fields');
+    if (tipo === 'delivery') {
+        btnD.style.borderColor = '#FF5A00';
+        btnD.style.background  = 'rgba(255,90,0,.15)';
+        btnD.style.color       = '#FF5A00';
+        btnP.style.borderColor = 'rgba(255,255,255,.1)';
+        btnP.style.background  = 'transparent';
+        btnP.style.color       = '#888';
+        if (fieldsD) fieldsD.style.display = 'block';
+        if (fieldsP) fieldsP.style.display = 'none';
+    } else {
+        btnP.style.borderColor = '#FF5A00';
+        btnP.style.background  = 'rgba(255,90,0,.15)';
+        btnP.style.color       = '#FF5A00';
+        btnD.style.borderColor = 'rgba(255,255,255,.1)';
+        btnD.style.background  = 'transparent';
+        btnD.style.color       = '#888';
+        if (fieldsD) fieldsD.style.display = 'none';
+        if (fieldsP) fieldsP.style.display = 'block';
+    }
+};
+
+window.confirmarTipoOrden = function() {
+    if (window._tipoOrden === 'delivery') {
+        var nombre   = document.getElementById('del-nombre')?.value.trim();
+        var telefono = document.getElementById('del-telefono')?.value.trim();
+        var dir      = document.getElementById('del-direccion')?.value.trim();
+        var notas    = document.getElementById('del-notas')?.value.trim();
+        if (!dir) { alert('Ingresa la dirección de entrega'); return; }
+        window._datosTipoOrden = { tipo:'delivery', nombre, telefono, direccion:dir, notas };
+    } else {
+        var nombreP = document.getElementById('del-nombre-pickup')?.value.trim();
+        var telP    = document.getElementById('del-tel-pickup')?.value.trim();
+        window._datosTipoOrden = { tipo:'pickup', nombre:nombreP, telefono:telP };
+    }
+    document.getElementById('delivery-modal').style.display = 'none';
+    // Proceder con el envío
+    _doEnvioAdmin();
+};
+
+window.abrirDeliveryModal = function() {
+    document.getElementById('delivery-modal').style.display = 'flex';
+    // Reset fields
+    var inputs = document.querySelectorAll('#delivery-modal input');
+    inputs.forEach(function(i){ i.value = ''; });
+    setTipoOrden('pickup');
+};
+
+</script>
+
+<script>
+function switchMenuTab(tab, btn) {
+    // Update buttons
+    document.querySelectorAll('.menu-tab').forEach(function(b) {
+        b.classList.remove('active');
+    });
+    if (btn) btn.classList.add('active');
+
+    // Show/hide sections
+    document.querySelectorAll('.menu-tab-content').forEach(function(s) {
+        s.style.display = 'none';
+    });
+    var target = document.getElementById('tab-' + tab);
+    if (target) {
+        target.style.display = 'block';
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // Save active tab
+    window._menuTabActivo = tab;
+}
+
+// Activate first tab on load
+document.addEventListener('DOMContentLoaded', function() {
+    var firstBtn = document.querySelector('.menu-tab[data-tab="tortas"]');
+    switchMenuTab('tortas', firstBtn);
+});
+</script>
+
+
+<script>
+// Guardar nombre de cuenta al escribir (debounce)
+(function() {
+    var _timer = null;
+    function initNombreInput() {
+        var inp = document.getElementById('nombre-cuenta-input');
+        if (!inp) return;
+
+        inp.addEventListener('input', function() {
+            clearTimeout(_timer);
+            var val = inp.value.trim();
+            _timer = setTimeout(function() {
+                var cs = window._cuentasSys;
+                if (!cs) return;
+                var c = cs.cuentas.find(function(x){ return x.id === cs.activa; });
+                if (c && val) {
+                    c.nombre = val;
+                    // Actualizar tab sin re-renderizar todo
+                    if (window.renderCartItems) window.renderCartItems();
+                }
+            }, 400);
+        });
+
+        inp.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { inp.blur(); }
+        });
+    }
+    document.addEventListener('DOMContentLoaded', initNombreInput);
+    // También intentar después si DOMContentLoaded ya pasó
+    setTimeout(initNombreInput, 500);
+})();
+
+window.editarNombreCuenta = function() {
+    var cs  = window._cuentasSys;
+    var inp = document.getElementById('nombre-cuenta-input');
+    var wrap = document.getElementById('nombre-cuenta-input-wrap');
+    var btn  = document.getElementById('btn-nombre-cuenta');
+    if (!inp || !wrap || !cs) return;
+
+    var c = cs.cuentas.find(function(x){ return x.id === cs.activa; });
+    if (!c) return;
+
+    // Mostrar input con valor actual
+    inp.value = c.nombre || '';
+    wrap.style.display = 'block';
+    btn.style.display = 'none';
+    inp.focus();
+    inp.select();
+};
+
+window.guardarNombreCuenta = function() {
+    var cs   = window._cuentasSys;
+    var inp  = document.getElementById('nombre-cuenta-input');
+    var wrap = document.getElementById('nombre-cuenta-input-wrap');
+    var btn  = document.getElementById('btn-nombre-cuenta');
+    if (!inp || !wrap || !cs) return;
+
+    var nuevoNombre = inp.value.trim();
+    if (nuevoNombre) {
+        var c = cs.cuentas.find(function(x){ return x.id === cs.activa; });
+        if (c) {
+            c.nombre = nuevoNombre;
+            if (window.renderCartItems) window.renderCartItems();
+        }
+    }
+    wrap.style.display = 'none';
+    if (btn) btn.style.display = 'block';
+};
+
+// Guardar con Enter, cancelar con Escape
+document.addEventListener('DOMContentLoaded', function() {
+    var inp = document.getElementById('nombre-cuenta-input');
+    if (!inp) return;
+    inp.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            window.guardarNombreCuenta();
+        } else if (e.key === 'Escape') {
+            var wrap = document.getElementById('nombre-cuenta-input-wrap');
+            var btn  = document.getElementById('btn-nombre-cuenta');
+            if (wrap) wrap.style.display = 'none';
+            if (btn)  btn.style.display  = 'block';
+        }
+    });
+    // Guardar al perder el foco
+    inp.addEventListener('blur', function() {
+        setTimeout(window.guardarNombreCuenta, 150);
+    });
+});
+</script>
+
+<script>
+/* ── MOD CHIPS: toggle selected ────────────── */
+document.addEventListener('click', function(e) {
+    var chip = e.target.closest('.mod-chip');
+    if (!chip) return;
+    var cb = chip.querySelector('input[type="checkbox"]');
+    if (!cb) return;
+    cb.checked = !cb.checked;
+    chip.classList.toggle('selected', cb.checked);
+    e.preventDefault();
+});
+</script>
+
+
+
+
+<!-- ══════ MODAL ROBUSTO: NOMBRE/MESA DE CUENTA ══════ -->
+<div id="nombre-cuenta-modal" class="modal-overlay" style="z-index:6000;">
+    <div style="background:#1A1A1A;width:100%;max-width:480px;border-radius:20px 20px 0 0;
+                max-height:85vh;overflow-y:auto;padding:1.2rem;box-sizing:border-box;">
+
+        <!-- Header -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+            <h3 style="margin:0;font-size:1.05rem;color:#fff;font-weight:800;">🏷️ Identificar cuenta</h3>
+            <button onclick="window.cerrarModalNombreCuenta()"
+                style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+                       color:#888;border-radius:8px;width:32px;height:32px;font-size:1rem;cursor:pointer;">✕</button>
+        </div>
+
+        <!-- Tipo de servicio -->
+        <div style="margin-bottom:1.1rem;">
+            <p style="font-size:.78rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.05em;">Tipo de servicio</p>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;">
+                <button class="tipo-serv-btn" data-tipo="Comer aquí" onclick="window.seleccionarTipoServicio(this,'Comer aquí')"
+                    style="padding:.7rem .4rem;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);
+                           color:#fff;border-radius:12px;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;
+                           display:flex;flex-direction:column;align-items:center;gap:.25rem;">
+                    <span style="font-size:1.3rem;">🍽️</span>Comer aquí
+                </button>
+                <button class="tipo-serv-btn" data-tipo="Para llevar" onclick="window.seleccionarTipoServicio(this,'Para llevar')"
+                    style="padding:.7rem .4rem;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);
+                           color:#fff;border-radius:12px;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;
+                           display:flex;flex-direction:column;align-items:center;gap:.25rem;">
+                    <span style="font-size:1.3rem;">🥡</span>Para llevar
+                </button>
+                <button class="tipo-serv-btn" data-tipo="Domicilio" onclick="window.seleccionarTipoServicio(this,'Domicilio')"
+                    style="padding:.7rem .4rem;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);
+                           color:#fff;border-radius:12px;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;
+                           display:flex;flex-direction:column;align-items:center;gap:.25rem;">
+                    <span style="font-size:1.3rem;">🚗</span>Domicilio
+                </button>
+            </div>
+        </div>
+
+        <!-- Mesas (solo si es Comer aquí) -->
+        <div id="mesas-section" style="margin-bottom:1.1rem;">
+            <p style="font-size:.78rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.05em;">Número de mesa</p>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.45rem;">
+                <!-- Mesas 1-10 generadas por JS -->
+            </div>
+        </div>
+
+        <!-- Nombre del cliente -->
+        <div style="margin-bottom:1.2rem;">
+            <p style="font-size:.78rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.05em;">O nombre del cliente</p>
+            <input id="input-nombre-cliente" type="text" placeholder="Ej: Juan, Familia López..."
+                autocomplete="off"
+                style="width:100%;box-sizing:border-box;padding:.7rem .8rem;background:#0d0d0d;
+                       border:1.5px solid rgba(255,90,0,.4);color:#fff;border-radius:12px;
+                       font-family:inherit;font-size:.9rem;outline:none;">
+        </div>
+
+        <!-- Telefono: aparece solo para Domicilio -->
+        <div id="telefono-section" style="margin-bottom:1.2rem;display:none;">
+            <p style="font-size:.78rem;color:#25D366;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.05em;">
+                📱 WhatsApp del cliente <span style="color:#666;font-weight:400;text-transform:none;">(para pedir ubicación)</span>
+            </p>
+            <input id="input-telefono-cliente" type="tel" inputmode="tel" placeholder="Ej: 210-555-1234"
+                autocomplete="off"
+                style="width:100%;box-sizing:border-box;padding:.7rem .8rem;background:#0d0d0d;
+                       border:1.5px solid rgba(37,211,102,.4);color:#fff;border-radius:12px;
+                       font-family:inherit;font-size:.9rem;outline:none;">
+            <div style="font-size:.7rem;color:#666;margin-top:.35rem;">Con este número podrás pedirle su ubicación por WhatsApp desde el panel.</div>
+        </div>
+
+        <!-- Vista previa -->
+        <div style="background:rgba(255,90,0,.08);border-radius:12px;padding:.7rem .9rem;margin-bottom:1rem;
+                    display:flex;align-items:center;gap:.5rem;">
+            <span style="font-size:.75rem;color:#888;">Se guardará como:</span>
+            <span id="preview-nombre-cuenta" style="font-size:.9rem;color:#FF5A00;font-weight:800;">Cuenta 1</span>
+        </div>
+
+        <!-- Acciones -->
+        <div style="display:flex;gap:.6rem;">
+            <button onclick="window.cerrarModalNombreCuenta()"
+                style="flex:1;padding:.85rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+                       color:#aaa;border-radius:12px;font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;">
+                Cancelar
+            </button>
+            <button onclick="window.confirmarNombreCuenta()"
+                style="flex:2;padding:.85rem;background:linear-gradient(135deg,#FF5A00,#FF8C00);border:none;
+                       color:#fff;border-radius:12px;font-family:inherit;font-size:.9rem;font-weight:800;cursor:pointer;
+                       box-shadow:0 4px 12px rgba(255,90,0,.3);">
+                ✅ Guardar
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<script>
+/* ══════ LÓGICA MODAL NOMBRE/MESA DE CUENTA ══════ */
+(function() {
+    // Estado temporal mientras el modal está abierto
+    var _seleccion = { tipo: '', mesa: '', nombre: '' };
+
+    // Generar botones de mesas 1-10
+    function generarMesas() {
+        var cont = document.querySelector('#mesas-section > div');
+        if (!cont) return;
+        var html = '';
+        for (var i = 1; i <= 10; i++) {
+            html += '<button class="mesa-btn" data-mesa="' + i + '" onclick="window.seleccionarMesa(this,' + i + ')" ' +
+                'style="aspect-ratio:1;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);' +
+                'color:#fff;border-radius:10px;font-family:inherit;font-size:1rem;font-weight:800;cursor:pointer;">' +
+                i + '</button>';
+        }
+        cont.innerHTML = html;
+    }
+
+    function actualizarPreview() {
+        var preview = document.getElementById('preview-nombre-cuenta');
+        if (!preview) return;
+        var texto = '';
+        if (_seleccion.nombre) {
+            texto = _seleccion.nombre;
+        } else if (_seleccion.mesa) {
+            texto = 'Mesa ' + _seleccion.mesa;
+        } else if (_seleccion.tipo) {
+            texto = _seleccion.tipo;
+        } else {
+            var CS = window._cuentasSys;
+            var c = CS ? CS.cuentas.find(function(x){ return x.id === CS.activa; }) : null;
+            texto = c ? c.nombre : 'Cuenta 1';
+        }
+        // Añadir tipo como prefijo si hay mesa o nombre
+        if (_seleccion.tipo && (_seleccion.mesa || _seleccion.nombre)) {
+            var iconos = { 'Comer aquí':'🍽️', 'Para llevar':'🥡', 'Domicilio':'🚗' };
+            texto = (iconos[_seleccion.tipo]||'') + ' ' + texto;
+        }
+        preview.textContent = texto;
+    }
+
+    window.abrirModalNombreCuenta = function() {
+        _seleccion = { tipo: '', mesa: '', nombre: '' };
+        generarMesas();
+
+        // Pre-cargar el nombre actual si no es el default
+        var CS = window._cuentasSys;
+        var c = CS ? CS.cuentas.find(function(x){ return x.id === CS.activa; }) : null;
+        var inp = document.getElementById('input-nombre-cliente');
+        if (inp) {
+            var esDefault = c && c.nombre === ('Cuenta ' + c.id);
+            inp.value = (c && !esDefault) ? c.nombre : '';
+        }
+        // Pre-cargar telefono si la cuenta ya tiene uno
+        var telInp = document.getElementById('input-telefono-cliente');
+        if (telInp) telInp.value = (c && c.telefono) ? c.telefono : '';
+        // Mostrar seccion telefono si la cuenta es Domicilio
+        var telSec = document.getElementById('telefono-section');
+        if (telSec) telSec.style.display = (c && c.tipoServicio === 'Domicilio') ? 'block' : 'none';
+
+        // Limpiar selecciones visuales
+        document.querySelectorAll('.tipo-serv-btn, .mesa-btn').forEach(function(b){
+            b.style.background = 'rgba(255,255,255,.05)';
+            b.style.borderColor = 'rgba(255,255,255,.12)';
+        });
+
+        actualizarPreview();
+        var modal = document.getElementById('nombre-cuenta-modal');
+        if (modal) modal.classList.add('active');
+        setTimeout(function(){ if (inp) inp.focus(); }, 200);
+    };
+
+    window.cerrarModalNombreCuenta = function() {
+        var modal = document.getElementById('nombre-cuenta-modal');
+        if (modal) modal.classList.remove('active');
+    };
+
+    window.seleccionarTipoServicio = function(btn, tipo) {
+        _seleccion.tipo = tipo;
+        // Resaltar el seleccionado
+        document.querySelectorAll('.tipo-serv-btn').forEach(function(b){
+            b.style.background = 'rgba(255,255,255,.05)';
+            b.style.borderColor = 'rgba(255,255,255,.12)';
+        });
+        btn.style.background = 'rgba(255,90,0,.15)';
+        btn.style.borderColor = '#FF5A00';
+
+        // Mostrar/ocultar mesas según tipo
+        var mesasSec = document.getElementById('mesas-section');
+        if (mesasSec) mesasSec.style.display = (tipo === 'Comer aquí') ? 'block' : 'none';
+        if (tipo !== 'Comer aquí') _seleccion.mesa = '';
+
+        // Mostrar el campo de telefono solo para Domicilio
+        var telSec = document.getElementById('telefono-section');
+        if (telSec) telSec.style.display = (tipo === 'Domicilio') ? 'block' : 'none';
+
+        actualizarPreview();
+    };
+
+    window.seleccionarMesa = function(btn, num) {
+        _seleccion.mesa = num;
+        _seleccion.nombre = ''; // mesa y nombre son excluyentes
+        var inp = document.getElementById('input-nombre-cliente');
+        if (inp) inp.value = '';
+        document.querySelectorAll('.mesa-btn').forEach(function(b){
+            b.style.background = 'rgba(255,255,255,.05)';
+            b.style.borderColor = 'rgba(255,255,255,.12)';
+            b.style.color = '#fff';
+        });
+        btn.style.background = 'rgba(255,90,0,.2)';
+        btn.style.borderColor = '#FF5A00';
+        btn.style.color = '#FF5A00';
+        actualizarPreview();
+    };
+
+    // Actualizar preview al escribir nombre
+    document.addEventListener('input', function(e) {
+        if (e.target && e.target.id === 'input-nombre-cliente') {
+            _seleccion.nombre = e.target.value.trim();
+            if (_seleccion.nombre) {
+                // Al escribir nombre, deseleccionar mesa
+                _seleccion.mesa = '';
+                document.querySelectorAll('.mesa-btn').forEach(function(b){
+                    b.style.background = 'rgba(255,255,255,.05)';
+                    b.style.borderColor = 'rgba(255,255,255,.12)';
+                    b.style.color = '#fff';
+                });
+            }
+            actualizarPreview();
+        }
+    });
+
+    window.confirmarNombreCuenta = function() {
+        var CS = window._cuentasSys;
+        if (!CS) return;
+        var c = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+        if (!c) return;
+
+        // Construir el nombre final
+        var nombre = '';
+        var iconos = { 'Comer aquí':'🍽️', 'Para llevar':'🥡', 'Domicilio':'🚗' };
+        if (_seleccion.nombre) {
+            nombre = _seleccion.nombre;
+        } else if (_seleccion.mesa) {
+            nombre = 'Mesa ' + _seleccion.mesa;
+        } else if (_seleccion.tipo) {
+            nombre = _seleccion.tipo;
+        }
+        if (_seleccion.tipo && (_seleccion.mesa || _seleccion.nombre)) {
+            nombre = (iconos[_seleccion.tipo]||'') + ' ' + nombre;
+        }
+
+        // Validar que se eligió algo
+        if (!nombre) {
+            alert('Elige una mesa, un tipo de servicio, o escribe un nombre');
+            return;
+        }
+
+        c.nombre = nombre;
+        // Guardar el tipo de servicio en la cuenta para usarlo al enviar
+        c.tipoServicio = _seleccion.tipo || 'Comer aquí';
+
+        // Guardar el telefono (solo relevante para Domicilio)
+        var telInp = document.getElementById('input-telefono-cliente');
+        if (telInp && _seleccion.tipo === 'Domicilio') {
+            c.telefono = (telInp.value || '').trim();
+        } else {
+            c.telefono = '';
+        }
+
+        // Actualizar UI
+        var display = document.getElementById('nombre-cuenta-display');
+        if (display) display.textContent = nombre;
+
+        if (window.renderCuentasTabs) window.renderCuentasTabs();
+        if (window.renderCartItems)   window.renderCartItems();
+
+        window.cerrarModalNombreCuenta();
+    };
+
+    // Sincronizar el display cuando cambia de cuenta
+    var _origRenderTabs = window.renderCuentasTabs;
+    window.renderCuentasTabs = function() {
+        if (_origRenderTabs) _origRenderTabs();
+        var CS = window._cuentasSys;
+        var c = CS ? CS.cuentas.find(function(x){ return x.id === CS.activa; }) : null;
+        var display = document.getElementById('nombre-cuenta-display');
+        if (display && c) {
+            var esDefault = c.nombre === ('Cuenta ' + c.id);
+            display.textContent = esDefault ? 'Asignar mesa / nombre' : c.nombre;
+        }
+    };
+})();
+</script>
+
+<!-- MODAL DESCUENTO -->
+<div id="modal-descuento" class="modal-overlay" style="z-index:6000;">
+  <div style="background:#1A1A1A;width:100%;max-width:420px;border-radius:20px 20px 0 0;padding:1.2rem;box-sizing:border-box;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <h3 style="margin:0;font-size:1.05rem;color:#fff;font-weight:800;">Aplicar descuento</h3>
+      <button onclick="window.cerrarModalDescuento()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#888;border-radius:8px;width:32px;height:32px;cursor:pointer;">&times;</button>
+    </div>
+
+    <p style="font-size:.75rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;">Descuentos rapidos</p>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem;margin-bottom:1rem;">
+      <button class="desc-quick" onclick="window.setDescuentoRapido(10)" style="padding:.6rem;background:rgba(167,139,250,.1);border:1.5px solid rgba(167,139,250,.3);color:#A78BFA;border-radius:10px;font-family:inherit;font-weight:800;cursor:pointer;">10%</button>
+      <button class="desc-quick" onclick="window.setDescuentoRapido(15)" style="padding:.6rem;background:rgba(167,139,250,.1);border:1.5px solid rgba(167,139,250,.3);color:#A78BFA;border-radius:10px;font-family:inherit;font-weight:800;cursor:pointer;">15%</button>
+      <button class="desc-quick" onclick="window.setDescuentoRapido(20)" style="padding:.6rem;background:rgba(167,139,250,.1);border:1.5px solid rgba(167,139,250,.3);color:#A78BFA;border-radius:10px;font-family:inherit;font-weight:800;cursor:pointer;">20%</button>
+      <button class="desc-quick" onclick="window.setDescuentoRapido(100)" style="padding:.6rem;background:rgba(244,67,54,.1);border:1.5px solid rgba(244,67,54,.3);color:#F44336;border-radius:10px;font-family:inherit;font-size:.7rem;font-weight:800;cursor:pointer;">Cortesia</button>
+    </div>
+
+    <p style="font-size:.75rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;">Monto personalizado</p>
+    <div style="display:flex;gap:.4rem;margin-bottom:.8rem;">
+      <select id="desc-tipo" style="background:#0d0d0d;border:1.5px solid rgba(167,139,250,.4);color:#fff;border-radius:10px;padding:.6rem;font-family:inherit;font-size:.85rem;">
+        <option value="porcentaje">%</option>
+        <option value="monto">$</option>
+      </select>
+      <input id="desc-valor" type="number" min="0" step="0.01" placeholder="0"
+        style="flex:1;box-sizing:border-box;padding:.6rem;background:#0d0d0d;border:1.5px solid rgba(167,139,250,.4);color:#fff;border-radius:10px;font-family:inherit;font-size:.9rem;">
+    </div>
+
+    <p style="font-size:.75rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;">Motivo (requerido)</p>
+    <input id="desc-motivo" type="text" placeholder="Ej: empleado, cliente frecuente, error de cocina"
+      style="width:100%;box-sizing:border-box;padding:.6rem;background:#0d0d0d;border:1.5px solid rgba(255,255,255,.15);color:#fff;border-radius:10px;font-family:inherit;font-size:.85rem;margin-bottom:1rem;">
+
+    <div style="display:flex;gap:.5rem;">
+      <button onclick="window.quitarDescuento()" style="flex:1;padding:.8rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#aaa;border-radius:12px;font-family:inherit;font-weight:700;cursor:pointer;">Quitar</button>
+      <button onclick="window.aplicarDescuento()" style="flex:2;padding:.8rem;background:linear-gradient(135deg,#A78BFA,#8B5CF6);border:none;color:#fff;border-radius:12px;font-family:inherit;font-weight:800;cursor:pointer;">Aplicar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PROPINA -->
+<div id="modal-propina" class="modal-overlay" style="z-index:6000;">
+  <div style="background:#1A1A1A;width:100%;max-width:420px;border-radius:20px 20px 0 0;padding:1.2rem;box-sizing:border-box;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <h3 style="margin:0;font-size:1.05rem;color:#fff;font-weight:800;">Agregar propina</h3>
+      <button onclick="window.cerrarModalPropina()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#888;border-radius:8px;width:32px;height:32px;cursor:pointer;">&times;</button>
+    </div>
+
+    <div id="propina-sugerencias" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:1rem;"></div>
+
+    <p style="font-size:.75rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;">Monto personalizado</p>
+    <div style="display:flex;gap:.4rem;margin-bottom:1rem;">
+      <select id="prop-tipo" style="background:#0d0d0d;border:1.5px solid rgba(37,211,102,.4);color:#fff;border-radius:10px;padding:.6rem;font-family:inherit;font-size:.85rem;">
+        <option value="porcentaje">%</option>
+        <option value="monto">$</option>
+      </select>
+      <input id="prop-valor" type="number" min="0" step="0.01" placeholder="0"
+        style="flex:1;box-sizing:border-box;padding:.6rem;background:#0d0d0d;border:1.5px solid rgba(37,211,102,.4);color:#fff;border-radius:10px;font-family:inherit;font-size:.9rem;">
+    </div>
+
+    <div style="display:flex;gap:.5rem;">
+      <button onclick="window.quitarPropina()" style="flex:1;padding:.8rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#aaa;border-radius:12px;font-family:inherit;font-weight:700;cursor:pointer;">Sin propina</button>
+      <button onclick="window.aplicarPropina()" style="flex:2;padding:.8rem;background:linear-gradient(135deg,#25D366,#1DB954);border:none;color:#fff;border-radius:12px;font-family:inherit;font-weight:800;cursor:pointer;">Aplicar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ PANTALLA COMPLETA: LISTA DE PRODUCTOS DEL PEDIDO ══════ -->
+<div id="lista-completa-modal" class="modal-overlay" style="z-index:5500;justify-content:center;">
+  <div id="lista-completa-container"
+       style="background:#141414;width:100%;height:100%;max-width:100%;
+              display:flex;flex-direction:column;overflow:hidden;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:1rem 1.2rem;border-bottom:1px solid rgba(255,255,255,.08);
+                flex-shrink:0;background:#1A1A1A;">
+      <div>
+        <div style="display:flex;align-items:center;gap:.6rem;">
+          <span style="font-size:1.1rem;font-weight:800;color:#FF5A00;">Productos del pedido</span>
+          <span id="lc-cuenta-badge"
+                style="font-size:.72rem;color:#888;background:rgba(255,255,255,.06);
+                       border-radius:6px;padding:.2rem .5rem;"></span>
+        </div>
+        <div id="lc-resumen" style="font-size:.78rem;color:#888;margin-top:.25rem;"></div>
+      </div>
+      <button onclick="window.cerrarListaCompleta()"
+        style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+               color:#888;font-size:.8rem;font-weight:700;border-radius:8px;
+               padding:0 .8rem;height:36px;cursor:pointer;display:flex;align-items:center;gap:.35rem;">
+        <span style="font-size:1rem;">⤡</span> Minimizar
+      </button>
+    </div>
+
+    <!-- CONTENEDOR: slider de bebidas para agregar rapido -->
+    <div style="flex-shrink:0;padding:.75rem 1.2rem;border-bottom:1px solid rgba(255,255,255,.08);background:#161616;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
+        <span style="font-size:.8rem;font-weight:700;color:#25D366;">🥤 Agregar bebida rápido</span>
+        <span style="font-size:.68rem;color:#666;">Desliza →</span>
+      </div>
+      <div id="lc-bebidas-slider"
+           style="display:flex;gap:.5rem;overflow-x:auto;padding-bottom:.3rem;
+                  scrollbar-width:thin;scrollbar-color:rgba(37,211,102,.3) transparent;">
+        <!-- Se llena por JS con las bebidas del menu -->
+      </div>
+    </div>
+
+    <!-- Lista (se llena por JS) -->
+    <div id="lc-items"
+         style="flex:1 1 auto;min-height:0;overflow-y:auto;padding:.5rem 0;"></div>
+
+    <!-- Footer -->
+    <div style="padding:.9rem 1.2rem;border-top:1px solid rgba(255,255,255,.08);
+                flex-shrink:0;background:#1A1A1A;">
+      <div style="display:flex;justify-content:space-between;align-items:center;
+                  max-width:600px;margin:0 auto;">
+        <div>
+          <div style="font-size:.75rem;color:#888;">Total del pedido</div>
+          <div id="lc-total" style="font-size:1.5rem;font-weight:900;color:#25D366;">$0.00</div>
+        </div>
+        <button onclick="window.cerrarListaCompleta()"
+          style="padding:.8rem 1.5rem;background:linear-gradient(135deg,#FF5A00,#FF8C00);
+                 border:none;color:#fff;border-radius:12px;font-family:inherit;
+                 font-size:.9rem;font-weight:800;cursor:pointer;">
+          Volver al pedido
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MOVER / DUPLICAR PRODUCTO -->
+<div id="mover-item-modal" class="modal-overlay" style="z-index:6500;justify-content:center;align-items:center;">
+  <div style="background:#1A1A1A;width:100%;max-width:420px;border-radius:20px;padding:1.3rem;box-sizing:border-box;margin:auto;max-height:85vh;overflow-y:auto;">
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <h3 style="margin:0;font-size:1.05rem;color:#fff;font-weight:800;">Mover o duplicar</h3>
+      <button onclick="window.cerrarMoverItem()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#888;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:1rem;">&times;</button>
+    </div>
+
+    <div id="mover-item-info" style="background:rgba(255,90,0,.08);border-radius:10px;padding:.7rem .85rem;margin-bottom:1rem;font-size:.88rem;color:#FF5A00;font-weight:600;"></div>
+
+    <!-- Selector de accion -->
+    <div style="display:flex;gap:.5rem;margin-bottom:1rem;">
+      <button id="mover-modo-mover" onclick="window.setModoMover('mover')"
+        style="flex:1;padding:.7rem;background:rgba(59,130,246,.15);border:1.5px solid #3B82F6;color:#3B82F6;border-radius:10px;font-family:inherit;font-size:.85rem;font-weight:800;cursor:pointer;">
+        ⇄ Mover</button>
+      <button id="mover-modo-duplicar" onclick="window.setModoMover('duplicar')"
+        style="flex:1;padding:.7rem;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.12);color:#aaa;border-radius:10px;font-family:inherit;font-size:.85rem;font-weight:800;cursor:pointer;">
+        ⧉ Duplicar</button>
+    </div>
+
+    <div id="mover-modo-hint" style="font-size:.72rem;color:#888;margin-bottom:1rem;line-height:1.5;">
+      <strong style="color:#3B82F6;">Mover:</strong> el producto se quita de esta cuenta y pasa a la otra.
+    </div>
+
+    <p style="font-size:.75rem;color:#888;font-weight:700;margin:0 0 .6rem;text-transform:uppercase;letter-spacing:.05em;">Elige la cuenta destino</p>
+    <div id="mover-cuentas-lista" style="display:flex;flex-direction:column;gap:.5rem;"></div>
+  </div>
+</div>
+
 </body>
 </html>

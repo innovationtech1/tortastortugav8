@@ -1,0 +1,69 @@
+rules_version = '2';
+
+// ═══════════════════════════════════════════════════════════
+//  REGLAS DE FIRESTORE — Tortas Tortuga POS
+//  Copia este contenido en:
+//  Firebase Console → Firestore Database → Reglas → Publicar
+// ═══════════════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── PRODUCTOS ──
+    // Lectura publica (el menu debe verse sin login)
+    // Escritura: solo usuarios autenticados (admin)
+    match /productos/{productoId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // ── PEDIDOS ──
+    // Crear: cualquiera puede enviar una orden
+    // Leer/actualizar: cocina y admin necesitan acceso
+    // Borrar: nunca desde el cliente (los pedidos son registro historico)
+    match /pedidos/{pedidoId} {
+      allow read:   if true;
+      allow create: if true;
+      allow update: if true;
+      allow delete: if false;
+    }
+
+    // ── CONTADORES (folios diarios) ──
+    // Necesario para el numero secuencial de orden #001, #002...
+    match /contadores/{contadorId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // ── USUARIOS / EMPLEADOS ──
+    // Solo autenticados
+    match /usuarios/{usuarioId} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // ── TURNOS DE CAJA ──
+    // Solo autenticados (corte de caja)
+    match /turnos_caja/{turnoId} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // ── CONFIGURACION (impuestos, propinas, etc) ──
+    match /configuracion/{configId} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // ── INVENTARIO ──
+    match /inventario/{itemId} {
+      allow read:  if true;
+      allow write: if true;
+    }
+
+    // Todo lo demas: denegado
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

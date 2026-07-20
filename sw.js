@@ -1,62 +1,30 @@
-// sw.js — Service Worker para Tortas Tortuga PWA
-const CACHE_NAME = 'tortuga-v2';
-const ASSETS = [
-    '/',
-    '/index.html',
-    '/ordenar.html',
-    '/pages/admin.html',
-    '/pages/auth.html',
-    '/css/style.css',
-    '/css/auth.css',
-    '/js/app.js',
-    '/js/menu.js',
-    '/js/auth.js',
-    '/js/firebase-config.js',
-    '/js/script.js',
-    '/manifest.json',
-    '/icons/icon-192.png',
-    '/icons/icon-512.png',
-    '/icons/icon-apple.png',
-    'https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap'
-];
+// Service Worker — NETWORK ONLY para HTML/JS (sin caché de código)
+const CACHE_NAME = 'tortas-v1784509763';
 
-self.addEventListener('install', (e) => {
-    e.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
-    );
-    self.skipWaiting();
+self.addEventListener('install', e => { self.skipWaiting(); });
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
 });
 
-self.addEventListener('activate', (e) => {
-    e.waitUntil(
-        caches.keys().then((keys) =>
-            Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-        )
-    );
-    self.clients.claim();
-});
-
-self.addEventListener('fetch', (e) => {
-    if (e.request.method !== 'GET') return;
-
-    if (e.request.url.includes('openstreetmap') || e.request.url.includes('nominatim')) {
-        e.respondWith(fetch(e.request).catch(() => new Response('', { status: 503 })));
-        return;
-    }
-
-    e.respondWith(
-        caches.match(e.request).then((cached) => {
-            return cached || fetch(e.request).then((response) => {
-                if (response && response.status === 200 && response.type !== 'opaque') {
-                    const clone = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
-                }
-                return response;
-            });
-        }).catch(() => {
-            if (e.request.headers.get('accept').includes('text/html')) {
-                return caches.match('/index.html');
-            }
-        })
-    );
+self.addEventListener('fetch', e => {
+  const url = new URL(e.request.url);
+  // NUNCA cachear HTML, JS, CSS — siempre red fresca
+  if (url.pathname.endsWith('.html') || url.pathname.endsWith('.js') ||
+      url.pathname.endsWith('.css') || url.pathname === '/' ||
+      url.pathname.endsWith('/ordenar.html')) {
+    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+    return;
+  }
+  // Firebase — siempre red
+  if (url.hostname.includes('firebase') || url.hostname.includes('googleapis') || url.hostname.includes('gstatic')) {
+    return;
+  }
+  // Imágenes — cache first
+  e.respondWith(
+    caches.match(e.request).then(c => c || fetch(e.request))
+  );
 });

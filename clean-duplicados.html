@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Limpiar Duplicados — Tortas Tortuga</title>
+<style>
+  body{font-family:system-ui;background:#111;color:#fff;padding:1.5rem;max-width:600px;margin:0 auto;}
+  h2{color:#FF5A00;}
+  .item{background:#1c1c1c;border-radius:8px;padding:.5rem .9rem;margin:.25rem 0;font-size:.82rem;display:flex;justify-content:space-between;}
+  .ok{color:#25D366;} .del{color:#F44336;} .warn{color:#FBB724;}
+  button{background:#FF5A00;color:#fff;border:none;border-radius:10px;padding:.8rem 2rem;font-size:1rem;font-weight:700;cursor:pointer;width:100%;margin-top:.75rem;}
+  button.green{background:#25D366;}
+  #log{margin-top:1rem;max-height:60vh;overflow-y:auto;}
+</style>
+</head>
+<body>
+<h2>🧹 Limpiar Duplicados de Productos</h2>
+<p style="color:#888;font-size:.85rem;">Este script elimina documentos duplicados de Firestore, manteniendo solo el más reciente de cada producto.</p>
+<button onclick="analizarDuplicados()" id="btn-analizar">🔍 Paso 1: Analizar</button>
+<button onclick="eliminarDuplicados()" id="btn-limpiar" style="display:none;background:#F44336;">🗑 Paso 2: Eliminar Duplicados</button>
+<div id="log"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, getDocs, deleteDoc, doc, writeBatch }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const app = initializeApp({
+  apiKey:"AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k",
+  authDomain:"tortas-tortuga.firebaseapp.com",
+  projectId:"tortas-tortuga"
+});
+const db = getFirestore(app);
+
+let toDelete = [];
+
+window.analizarDuplicados = async function() {
+  const log = document.getElementById('log');
+  log.innerHTML = '<div class="warn">Cargando productos...</div>';
+  
+  const snap = await getDocs(collection(db, 'productos'));
+  const docs = snap.docs.map(d => ({id: d.id, ...d.data()}));
+  log.innerHTML = '<div class="warn">'+docs.length+' documentos encontrados</div>';
+
+  // Group by nombre
+  const groups = {};
+  docs.forEach(d => {
+    const key = (d.nombre||'').toLowerCase().trim();
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(d);
+  });
+
+  toDelete = [];
+  let html = '';
+  let dupCount = 0;
+
+  Object.entries(groups).forEach(([key, items]) => {
+    if (items.length === 1) {
+      html += '<div class="item"><span>'+items[0].nombre+'</span><span class="ok">✅ único</span></div>';
+    } else {
+      dupCount++;
+      // Keep the one with variantes (most updated), delete the rest
+      const keeper = items.find(i => i.variantes && i.variantes.length) || items[items.length-1];
+      items.forEach(i => {
+        if (i.id !== keeper.id) {
+          toDelete.push({id: i.id, nombre: i.nombre});
+          html += '<div class="item"><span>'+i.nombre+'</span><span class="del">🗑 ELIMINAR ('+i.id.slice(0,8)+'...)</span></div>';
+        } else {
+          html += '<div class="item"><span>'+i.nombre+'</span><span class="ok">✅ CONSERVAR</span></div>';
+        }
+      });
+    }
+  });
+
+  log.innerHTML = '<div style="margin-bottom:.5rem;font-weight:700;">'
+    + (dupCount > 0 ? '<span class="del">⚠️ '+dupCount+' grupos duplicados, '+toDelete.length+' a eliminar</span>' : '<span class="ok">✅ Sin duplicados</span>')
+    + '</div>' + html;
+
+  if (toDelete.length > 0) {
+    document.getElementById('btn-limpiar').style.display = 'block';
+  }
+};
+
+window.eliminarDuplicados = async function() {
+  if (!toDelete.length) { alert('Nada que eliminar'); return; }
+  const btn = document.getElementById('btn-limpiar');
+  btn.disabled = true;
+  btn.textContent = '⏳ Eliminando...';
+  
+  const log = document.getElementById('log');
+  let deleted = 0;
+  
+  try {
+    const batch = writeBatch(db);
+    toDelete.forEach(item => {
+      batch.delete(doc(db, 'productos', item.id));
+    });
+    await batch.commit();
+    deleted = toDelete.length;
+    toDelete = [];
+    
+    log.innerHTML = '<div class="ok" style="font-size:1.1rem;font-weight:700;">✅ '+deleted+' duplicados eliminados</div>'
+      + '<div style="color:#888;margin-top:.5rem;font-size:.85rem;">Recarga el menú para ver los cambios.</div>';
+    btn.style.display = 'none';
+    btn.textContent = '✅ Completado';
+  } catch(e) {
+    log.innerHTML += '<div class="del">❌ Error: '+e.message+'</div>';
+    btn.disabled = false;
+    btn.textContent = '🗑 Reintentar';
+  }
+};
+</script>
+</body>
+</html>

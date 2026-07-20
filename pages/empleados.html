@@ -1,0 +1,3341 @@
+<!DOCTYPE html><!-- v1782793426 -->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<link rel="icon" type="image/x-icon" href="../favicon.ico">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Tortas Tortuga — Portal Empleados</title><!-- v1782793426 -->
+<link rel="manifest" href="../manifest.json">
+<meta name="theme-color" content="#FF5A00">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="../icons/icon-apple.png">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════
+   TORTAS TORTUGA — SISTEMA DE EMPLEADOS v3 FINAL
+   Credenciales configurables · Estados de turno completos
+   ═══════════════════════════════════════════════════════ */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{
+  --primary:#FF5A00;--pdark:#CC4700;--pglow:rgba(255,90,0,.15);
+  --bg:#0D0D0D;--sf:#1A1A1A;--sf2:#222;--sf3:#2A2A2A;--sf4:#333;
+  --tx:#FFF;--mu:#888;--bd:rgba(255,255,255,.1);--bd2:rgba(255,255,255,.06);
+  --ok:#25D366;--ok2:rgba(37,211,102,.12);
+  --er:#FF4444;--er2:rgba(255,68,68,.12);
+  --wa:#F59E0B;--wa2:rgba(245,158,11,.12);
+  --in:#3B82F6;--in2:rgba(59,130,246,.12);
+  --rest:#A78BFA;--rest2:rgba(167,139,250,.12);
+  --g:#FFD700;--g2:rgba(255,215,0,.12);
+  --sup:#A78BFA;--sup2:rgba(167,139,250,.12);
+  --caj:#38BDF8;--caj2:rgba(56,189,248,.12);
+  --emp:#94A3B8;--emp2:rgba(148,163,184,.12);
+  --r:14px;--rs:10px;--rxs:8px;
+}
+html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'Outfit',sans-serif;overflow-x:hidden;}
+.gbg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+.gbg::before{content:'';position:absolute;width:700px;height:700px;background:radial-gradient(circle,var(--pglow),transparent 65%);top:-300px;left:-200px;animation:drift 22s ease-in-out infinite alternate;}
+.gbg::after{content:'';position:absolute;width:500px;height:500px;background:radial-gradient(circle,rgba(59,130,246,.07),transparent 65%);bottom:-200px;right:-100px;animation:drift 28s ease-in-out infinite alternate-reverse;}
+@keyframes drift{to{transform:translate(80px,60px);}}
+#app{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;}
+
+/* HDR */
+.hdr{background:rgba(13,13,13,.92);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-bottom:1px solid var(--bd);padding:.85rem 1.2rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;}
+.hdr-logo{font-size:.95rem;font-weight:900;color:var(--primary);text-decoration:none;display:flex;align-items:center;gap:.4rem;}
+.hdr-r{display:flex;align-items:center;gap:.5rem;}
+.rchip{font-size:.7rem;font-weight:800;padding:.2rem .6rem;border-radius:20px;letter-spacing:.04em;display:none;}
+.rc-gerente{background:var(--g2);color:var(--g);border:1px solid rgba(255,215,0,.25);}
+.rc-supervisor{background:var(--sup2);color:var(--sup);border:1px solid rgba(167,139,250,.25);}
+.rc-cajero{background:var(--caj2);color:var(--caj);border:1px solid rgba(56,189,248,.25);}
+.rc-empleado{background:var(--emp2);color:var(--emp);border:1px solid rgba(148,163,184,.2);}
+.hname{font-size:.8rem;color:var(--mu);display:none;}
+.ibtn{background:none;border:1px solid var(--bd);color:var(--mu);border-radius:var(--rxs);padding:.38rem .65rem;font-size:.76rem;font-family:inherit;cursor:pointer;transition:.15s;display:none;}
+.ibtn:hover{background:var(--sf2);color:var(--tx);}
+
+/* SCREENS */
+.screen{display:none;flex:1;padding:1.2rem 1rem 2.5rem;max-width:560px;margin:0 auto;width:100%;}
+.screen.on{display:flex;flex-direction:column;animation:fup .28s ease;}
+@keyframes fup{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+/* CARD */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:1.35rem;margin-bottom:.85rem;}
+.card-hd{font-size:.93rem;font-weight:700;margin-bottom:.95rem;display:flex;align-items:center;gap:.45rem;}
+
+/* LOGO HERO */
+.hero{text-align:center;padding:1.5rem 0 1rem;}
+.turtle{font-size:3.5rem;animation:bob 3s ease-in-out infinite;}
+@keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
+.hero h1{font-size:1.5rem;font-weight:900;color:var(--primary);margin:.3rem 0 .15rem;}
+.hero p{font-size:.82rem;color:var(--mu);}
+
+/* TABS */
+.tabs{display:flex;background:var(--sf2);border-radius:var(--rs);padding:.2rem;margin-bottom:1rem;gap:.2rem;overflow-x:auto;}
+.tab{flex:1;min-width:max-content;padding:.48rem .7rem;border:none;border-radius:var(--rxs);background:transparent;color:var(--mu);font-family:inherit;font-size:.8rem;font-weight:600;cursor:pointer;transition:.15s;white-space:nowrap;}
+.tab.on{background:var(--sf);color:var(--primary);box-shadow:0 2px 8px rgba(0,0,0,.3);}
+.pane{display:none;}
+.pane.on{display:block;animation:fup .22s ease;}
+
+/* FORM */
+.f{margin-bottom:.85rem;}
+.f label{display:block;font-size:.76rem;font-weight:700;color:var(--mu);margin-bottom:.32rem;letter-spacing:.03em;}
+.f input,.f select{width:100%;padding:.7rem .92rem;background:var(--sf2);border:1.5px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:.92rem;outline:none;transition:.2s;-webkit-appearance:none;appearance:none;}
+.f input:focus,.f select:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--pglow);}
+.f input.ok{border-color:var(--ok);box-shadow:0 0 0 3px var(--ok2);}
+.f input.er{border-color:var(--er);box-shadow:0 0 0 3px var(--er2);animation:shk .3s ease;}
+@keyframes shk{0%,100%{transform:translateX(0);}30%{transform:translateX(-5px);}70%{transform:translateX(5px);}}
+.ferr{font-size:.71rem;color:var(--er);margin-top:.25rem;min-height:.85rem;display:block;}
+.fhint{font-size:.68rem;color:var(--mu);margin-top:.18rem;}
+.pw{position:relative;}
+.pw input{padding-right:2.9rem;}
+.eye{position:absolute;right:.7rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:.9rem;opacity:.5;transition:.15s;}
+.eye:hover{opacity:1;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:.65rem;}
+
+/* BTNS */
+.btn{width:100%;padding:.82rem;border:none;border-radius:var(--rxs);font-family:inherit;font-size:.95rem;font-weight:700;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;gap:.42rem;position:relative;}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.bp{background:linear-gradient(135deg,var(--primary),#FF8800);color:#fff;box-shadow:0 5px 16px rgba(255,90,0,.28);}
+.bp:hover:not(:disabled){filter:brightness(1.08);}
+.bp:active:not(:disabled){transform:scale(.98);}
+.bs{background:var(--sf2);color:var(--tx);border:1px solid var(--bd);}
+.bs:hover:not(:disabled){background:var(--sf3);}
+.bd{background:var(--er2);color:var(--er);border:1px solid rgba(255,68,68,.28);}
+.bd:hover:not(:disabled){background:rgba(255,68,68,.2);}
+.bok{background:var(--ok2);color:var(--ok);border:1px solid rgba(37,211,102,.28);}
+.bok:hover:not(:disabled){background:rgba(37,211,102,.22);}
+.bwa{background:var(--rest2);color:var(--rest);border:1px solid rgba(167,139,250,.28);}
+.bwa:hover:not(:disabled){background:rgba(167,139,250,.22);}
+.bsm{padding:.48rem .88rem;font-size:.78rem;width:auto;}
+.spin{width:16px;height:16px;border:2.5px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite;display:none;}
+.btn.ld .spin{display:block;}
+.btn.ld .lbl{display:none;}
+@keyframes sp{to{transform:rotate(360deg);}}
+.dvd{display:flex;align-items:center;gap:.65rem;margin:.8rem 0;color:var(--mu);font-size:.76rem;}
+.dvd::before,.dvd::after{content:'';flex:1;height:1px;background:var(--bd);}
+
+/* MSGS */
+.msg{padding:.6rem .9rem;border-radius:var(--rxs);font-size:.84rem;line-height:1.55;display:none;align-items:flex-start;gap:.42rem;}
+.msg.on{display:flex;}
+.m-ok{background:var(--ok2);border:1px solid rgba(37,211,102,.28);color:var(--ok);}
+.m-er{background:var(--er2);border:1px solid rgba(255,68,68,.28);color:var(--er);}
+.m-wa{background:var(--wa2);border:1px solid rgba(245,158,11,.28);color:var(--wa);}
+.m-in{background:var(--in2);border:1px solid rgba(59,130,246,.28);color:var(--in);}
+
+/* STRENGTH */
+.sbar{height:4px;background:var(--bd);border-radius:4px;overflow:hidden;margin-top:.28rem;}
+.sfill{height:100%;border-radius:4px;width:0;transition:width .3s,background .3s;}
+.slbl{font-size:.7rem;font-weight:700;margin-top:.2rem;}
+
+/* ═══════════════════════════════════════════
+   RELOJ / CONTROL DE TURNO
+   ═══════════════════════════════════════════ */
+.clock-card{background:linear-gradient(160deg,var(--sf2),var(--sf));border:1px solid var(--bd);border-radius:var(--r);padding:1.6rem 1.4rem;text-align:center;margin-bottom:.85rem;}
+.ck-sub{font-size:.75rem;color:var(--mu);font-weight:700;letter-spacing:.06em;margin-bottom:.22rem;}
+.ck-name{font-size:1.3rem;font-weight:900;margin-bottom:1rem;}
+.ck-time{font-size:2.8rem;font-weight:900;color:var(--primary);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+.ck-date{font-size:.8rem;color:var(--mu);margin-top:.22rem;}
+
+/* Estado badge del turno */
+.estado-badge{display:inline-flex;align-items:center;gap:.35rem;margin-top:.65rem;font-size:.76rem;font-weight:800;padding:.28rem .8rem;border-radius:20px;letter-spacing:.03em;}
+.eb-off{background:rgba(136,136,136,.12);color:var(--mu);}
+.eb-in{background:var(--ok2);color:var(--ok);border:1px solid rgba(37,211,102,.25);}
+.eb-rest{background:var(--rest2);color:var(--rest);border:1px solid rgba(167,139,250,.25);}
+.pulse{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pl 1.5s ease-in-out infinite;}
+@keyframes pl{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* Botones de turno grandes */
+.turno-btns{display:flex;flex-direction:column;gap:.65rem;margin-top:.85rem;}
+.btn-ck{padding:1rem;font-size:1rem;border-radius:var(--r);}
+.btn-entrada{background:linear-gradient(135deg,var(--ok),#18a849);color:#fff;box-shadow:0 5px 16px rgba(37,211,102,.22);}
+.btn-descanso{background:linear-gradient(135deg,#7C3AED,#A78BFA);color:#fff;box-shadow:0 5px 16px rgba(124,58,237,.22);}
+.btn-regreso{background:linear-gradient(135deg,#1D4ED8,#3B82F6);color:#fff;box-shadow:0 5px 16px rgba(59,130,246,.22);}
+.btn-salida{background:linear-gradient(135deg,var(--er),#c93333);color:#fff;box-shadow:0 5px 16px rgba(255,68,68,.22);}
+
+/* Contador de tiempo activo */
+.timer-strip{background:var(--ok2);border:1px solid rgba(37,211,102,.22);border-radius:var(--rxs);padding:.55rem 1rem;display:none;text-align:center;font-size:.88rem;font-weight:700;color:var(--ok);margin-top:.65rem;}
+.rest-strip{background:var(--rest2);border:1px solid rgba(167,139,250,.22);border-radius:var(--rxs);padding:.55rem 1rem;display:none;text-align:center;font-size:.88rem;font-weight:700;color:var(--rest);margin-top:.65rem;}
+
+/* Resumen del día */
+.day-summary{background:var(--sf2);border:1px solid var(--bd2);border-radius:var(--rxs);padding:.9rem 1rem;margin-top:.65rem;display:none;}
+.ds-row{display:flex;justify-content:space-between;align-items:center;padding:.3rem 0;border-bottom:1px solid var(--bd2);font-size:.85rem;}
+.ds-row:last-child{border:none;font-weight:800;font-size:.95rem;}
+.ds-key{color:var(--mu);}
+.ds-val{font-weight:700;color:var(--tx);}
+.ds-val.accent{color:var(--primary);}
+
+/* HISTORIAL */
+.wnav{display:flex;align-items:center;gap:.55rem;margin-bottom:.85rem;}
+.wnav button{background:var(--sf2);border:1px solid var(--bd);color:var(--tx);border-radius:var(--rxs);padding:.42rem .6rem;cursor:pointer;font-size:.9rem;transition:.15s;}
+.wnav button:hover{background:var(--sf3);}
+.wnav-lbl{flex:1;text-align:center;font-size:.85rem;font-weight:700;}
+.week-box{background:linear-gradient(135deg,var(--pglow),transparent);border:1px solid rgba(255,90,0,.18);border-radius:var(--rxs);padding:.85rem 1rem;margin-bottom:.85rem;display:flex;justify-content:space-between;align-items:center;}
+.wb-l h4{font-size:.75rem;color:var(--mu);}
+.wb-l p{font-size:1.65rem;font-weight:900;color:var(--primary);}
+.wb-r{text-align:right;}
+.wb-r h4{font-size:.75rem;color:var(--mu);}
+.wb-r p{font-size:1.3rem;font-weight:900;}
+.hist-list{display:flex;flex-direction:column;gap:.5rem;}
+.hi{background:var(--sf2);border:1px solid var(--bd2);border-radius:var(--rxs);padding:.78rem .9rem;}
+.hi-top{display:flex;align-items:center;gap:.7rem;margin-bottom:.4rem;}
+.hi-ico{font-size:1.15rem;width:28px;text-align:center;flex-shrink:0;}
+.hi-inf{flex:1;min-width:0;}
+.hi-date{font-size:.73rem;color:var(--mu);}
+.hi-emp{font-size:.83rem;font-weight:700;color:var(--tx);}
+.hi-hrs{font-size:.76rem;font-weight:800;padding:.14rem .52rem;border-radius:20px;flex-shrink:0;}
+.hc-ok{background:var(--pglow);color:var(--primary);}
+.hc-wa{background:var(--wa2);color:var(--wa);}
+.hc-rest{background:var(--rest2);color:var(--rest);}
+.hi-detail{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.2rem;}
+.seg-pill{font-size:.7rem;padding:.15rem .5rem;border-radius:20px;font-weight:600;}
+.sp-in{background:var(--ok2);color:var(--ok);}
+.sp-rest{background:var(--rest2);color:var(--rest);}
+.sp-out{background:var(--er2);color:var(--er);}
+.hi-empty{text-align:center;padding:2.2rem 1rem;color:var(--mu);font-size:.86rem;}
+
+/* EMP GRID */
+.emp-grid{display:flex;flex-direction:column;gap:.5rem;}
+.ec{background:var(--sf2);border:1px solid var(--bd2);border-radius:var(--rxs);padding:.82rem .9rem;display:flex;align-items:center;gap:.65rem;cursor:pointer;transition:.15s;}
+.ec:hover{border-color:rgba(255,90,0,.3);background:var(--sf3);}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:900;flex-shrink:0;}
+.av-g{background:var(--g2);color:var(--g);border:1.5px solid rgba(255,215,0,.3);}
+.av-s{background:var(--sup2);color:var(--sup);border:1.5px solid rgba(167,139,250,.3);}
+.av-c{background:var(--caj2);color:var(--caj);border:1.5px solid rgba(56,189,248,.3);}
+.av-e{background:var(--emp2);color:var(--emp);border:1.5px solid rgba(148,163,184,.2);}
+.ei{flex:1;min-width:0;}
+.ei h4{font-size:.88rem;font-weight:700;margin-bottom:.1rem;}
+.ei p{font-size:.73rem;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.echips{display:flex;flex-direction:column;align-items:flex-end;gap:.22rem;flex-shrink:0;}
+.chip{font-size:.66rem;font-weight:800;padding:.16rem .52rem;border-radius:20px;}
+.ch-g{background:var(--g2);color:var(--g);}
+.ch-s{background:var(--sup2);color:var(--sup);}
+.ch-c{background:var(--caj2);color:var(--caj);}
+.ch-e{background:var(--emp2);color:var(--emp);}
+.ch-on{background:var(--ok2);color:var(--ok);border:1px solid rgba(37,211,102,.2);}
+.ch-rest{background:var(--rest2);color:var(--rest);border:1px solid rgba(167,139,250,.2);}
+.ch-off{background:rgba(136,136,136,.1);color:var(--mu);}
+
+/* MODAL */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center;z-index:500;opacity:0;pointer-events:none;transition:opacity .22s;}
+.ov.open{opacity:1;pointer-events:all;}
+.modal{background:var(--sf);border:1px solid var(--bd);border-radius:20px 20px 0 0;padding:1.35rem 1.15rem 2rem;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);}
+.ov.open .modal{transform:translateY(0);}
+.mhandle{width:32px;height:4px;background:var(--bd);border-radius:4px;margin:0 auto 1.05rem;}
+.mhd{font-size:1.02rem;font-weight:800;margin-bottom:1.05rem;display:flex;align-items:center;gap:.42rem;}
+.mclose{margin-left:auto;background:none;border:none;color:var(--mu);font-size:1.2rem;cursor:pointer;padding:.18rem;}
+.mclose:hover{color:var(--tx);}
+
+/* PIN PAD */
+.gate-center{text-align:center;padding:.5rem 0 1rem;}
+.gate-ico{font-size:2.6rem;margin-bottom:.42rem;}
+.gate-ttl{font-size:.95rem;font-weight:700;margin-bottom:.25rem;}
+.gate-sub{font-size:.8rem;color:var(--mu);margin-bottom:1.1rem;line-height:1.5;}
+.pin-dots{display:flex;justify-content:center;gap:.5rem;margin-bottom:.95rem;}
+.dot{width:13px;height:13px;border-radius:50%;border:2px solid var(--bd);transition:.18s;}
+.dot.f{background:var(--primary);border-color:var(--primary);}
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:.45rem;max-width:210px;margin:0 auto .85rem;}
+.npb{padding:.85rem;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:1.15rem;font-weight:700;cursor:pointer;transition:.14s;}
+.npb:hover{background:var(--sf3);}
+.npb:active{transform:scale(.95);}
+.npd{font-size:.95rem;color:var(--mu);}
+
+/* PRIV GRID */
+.priv-grid{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;margin-bottom:.9rem;}
+.po{border:2px solid var(--bd);border-radius:var(--rs);padding:.85rem;cursor:pointer;transition:.15s;text-align:center;}
+.po:hover{border-color:rgba(255,90,0,.38);}
+.po-ico{font-size:1.5rem;margin-bottom:.28rem;}
+.po-nm{font-size:.82rem;font-weight:800;}
+.po-desc{font-size:.68rem;color:var(--mu);margin-top:.18rem;line-height:1.4;}
+.po.sel-g{border-color:var(--g);background:var(--g2);}
+.po.sel-s{border-color:var(--sup);background:var(--sup2);}
+.po.sel-c{border-color:var(--caj);background:var(--caj2);}
+.po.sel-e{border-color:var(--emp);background:var(--emp2);}
+
+/* ROLE MATRIX */
+.rm{border-radius:var(--r);overflow:hidden;border:1px solid var(--bd);margin-bottom:.85rem;}
+.rm-hd,.rm-row{display:grid;grid-template-columns:1fr repeat(4,55px);}
+.rm-hd{background:var(--sf3);}
+.rm-hd span{padding:.55rem .35rem;font-size:.65rem;font-weight:800;color:var(--mu);text-align:center;letter-spacing:.04em;}
+.rm-row{border-top:1px solid var(--bd2);}
+.rm-row:nth-child(even){background:var(--sf);}
+.rm-row:nth-child(odd){background:var(--sf2);}
+.rm-row span:first-child{padding:.6rem .75rem;font-size:.78rem;color:var(--tx);}
+.rm-row span:not(:first-child){padding:.6rem 0;text-align:center;font-size:.85rem;}
+
+/* INFO ROW */
+.ir{display:flex;align-items:center;justify-content:space-between;padding:.52rem 0;border-bottom:1px solid var(--bd2);font-size:.86rem;}
+.ir:last-child{border:none;}
+.ir-k{color:var(--mu);}
+.ir-v{font-weight:600;}
+.no-emp{text-align:center;padding:2.2rem 1rem;color:var(--mu);}
+.no-emp .ico{font-size:2rem;margin-bottom:.35rem;}
+@media(max-width:380px){.g2{grid-template-columns:1fr;}.ck-time{font-size:2.3rem;}}
+</style>
+</head>
+<body>
+<div class="gbg"></div>
+<div id="app">
+
+<!-- ─── HEADER ────────────────────────────────── -->
+<header class="hdr">
+  <a href="../index.html" class="hdr-logo"><img src="../icons/icon-192.png" alt="" style="width:26px;height:26px;border-radius:50%;object-fit:cover;"> <span style="color:var(--tx);font-weight:400;">Tortas Tortuga</span></a>
+  <div class="hdr-r">
+    <span class="rchip" id="rchip"></span>
+    <span class="hname" id="hname"></span>
+    <button class="ibtn" id="btn-back" onclick="volverLogin()">← Salir</button>
+    <button class="ibtn" id="btn-logout" onclick="cerrarSesion()">Salir →</button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════
+     S1 · LOGIN / REGISTRO
+     ═══════════════════════════════════════════════════ -->
+<div class="screen on" id="s-auth">
+  <div class="hero">
+    <div class="turtle"><img src="../icons/icon-192.png" alt="Tortas Tortuga" style="width:90px;height:90px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 4px rgba(255,90,0,.2);"></div>
+    <h1>Portal Empleados</h1>
+    <p>Tortas Tortuga · San Antonio TX</p>
+  </div>
+
+  <!-- LOGIN — pantalla única, sin auto-registro -->
+  <div class="card">
+    <div id="msg-login" class="msg"></div>
+    <div class="f">
+      <label>Número de empleado (Ej: EMP-001 o EMP-GERENTE)</label>
+      <input type="text" id="l-id" placeholder="EMP-001 o EMP-GERENTE" maxlength="20" autocapitalize="characters" autocomplete="username" style="font-size:1.1rem;font-weight:700;letter-spacing:.05em;" oninput="this.value=this.value.toUpperCase()">
+      <span class="ferr" id="e-lid"></span>
+    </div>
+    <div class="f">
+      <label>PIN (4 dígitos)</label>
+      <input type="tel" id="l-pw" placeholder="• • • •" maxlength="4" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginEmp()" style="font-size:1.4rem;letter-spacing:.5em;font-weight:700;text-align:center;">
+      <span class="ferr" id="e-lpw"></span>
+      <span class="fhint" style="text-align:center;display:block;margin-top:.3rem;">Gerente: <strong>EMP-GERENTE</strong> · PIN <strong>1234</strong></span>
+    </div>
+    <button class="btn bp" id="btn-login" onclick="loginEmp()"><span class="lbl">Entrar</span><div class="spin"></div></button>
+    <div class="dvd">acceso rápido para checar</div>
+    <button class="btn" onclick="abrirChecarRapido()" style="background:linear-gradient(135deg,#25D366,#18a849);color:#fff;font-size:1rem;padding:1rem;border-radius:var(--r);box-shadow:0 5px 16px rgba(37,211,102,.25);">
+      <span style="font-size:1.3rem;">⏱</span> Checar Entrada / Salida
+    </button>
+    <div class="dvd">¿No tienes cuenta?</div>
+    <div style="background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rxs);padding:.85rem;text-align:center;">
+      <div style="font-size:.82rem;color:var(--mu);line-height:1.7;">
+        Las cuentas de empleados solo las puede crear el <strong style="color:var(--tx);">Gerente</strong> o <strong style="color:var(--tx);">Supervisor</strong>.<br>
+        Contacta a tu gerente para que te registre en el sistema.
+      </div>
+    </div>
+    <div class="dvd">acceso gerente / supervisor</div>
+    <button class="btn bs" onclick="abrirGatePass('admin', mostrarAdminDirecto)">⚙️ Acceso Gerente / Supervisor</button>
+    <!-- Credenciales de gerente para primer uso -->
+    <div id="info-setup" class="card" style="border-color:rgba(255,215,0,.25);background:rgba(255,215,0,.06);margin-top:.6rem;">
+      <div style="font-size:.78rem;font-weight:800;color:#FFD700;margin-bottom:.5rem;">👑 Credenciales del Gerente</div>
+      <div style="font-size:.8rem;color:var(--mu);line-height:2;">
+        Número: <strong style="color:var(--tx);">EMP-GERENTE</strong><br>
+        PIN: <strong style="color:var(--tx);">1234</strong><br>
+        <span style="font-size:.72rem;opacity:.7;">Panel maestro: <strong style="color:var(--tx);">Innovationtech1</strong> / <strong style="color:var(--tx);">innovationtech1</strong></span>
+      </div>
+      <button onclick="document.getElementById('info-setup').style.display='none'" style="background:none;border:none;color:var(--mu);font-size:.72rem;cursor:pointer;margin-top:.5rem;padding:0;">Ocultar esto ✕</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     S2 · PANEL EMPLEADO (reloj + historial + perfil)
+     ═══════════════════════════════════════════════════ -->
+<div class="screen" id="s-emp">
+  <div class="tabs">
+    <button class="tab on" id="et-clk" onclick="swEmp('clk')">⏱ Mi Turno</button>
+    <button class="tab" id="et-hist" onclick="swEmp('hist')">📋 Mis Horas</button>
+    <button class="tab" id="et-prof" onclick="swEmp('prof')">👤 Perfil</button>
+  </div>
+
+  <!-- MI TURNO (reloj + botones de estado) -->
+  <div class="pane on" id="ep-clk">
+    <div class="clock-card">
+      <div class="ck-sub">EMPLEADO</div>
+      <div class="ck-name" id="ck-name">—</div>
+      <div class="ck-time" id="ck-time">00:00:00</div>
+      <div class="ck-date" id="ck-date">—</div>
+      <div class="estado-badge eb-off" id="estado-badge">
+        <span class="pulse"></span>
+        <span id="estado-txt">Sin turno activo</span>
+      </div>
+    </div>
+
+    <!-- Tira de tiempo activo -->
+    <div class="timer-strip" id="timer-strip">⏱ Tiempo trabajado: <strong id="timer-txt">0h 0m</strong></div>
+    <div class="rest-strip" id="rest-strip">☕ En descanso: <strong id="rest-txt">0m</strong></div>
+
+    <!-- Botones de turno -->
+    <div class="turno-btns" id="turno-btns">
+      <!-- Se renderizan dinámicamente según el estado -->
+    </div>
+
+    <div id="msg-clk" class="msg" style="margin-top:.6rem;"></div>
+
+    <!-- Resumen del día -->
+    <div class="day-summary" id="day-sum">
+      <div class="ds-row"><span class="ds-key">Entrada</span><span class="ds-val" id="ds-entrada">—</span></div>
+      <div class="ds-row" id="ds-desc-row" style="display:none;"><span class="ds-key">Descanso</span><span class="ds-val" id="ds-descanso">—</span></div>
+      <div class="ds-row" id="ds-sal-row" style="display:none;"><span class="ds-key">Salida</span><span class="ds-val" id="ds-salida">—</span></div>
+      <div class="ds-row"><span class="ds-key">Horas trabajadas</span><span class="ds-val accent" id="ds-horas">0h 0m</span></div>
+    </div>
+  </div>
+
+  <!-- MIS HORAS -->
+  <div class="pane" id="ep-hist">
+    <div class="wnav">
+      <button onclick="cambSem(-1)">‹</button>
+      <div class="wnav-lbl" id="wlbl-emp">—</div>
+      <button onclick="cambSem(1)">›</button>
+    </div>
+    <div class="week-box">
+      <div class="wb-l"><h4>Horas trabajadas</h4><p id="wtot-emp">0h 0m</p></div>
+      <div class="wb-r"><h4>Días / Turnos</h4><p id="wshift-emp">0</p></div>
+    </div>
+    <div class="hist-list" id="hist-emp"><div class="hi-empty">Cargando…</div></div>
+  </div>
+
+  <!-- PERFIL -->
+  <div class="pane" id="ep-prof">
+    <div class="card"><div class="card-hd">👤 Mi perfil</div><div id="prof-body">Cargando…</div></div>
+    <button class="btn bs" onclick="cerrarSesion()" style="margin-top:.4rem;">Cerrar sesión →</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     S3 · PANEL ADMIN / GERENTE / SUPERVISOR
+     ═══════════════════════════════════════════════════ -->
+<div class="screen" id="s-admin">
+  <div class="tabs" id="admin-tabs">
+    <button class="tab on" id="at-emp" onclick="swAdmin('emp')">👥 Empleados</button>
+    <button class="tab" id="at-rep" onclick="swAdmin('rep')">📊 Reportes</button>
+    <button class="tab" id="at-nom" onclick="swAdmin('nom')">💰 Nómina</button>
+    <button class="tab" id="at-priv" onclick="swAdmin('priv')">🛡 Roles</button>
+    <button class="tab" id="at-new" onclick="swAdmin('new')">➕ Nuevo</button>
+  </div>
+
+  <!-- LISTA EMPLEADOS -->
+  <div class="pane on" id="ap-emp">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;">
+      <span style="font-size:.88rem;font-weight:700;">Empleados <span style="background:var(--pglow);color:var(--primary);border-radius:20px;padding:.1rem .52rem;font-size:.7rem;font-weight:800;" id="emp-cnt">0</span></span>
+    </div>
+    <div class="f" style="margin-bottom:.6rem;"><input type="search" id="srch-emp" placeholder="Buscar por nombre, ID o puesto…" oninput="filtrarEmp()" style="font-size:.84rem;padding:.52rem .88rem;"></div>
+    <div class="emp-grid" id="emp-grid"><div class="no-emp"><div class="ico">👥</div><p>Cargando empleados…</p></div></div>
+  </div>
+
+  <!-- REPORTE -->
+  <div class="pane" id="ap-rep">
+    <div class="wnav">
+      <button onclick="cambSemA(-1)">‹</button>
+      <div class="wnav-lbl" id="wlbl-adm">—</div>
+      <button onclick="cambSemA(1)">›</button>
+    </div>
+    <div class="f" style="margin-bottom:.6rem;"><select id="rep-sel" onchange="cargarRep()"><option value="">— Todos los empleados —</option></select></div>
+    <div class="week-box">
+      <div class="wb-l"><h4>Horas totales del período</h4><p id="rep-tot">0h 0m</p></div>
+      <div class="wb-r"><h4>Turnos</h4><p id="rep-sh">0</p></div>
+    </div>
+    <div class="hist-list" id="hist-adm"><div class="hi-empty">Selecciona período o empleado</div></div>
+  </div>
+
+  <!-- NÓMINA DIARIA -->
+  <div class="pane" id="ap-nom">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;">
+      <div style="font-size:.88rem;font-weight:700;">Nómina Diaria</div>
+      <input type="date" id="nom-fecha" onchange="cargarNomina()"
+        style="padding:.38rem .65rem;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:.78rem;outline:none;">
+    </div>
+
+    <!-- Resumen global -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin-bottom:.85rem;">
+      <div style="background:var(--ok2);border:1px solid rgba(37,211,102,.2);border-radius:var(--rxs);padding:.75rem;text-align:center;">
+        <div style="font-size:1.3rem;font-weight:900;color:var(--ok);" id="nom-tot-hrs">0h</div>
+        <div style="font-size:.68rem;color:var(--ok);font-weight:700;">HORAS TOTALES</div>
+      </div>
+      <div style="background:var(--pglow);border:1px solid rgba(255,90,0,.2);border-radius:var(--rxs);padding:.75rem;text-align:center;">
+        <div style="font-size:1.3rem;font-weight:900;color:var(--primary);" id="nom-tot-pago">$0</div>
+        <div style="font-size:.68rem;color:var(--primary);font-weight:700;">COSTO TOTAL</div>
+      </div>
+      <div style="background:var(--emp2);border:1px solid rgba(148,163,184,.15);border-radius:var(--rxs);padding:.75rem;text-align:center;">
+        <div style="font-size:1.3rem;font-weight:900;color:var(--emp);" id="nom-tot-emps">0</div>
+        <div style="font-size:.68rem;color:var(--emp);font-weight:700;">EMPLEADOS</div>
+      </div>
+    </div>
+
+    <div id="nom-list"><div class="hi-empty">Selecciona una fecha para ver la nómina.</div></div>
+  </div>
+
+  <!-- ROLES / PRIVILEGIOS -->
+  <div class="pane" id="ap-priv">
+    <div class="rm">
+      <div class="rm-hd"><span>Función</span><span style="color:var(--g)">GER</span><span style="color:var(--sup)">SUP</span><span style="color:var(--caj)">CAJ</span><span style="color:var(--emp)">EMP</span></div>
+      <div class="rm-row"><span>Reloj entrada/descanso/salida</span><span>✅</span><span>✅</span><span>✅</span><span>✅</span></div>
+      <div class="rm-row"><span>Ver sus propias horas</span><span>✅</span><span>✅</span><span>✅</span><span>✅</span></div>
+      <div class="rm-row"><span>Ver lista de empleados</span><span>✅</span><span>✅</span><span>🔐</span><span>🚫</span></div>
+      <div class="rm-row"><span>Ver reportes generales</span><span>✅</span><span>✅</span><span>🔐</span><span>🚫</span></div>
+      <div class="rm-row"><span>Crear / editar empleados</span><span>✅</span><span>✅</span><span>🚫</span><span>🚫</span></div>
+      <div class="rm-row"><span>Eliminar / desactivar</span><span>✅</span><span>✅</span><span>🚫</span><span>🚫</span></div>
+      <div class="rm-row"><span>Editar turnos (corrección)</span><span>✅</span><span>✅</span><span>🚫</span><span>🚫</span></div>
+      <div class="rm-row"><span>Cambiar roles</span><span>✅</span><span>🔐PIN</span><span>🚫</span><span>🚫</span></div>
+    </div>
+    <div class="msg m-in on" style="font-size:.75rem;line-height:1.6;margin-bottom:1rem;">✅ Libre · 🔐 Requiere PIN · 🚫 Sin acceso</div>
+
+    <p style="font-size:.75rem;font-weight:800;color:var(--mu);letter-spacing:.05em;margin-bottom:.55rem;">CAMBIAR ROL DE EMPLEADO</p>
+    <div class="f" style="margin-bottom:.6rem;"><select id="priv-sel" onchange="cargarRolActual()"><option value="">— Selecciona empleado —</option></select></div>
+    <div id="priv-body" style="display:none;">
+      <div class="msg m-in on" id="msg-rol-act" style="margin-bottom:.7rem;font-size:.8rem;"></div>
+      <div class="priv-grid">
+        <div class="po" id="po-g" onclick="selRol('gerente')"><div class="po-ico">👑</div><div class="po-nm" style="color:var(--g)">Gerente</div><div class="po-desc">Acceso total sin restricciones</div></div>
+        <div class="po" id="po-s" onclick="selRol('supervisor')"><div class="po-ico">🛡️</div><div class="po-nm" style="color:var(--sup)">Supervisor</div><div class="po-desc">Gestión completa, PIN en roles</div></div>
+        <div class="po" id="po-c" onclick="selRol('cajero')"><div class="po-ico">💼</div><div class="po-nm" style="color:var(--caj)">Cajero / Líder</div><div class="po-desc">Reportes con PIN de supervisor</div></div>
+        <div class="po" id="po-e" onclick="selRol('empleado')"><div class="po-ico">👤</div><div class="po-nm" style="color:var(--emp)">Empleado</div><div class="po-desc">Solo reloj y sus horas</div></div>
+      </div>
+      <div id="msg-priv" class="msg" style="margin-bottom:.6rem;"></div>
+      <button class="btn bp" id="btn-save-rol" onclick="guardarRol()" style="display:none;"><span class="lbl">Guardar cambio de rol</span><div class="spin"></div></button>
+    </div>
+  </div>
+
+  <!-- NUEVO EMPLEADO -->
+  <div class="pane" id="ap-new">
+    <div class="card">
+      <div class="card-hd">➕ Registrar nuevo empleado</div>
+      <div id="msg-new" class="msg"></div>
+      <div class="g2">
+        <div class="f"><label>Nombre *</label><input type="text" id="n-nom" placeholder="Nombre"><span class="ferr" id="e-nnom"></span></div>
+        <div class="f"><label>Apellido *</label><input type="text" id="n-ape" placeholder="Apellido"><span class="ferr" id="e-nape"></span></div>
+      </div>
+      <div class="f"><label>Teléfono *</label><input type="tel" id="n-tel" placeholder="2105550000" maxlength="10"><span class="ferr" id="e-ntel"></span></div>
+      <div class="f"><label>Puesto *</label>
+        <select id="n-puesto"><option value="">— Selecciona —</option><option value="cajero">Cajero/a</option><option value="cocinero">Cocinero/a</option><option value="mesero">Mesero/a</option><option value="repartidor">Repartidor</option><option value="limpieza">Limpieza</option><option value="otro">Otro</option></select>
+        <span class="ferr" id="e-npuesto"></span>
+      </div>
+      <div class="f"><label>Rol inicial</label>
+        <select id="n-rol"><option value="empleado">👤 Empleado (básico)</option><option value="cajero">💼 Cajero / Líder</option><option value="supervisor">🛡️ Supervisor</option><option value="gerente">👑 Gerente</option></select>
+      </div>
+      <div class="f"><label>Salario por hora ($) — opcional</label><input type="number" id="n-sal" placeholder="0.00" min="0" step="0.25"></div>
+      <div class="f">
+        <label>PIN de acceso (4 dígitos) *</label>
+        <input type="tel" id="n-pin" placeholder="Ej: 1234" maxlength="4" style="letter-spacing:.3em;font-size:1.1rem;font-weight:700;">
+        <span class="ferr" id="e-npin"></span>
+        <span class="fhint">El empleado usará su número EMP-001 + este PIN para entrar. Fácil de recordar.</span>
+      </div>
+      <button class="btn bp" id="btn-new" onclick="crearEmpAdmin()"><span class="lbl">Registrar empleado</span><div class="spin"></div></button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════
+     PANEL MAESTRO SECRETO — Innovationtech1
+     Acceso: usuario "Innovationtech1" pass "innovationtech1"
+     ═══════════════════════════════════════════════════ -->
+<div class="screen" id="s-master">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;">
+    <div style="font-size:.9rem;font-weight:700;color:var(--primary);">🔑 Panel Maestro</div>
+    <div style="display:flex;gap:.5rem;">
+      <button onclick="masterRefresh()" style="background:var(--sf2);border:1px solid var(--bd);color:var(--mu);border-radius:var(--rxs);padding:.35rem .7rem;font-size:.76rem;cursor:pointer;font-family:inherit;">🔄 Actualizar</button>
+      <button onclick="cerrarMaster()" style="background:var(--er2);border:1px solid rgba(255,68,68,.3);color:var(--er);border-radius:var(--rxs);padding:.35rem .7rem;font-size:.76rem;cursor:pointer;font-family:inherit;">Salir</button>
+    </div>
+  </div>
+
+  <!-- Stats en tiempo real -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.55rem;margin-bottom:.85rem;" id="master-stats">
+    <div style="background:var(--ok2);border:1px solid rgba(37,211,102,.25);border-radius:var(--rxs);padding:.75rem;text-align:center;">
+      <div style="font-size:1.6rem;font-weight:900;color:var(--ok);" id="m-activos">0</div>
+      <div style="font-size:.7rem;color:var(--ok);font-weight:700;">EN TURNO</div>
+    </div>
+    <div style="background:var(--rest2);border:1px solid rgba(167,139,250,.25);border-radius:var(--rxs);padding:.75rem;text-align:center;">
+      <div style="font-size:1.6rem;font-weight:900;color:var(--rest);" id="m-descanso">0</div>
+      <div style="font-size:.7rem;color:var(--rest);font-weight:700;">DESCANSO</div>
+    </div>
+    <div style="background:var(--emp2);border:1px solid rgba(148,163,184,.2);border-radius:var(--rxs);padding:.75rem;text-align:center;">
+      <div style="font-size:1.6rem;font-weight:900;color:var(--emp);" id="m-total-emp">0</div>
+      <div style="font-size:.7rem;color:var(--emp);font-weight:700;">EMPLEADOS</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab on" id="mt-live" onclick="swMaster('live')">🟢 En sistema</button>
+    <button class="tab" id="mt-horas" onclick="swMaster('horas')">⏱ Horas hoy</button>
+    <button class="tab" id="mt-semana" onclick="swMaster('semana')">📊 Semana</button>
+    <button class="tab" id="mt-emps" onclick="swMaster('emps')">👥 Todos</button>
+  </div>
+
+  <!-- EN SISTEMA AHORA -->
+  <div class="pane on" id="mp-live">
+    <div id="master-live-list"><div class="hi-empty">Cargando…</div></div>
+  </div>
+
+  <!-- HORAS DE HOY -->
+  <div class="pane" id="mp-horas">
+    <div style="font-size:.75rem;color:var(--mu);margin-bottom:.55rem;">Todos los turnos registrados hoy</div>
+    <div id="master-horas-list"><div class="hi-empty">Cargando…</div></div>
+  </div>
+
+  <!-- REPORTE SEMANAL -->
+  <div class="pane" id="mp-semana">
+    <div class="wnav">
+      <button onclick="cambMasterSem(-1)">‹</button>
+      <div class="wnav-lbl" id="master-week-lbl">—</div>
+      <button onclick="cambMasterSem(1)">›</button>
+    </div>
+    <div class="week-box">
+      <div class="wb-l"><h4>Total horas</h4><p id="master-tot-hrs">0h 0m</p></div>
+      <div class="wb-r"><h4>Turnos</h4><p id="master-tot-shifts">0</p></div>
+    </div>
+    <div id="master-sem-list"><div class="hi-empty">Cargando…</div></div>
+  </div>
+
+  <!-- TODOS LOS EMPLEADOS -->
+  <div class="pane" id="mp-emps">
+    <div class="f" style="margin-bottom:.6rem;">
+      <input type="search" id="master-srch" placeholder="Buscar empleado…" oninput="filtrarMasterEmps()" style="font-size:.84rem;padding:.52rem .88rem;">
+    </div>
+    <div id="master-emps-list"><div class="hi-empty">Cargando…</div></div>
+  </div>
+</div>
+
+<!-- MODAL ACCIÓN RÁPIDA MAESTRO -->
+<div class="ov" id="ov-master-action">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mhd">⚡ Acción rápida <button class="mclose" onclick="cOv('ov-master-action')">✕</button></div>
+    <div id="ma-emp-info" style="background:var(--sf2);border-radius:var(--rxs);padding:.85rem;margin-bottom:.85rem;font-size:.88rem;"></div>
+    <div id="msg-master-action" class="msg" style="margin-bottom:.65rem;"></div>
+    <div style="display:flex;flex-direction:column;gap:.5rem;" id="ma-btns"></div>
+
+    <div style="border-top:1px solid var(--bd);margin-top:.85rem;padding-top:.85rem;">
+      <div style="font-size:.75rem;font-weight:800;color:var(--mu);letter-spacing:.05em;margin-bottom:.55rem;">EDITAR TURNO MANUALMENTE</div>
+      <div class="g2">
+        <div class="f"><label>Hora entrada</label><input type="time" id="ma-entrada" oninput="calcMaHoras()"></div>
+        <div class="f"><label>Hora salida</label><input type="time" id="ma-salida" oninput="calcMaHoras()"></div>
+      </div>
+      <div class="g2">
+        <div class="f"><label>Inicio descanso</label><input type="time" id="ma-desc-in"></div>
+        <div class="f"><label>Fin descanso</label><input type="time" id="ma-desc-out"></div>
+      </div>
+      <div id="ma-horas-calc" style="background:var(--pglow);border:1px solid rgba(255,90,0,.2);border-radius:var(--rxs);padding:.55rem;text-align:center;font-size:.85rem;margin-bottom:.65rem;display:none;">
+        Horas netas: <strong id="ma-horas-tot" style="color:var(--primary);">—</strong>
+      </div>
+      <div class="f"><label>Nota</label><input type="text" id="ma-nota" placeholder="Razón de la corrección"></div>
+      <button class="btn bp" id="btn-ma-guardar" onclick="guardarTurnoMaster()"><span class="lbl">💾 Guardar turno</span><div class="spin"></div></button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+
+<!-- MODAL CHECAR RÁPIDO -->
+<div class="ov" id="ov-checar">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mhd">⏱ Checar Entrada / Salida <button class="mclose" onclick="cOv('ov-checar')">✕</button></div>
+    <div id="msg-checar" class="msg" style="margin-bottom:.75rem;"></div>
+    <div class="f">
+      <label>Número de empleado</label>
+      <input type="text" id="ck-emp-id" placeholder="EMP-001 o EMP-GERENTE" maxlength="20"
+        style="font-size:1.2rem;font-weight:700;letter-spacing:.1em;text-align:center;"
+        oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')el('ck-pin').focus()">
+    </div>
+    <div class="f">
+      <label>PIN (4 dígitos)</label>
+      <input type="tel" id="ck-pin" placeholder="• • • •" maxlength="4"
+        style="font-size:1.6rem;letter-spacing:.6em;font-weight:700;text-align:center;"
+        onkeydown="if(event.key==='Enter')checaRapido()">
+    </div>
+    <div id="ck-estado-info" style="display:none;background:var(--sf2);border-radius:var(--rxs);padding:.85rem;text-align:center;margin-bottom:.85rem;">
+      <div style="font-size:.82rem;color:var(--mu);">Estado actual</div>
+      <div id="ck-estado-txt" style="font-size:1.1rem;font-weight:700;margin-top:.25rem;">—</div>
+    </div>
+    <button class="btn bp" id="btn-checa-rapido" onclick="checaRapido()"><span class="lbl">Verificar y checar</span><div class="spin"></div></button>
+  </div>
+</div>
+
+<!-- MODAL GATE (PIN / CONTRASEÑA) -->
+<div class="ov" id="ov-gate">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mhd" id="gate-ttl">🔐 Verificar acceso <button class="mclose" onclick="cerrarGate()">✕</button></div>
+    <div class="gate-center">
+      <div class="gate-ico" id="gate-ico">🛡️</div>
+      <div class="gate-ttl" id="gate-sub">Acceso protegido</div>
+      <div class="gate-sub" id="gate-desc">Ingresa la contraseña para continuar.</div>
+      <!-- PIN mode -->
+      <div id="gate-pin">
+        <div class="pin-dots"><div class="dot" id="d0"></div><div class="dot" id="d1"></div><div class="dot" id="d2"></div><div class="dot" id="d3"></div></div>
+        <div class="numpad">
+          <button class="npb" onclick="pk('1')">1</button><button class="npb" onclick="pk('2')">2</button><button class="npb" onclick="pk('3')">3</button>
+          <button class="npb" onclick="pk('4')">4</button><button class="npb" onclick="pk('5')">5</button><button class="npb" onclick="pk('6')">6</button>
+          <button class="npb" onclick="pk('7')">7</button><button class="npb" onclick="pk('8')">8</button><button class="npb" onclick="pk('9')">9</button>
+          <button class="npb" onclick="pclr()">C</button><button class="npb" onclick="pk('0')">0</button><button class="npb npd" onclick="pdel()">⌫</button>
+        </div>
+        <div id="msg-pin" class="msg" style="margin-top:.4rem;"></div>
+      </div>
+      <!-- PASS mode -->
+      <div id="gate-pass" style="display:none;width:100%;">
+        <div class="f"><div class="pw"><input type="password" id="gate-pw" placeholder="Contraseña" autocomplete="off" onkeydown="if(event.key==='Enter')gateV()"><button class="eye" type="button" onclick="eye('gate-pw',this)">👁️</button></div></div>
+        <div id="msg-gpw" class="msg" style="margin-bottom:.6rem;"></div>
+        <button class="btn bp" id="btn-gv" onclick="gateV()"><span class="lbl">Verificar</span><div class="spin"></div></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE EMPLEADO -->
+<div class="ov" id="ov-detail">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mhd">👤 Detalle de empleado <button class="mclose" onclick="cOv('ov-detail')">✕</button></div>
+    <div id="detail-body">Cargando…</div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR TURNO -->
+<div class="ov" id="ov-edit">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mhd">✏️ Editar / Agregar turno <button class="mclose" onclick="cOv('ov-edit')">✕</button></div>
+    <p style="font-size:.8rem;color:var(--mu);margin-bottom:.85rem;">Empleado: <strong id="edit-name" style="color:var(--tx)">—</strong></p>
+    <div id="msg-edit" class="msg"></div>
+    <div class="f"><label>Fecha</label><input type="date" id="et-fecha"></div>
+    <div class="g2">
+      <div class="f"><label>Hora entrada</label><input type="time" id="et-in" oninput="calcEditH()"></div>
+      <div class="f"><label>Hora salida</label><input type="time" id="et-out" oninput="calcEditH()"></div>
+    </div>
+    <div class="g2">
+      <div class="f"><label>Inicio descanso</label><input type="time" id="et-rd"></div>
+      <div class="f"><label>Fin descanso</label><input type="time" id="et-rv"></div>
+    </div>
+    <div id="et-calc" style="background:var(--pglow);border:1px solid rgba(255,90,0,.2);border-radius:var(--rxs);padding:.6rem;text-align:center;margin-bottom:.8rem;display:none;">
+      Horas netas calculadas: <strong id="et-tot" style="color:var(--primary)">—</strong>
+    </div>
+    <div class="f"><label>Nota / Razón de corrección</label><input type="text" id="et-nota" placeholder="Ej: Empleado olvidó marcar entrada"></div>
+    <button class="btn bp" id="btn-edit" onclick="guardarEditT()"><span class="lbl">Guardar turno</span><div class="spin"></div></button>
+  </div>
+</div>
+
+<!-- ═══════════════════ FIREBASE + LÓGICA ═══════════════════ -->
+<script>
+/* ── Funciones globales básicas — disponibles inmediatamente ── */
+function el(id){ return document.getElementById(id); }
+
+/* ── RESTAURAR SESIÓN (20 minutos) ─────────────────────── */
+(function(){
+  var empId = sessionStorage.getItem('tt_emp_id');
+  var pin   = sessionStorage.getItem('tt_emp_pin');
+  var ts    = parseInt(sessionStorage.getItem('tt_emp_ts') || '0');
+  if(!empId || !pin || !ts) return;
+  if(Date.now() - ts > 20 * 60 * 1000){
+    // Sesión expirada — limpiar
+    sessionStorage.removeItem('tt_emp_id');
+    sessionStorage.removeItem('tt_emp_pin');
+    sessionStorage.removeItem('tt_emp_ts');
+    return;
+  }
+  // Sesión válida — Firebase la restaurará automáticamente
+  window._autoLoginEmp = { empId: empId, pin: pin };
+  console.log('🔄 Sesión activa para', empId, '— restaurando...');
+})();
+function showScreen(id){ document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('on');}); var e=el(id); if(e)e.classList.add('on'); }
+function aOv(id){ var e=el(id); if(e)e.classList.add('open'); }
+function cOv(id){ var e=el(id); if(e)e.classList.remove('open'); }
+function msg(id,tipo,html,auto){ var e=el(id); if(!e)return; var m={ok:'msg on m-ok',er:'msg on m-er',wa:'msg on m-wa','in':'msg on m-in'}; e.className=m[tipo]||m['in']; e.innerHTML=html; if(auto!==false&&tipo==='ok')setTimeout(function(){if(e){e.className='msg';e.innerHTML='';}},5000); }
+function btnLd(id,v){ var b=el(id); if(!b)return; b.classList.toggle('ld',v); b.disabled=v; }
+function fErr(id,eid,m){ var e=el(id); if(e){e.classList.add('er');e.classList.remove('ok');} var er=el(eid); if(er)er.textContent=m; }
+function fOk(id){ var e=el(id); if(e){e.classList.remove('er');e.classList.add('ok');} }
+function eye(id,btn){ var e=el(id); if(!e)return; e.type=e.type==='password'?'text':'password'; btn.textContent=e.type==='password'?'👁️':'🙈'; }
+function swAuth(t){ ['login','reg'].forEach(function(x){ var tb=el('t-'+x); var p=el('p-'+x); if(tb)tb.classList.toggle('on',x===t); if(p)p.classList.toggle('on',x===t); }); }
+function swEmp(t){ ['clk','hist','prof'].forEach(function(x){ var tb=el('et-'+x); var p=el('ep-'+x); if(tb)tb.classList.toggle('on',x===t); if(p)p.classList.toggle('on',x===t); }); }
+function swAdmin(t){ ['emp','rep','priv','new'].forEach(function(x){ var tb=el('at-'+x); var p=el('ap-'+x); if(tb)tb.classList.toggle('on',x===t); if(p)p.classList.toggle('on',x===t); }); }
+function volverLogin(){ showScreen('s-auth'); var rc=el('rchip'); if(rc)rc.style.display='none'; var hn=el('hname'); if(hn)hn.style.display='none'; var bl=el('btn-logout'); if(bl)bl.style.display='none'; var bb=el('btn-back'); if(bb)bb.style.display='none'; }
+
+// Proxy functions — funcionan inmediatamente aunque Firebase tarde en cargar
+// Se sobreescriben automáticamente cuando el módulo termina de cargar
+function abrirChecarRapido(){
+    var ov = document.getElementById('ov-checar');
+    if(ov){ 
+        ov.classList.add('open');
+        setTimeout(function(){ var inp=document.getElementById('ck-emp-id'); if(inp)inp.focus(); }, 300);
+    }
+}
+function cOv(id){ var e=document.getElementById(id); if(e) e.classList.remove('open'); }
+function abrirGatePass(tipo, cb){
+    // Guardar callback para cuando el módulo cargue
+    window._pendingGateCb = cb;
+    window._pendingGateTipo = tipo;
+    var ov = document.getElementById('ov-gate');
+    var gpass = document.getElementById('gate-pass');
+    var gpin = document.getElementById('gate-pin');
+    var gico = document.getElementById('gate-ico');
+    var gsub = document.getElementById('gate-sub');
+    var gdesc = document.getElementById('gate-desc');
+    var gpw = document.getElementById('gate-pw');
+    if(gpass) gpass.style.display='block';
+    if(gpin) gpin.style.display='none';
+    if(gico) gico.textContent = tipo==='admin' ? '🔐' : '🛡️';
+    if(gsub) gsub.textContent = 'Acceso Privilegiado';
+    if(gdesc) gdesc.textContent = 'Ingresa la contraseña de gerente o supervisor.';
+    if(gpw) gpw.value='';
+    if(ov) ov.classList.add('open');
+    setTimeout(function(){ var p=document.getElementById('gate-pw'); if(p)p.focus(); },300);
+}
+function mostrarAdminDirecto(nivel){ window._adminNivel = nivel || 3; }
+async function checaRapido(){
+    var empId = (document.getElementById('ck-emp-id').value||'').trim().toUpperCase();
+    var pin   = (document.getElementById('ck-pin').value||'').replace(/\D/g,'');
+    var msgEl = document.getElementById('msg-checar');
+    var btn   = document.getElementById('btn-checa-rapido');
+
+    function showMsg(tipo, txt){
+        if(!msgEl) return;
+        var cls = {ok:'msg on m-ok', er:'msg on m-er', in:'msg on m-in', wa:'msg on m-wa'};
+        msgEl.className = cls[tipo]||cls.in;
+        msgEl.innerHTML = txt;
+    }
+
+    if(!empId.startsWith('EMP-')){ showMsg('er','Ingresa tu número: EMP-001 o EMP-GERENTE'); return; }
+    if(pin.length!==4){ showMsg('er','Ingresa tu PIN de 4 dígitos'); return; }
+
+    if(btn){ btn.disabled=true; btn.querySelector('.lbl').textContent='Verificando…'; }
+    showMsg('in','⏳ Verificando…');
+
+    var API_KEY = 'AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k';
+    var PROJECT = 'tortas-tortuga';
+    var emailInterno = empId.toLowerCase() + '@tortuga.local';
+    var pwAuto = empId + pin;
+
+    try{
+        // 1. Login con Firebase Auth REST API
+        var authRes = await fetch(
+            'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + API_KEY,
+            { method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ email: emailInterno, password: pwAuto, returnSecureToken: true }) }
+        );
+        var authData = await authRes.json();
+
+        // Si falla, intentar con email legacy para cuentas creadas antes del nuevo sistema
+        if(authData.error && empId === 'EMP-GERENTE'){
+            var legacyRes = await fetch(
+                'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + API_KEY,
+                { method:'POST', headers:{'Content-Type':'application/json'},
+                  body: JSON.stringify({ email:'gerente@tortuga.local', password:'GerenteTortuga2026', returnSecureToken:true }) }
+            );
+            var legacyData = await legacyRes.json();
+            if(!legacyData.error) authData = legacyData;
+        }
+
+        if(authData.error){
+            // Fallback: buscar en Firestore directamente por empleadoId + pin
+            var snapQ = await getDocs(query(
+                collection(db, 'empleados'),
+                where('empleadoId','==', empId),
+                where('pin','==', pin)
+            ));
+            if(snapQ.empty){
+                var m = { 'INVALID_LOGIN_CREDENTIALS':'Número o PIN incorrecto.',
+                          'TOO_MANY_ATTEMPTS_TRY_LATER':'Demasiados intentos. Espera unos minutos.' };
+                showMsg('er','❌ ' + (m[authData.error.message] || 'Número o PIN incorrecto.'));
+                return;
+            }
+            // Empleado encontrado en Firestore — checar sin Firebase Auth
+            var empDocFS  = snapQ.docs[0];
+            var empDataFS = empDocFS.data();
+            var uidFS     = empDocFS.id;
+            var nombreFS  = empDataFS.nombre || empId;
+            var ahoraFS   = new Date();
+            var hoyISOFS  = hoyISO;
+            var fHoraFS   = function(d){ return d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:true}); };
+            var mToHFS    = function(m){ return Math.floor(m/60)+'h '+Math.round(m%60)+'m'; };
+
+            // Buscar turno activo de hoy
+            var qFS = query(collection(db,'turnos'),
+                where('uid','==', uidFS),
+                where('fechaISO','==', hoyISOFS));
+            var snapT = await getDocs(qFS);
+            var turnoActivoFS = null;
+            snapT.forEach(function(d){
+                var t = d.data();
+                if(t.estado==='activo'||t.estado==='descanso') turnoActivoFS = {id:d.id, ...t};
+            });
+
+            if(!turnoActivoFS){
+                // ENTRADA
+                await addDoc(collection(db,'turnos'),{
+                    uid:uidFS, empleadoId:empId,
+                    nombre:nombreFS, apellido:empDataFS.apellido||'',
+                    entrada:Timestamp.fromDate(ahoraFS), salida:null,
+                    inicioDescanso:null, finDescanso:null,
+                    minDescanso:0, minTrabajados:null, horas:null,
+                    estado:'activo', editado:false, nota:'',
+                    fechaISO:hoyISOFS, creado:serverTimestamp()
+                });
+                document.getElementById('ck-estado-info').style.display='block';
+                document.getElementById('ck-estado-txt').innerHTML =
+                    '<span style="color:#25D366">✅ Entrada registrada</span><br>' +
+                    '<span style="font-size:.85rem;color:#888">'+nombreFS+' — '+fHoraFS(ahoraFS)+'</span>';
+                showMsg('ok','✅ ¡Buen día, '+nombreFS+'! Entrada: '+fHoraFS(ahoraFS));
+            } else {
+                // SALIDA
+                var entradaFS = turnoActivoFS.entrada?.toDate?.() || (turnoActivoFS.entrada?.seconds ? new Date(turnoActivoFS.entrada.seconds*1000) : ahoraFS);
+                var descFS    = turnoActivoFS.minDescanso || 0;
+                var brutoFS   = Math.round((ahoraFS - entradaFS)/60000);
+                var netoFS    = Math.max(0, Math.min(brutoFS, 960) - descFS);
+                await updateDoc(doc(db,'turnos',turnoActivoFS.id),{
+                    salida:Timestamp.fromDate(ahoraFS),
+                    estado:'completo',
+                    minTrabajados:netoFS,
+                    horas:parseFloat((netoFS/60).toFixed(2))
+                });
+                document.getElementById('ck-estado-info').style.display='block';
+                document.getElementById('ck-estado-txt').innerHTML =
+                    '<span style="color:#FF4444">⏹ Salida registrada</span><br>' +
+                    '<span style="font-size:.85rem;color:#888">'+nombreFS+' — '+fHoraFS(ahoraFS)+' · '+mToHFS(netoFS)+' trabajadas</span>';
+                showMsg('ok','✅ ¡Hasta luego, '+nombreFS+'! Trabajaste '+mToHFS(netoFS)+' hoy.');
+            }
+            return;
+        }
+        var uid   = authData.localId;
+        var token = authData.idToken;
+        var _hd = new Date(); var hoyISO = _hd.getFullYear()+'-'+String(_hd.getMonth()+1).padStart(2,'0')+'-'+String(_hd.getDate()).padStart(2,'0');
+        var ahora  = new Date();
+
+        // 2. Buscar empleado en Firestore
+        var empRes = await fetch(
+            'https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents/empleados/'+uid,
+            { headers:{ 'Authorization':'Bearer '+token } }
+        );
+        var empData = await empRes.json();
+        if(!empData.fields){ showMsg('er','❌ Perfil de empleado no encontrado.'); return; }
+        var nombre = empData.fields.nombre?.stringValue || empId;
+
+        // 3. Buscar turno activo de hoy
+        var turnosRes = await fetch(
+            'https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents:runQuery',
+            { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+              body: JSON.stringify({ structuredQuery:{
+                from:[{collectionId:'turnos'}],
+                where:{ compositeFilter:{ op:'AND', filters:[
+                    {fieldFilter:{field:{fieldPath:'uid'},op:'EQUAL',value:{stringValue:uid}}},
+                    {fieldFilter:{field:{fieldPath:'fechaISO'},op:'EQUAL',value:{stringValue:hoyISO}}},
+                    {fieldFilter:{field:{fieldPath:'estado'},op:'IN',value:{arrayValue:{values:[
+                        {stringValue:'activo'},{stringValue:'descanso'}
+                    ]}}}}
+                ]}},
+                limit: 1
+              }})
+            }
+        );
+        var turnosData = await turnosRes.json();
+        var turnoDoc = turnosData[0]?.document;
+
+        var fHora = function(d){ return d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:true}); };
+        var mToH  = function(m){ return Math.floor(m/60)+'h '+Math.round(m%60)+'m'; };
+
+        if(!turnoDoc){
+            // SIN turno → CHECAR ENTRADA
+            var entradaISO = ahora.toISOString();
+            await fetch(
+                'https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents/turnos',
+                { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+                  body: JSON.stringify({ fields:{
+                    uid:{stringValue:uid},
+                    empleadoId:{stringValue:empId},
+                    nombre:{stringValue:nombre},
+                    apellido:{stringValue:empData.fields.apellido?.stringValue||''},
+                    entrada:{timestampValue:entradaISO},
+                    estado:{stringValue:'activo'},
+                    fechaISO:{stringValue:hoyISO},
+                    minDescanso:{integerValue:0},
+                    editado:{booleanValue:false},
+                    nota:{stringValue:''}
+                  }})
+                }
+            );
+            document.getElementById('ck-estado-info').style.display='block';
+            document.getElementById('ck-estado-txt').innerHTML =
+                '<span style="color:#25D366">✅ Entrada registrada</span><br>' +
+                '<span style="font-size:.85rem;color:#888">'+nombre+' — '+fHora(ahora)+'</span>';
+            showMsg('ok','✅ ¡Buen día, '+nombre+'! Entrada: '+fHora(ahora));
+            // Sin auto-cierre
+
+        } else {
+            // CON turno → CHECAR SALIDA
+            var turnoId = turnoDoc.name.split('/').pop();
+            var entradaStr = turnoDoc.fields.entrada?.timestampValue;
+            var entrada = entradaStr ? new Date(entradaStr) : ahora;
+            var totalDesc = parseInt(turnoDoc.fields.minDescanso?.integerValue||0);
+            var neto = Math.max(0, Math.round((ahora - entrada)/60000) - totalDesc);
+
+            await fetch(
+                'https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents/turnos/'+turnoId+'?updateMask.fieldPaths=salida&updateMask.fieldPaths=estado&updateMask.fieldPaths=minTrabajados&updateMask.fieldPaths=horas',
+                { method:'PATCH', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+                  body: JSON.stringify({ fields:{
+                    ...turnoDoc.fields,
+                    salida:{timestampValue:ahora.toISOString()},
+                    estado:{stringValue:'completo'},
+                    minTrabajados:{integerValue:neto},
+                    horas:{doubleValue:parseFloat((neto/60).toFixed(2))}
+                  }})
+                }
+            );
+            document.getElementById('ck-estado-info').style.display='block';
+            document.getElementById('ck-estado-txt').innerHTML =
+                '<span style="color:#FF4444">⏹ Salida registrada</span><br>' +
+                '<span style="font-size:.85rem;color:#888">'+nombre+' — '+fHora(ahora)+' · '+mToH(neto)+' trabajadas</span>';
+            showMsg('ok','✅ ¡Hasta luego, '+nombre+'! Trabajaste '+mToH(neto)+' hoy.');
+            // Sin auto-cierre — el empleado cierra manualmente
+        }
+
+        // 4. Cerrar sesión REST
+        await fetch(
+            'https://securetoken.googleapis.com/v1/token?key='+API_KEY,
+            { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+              body:'grant_type=refresh_token&refresh_token='+authData.refreshToken }
+        );
+
+    } catch(e){
+        showMsg('er','❌ Error de conexión: '+e.message);
+    } finally {
+        if(btn){ btn.disabled=false; btn.querySelector('.lbl').textContent='Verificar y checar'; }
+    }
+}
+function gateV(){
+    var pw = document.getElementById('gate-pw');
+    if(!pw || !pw.value){ return; }
+    var p = pw.value.trim();
+    var nivel = 0;
+    if(p === 'GerenteTortuga2026') nivel = 4;
+    else if(p === 'SupervisorTortuga2026') nivel = 3;
+    else if(p === 'innovationtech1') nivel = 4;  // master — acceso total
+
+    if(nivel > 0){
+        // Cerrar modal
+        var ov = document.getElementById('ov-gate');
+        if(ov) ov.classList.remove('open');
+        pw.value = '';
+
+        // Mostrar panel admin directamente en el DOM sin depender del módulo
+        mostrarPanelAdminDireto(nivel);
+    } else {
+        var msg2 = document.getElementById('msg-gpw');
+        if(msg2){ msg2.className='msg on m-er'; msg2.innerHTML='❌ Contraseña incorrecta.'; }
+        if(pw) pw.value='';
+    }
+}
+
+function mostrarPanelAdminDireto(nivel){
+    // Mostrar pantalla admin inmediatamente
+    document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('on'); });
+    var sa = document.getElementById('s-admin');
+    if(sa) sa.classList.add('on');
+
+    // Header
+    var rc = document.getElementById('rchip');
+    if(rc){
+        rc.className = 'rchip rc-' + (nivel>=4?'gerente':'supervisor');
+        rc.textContent = nivel>=4 ? '👑 Gerente' : '🛡️ Supervisor';
+        rc.style.display = 'inline-flex';
+    }
+    var hn = document.getElementById('hname');
+    if(hn){ hn.textContent = nivel>=4?'Gerente':'Supervisor'; hn.style.display='inline'; }
+    var bl = document.getElementById('btn-logout');
+    if(bl) bl.style.display='flex';
+    var bb = document.getElementById('btn-back');
+    if(bb) bb.style.display='flex';
+
+    // Guardar nivel para que el módulo lo use cuando cargue
+    window._adminNivel = nivel;
+
+    // Cargar datos via REST API inmediatamente — no esperar al módulo
+    window._adminNivel = nivel;
+    cargarListaEmpsREST();
+    poblarSelectsREST();
+    // Si el módulo también cargó, dejar que tome control
+    if(window._mostrarAdminReal){
+        window._mostrarAdminReal(nivel);
+    }
+}
+
+/* ─── FUNCIONES REST API (independientes del módulo) ─────────── */
+var _restToken = null;
+
+async function getRestToken(){
+    if(_restToken) return _restToken;
+    // Usar token del usuario autenticado en Firebase Auth si está disponible
+    try {
+        if(user && user.getIdToken) {
+            _restToken = await user.getIdToken();
+            return _restToken;
+        }
+    } catch(e) {}
+    // Login silencioso — errores 400 son normales si la cuenta no existe
+    var API_KEY = 'AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k';
+    try {
+        var res = await fetch(
+            'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+API_KEY,
+            { method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({email:'gerente@tortuga.local', password:'GerenteTortuga2026', returnSecureToken:true}) }
+        );
+        var d = await res.json();
+        if(d.idToken){ _restToken = d.idToken; return _restToken; }
+    } catch(e) {}
+    return null;
+}
+
+async function cargarListaEmpsREST(){
+    var grid = el('emp-grid');
+    if(!grid) return;
+    grid.innerHTML = '<div class="no-emp"><div class="ico">⏳</div><p>Cargando empleados…</p></div>';
+    try{
+        var token = await getRestToken();
+        if(!token){ grid.innerHTML='<div class="no-emp"><div class="ico">❌</div><p>No se pudo conectar.</p></div>'; return; }
+        var PROJECT = 'tortas-tortuga';
+        var res = await fetch(
+            'https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents/empleados?pageSize=100',
+            { headers:{'Authorization':'Bearer '+token} }
+        );
+        var d = await res.json();
+        var docs = d.documents || [];
+        allEmps = docs.map(function(doc){
+            var f = doc.fields||{};
+            return {
+                uid: doc.name.split('/').pop(),
+                nombre: f.nombre?.stringValue||'',
+                apellido: f.apellido?.stringValue||'',
+                empleadoId: f.empleadoId?.stringValue||'',
+                puesto: f.puesto?.stringValue||'',
+                rol: f.rol?.stringValue||'empleado',
+                estado: f.estado?.stringValue||'activo',
+                turnoActivo: f.turnoActivo?.booleanValue||false,
+                email: f.email?.stringValue||''
+            };
+        });
+        // Ordenar por nombre
+        allEmps.sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
+        var cnt = el('emp-cnt');
+        if(cnt) cnt.textContent = allEmps.length;
+        // Llamar renderEmps si ya está disponible, si no renderizar inline
+        if(typeof window.renderEmpsGlobal === 'function') {
+            window.renderEmpsGlobal(allEmps);
+        } else {
+            renderEmpsBasico(allEmps);
+        }
+    } catch(e){
+        console.error('cargarListaEmpsREST:', e);
+        grid.innerHTML='<div class="no-emp"><div class="ico">❌</div><p>Error: '+e.message+'</p></div>';
+    }
+}
+
+function renderEmpsBasico(list){
+    var ROLES_CSS = {gerente:'g', supervisor:'s', cajero:'c', empleado:'e'};
+    var ROLES_ICO = {gerente:'👑', supervisor:'🛡️', cajero:'💼', empleado:'👤'};
+    var ROLES_LBL = {gerente:'Gerente', supervisor:'Supervisor', cajero:'Cajero', empleado:'Empleado'};
+    var g = el('emp-grid');
+    if(!g) return;
+    if(!list || !list.length){
+        g.innerHTML='<div class="no-emp"><div class="ico">🔍</div><p>Sin empleados.</p></div>'; return;
+    }
+    g.innerHTML = list.map(function(e){
+        var css = ROLES_CSS[e.rol||'empleado']||'e';
+        var ico = ROLES_ICO[e.rol||'empleado']||'👤';
+        var lbl = ROLES_LBL[e.rol||'empleado']||'Empleado';
+        var ini = (e.nombre?e.nombre[0]:'')+(e.apellido?e.apellido[0]:'');
+        return '<div class="ec" onclick="verDetalle(\\"'+e.uid+'\\")">'
+            +'<div class="av av-'+css+'">'+ini+'</div>'
+            +'<div class="ei"><h4>'+e.nombre+' '+e.apellido+'</h4>'
+            +'<p>'+e.empleadoId+' · '+e.puesto+'</p></div>'
+            +'<div class="echips">'
+            +'<div class="chip ch-'+css+'">'+ico+' '+lbl+'</div>'
+            +'<div class="chip ch-off">'+e.estado+'</div>'
+            +'</div></div>';
+    }).join('');
+}
+
+async function poblarSelectsREST(){
+    var token = await getRestToken();
+    if(!token) return;
+    var PROJECT = 'tortas-tortuga';
+    try{
+        var res = await fetch(
+            'https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents/empleados?pageSize=100',
+            { headers:{'Authorization':'Bearer '+token} }
+        );
+        var d = await res.json();
+        var docs = d.documents||[];
+        var opts = docs.map(function(doc){
+            var f = doc.fields||{};
+            var uid = doc.name.split('/').pop();
+            var nom = (f.nombre?.stringValue||'')+' '+(f.apellido?.stringValue||'');
+            return '<option value="'+uid+'">'+nom.trim()+'</option>';
+        }).join('');
+        var repSel = el('rep-sel');
+        if(repSel) repSel.innerHTML='<option value="">— Todos los empleados —</option>'+opts;
+        var privSel = el('priv-sel');
+        if(privSel) privSel.innerHTML='<option value="">— Selecciona empleado —</option>'+opts;
+    } catch(e){ console.error('poblarSelectsREST:', e); }
+}
+
+</script>
+
+<script type="module">
+// Capturar errores del módulo para debug
+window.addEventListener('error', function(e){ console.error('Error global:', e.message, e.filename, e.lineno); });
+window.addEventListener('unhandledrejection', function(e){ console.error('Promise rechazada:', e.reason); });
+
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+         onAuthStateChanged, signOut, updateProfile, updatePassword }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, setDoc, getDoc, addDoc, updateDoc,
+         collection, query, where, orderBy, getDocs, serverTimestamp, Timestamp }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+/* ─── FIREBASE CONFIG ─────────────────────────── */
+const FB = {
+  apiKey:"AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k",
+  authDomain:"tortas-tortuga.firebaseapp.com",
+  projectId:"tortas-tortuga",
+  storageBucket:"tortas-tortuga.firebasestorage.app",
+  messagingSenderId:"828578668114",
+  appId:"1:828578668114:web:747331efe534341d97098b"
+};
+const fbApp = initializeApp(FB);
+const auth  = getAuth(fbApp);
+const db    = getFirestore(fbApp);
+
+/* ════════════════════════════════════════════════
+   ⚙️  CREDENCIALES — CAMBIA ESTAS ANTES DE PUBLICAR
+   ════════════════════════════════════════════════ */
+const CREDS = {
+  PASS_GERENTE:    'GerenteTortuga2026',    // contraseña del dueño/gerente
+  PASS_SUPERVISOR: 'SupervisorTortuga2026', // contraseña del supervisor
+  PIN_ELEVACION:   '2812',                  // PIN de 4 dígitos para funciones críticas
+  // Panel maestro secreto
+  MASTER_USER:     'Innovationtech1',       // usuario maestro
+  MASTER_PASS:     'innovationtech1',       // contraseña maestra
+};
+
+/* ─── ROLES ───────────────────────────────────── */
+/* ════════════════════════════════════════════════
+   CUENTA INICIAL DEL GERENTE
+   Usuario para login: gerente@tortuga.local
+   Contraseña para login: GerenteTortuga2026
+   Se crea automaticamente la primera vez.
+   ════════════════════════════════════════════════ */
+const GERENTE_INICIAL = {
+  email:    'emp-gerente@tortuga.local',   // número: EMP-GERENTE
+  password: 'EMP-GERENTE1234',             // número + PIN 1234
+  empId:    'EMP-GERENTE',
+  pin:      '1234',
+  nombre:   'Gerente',
+  apellido: 'Principal',
+  puesto:   'Gerente General',
+  rol:      'gerente',
+};
+
+const ROLES = {
+  gerente:   { nivel:4, label:'Gerente',      ico:'👑', css:'g' },
+  supervisor:{ nivel:3, label:'Supervisor',   ico:'🛡️', css:'s' },
+  cajero:    { nivel:2, label:'Cajero/Líder', ico:'💼', css:'c' },
+  empleado:  { nivel:1, label:'Empleado',     ico:'👤', css:'e' },
+};
+
+/* ─── ESTADOS DE TURNO ────────────────────────── */
+// off → activo → descanso → activo → completo
+const ESTADOS = {
+  off:      { label:'Sin turno activo',  css:'eb-off',  ico:'⬜' },
+  activo:   { label:'En turno',          css:'eb-in',   ico:'🟢' },
+  descanso: { label:'En descanso',       css:'eb-rest', ico:'☕' },
+  completo: { label:'Turno completado',  css:'eb-off',  ico:'✅' },
+};
+
+/* ─── ESTADO GLOBAL ───────────────────────────── */
+let user       = null;
+let empData    = null;
+let rolActual  = 'empleado';
+let nivelActual= 1;
+let turnoId    = null;
+let turnoData  = null;
+let skipAuthChange = false;  // evita que onAuthStateChanged interrumpa el panel admin
+let semOff     = 0;
+let semOffA    = 0;
+let rlj        = null;
+let editEUid   = null;
+let editTId    = null;
+let allEmps    = [];
+let nivelAdmin = 0;
+let rolSel     = null;
+let gatePin    = '';
+let gateCb     = null;
+let gateMode   = 'pass';
+
+/* ─── HELPERS DE TIEMPO ───────────────────────── */
+const fTime = d=> d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
+const fDate = d=> d.toLocaleDateString('es-MX',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+const fShort= d=> d.toLocaleDateString('es-MX',{weekday:'short',month:'short',day:'numeric'});
+const fHora = d=> d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:true});
+const mToH  = m=>{ const h=Math.floor(m/60),mn=Math.round(m%60); return `${h}h ${mn}m`; };
+const mToM  = m=> `${Math.round(m)}m`;
+const calcM = (a,b)=>(b-a)/60000;
+const pad   = n=> String(n).padStart(2,'0');
+function semRng(off=0){
+  const n=new Date(),dy=n.getDay();
+  const l=new Date(n); l.setDate(n.getDate()-((dy===0?7:dy)-1)+off*7); l.setHours(0,0,0,0);
+  const d=new Date(l); d.setDate(l.getDate()+6); d.setHours(23,59,59,999);
+  return {l,d};
+}
+function semLbl(l,d){ const f=x=>x.toLocaleDateString('es-MX',{month:'short',day:'numeric'}); return `${f(l)} — ${f(d)}`; }
+
+/* ─── RELOJ EN VIVO ───────────────────────────── */
+function startClock(){
+  clearInterval(rlj);
+  rlj = setInterval(()=>{
+    const n=new Date();
+    el('ck-time').textContent = fTime(n);
+    el('ck-date').textContent = fDate(n);
+    actualizarTimers(n);
+  },1000);
+}
+
+function actualizarTimers(now){
+  if(!turnoData) return;
+  const entrada = turnoData.entrada?.toDate?.();
+  if(!entrada) return;
+  const estado = turnoData.estado || 'off';
+
+  if(estado==='activo'){
+    // tiempo trabajado = ahora - entrada - minutos de descanso ya tomados
+    const descMin = turnoData.minDescanso || 0;
+    const trabMin = calcM(entrada, now) - descMin;
+    el('timer-txt').textContent = mToH(Math.max(0, trabMin));
+    // actualizar resumen
+    el('ds-horas').textContent = mToH(Math.max(0, trabMin));
+  }
+  if(estado==='descanso'){
+    const inicioDesc = turnoData.inicioDescanso?.toDate?.();
+    if(inicioDesc){
+      const durDesc = calcM(inicioDesc, now);
+      el('rest-txt').textContent = mToM(durDesc);
+    }
+  }
+}
+
+/* ════════════════════════════════════════════════
+   SETUP INICIAL — crea la cuenta del gerente
+   si no existe en Firebase al cargar la app.
+   ════════════════════════════════════════════════ */
+async function setupInicial(){
+  try {
+    // Intentar login silencioso para ver si ya existe
+    const cred = await signInWithEmailAndPassword(auth,
+      GERENTE_INICIAL.email, GERENTE_INICIAL.password).catch(()=>null);
+
+    if(cred){
+      // Ya existe — verificar que tenga perfil Firestore
+      const snap = await getDoc(doc(db,'empleados', cred.user.uid));
+      if(!snap.exists()){
+        const empId = GERENTE_INICIAL.empId;
+        await setDoc(doc(db,'empleados', cred.user.uid),{
+          uid:cred.user.uid, empleadoId:empId,
+          nombre:GERENTE_INICIAL.nombre, apellido:GERENTE_INICIAL.apellido,
+          email:GERENTE_INICIAL.email, telefono:'2100000000',
+          puesto:GERENTE_INICIAL.puesto, rol:GERENTE_INICIAL.rol,
+          pin:GERENTE_INICIAL.pin,
+          salarioHora:0, estado:'activo',
+          creado:serverTimestamp(), turnoActivo:false
+        });
+      }
+      await signOut(auth); // volver a pantalla de login
+      return;
+    }
+
+    // No existe — crear cuenta nueva
+    const newCred = await createUserWithEmailAndPassword(auth,
+      GERENTE_INICIAL.email, GERENTE_INICIAL.password);
+    await updateProfile(newCred.user,{displayName:'Gerente Principal'});
+    await setDoc(doc(db,'empleados', newCred.user.uid),{
+      uid:newCred.user.uid, empleadoId:GERENTE_INICIAL.empId,
+      nombre:GERENTE_INICIAL.nombre, apellido:GERENTE_INICIAL.apellido,
+      email:GERENTE_INICIAL.email, telefono:'2100000000',
+      puesto:GERENTE_INICIAL.puesto, rol:GERENTE_INICIAL.rol,
+      pin:GERENTE_INICIAL.pin,
+      salarioHora:0, estado:'activo',
+      creado:serverTimestamp(), turnoActivo:false
+    });
+    await signOut(auth);
+    console.log('✅ Cuenta de gerente creada:', GERENTE_INICIAL.email);
+  } catch(e){
+    // Si el correo ya está en uso por otra cuenta, ignorar
+    if(e.code !== 'auth/email-already-in-use'){
+      console.warn('Setup inicial:', e.message);
+    }
+  }
+}
+
+// Ejecutar al cargar — con pequeño delay para que Firebase se inicialice
+setTimeout(setupInicial, 500);
+
+/* ─── AUTH STATE ──────────────────────────────── */
+onAuthStateChanged(auth, async u=>{
+  // Si estamos en modo admin silencioso, ignorar este cambio
+  if(skipAuthChange){ return; }
+  if(u){
+    user=u;
+    const s=await getDoc(doc(db,'empleados',u.uid));
+    if(!s.exists()){
+      // Si es la cuenta del gerente, crear el perfil automáticamente
+      if(u.email === GERENTE_INICIAL.email){
+        const empId = GERENTE_INICIAL.empId;
+        await setDoc(doc(db,'empleados', u.uid),{
+          uid:u.uid, empleadoId:empId,
+          nombre:GERENTE_INICIAL.nombre, apellido:GERENTE_INICIAL.apellido,
+          email:GERENTE_INICIAL.email, telefono:'2100000000',
+          puesto:GERENTE_INICIAL.puesto, rol:GERENTE_INICIAL.rol,
+          pin:GERENTE_INICIAL.pin,
+          salarioHora:0, estado:'activo',
+          creado:serverTimestamp(), turnoActivo:false
+        });
+        // Recargar datos recién creados
+        const snap2 = await getDoc(doc(db,'empleados', u.uid));
+        empData = snap2.data();
+        rolActual   = empData.rol || 'gerente';
+        nivelActual = ROLES[rolActual]?.nivel || 4;
+        mostrarEmp();
+        return;
+      }
+      // Fallback: buscar por email en empleados
+      const qEmail = query(collection(db,'empleados'), where('email','==', u.email));
+      const snapEmail = await getDocs(qEmail);
+      if (!snapEmail.empty) {
+        empData = { ...snapEmail.docs[0].data(), id: snapEmail.docs[0].id };
+        rolActual   = empData.rol || 'gerente';
+        nivelActual = ROLES[rolActual]?.nivel || 4;
+        mostrarEmp();
+        return;
+      }
+      // No encontrado por UID ni email — cerrar sesión
+      await signOut(auth); return;
+    }
+    empData = { ...s.data(), id: s.id };
+    if(empData.estado==='inactivo'){ msg('msg-login','er','❌ Cuenta desactivada. Contacta al supervisor.'); await signOut(auth); return; }
+    rolActual   = empData.rol || 'empleado';
+    nivelActual = ROLES[rolActual]?.nivel || 1;
+    mostrarEmp();
+  } else {
+    // Verificar si hay sesión guardada para auto-login
+    if(window._autoLoginEmp){
+      const {empId, pin} = window._autoLoginEmp;
+      window._autoLoginEmp = null;
+      console.log('🔄 Auto-login con sesión guardada:', empId);
+      try{
+        const emailInterno = `${empId.toLowerCase()}@tortuga.local`;
+        const pwAuto = `${empId}${pin}`;
+        try{
+          skipAuthChange = true;
+          await signInWithEmailAndPassword(auth, emailInterno, pwAuto);
+          skipAuthChange = false;
+        } catch(e1){
+          if(empId==='EMP-GERENTE'){
+            skipAuthChange = true;
+            await signInWithEmailAndPassword(auth,'gerente@tortuga.local','GerenteTortuga2026');
+            skipAuthChange = false;
+          } else { throw e1; }
+        }
+        // Actualizar timestamp de sesión
+        sessionStorage.setItem('tt_emp_ts', Date.now().toString());
+        return; // onAuthStateChanged volverá a correr con el usuario
+      } catch(e){
+        console.warn('Auto-login falló:', e.message);
+        // Limpiar sesión inválida
+        sessionStorage.removeItem('tt_emp_id');
+        sessionStorage.removeItem('tt_emp_pin');
+        sessionStorage.removeItem('tt_emp_ts');
+      }
+    }
+    user=null; empData=null; rolActual='empleado'; nivelActual=1; turnoId=null; turnoData=null;
+    clearInterval(rlj);
+    showScreen('s-auth');
+    el('rchip').style.display='none';
+    el('hname').style.display='none';
+    el('btn-logout').style.display='none';
+    el('btn-back').style.display='none';
+  }
+});
+
+/* ─── MOSTRAR PANEL EMPLEADO ──────────────────── */
+function mostrarEmp(){
+  showScreen('s-emp');
+  el('btn-logout').style.display='flex';
+  el('btn-back').style.display='none';
+  const R=ROLES[rolActual];
+  el('rchip').className=`rchip rc-${rolActual}`;
+  el('rchip').textContent=`${R.ico} ${R.label}`;
+  el('rchip').style.display='inline-flex';
+  el('hname').textContent=empData.nombre.split(' ')[0];
+  el('hname').style.display='inline';
+  el('ck-name').textContent=`${empData.nombre} ${empData.apellido}`;
+  startClock();
+  cargarTurnoActivo();
+  semOff=0; cargarHistEmp();
+  renderPerfil();
+}
+
+function renderPerfil(){
+  const R=ROLES[rolActual];
+  const puestos = ['cajero','cocinero','mesero','repartidor','limpieza','otro'];
+  el('prof-body').innerHTML=`
+    /* AVATAR + NOMBRE CON EDICION */
+    <div style="background:var(--sf2);border-radius:var(--rxs);padding:.9rem;margin-bottom:.7rem;display:flex;align-items:center;gap:.8rem;">
+      <div class="av av-${R.css}" style="width:50px;height:50px;font-size:1.25rem;" id="prof-av">${(empData.nombre[0]||'')+(empData.apellido[0]||'')}</div>
+      <div style="flex:1;">
+        <div style="font-weight:800;font-size:.98rem;" id="prof-nombre-txt">${empData.nombre} ${empData.apellido}</div>
+        <div style="font-size:.73rem;color:var(--mu);">${empData.empleadoId} · <span id="prof-puesto-txt">${empData.puesto}</span></div>
+      </div>
+      <button onclick="abrirEditPerfil()" style="background:var(--pglow);border:1px solid rgba(255,90,0,.3);color:var(--primary);border-radius:6px;padding:.28rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit;">✏️ Editar perfil</button>
+    </div>
+
+    /* FORMULARIO DE EDICION */
+    <div id="prof-edit-form" style="display:none;background:var(--sf2);border:1px solid rgba(255,90,0,.25);border-radius:var(--rxs);padding:1rem;margin-bottom:.7rem;">
+      <div style="font-size:.76rem;font-weight:800;color:var(--mu);letter-spacing:.05em;margin-bottom:.75rem;">EDITAR INFORMACIÓN</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.6rem;">
+        <div>
+          <div style="font-size:.72rem;color:var(--mu);margin-bottom:.25rem;">Nombre</div>
+          <input type="text" id="edit-nombre" value="${empData.nombre}" style="width:100%;padding:.6rem .75rem;background:var(--sf3);border:1.5px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:.88rem;outline:none;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--bd)'">
+        </div>
+        <div>
+          <div style="font-size:.72rem;color:var(--mu);margin-bottom:.25rem;">Apellido</div>
+          <input type="text" id="edit-apellido" value="${empData.apellido}" style="width:100%;padding:.6rem .75rem;background:var(--sf3);border:1.5px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:.88rem;outline:none;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--bd)'">
+        </div>
+      </div>
+      <div style="margin-bottom:.6rem;">
+        <div style="font-size:.72rem;color:var(--mu);margin-bottom:.25rem;">Teléfono (10 dígitos)</div>
+        <input type="tel" id="edit-tel" value="${empData.telefono}" maxlength="10" oninput="this.value=this.value.replace(/\D/g,'')" style="width:100%;padding:.6rem .75rem;background:var(--sf3);border:1.5px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:.88rem;outline:none;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--bd)'">
+      </div>
+      <div style="margin-bottom:.85rem;">
+        <div style="font-size:.72rem;color:var(--mu);margin-bottom:.25rem;">Puesto</div>
+        <select id="edit-puesto" style="width:100%;padding:.6rem .75rem;background:var(--sf3);border:1.5px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:.88rem;outline:none;-webkit-appearance:none;">
+          ${puestos.map(p=>`<option value="${p}" ${empData.puesto===p?'selected':''}>${p.charAt(0).toUpperCase()+p.slice(1)}</option>`).join('')}
+        </select>
+      </div>
+      /* CAMBIO DE CONTRASENA */
+      <div style="border-top:1px solid var(--bd);margin:.75rem 0 .75rem;padding-top:.75rem;">
+        <div style="font-size:.72rem;font-weight:800;color:var(--mu);letter-spacing:.05em;margin-bottom:.55rem;"><span id="pw-section-label">CAMBIAR CONTRASEÑA / PIN (opcional)</span></div>
+        <div style="margin-bottom:.6rem;">
+          <div style="font-size:.72rem;color:var(--mu);margin-bottom:.25rem;" id="pw-new-label">Nueva contraseña o PIN</div>
+          <div style="position:relative;">
+            <input type="password" id="edit-pw-new" placeholder="PIN (4 dígitos) o contraseña (mín 6)" style="width:100%;padding:.6rem 2.8rem .6rem .75rem;background:var(--sf3);border:1.5px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:.88rem;outline:none;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--bd)'" oninput="checkPwMatch()">
+            <button type="button" onclick="togglePwEdit('edit-pw-new',this)" style="position:absolute;right:.6rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:.9rem;opacity:.5;">👁️</button>
+          </div>
+        </div>
+        <div style="margin-bottom:.6rem;">
+          <div style="font-size:.72rem;color:var(--mu);margin-bottom:.25rem;">Confirmar nueva contraseña</div>
+          <div style="position:relative;">
+            <input type="password" id="edit-pw-confirm" placeholder="Repite la contraseña" style="width:100%;padding:.6rem 2.8rem .6rem .75rem;background:var(--sf3);border:1.5px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:.88rem;outline:none;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--bd)'" oninput="checkPwMatch()">
+            <button type="button" onclick="togglePwEdit('edit-pw-confirm',this)" style="position:absolute;right:.6rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:.9rem;opacity:.5;">👁️</button>
+          </div>
+        </div>
+        <div id="pw-match-msg" style="font-size:.72rem;min-height:.85rem;margin-top:-.3rem;margin-bottom:.4rem;"></div>
+      </div>
+
+      <div id="prof-edit-msg" style="font-size:.78rem;margin-bottom:.6rem;"></div>
+      <div style="display:flex;gap:.5rem;">
+        <button onclick="guardarPerfil()" id="btn-guardar-perfil" style="flex:1;padding:.7rem;background:linear-gradient(135deg,var(--ok),#18a849);color:#fff;border:none;border-radius:var(--rxs);font-family:inherit;font-size:.88rem;font-weight:700;cursor:pointer;">Guardar cambios</button>
+        <button onclick="cancelarEditPerfil()" style="padding:.7rem 1rem;background:var(--sf3);border:1px solid var(--bd);color:var(--mu);border-radius:var(--rxs);font-family:inherit;font-size:.88rem;cursor:pointer;">Cancelar</button>
+      </div>
+    </div>
+
+    <div class="ir"><span class="ir-k">Rol</span><span class="ir-v"><span class="chip ch-${R.css}">${R.ico} ${R.label}</span></span></div>
+    <div class="ir"><span class="ir-k">N° Empleado</span><span class="ir-v" style="font-family:monospace;font-weight:700;color:var(--primary);">${empData.empleadoId}</span></div>
+    <div class="ir"><span class="ir-k">Correo</span><span class="ir-v" style="font-size:.8rem;">${empData.email}</span></div>
+    <div class="ir"><span class="ir-k">Teléfono</span><span class="ir-v" id="prof-tel-txt">${empData.telefono}</span></div>
+    <div class="ir"><span class="ir-k">Puesto</span><span class="ir-v" id="prof-puesto-txt2">${empData.puesto}</span></div>
+    <div class="ir"><span class="ir-k">Alta en sistema</span><span class="ir-v" style="font-size:.8rem;">${empData.creado?.toDate?.().toLocaleDateString('es-MX')||'N/A'}</span></div>`;
+}
+
+/* ─── EDITAR PERFIL COMPLETO ─────────────────────── */
+window.abrirEditPerfil = function(){
+  el('prof-edit-form').style.display = 'block';
+  el('prof-edit-msg').textContent = '';
+  el('prof-edit-msg').style.color = '';
+  // Limpiar campos de contraseña al abrir
+  if(el('edit-pw-new')) el('edit-pw-new').value='';
+  if(el('edit-pw-confirm')) el('edit-pw-confirm').value='';
+  if(el('pw-match-msg')) el('pw-match-msg').textContent='';
+};
+
+window.cancelarEditPerfil = function(){
+  el('prof-edit-form').style.display = 'none';
+};
+
+window.guardarPerfil = async function(){
+  const nombre   = el('edit-nombre').value.trim();
+  const apellido = el('edit-apellido').value.trim();
+  const tel      = el('edit-tel').value.replace(/\D/g,'');
+  const puesto   = el('edit-puesto').value;
+  const pwNew    = el('edit-pw-new')?.value || '';
+  const pwCfg    = el('edit-pw-confirm')?.value || '';
+  const msgEl    = el('prof-edit-msg');
+  const btn      = el('btn-guardar-perfil');
+
+  // Validaciones
+  if(nombre.length < 2){ msgEl.textContent='❌ Nombre muy corto'; msgEl.style.color='var(--er)'; return; }
+  if(apellido.length < 2){ msgEl.textContent='❌ Apellido muy corto'; msgEl.style.color='var(--er)'; return; }
+  if(tel.length !== 10){ msgEl.textContent='❌ Teléfono debe tener 10 dígitos'; msgEl.style.color='var(--er)'; return; }
+  // Validar: PIN (4 dígitos) O contraseña (mín 6 chars)
+  const esPIN = pwNew && /^\d{4}$/.test(pwNew);
+  const esPW  = pwNew && pwNew.length >= 6;
+  if(pwNew && !esPIN && !esPW){
+    msgEl.textContent='❌ Ingresa un PIN de 4 dígitos o una contraseña de mínimo 6 caracteres';
+    msgEl.style.color='var(--er)'; return;
+  }
+  if(pwNew && pwNew !== pwCfg){ msgEl.textContent='❌ No coinciden — vuelve a escribir'; msgEl.style.color='var(--er)'; return; }
+
+  btn.textContent = 'Guardando…'; btn.disabled = true;
+  try{
+    // Guardar datos en Firestore
+    await updateDoc(doc(db,'empleados',user.uid),{ nombre, apellido, telefono:tel, puesto });
+    empData.nombre = nombre; empData.apellido = apellido;
+    empData.telefono = tel; empData.puesto = puesto;
+    await updateProfile(user,{displayName:`${nombre} ${apellido}`});
+
+    // Cambiar credencial si se ingresó
+    if(pwNew){
+      const esPINnuevo = /^\d{4}$/.test(pwNew);
+      if(esPINnuevo){
+        // Actualizar PIN en Firestore
+        const docId = empData?.id || empData?.docId || (user ? user.uid : null);
+        if(docId) await updateDoc(doc(db,'empleados',docId), { pin: pwNew });
+        if(empData) empData.pin = pwNew;
+      } else if(user){
+        // Actualizar contraseña Firebase Auth (solo si tiene cuenta Auth)
+        await updatePassword(user, pwNew);
+      }
+      if(el('edit-pw-new'))    el('edit-pw-new').value='';
+      if(el('edit-pw-confirm')) el('edit-pw-confirm').value='';
+      if(el('pw-match-msg'))   el('pw-match-msg').textContent='';
+    }
+
+    msgEl.textContent = pwNew
+      ? '✅ Perfil y contraseña actualizados correctamente'
+      : '✅ Perfil actualizado correctamente';
+    msgEl.style.color='var(--ok)';
+
+    // Actualizar vista
+    const nomTxt = el('prof-nombre-txt');
+    if(nomTxt) nomTxt.textContent=`${nombre} ${apellido}`;
+    const avEl = el('prof-av');
+    if(avEl) avEl.textContent=(nombre[0]||'')+(apellido[0]||'');
+    const telTxt = el('prof-tel-txt');
+    if(telTxt) telTxt.textContent=tel;
+    const p1 = el('prof-puesto-txt');
+    if(p1) p1.textContent=puesto;
+    const p2 = el('prof-puesto-txt2');
+    if(p2) p2.textContent=puesto;
+    el('hname').textContent = nombre.split(' ')[0];
+
+    setTimeout(()=>{ el('prof-edit-form').style.display='none'; },2200);
+  }catch(e){
+    // Si el token expiró, pedir que vuelva a entrar
+    if(e.code==='auth/requires-recent-login'){
+      msgEl.textContent='⚠️ Por seguridad, cierra sesión y vuelve a entrar para cambiar la contraseña.';
+      msgEl.style.color='var(--wa)';
+    } else {
+      msgEl.textContent='❌ Error: '+e.message;
+      msgEl.style.color='var(--er)';
+    }
+  }finally{
+    btn.textContent='Guardar cambios'; btn.disabled=false;
+  }
+};
+
+/* ─── HELPERS DEL FORMULARIO DE PERFIL ───────────── */
+window.togglePwEdit = function(id, btn){
+  const e = el(id); if(!e) return;
+  e.type = e.type==='password'?'text':'password';
+  btn.textContent = e.type==='password'?'👁️':'🙈';
+};
+
+window.checkPwMatch = function(){
+  const pw1 = el('edit-pw-new')?.value || '';
+  const pw2 = el('edit-pw-confirm')?.value || '';
+  const msg = el('pw-match-msg');
+  if(!msg) return;
+  if(!pw1 && !pw2){ msg.textContent=''; return; }
+  if(pw1 && pw1.length < 6){ msg.textContent='⚠️ Mínimo 6 caracteres'; msg.style.color='var(--wa)'; return; }
+  if(pw2 && pw1 !== pw2){ msg.textContent='❌ Las contraseñas no coinciden'; msg.style.color='var(--er)'; return; }
+  if(pw1 && pw1===pw2){ msg.textContent='✅ Contraseñas coinciden'; msg.style.color='var(--ok)'; return; }
+  msg.textContent='';
+};
+
+/* ─── EDITAR TELÉFONO ─────────────────────────── */
+window.abrirEditTel = function(){
+  el('tel-display-row').style.borderBottom='none';
+  el('tel-edit-row').style.display='block';
+  const inp=el('tel-input');
+  inp.value='';
+  inp.style.borderColor='var(--bd)';
+  el('tel-err').textContent='';
+  el('tel-ok').className='msg m-ok';
+  inp.focus();
+};
+
+window.cancelarEditTel = function(){
+  el('tel-edit-row').style.display='none';
+  el('tel-display-row').style.borderBottom='1px solid var(--bd2)';
+};
+
+window.validarTelInput = function(){
+  const v=el('tel-input').value;
+  const btn=el('btn-tel-save');
+  const err=el('tel-err');
+  if(v.length===0){
+    err.textContent='';
+    btn.style.opacity='.5'; btn.style.pointerEvents='none'; btn.disabled=true;
+  } else if(v.length<10){
+    err.textContent=`Faltan ${10-v.length} dígito${10-v.length!==1?'s':''}`;
+    el('tel-input').style.borderColor='var(--er)';
+    btn.style.opacity='.5'; btn.style.pointerEvents='none'; btn.disabled=true;
+  } else {
+    err.textContent='';
+    el('tel-input').style.borderColor='var(--ok)';
+    btn.style.opacity='1'; btn.style.pointerEvents='auto'; btn.disabled=false;
+  }
+};
+
+window.guardarTelefono = async function(){
+  const nuevo=el('tel-input').value.replace(/\D/g,'');
+  if(nuevo.length!==10){ el('tel-err').textContent='Ingresa exactamente 10 dígitos.'; return; }
+  if(nuevo===empData.telefono){ el('tel-err').textContent='Es el mismo número actual.'; return; }
+
+  const btn=el('btn-tel-save');
+  btn.textContent='Guardando…'; btn.disabled=true; btn.style.opacity='.6';
+
+  try{
+    await updateDoc(doc(db,'empleados',user.uid),{ telefono:nuevo });
+    empData.telefono=nuevo;
+    // Actualizar vista sin re-renderizar todo
+    el('tel-display').textContent=nuevo;
+    el('tel-ok').className='msg m-ok on';
+    el('tel-ok').textContent='✅ Teléfono actualizado correctamente.';
+    el('tel-err').textContent='';
+    el('tel-input').style.borderColor='var(--ok)';
+    setTimeout(()=>{
+      cancelarEditTel();
+      el('tel-ok').className='msg m-ok';
+    }, 2000);
+  } catch(e){
+    el('tel-err').textContent='❌ Error al guardar: '+e.message;
+  } finally {
+    btn.textContent='Guardar'; btn.disabled=false; btn.style.opacity='1';
+  }
+};
+
+/* ─── MOSTRAR PANEL ADMIN ─────────────────────── */
+async function mostrarAdmin(nivel){
+  nivelAdmin=nivel;
+  showScreen('s-admin');
+  el('btn-logout').style.display='none';
+  el('btn-back').style.display='flex';
+  el('rchip').className=`rchip rc-${nivel>=4?'gerente':'supervisor'}`;
+  el('rchip').textContent=nivel>=4?'👑 Gerente':'🛡️ Supervisor';
+  el('rchip').style.display='inline-flex';
+  el('hname').textContent=nivel>=4?'Gerente':'Supervisor';
+  el('hname').style.display='inline';
+
+  // Login silencioso para poder leer Firestore (no dispara pantalla de empleado)
+  if(!user){
+    try{
+      skipAuthChange = true;  // bloquear onAuthStateChanged
+      const cred = await signInWithEmailAndPassword(auth,
+        GERENTE_INICIAL.email, GERENTE_INICIAL.password);
+      user = cred.user;
+      skipAuthChange = false;
+    } catch(e){
+      skipAuthChange = false;
+      // Intentar cuenta legacy
+      try{
+        skipAuthChange = true;
+        const cred2 = await signInWithEmailAndPassword(auth,'gerente@tortuga.local','GerenteTortuga2026');
+        user = cred2.user;
+        skipAuthChange = false;
+      } catch(e2){
+        skipAuthChange = false;
+        console.warn('Login silencioso admin falló:', e2.message);
+      }
+    }
+  }
+
+  cargarListaEmps();
+  semOffA=0; cargarRep();
+  poblarSelects();
+}
+
+/* ════════════════════════════════════════════════
+   CONTROL DE TURNO — ESTADOS: off / activo / descanso / completo
+   ════════════════════════════════════════════════ */
+async function cargarTurnoActivo(){
+  const empDocId = getEmpDocId();
+  if(!empDocId) return;
+  const hoy2 = new Date(); const hoyISO = hoy2.getFullYear()+'-'+String(hoy2.getMonth()+1).padStart(2,'0')+'-'+String(hoy2.getDate()).padStart(2,'0');
+  // Buscar turno activo de hoy
+  // Sin filtro estado para evitar índice — filtramos en JS
+  const q = query(collection(db,'turnos'),
+    where('uid','==',empDocId),
+    where('fechaISO','==',hoyISO)
+  );
+  const s = await getDocs(q);
+  const docActivo = s.docs.find(d=>['activo','descanso'].includes(d.data().estado));
+  if(docActivo){
+    const d = docActivo;
+    turnoId   = d.id;
+    turnoData = d.data();
+    renderEstadoTurno();
+  } else {
+    turnoId=null; turnoData=null;
+    renderEstadoTurno();
+  }
+  // Cargar resumen del día completo
+  cargarResumenHoy();
+}
+
+function renderEstadoTurno(){
+  const estado = turnoData?.estado || 'off';
+  const E = ESTADOS[estado] || ESTADOS.off;
+
+  // badge de estado
+  const badge = el('estado-badge');
+  badge.className = `estado-badge ${E.css}`;
+  el('estado-txt').textContent = E.label;
+
+  // tiras de tiempo
+  el('timer-strip').style.display = estado==='activo'   ? 'block' : 'none';
+  el('rest-strip').style.display  = estado==='descanso' ? 'block' : 'none';
+
+  // botones según estado
+  const cont = el('turno-btns');
+  if(estado==='off' || estado==='completo'){
+    cont.innerHTML=`<button class="btn btn-ck btn-entrada" id="btn-entrada" onclick="accionTurno('entrada')"><span class="lbl">▶ Iniciar turno</span><div class="spin"></div></button>`;
+  } else if(estado==='activo'){
+    cont.innerHTML=`
+      <button class="btn btn-ck btn-descanso" id="btn-desc" onclick="accionTurno('descanso')"><span class="lbl">☕ Tomar descanso</span><div class="spin"></div></button>
+      <button class="btn btn-ck btn-salida" id="btn-sal" onclick="accionTurno('salida')"><span class="lbl">⏹ Terminar turno</span><div class="spin"></div></button>`;
+  } else if(estado==='descanso'){
+    cont.innerHTML=`
+      <button class="btn btn-ck btn-regreso" id="btn-reg" onclick="accionTurno('regreso')"><span class="lbl">▶ Regresar del descanso</span><div class="spin"></div></button>
+      <button class="btn btn-ck btn-salida" id="btn-sal" onclick="accionTurno('salida')"><span class="lbl">⏹ Terminar turno</span><div class="spin"></div></button>`;
+  }
+
+  // Resumen del día
+  if(turnoData){
+    const daySumEl = el('day-sum');
+    daySumEl.style.display='block';
+    const entrada = turnoData.entrada?.toDate?.();
+    el('ds-entrada').textContent = entrada ? fHora(entrada) : '—';
+  } else {
+    el('day-sum').style.display='none';
+  }
+}
+
+
+    /* ─── HELPER: ID del empleado en Firestore ───────── */
+    function getEmpDocId() {
+      // Para Firebase Auth users: user.uid
+      // Para PIN-only users: empData.id (Firestore doc ID guardado en session)
+      if (user) return user.uid;
+      if (empData?.id) return empData.id;
+      return sessionStorage.getItem('tt_emp_docid') || null;
+    }
+
+    window.accionTurno = async function(accion){
+  const empDocId = getEmpDocId();
+  if(!empDocId || !empData) { msg('msg-clk','er','❌ Sesión expirada. Vuelve a iniciar sesión.'); return; }
+  // Renovar sesión al hacer cualquier acción de turno
+  // Restaurar sesión PIN-only si no hay Firebase Auth
+  const _savedDocId = sessionStorage.getItem('tt_emp_docid');
+  const _savedTs    = parseInt(sessionStorage.getItem('tt_emp_ts')||'0');
+  if(_savedDocId && !user && (Date.now()-_savedTs < 20*60*1000)){
+    try {
+      const _snap = await getDoc(doc(db,'empleados', _savedDocId));
+      if(_snap.exists()){
+        empData     = { ..._snap.data(), id: _snap.id };
+        rolActual   = empData.rol || 'empleado';
+        nivelActual = ROLES[rolActual]?.nivel || 1;
+        mostrarEmp();
+        return;
+      }
+    } catch(e) {}
+    // Sesión inválida — limpiar
+    sessionStorage.removeItem('tt_emp_docid');
+    sessionStorage.removeItem('tt_emp_id');
+    sessionStorage.removeItem('tt_emp_ts');
+  }
+
+  if(sessionStorage.getItem('tt_emp_id')){
+    sessionStorage.setItem('tt_emp_ts', Date.now().toString());
+  }
+  const ahora = new Date();
+  const ahoraTs = Timestamp.fromDate(ahora);
+  const hoyISO = ahora.getFullYear()+'-'+String(ahora.getMonth()+1).padStart(2,'0')+'-'+String(ahora.getDate()).padStart(2,'0');
+
+  // Deshabilitar todos los botones mientras se procesa
+  document.querySelectorAll('.btn-ck').forEach(b=>{ b.disabled=true; });
+  clearMsg('msg-clk');
+
+  try {
+    if(accion==='entrada'){
+      if(turnoId){ msg('msg-clk','wa','⚠️ Ya tienes un turno activo hoy.'); return; }
+      const ref = await addDoc(collection(db,'turnos'),{
+        uid:empDocId, empleadoId:empData.empleadoId,
+        nombre:empData.nombre, apellido:empData.apellido,
+        entrada:ahoraTs, salida:null,
+        inicioDescanso:null, finDescanso:null,
+        minDescanso:0, minTrabajados:null,
+        horas:null, estado:'activo', editado:false, nota:'',
+        fechaISO:hoyISO, creado:serverTimestamp()
+      });
+      turnoId = ref.id;
+      turnoData = { uid:empDocId, entrada:ahoraTs, estado:'activo', minDescanso:0,
+                    nombre:empData.nombre, apellido:empData.apellido,
+                    empleadoId:empData.empleadoId };
+      msg('msg-clk','ok',`✅ Turno iniciado a las ${fHora(ahora)}`);
+
+    } else if(accion==='descanso'){
+      if(!turnoId || turnoData?.estado!=='activo'){ msg('msg-clk','wa','Sin turno activo.'); return; }
+      await updateDoc(doc(db,'turnos',turnoId),{ inicioDescanso:ahoraTs, estado:'descanso' });
+      turnoData = {...turnoData, inicioDescanso:ahoraTs, estado:'descanso'};
+      msg('msg-clk','ok',`☕ Descanso iniciado a las ${fHora(ahora)}`);
+
+    } else if(accion==='regreso'){
+      if(!turnoId || turnoData?.estado!=='descanso'){ msg('msg-clk','wa','No estás en descanso.'); return; }
+      const inicioDesc = turnoData.inicioDescanso?.toDate?.() || turnoData.inicioDescanso?.seconds
+        ? new Date(turnoData.inicioDescanso.seconds*1000) : null;
+      const minDesc = inicioDesc ? Math.round(calcM(inicioDesc, ahora)) : 0;
+      const totalDesc = (turnoData.minDescanso || 0) + minDesc;
+      await updateDoc(doc(db,'turnos',turnoId),{
+        finDescanso:ahoraTs, estado:'activo',
+        minDescanso:totalDesc, inicioDescanso:null
+      });
+      turnoData = {...turnoData, finDescanso:ahoraTs, estado:'activo',
+                   minDescanso:totalDesc, inicioDescanso:null};
+      msg('msg-clk','ok',`▶ Regresaste del descanso (${mToM(minDesc)} de descanso)`);
+
+    } else if(accion==='salida'){
+      if(!turnoId){ msg('msg-clk','wa','Sin turno activo.'); return; }
+      // Si estaba en descanso, cerrar descanso primero
+      let totalDesc = turnoData.minDescanso || 0;
+      if(turnoData.estado==='descanso'){
+        const inicioDesc = turnoData.inicioDescanso?.toDate?.()
+          || (turnoData.inicioDescanso?.seconds ? new Date(turnoData.inicioDescanso.seconds*1000) : null);
+        if(inicioDesc) totalDesc += Math.round(calcM(inicioDesc, ahora));
+      }
+      const entrada = turnoData.entrada?.toDate?.()
+        || (turnoData.entrada?.seconds ? new Date(turnoData.entrada.seconds*1000) : null);
+      if(!entrada){ msg('msg-clk','er','Error: no se encontró la hora de entrada.'); return; }
+      const totalBruto = Math.round(calcM(entrada, ahora));
+      const minTrab    = Math.max(0, totalBruto - totalDesc);
+      if(minTrab < 1){ msg('msg-clk','wa','⚠️ El turno debe tener al menos 1 minuto trabajado.'); return; }
+      await updateDoc(doc(db,'turnos',turnoId),{
+        salida:ahoraTs, estado:'completo',
+        minDescanso:totalDesc, minTrabajados:minTrab,
+        horas:(minTrab/60).toFixed(2)
+      });
+      msg('msg-clk','ok',`✅ Turno terminado. Trabajaste ${mToH(minTrab)} netos (descanso: ${mToM(totalDesc)})`);
+      turnoId=null; turnoData=null;
+      cargarHistEmp();
+    }
+  } catch(e){
+    msg('msg-clk','er','❌ Error: '+e.message);
+  } finally {
+    renderEstadoTurno();
+    cargarResumenHoy();
+  }
+};
+
+async function cargarResumenHoy(){
+  if(!user) return;
+  const hoy = (function(){var _d=new Date();return _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');})();
+  const q   = query(collection(db,'turnos'),
+    where('uid','==',user.uid),
+    where('fechaISO','==',hoy));
+  const s = await getDocs(q);
+  let minTot=0, hay=false;
+  s.forEach(d=>{
+    const t=d.data();
+    if(t.minTrabajados) { minTot+=t.minTrabajados; hay=true; }
+  });
+  // Si hay turno activo NO completado, calcular en tiempo real
+  if(turnoData?.estado==='activo'||turnoData?.estado==='descanso'){
+    const entrada = turnoData.entrada?.toDate?.()
+      ||(turnoData.entrada?.seconds ? new Date(turnoData.entrada.seconds*1000) : null);
+    if(entrada){
+      const desc = turnoData.minDescanso||0;
+      const bruto = calcM(entrada, new Date());
+      minTot += Math.max(0, bruto - desc);
+      hay=true;
+    }
+  }
+  if(hay){
+    el('ds-horas').textContent = mToH(Math.round(minTot));
+    el('day-sum').style.display='block';
+    // mostrar detalles si hay turno
+    if(turnoData?.entrada){
+      const ent = turnoData.entrada?.toDate?.()
+        ||(turnoData.entrada?.seconds ? new Date(turnoData.entrada.seconds*1000) : null);
+      if(ent) el('ds-entrada').textContent = fHora(ent);
+    }
+  }
+}
+
+/* ─── HISTORIAL EMPLEADO ──────────────────────── */
+window.cambSem = d=>{ semOff+=d; if(semOff>0)semOff=0; cargarHistEmp(); };
+async function cargarHistEmp(){
+  const empDocId = getEmpDocId();
+  if(!empDocId) return;
+  const {l,d}=semRng(semOff);
+  el('wlbl-emp').textContent=semLbl(l,d);
+  try{
+    // Solo filtrar por uid — sin rango de fechas para evitar índice compuesto
+    const q=query(collection(db,'turnos'), where('uid','==',empDocId));
+    const s=await getDocs(q);
+    let mins=0,cnt=0,items=[];
+    const ahora = new Date();
+    s.forEach(doc=>{
+      const t={...doc.data(),id:doc.id};
+      // Filtrar por semana en JavaScript
+      const entrada = t.entrada?.toDate?.() || (t.entrada?.seconds ? new Date(t.entrada.seconds*1000) : null);
+      if(!entrada) return;
+      if(entrada >= l && entrada <= d){
+        if(t.minTrabajados){
+          // Turno completado — usar minTrabajados guardado
+          mins += t.minTrabajados;
+        } else if(t.estado === 'activo' || t.estado === 'descanso'){
+          // Turno en curso — calcular en tiempo real
+          const descMin = t.minDescanso || 0;
+          const bruto = Math.round((ahora - entrada) / 60000);
+          // Cap de 16h (960 min) para evitar que turnos sin salida distorsionen el total
+          const brutoCapped = Math.min(bruto, 960);
+          const neto = Math.max(0, brutoCapped - descMin);
+          mins += neto;
+          t._minCalculados = neto;
+          t._sinSalida = bruto > 960; // marcar si excede límite razonable
+        }
+        cnt++;
+        items.push(t);
+      }
+    });
+    // Ordenar por fecha descendente
+    items.sort((a,b)=>{
+      const ta=a.entrada?.toDate?.().getTime()||(a.entrada?.seconds*1000)||0;
+      const tb=b.entrada?.toDate?.().getTime()||(b.entrada?.seconds*1000)||0;
+      return tb-ta;
+    });
+    el('wtot-emp').textContent=mToH(mins);
+    el('wshift-emp').textContent=cnt;
+    const list=el('hist-emp');
+    if(!items.length){ list.innerHTML='<div class="hi-empty">Sin turnos esta semana.</div>'; return; }
+    // Mostrar botón editar si el usuario es cajero, supervisor o gerente
+    const canEdit = nivelActual >= 2;
+    list.innerHTML=items.map(t=>hiRow(t, canEdit)).join('');
+  } catch(e){
+    console.error('cargarHistEmp error:', e);
+    const list=el('hist-emp');
+    if(list) list.innerHTML='<div class="hi-empty">Error cargando historial: '+e.message+'</div>';
+  }
+}
+
+/* ─── FILA DE HISTORIAL ───────────────────────── */
+function hiRow(t, adminMode){
+  const e = t.entrada?.toDate?.() || (t.entrada?.seconds ? new Date(t.entrada.seconds*1000) : null);
+  const s = t.salida?.toDate?.()  || (t.salida?.seconds  ? new Date(t.salida.seconds*1000)  : null);
+  const inc = !s || t.estado==='activo' || t.estado==='descanso';
+  // Usar minTrabajados si está completado, o _minCalculados si está activo
+  const hrsMin = t.minTrabajados || t._minCalculados || 0;
+  const hrs = hrsMin > 0 ? mToH(hrsMin) : (inc ? t.estado : '—');
+
+  // segmentos de detalle
+  let segs = '';
+  if(e) segs += `<span class="seg-pill sp-in">Entrada: ${fHora(e)}</span>`;
+  if(t.inicioDescanso){
+    const id = t.inicioDescanso?.toDate?.() || new Date(t.inicioDescanso.seconds*1000);
+    segs += `<span class="seg-pill sp-rest">Descanso: ${fHora(id)}</span>`;
+    if(t.finDescanso){
+      const fd = t.finDescanso?.toDate?.() || new Date(t.finDescanso.seconds*1000);
+      segs += `<span class="seg-pill sp-rest">Regreso: ${fHora(fd)}</span>`;
+    }
+  }
+  if(t.minDescanso) segs += `<span class="seg-pill sp-rest">Desc: ${mToM(t.minDescanso)}</span>`;
+  if(s) segs += `<span class="seg-pill sp-out">Salida: ${fHora(s)}</span>`;
+
+  return `<div class="hi">
+    <div class="hi-top">
+      <div class="hi-ico">${t.editado?'✏️':t._sinSalida?'⚠️':inc?'🟡':'✅'}</div>
+      <div class="hi-inf">
+        ${adminMode?`<div class="hi-emp">${t.nombre||''} ${t.apellido||''}</div>`:''}
+        <div class="hi-date">${e?fShort(e):'—'}${t.editado?' · corregido':''}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.25rem;">
+        <div class="hi-hrs ${hrsMin>0?'hc-ok':inc?'hc-wa':'hc-rest'}">${hrsMin>0?hrs:(inc?t.estado||'activo':'—')}</div>
+        ${adminMode?`<button class="btn bsm" style="background:rgba(59,130,246,.2);border:1px solid rgba(59,130,246,.3);color:#3B82F6;border-radius:6px;font-size:.7rem;padding:.28rem .55rem;cursor:pointer;font-family:inherit;" data-tid="${t.id}" data-uid="${t.uid||''}" data-nom="${(t.nombre||empData?.nombre||'')+ ' ' +(t.apellido||empData?.apellido||'')}" onclick="abrirEditTBtn(this)">✏️ Editar</button>`:''}
+      </div>
+    </div>
+    <div class="hi-detail">${segs}</div>
+    ${t.nota?`<div style="font-size:.7rem;color:var(--wa);margin-top:.25rem;">📝 ${t.nota}</div>`:''}
+  </div>`;
+}
+
+/* ─── LOGIN EMPLEADO ──────────────────────────── */
+window.loginEmp = async function(){
+  const rawId = el('l-id').value.trim();
+  const rawPw = el('l-pw').value;
+
+  // ── Verificar si es acceso master ──────────────────
+  if(rawId === CREDS.MASTER_USER && rawPw === CREDS.MASTER_PASS){
+    const ok = await loginMaster(rawId, rawPw);
+    if(ok) return;
+  }
+
+  const empId = rawId.toUpperCase();
+  const pin   = rawPw.replace(/\D/g,'');
+  let ok=true;
+  if(!empId||!empId.startsWith('EMP-')){ fErr('l-id','e-lid','Ej: EMP-001'); ok=false; }
+  if(pin.length!==4){ fErr('l-pw','e-lpw','PIN de 4 dígitos'); ok=false; }
+  if(!ok) return;
+  btnLd('btn-login',true);
+  try{
+    const emailInterno = `${empId.toLowerCase()}@tortuga.local`;
+    const pwAuto = `${empId}${pin}`;
+    try{
+      await signInWithEmailAndPassword(auth, emailInterno, pwAuto);
+    } catch(e1){
+      // Fallback para gerente con cuenta legacy
+      if(empId==='EMP-GERENTE'){
+        await signInWithEmailAndPassword(auth,'gerente@tortuga.local','GerenteTortuga2026');
+      } else {
+        throw e1;
+      }
+    }
+    // ✅ Login exitoso — guardar sesión por 20 minutos
+    sessionStorage.setItem('tt_emp_id', empId);
+    sessionStorage.setItem('tt_emp_pin', pin);
+    sessionStorage.setItem('tt_emp_ts', Date.now().toString());
+  } catch(e) {
+    // Firebase Auth falló — intentar login directo con Firestore (cajeros sin Auth)
+    try {
+      const qPin = query(collection(db,'empleados'),
+        where('empleadoId','==', empId),
+        where('pin','==', pin));
+      const snapPin = await getDocs(qPin);
+      if (snapPin.empty) {
+        msg('msg-login','er','❌ Número o PIN incorrecto.');
+        return;
+      }
+      // Empleado encontrado en Firestore sin Firebase Auth
+      const empDoc = snapPin.docs[0];
+      empData      = { ...empDoc.data(), id: empDoc.id };
+      if (empData.estado === 'inactivo') {
+        msg('msg-login','er','❌ Cuenta desactivada. Contacta a tu supervisor.');
+        return;
+      }
+      rolActual   = empData.rol || 'empleado';
+      nivelActual = ROLES[rolActual]?.nivel || 1;
+      // Guardar sesión como PIN-only (sin Firebase Auth)
+      sessionStorage.setItem('tt_emp_id',   empId);
+      sessionStorage.setItem('tt_emp_pin',  pin);
+      sessionStorage.setItem('tt_emp_docid', empDoc.id);
+      sessionStorage.setItem('tt_emp_ts',   Date.now().toString());
+      // user = null para pin-only, pero empData está disponible
+      user = null;
+      mostrarEmp();
+    } catch(e2) {
+      const m = {
+        'auth/too-many-requests':'Demasiados intentos. Espera unos minutos.',
+        'auth/network-request-failed':'Sin conexión. Verifica tu internet.',
+      };
+      msg('msg-login','er','❌ '+(m[e.code]||'Número o PIN incorrecto.'));
+    }
+  } finally { btnLd('btn-login',false); }
+};
+
+/* auto-registro eliminado — solo admin puede crear empleados */
+
+/* ─── CREAR EMPLEADO (SOLO GERENTE/SUPERVISOR) ── */
+window.crearEmpAdmin = async function(){
+  const nom=el('n-nom').value.trim(), ape=el('n-ape').value.trim();
+  const tel=el('n-tel').value.replace(/\D/g,'');
+  const psto=el('n-puesto').value, rol=el('n-rol').value||'empleado';
+  const sal=parseFloat(el('n-sal').value)||0;
+  // PIN de 4 dígitos para acceso rápido del empleado
+  const pin=el('n-pin').value.replace(/\D/g,'');
+  let ok=true;
+
+  if(nom.length<2){ fErr('n-nom','e-nnom','Mínimo 2 caracteres'); ok=false; } else fOk('n-nom');
+  if(ape.length<2){ fErr('n-ape','e-nape','Mínimo 2 caracteres'); ok=false; } else fOk('n-ape');
+  if(tel.length!==10){ fErr('n-tel','e-ntel','10 dígitos exactos'); ok=false; } else fOk('n-tel');
+  if(!psto){ fErr('n-puesto','e-npuesto','Selecciona un puesto'); ok=false; }
+  if(pin.length!==4){ fErr('n-pin','e-npin','PIN de exactamente 4 dígitos'); ok=false; } else fOk('n-pin');
+  if(!ok) return;
+
+  btnLd('btn-new',true);
+  try{
+    // Auto-generar número de empleado secuencial
+    const empId = await genId();
+    // Auto-generar email interno: empId@tortuga.local
+    const emailInterno = `${empId.toLowerCase()}@tortuga.local`;
+    // Contraseña = empId + PIN  (ej: EMP-001+1234 = "EMP-0011234")
+    const pwAuto = `${empId}${pin}`;
+
+    const cred = await createUserWithEmailAndPassword(auth, emailInterno, pwAuto);
+    await setDoc(doc(db,'empleados', cred.user.uid),{
+      uid:cred.user.uid, empleadoId:empId,
+      nombre:nom, apellido:ape,
+      email:emailInterno, telefono:tel, puesto:psto, rol,
+      salarioHora:sal, pin:pin,
+      estado:'activo', creado:serverTimestamp(), turnoActivo:false
+    });
+    await updateProfile(cred.user,{displayName:`${nom} ${ape}`});
+    await signOut(auth);
+
+    // Mostrar resumen claro de credenciales
+    msg('msg-new','ok',`
+      ✅ Empleado registrado exitosamente<br><br>
+      <div style="background:rgba(0,0,0,.2);border-radius:8px;padding:.75rem;line-height:2;font-size:.9rem;">
+        <strong>Número:</strong> ${empId}<br>
+        <strong>PIN:</strong> ${pin}<br>
+        <strong>Rol:</strong> ${ROLES[rol].ico} ${ROLES[rol].label}<br>
+        <strong>Cómo entrar:</strong> Número ${empId} + PIN ${pin}
+      </div>
+    `);
+    ['n-nom','n-ape','n-tel','n-pin','n-sal'].forEach(i=>{ const e=el(i); if(e)e.value=''; });
+    if(el('n-puesto')) el('n-puesto').value='';
+    cargarListaEmps(); poblarSelects();
+  }catch(e){
+    const m={'auth/email-already-in-use':'Ese número de empleado ya está en uso.'};
+    msg('msg-new','er','❌ '+(m[e.code]||e.message));
+  }finally{ btnLd('btn-new',false); }
+};
+
+/* ─── LISTA DE EMPLEADOS (ADMIN) ──────────────── */
+async function cargarListaEmps(){
+  const s=await getDocs(query(collection(db,'empleados'),orderBy('nombre')));
+  allEmps=[]; s.forEach(d=>allEmps.push({...d.data(),uid:d.id}));
+  el('emp-cnt').textContent=allEmps.length;
+  renderEmps(allEmps);
+}
+
+function renderEmps(list){
+  const g=el('emp-grid');
+  if(!list.length){ g.innerHTML='<div class="no-emp"><div class="ico">🔍</div><p>Sin resultados.</p></div>'; return; }
+  g.innerHTML=list.map(e=>{
+    const R=ROLES[e.rol||'empleado'];
+    const estadoTurno = e.estadoTurno||'off';
+    const chipTurno = estadoTurno==='activo'?'<div class="chip ch-on">🟢 En turno</div>':
+                      estadoTurno==='descanso'?'<div class="chip ch-rest">☕ Descanso</div>':
+                      `<div class="chip ch-off">${e.estado==='inactivo'?'🚫 Inactivo':'fuera'}</div>`;
+    return `<div class="ec" onclick="verDetalle('${e.uid}')">
+      <div class="av av-${R.css}">${(e.nombre[0]||'')+(e.apellido[0]||'')}</div>
+      <div class="ei"><h4>${e.nombre} ${e.apellido}</h4><p>${e.empleadoId} · ${e.puesto}</p></div>
+      <div class="echips"><div class="chip ch-${R.css}">${R.ico} ${R.label}</div>${chipTurno}</div>
+    </div>`;
+  }).join('');
+}
+
+window.filtrarEmp=function(){
+  const q=el('srch-emp').value.toLowerCase();
+  const list=!q?allEmps:allEmps.filter(e=>
+    `${e.nombre} ${e.apellido} ${e.empleadoId} ${e.puesto}`.toLowerCase().includes(q)
+  );
+  if(typeof renderEmps==='function') renderEmps(list);
+  else renderEmpsBasico(list);
+};
+
+/* ─── DETALLE EMPLEADO ────────────────────────── */
+window.verDetalle = async function(uid){
+  aOv('ov-detail');
+  el('detail-body').innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">Cargando...</div>';
+
+  let eData = null;
+  let docId  = uid;
+
+  try {
+    // Intentar por docId directo
+    const s = await getDoc(doc(db,'empleados', uid));
+    if (s.exists()) {
+      eData = s.data();
+      docId  = s.id;
+    }
+  } catch(e) {}
+
+  // Fallback: buscar en empleados cargados en memoria
+  if (!eData && window._empleadosCache) {
+    const found = window._empleadosCache.find(function(e){
+      return e.uid === uid || e.id === uid || e.empleadoId === uid;
+    });
+    if (found) { eData = found; docId = found.id || uid; }
+  }
+
+  if (!eData) {
+    el('detail-body').innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">No se encontraron datos del empleado.</div>';
+    return;
+  }
+
+  const e = eData;
+  const R = ROLES[e.rol||'empleado'] || ROLES['empleado'];
+
+  // Horas esta semana
+  let minSem = 0, turnSem = 0;
+  try {
+    const {l,d} = semRng(0);
+    const qt = query(collection(db,'turnos'),
+      where('uid','==', docId),
+      where('entrada','>=', Timestamp.fromDate(l)),
+      where('entrada','<=', Timestamp.fromDate(d)));
+    const ts = await getDocs(qt);
+    ts.forEach(dd => {
+      const t = dd.data();
+      if (t.minTrabajados) minSem += t.minTrabajados;
+      turnSem++;
+    });
+  } catch(err) {}
+
+  const ini = ((e.nombre||'?')[0] + (e.apellido||'?')[0]).toUpperCase();
+
+  el('detail-body').innerHTML = `
+    <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:.95rem;">
+      <div class="av av-${R.css}" style="width:52px;height:52px;font-size:1.25rem;">${ini}</div>
+      <div>
+        <div style="font-size:1.05rem;font-weight:800;">${e.nombre||''} ${e.apellido||''}</div>
+        <div style="font-size:.8rem;color:#888;">${e.empleadoId||docId} &middot; ${e.puesto||e.rol||'empleado'}</div>
+        <div class="chip ch-${R.css}" style="margin-top:.25rem;display:inline-block;">${R.ico||'👤'} ${R.lbl||e.rol}</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.85rem;">
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.65rem;text-align:center;">
+        <div style="font-size:1.3rem;font-weight:900;color:#FF5A00;">${mToH(minSem)}</div>
+        <div style="font-size:.7rem;color:#888;">Horas esta semana</div>
+      </div>
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.65rem;text-align:center;">
+        <div style="font-size:1.3rem;font-weight:900;color:#3B82F6;">${turnSem}</div>
+        <div style="font-size:.7rem;color:#888;">Turnos esta semana</div>
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.75rem;margin-bottom:.75rem;">
+      <div style="font-size:.72rem;color:#888;font-weight:700;margin-bottom:.5rem;">INFORMACIÓN</div>
+      <div style="font-size:.83rem;display:flex;flex-direction:column;gap:.35rem;">
+        <div><span style="color:#888;">Email:</span> ${e.email||'—'}</div>
+        <div><span style="color:#888;">Teléfono:</span> ${e.telefono||'—'}</div>
+        <div><span style="color:#888;">Salario/hr:</span> $${e.salarioPorHora||e.salario||'—'}</div>
+        <div><span style="color:#888;">Estado:</span>
+          <span style="color:${e.estado==='activo'?'#25D366':'#888'};">
+            ${e.estado==='activo'?'🟢 Activo':'⚫ Inactivo'}
+          </span>
+        </div>
+      </div>
+    </div>
+    <button onclick="toggleEstado('${docId}','${e.estado}')"
+      style="width:100%;padding:.7rem;background:rgba(255,255,255,.06);
+             border:1px solid rgba(255,255,255,.1);color:#ccc;
+             border-radius:10px;font-family:inherit;font-size:.85rem;cursor:pointer;">
+      ${e.estado==='activo'?'🚫 Desactivar cuenta':'✅ Activar cuenta'}
+    </button>
+  `;
+};
+
+window.toggleStatus = async function(uid, est){
+  await updateDoc(doc(db,'empleados',uid),{estado:est==='activo'?'inactivo':'activo'});
+  cOv('ov-detail'); cargarListaEmps();
+};
+
+/* ─── REPORTE ADMIN ───────────────────────────── */
+window.cambSemA = d=>{ semOffA+=d; if(semOffA>0)semOffA=0; cargarRep(); };
+async function poblarSelects(){
+  const s=await getDocs(query(collection(db,'empleados'),orderBy('nombre')));
+  const opts=s.docs.map(d=>`<option value="${d.id}">${d.data().nombre} ${d.data().apellido}</option>`).join('');
+  el('rep-sel').innerHTML='<option value="">— Todos los empleados —</option>'+opts;
+  el('priv-sel').innerHTML='<option value="">— Selecciona empleado —</option>'+opts;
+}
+
+window.cargarRep = async function(){
+  const {l,d}=semRng(semOffA);
+  el('wlbl-adm').textContent=semLbl(l,d);
+  const empF=el('rep-sel')?.value;
+  // Filtrar solo por uid si hay filtro, luego filtrar fechas en JS
+  let baseQuery = empF
+    ? query(collection(db,'turnos'), where('uid','==',empF))
+    : query(collection(db,'turnos'));
+  const s=await getDocs(baseQuery);
+  let mins=0,cnt=0,items=[];
+  s.forEach(doc=>{
+    const t={...doc.data(),id:doc.id};
+    const entrada = t.entrada?.toDate?.() || (t.entrada?.seconds ? new Date(t.entrada.seconds*1000) : null);
+    if(!entrada) return;
+    if(entrada >= l && entrada <= d){
+      if(t.minTrabajados) mins+=t.minTrabajados; cnt++; items.push(t);
+    }
+  });
+  items.sort((a,b)=>{
+    const ta=a.entrada?.toDate?.().getTime()||(a.entrada?.seconds*1000)||0;
+    const tb=b.entrada?.toDate?.().getTime()||(b.entrada?.seconds*1000)||0;
+    return tb-ta;
+  });
+  el('rep-tot').textContent=mToH(mins);
+  el('rep-sh').textContent=cnt;
+  const list=el('hist-adm');
+  if(!items.length){ list.innerHTML='<div class="hi-empty">Sin turnos en este período.</div>'; return; }
+  list.innerHTML=items.map(t=>hiRow(t,true)).join('');
+};
+
+/* ─── ROLES ───────────────────────────────────── */
+window.cargarRolActual = async function(){
+  const uid=el('priv-sel').value;
+  const pb=el('priv-body');
+  if(!uid){ pb.style.display='none'; return; }
+  pb.style.display='block';
+  const s=await getDoc(doc(db,'empleados',uid));
+  if(!s.exists()) return;
+  const rol=s.data().rol||'empleado';
+  const R=ROLES[rol];
+  el('msg-rol-act').textContent=`Rol actual: ${R.ico} ${R.label}`;
+  rolSel=rol;
+  ['g','s','c','e'].forEach(k=>{ const o=el(`po-${k}`); if(o) o.className='po'; });
+  const mp={'gerente':'g','supervisor':'s','cajero':'c','empleado':'e'};
+  const po=el(`po-${mp[rol]}`); if(po) po.className=`po sel-${mp[rol]}`;
+  el('btn-save-rol').style.display='none';
+};
+
+window.selRol = function(rol){
+  rolSel=rol;
+  const mp={'gerente':'g','supervisor':'s','cajero':'c','empleado':'e'};
+  ['g','s','c','e'].forEach(k=>{ const o=el(`po-${k}`); if(o) o.className='po'; });
+  const po=el(`po-${mp[rol]}`); if(po) po.className=`po sel-${mp[rol]}`;
+  el('btn-save-rol').style.display='flex';
+};
+
+window.guardarRol = async function(){
+  const uid=el('priv-sel').value;
+  if(!uid||!rolSel) return;
+  // Supervisor necesita PIN para asignar rol gerente
+  if(nivelAdmin<4 && rolSel==='gerente'){
+    abrirGatePin(()=>_guardarRol(uid));
+    return;
+  }
+  await _guardarRol(uid);
+};
+
+async function _guardarRol(uid){
+  btnLd('btn-save-rol',true);
+  try{
+    await updateDoc(doc(db,'empleados',uid),{rol:rolSel});
+    msg('msg-priv','ok',`✅ Rol actualizado a ${ROLES[rolSel].ico} ${ROLES[rolSel].label}`);
+    el('btn-save-rol').style.display='none';
+    cargarListaEmps(); poblarSelects();
+    setTimeout(()=>cargarRolActual(),600);
+  }catch(e){ msg('msg-priv','er','❌ '+e.message); }
+  finally{ btnLd('btn-save-rol',false); }
+}
+
+/* ─── EDITAR TURNO ────────────────────────────── */
+window.abrirEditTBtn = function(btn) {
+  var tid = btn.getAttribute('data-tid');
+  // For own turns: use current user's uid or empData id
+  var uid = btn.getAttribute('data-uid');
+  if (!uid || uid === 'undefined') uid = (user ? user.uid : '') || (empData ? empData.id : '');
+  var nom = btn.getAttribute('data-nom') || '';
+  if (!nom || !nom.trim()) nom = empData ? ((empData.nombre||'') + ' ' + (empData.apellido||'')) : '';
+  abrirEditT(uid.trim(), nom.trim(), tid);
+};
+
+window.abrirEditT = function(uid, nombre, tid){
+  editEUid=uid; editTId=tid;
+  el('edit-name').textContent=nombre;
+  el('et-nota').value='';
+  el('msg-edit').className='msg';
+  const hoy=(function(){var _d=new Date();return _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');})();
+  el('et-fecha').value=hoy;
+  ['et-in','et-out','et-rd','et-rv'].forEach(i=>{ const e=el(i); if(e)e.value=''; });
+  el('et-calc').style.display='none';
+  if(tid){
+    getDoc(doc(db,'turnos',tid)).then(s=>{
+      if(!s.exists()) return;
+      const t=s.data();
+      const getD=ts=>ts?.toDate?.() || (ts?.seconds ? new Date(ts.seconds*1000) : null);
+      const fe=getD(t.entrada), fs=getD(t.salida);
+      const fr=getD(t.inicioDescanso), fv=getD(t.finDescanso);
+      if(fe){ el('et-fecha').value=fe.toISOString().split('T')[0]; el('et-in').value=`${pad(fe.getHours())}:${pad(fe.getMinutes())}`; }
+      if(fs) el('et-out').value=`${pad(fs.getHours())}:${pad(fs.getMinutes())}`;
+      if(fr) el('et-rd').value=`${pad(fr.getHours())}:${pad(fr.getMinutes())}`;
+      if(fv) el('et-rv').value=`${pad(fv.getHours())}:${pad(fv.getMinutes())}`;
+      calcEditH();
+    });
+  }
+  aOv('ov-edit');
+};
+
+window.calcEditH = function(){
+  const ei=el('et-in').value, so=el('et-out').value;
+  if(!ei||!so){ el('et-calc').style.display='none'; return; }
+  const [eh,em]=ei.split(':').map(Number),[sh,sm]=so.split(':').map(Number);
+  let total=(sh*60+sm)-(eh*60+em); if(total<0)total+=1440;
+  const rd=el('et-rd').value, rv=el('et-rv').value;
+  let desc=0;
+  if(rd&&rv){ const [rh,rm]=rd.split(':').map(Number),[vh,vm]=rv.split(':').map(Number); desc=Math.max(0,(vh*60+vm)-(rh*60+rm)); }
+  const neto=Math.max(0,total-desc);
+  el('et-calc').style.display='block';
+  el('et-tot').textContent=`${mToH(neto)} netos (${mToH(total)} bruto − ${mToM(desc)} descanso)`;
+};
+
+window.guardarEditT = async function(){
+  const fecha=el('et-fecha').value, ei=el('et-in').value, so=el('et-out').value;
+  const nota=el('et-nota').value.trim();
+  if(!fecha||!ei){ msg('msg-edit','er','Fecha y hora de entrada son obligatorias.'); return; }
+  const mk=(h,m)=>{ const d=new Date(fecha); d.setHours(h,m,0,0); return d; };
+  const [eh,em]=ei.split(':').map(Number);
+  const tsE=mk(eh,em);
+  let tsS=null,mins=0,minDesc=0,tsRD=null,tsRV=null;
+  if(so){ const [sh,sm]=so.split(':').map(Number); tsS=mk(sh,sm); if(tsS<=tsE)tsS.setDate(tsS.getDate()+1); mins=Math.round((tsS-tsE)/60000); }
+  const rd=el('et-rd').value, rv=el('et-rv').value;
+  if(rd&&rv){ const [rh,rm]=rd.split(':').map(Number),[vh,vm]=rv.split(':').map(Number); tsRD=mk(rh,rm); tsRV=mk(vh,vm); minDesc=Math.max(0,Math.round((tsRV-tsRD)/60000)); }
+  const minNeto=Math.max(0,mins-minDesc);
+  if(tsS&&minNeto<1){ msg('msg-edit','er','El turno debe tener al menos 1 minuto neto trabajado.'); return; }
+  // Obtener datos del empleado — con fallback a empData si es el propio usuario
+  let ed = {};
+  try {
+    const es = await getDoc(doc(db,'empleados',editEUid));
+    if (es.exists()) { ed = es.data(); }
+    else if (empData) { ed = empData; }
+  } catch(e) { if (empData) ed = empData; }
+  btnLd('btn-edit',true);
+  try{
+    const data={
+      uid:editEUid,empleadoId:ed.empleadoId||'',
+      nombre:ed.nombre||'',apellido:ed.apellido||'',
+      entrada:Timestamp.fromDate(tsE),
+      salida:tsS?Timestamp.fromDate(tsS):null,
+      inicioDescanso:tsRD?Timestamp.fromDate(tsRD):null,
+      finDescanso:tsRV?Timestamp.fromDate(tsRV):null,
+      minDescanso:minDesc, minTrabajados:tsS?minNeto:null,
+      horas:tsS?(minNeto/60).toFixed(2):null,
+      estado:tsS?'completo':'activo',
+      editado:true, nota:nota||'Corrección manual',
+      fechaISO:fecha, editadoPor:'admin', editadoEn:serverTimestamp()
+    };
+    if(editTId) await updateDoc(doc(db,'turnos',editTId),data);
+    else await addDoc(collection(db,'turnos'),data);
+    msg('msg-edit','ok','✅ Turno guardado correctamente.');
+    setTimeout(()=>{
+      cOv('ov-edit');
+      // Recargar la vista correcta según contexto
+      if(typeof cargarHistEmp === 'function') cargarHistEmp();
+      if(typeof cargarRep === 'function') cargarRep();
+    },1500);
+  }catch(e){ msg('msg-edit','er','❌ '+e.message); }
+  finally{ btnLd('btn-edit',false); }
+};
+
+/* ════════════════════════════════════════════════
+   ACCESS GATE — CONTRASEÑA Y PIN
+   ════════════════════════════════════════════════ */
+window.abrirGatePass = function(tipo, cb){
+  gateCb=cb; gatePin=''; gateMode='pass';
+  const cfg={
+    gerente:   { ico:'👑', ttl:'Acceso Gerente',    desc:'Ingresa la contraseña del gerente.' },
+    supervisor:{ ico:'🛡️', ttl:'Acceso Supervisor',  desc:'Ingresa la contraseña del supervisor.' },
+    admin:     { ico:'🔐', ttl:'Acceso Privilegiado', desc:'Ingresa la contraseña de gerente o supervisor.' },
+  };
+  const c=cfg[tipo]||cfg.admin;
+  el('gate-ico').textContent=c.ico;
+  el('gate-sub').textContent=c.ttl;
+  el('gate-desc').textContent=c.desc;
+  el('gate-pin').style.display='none';
+  el('gate-pass').style.display='block';
+  el('gate-pw').value='';
+  el('msg-gpw').className='msg';
+  aOv('ov-gate');
+  setTimeout(()=>el('gate-pw')?.focus(),280);
+};
+
+window.abrirGatePin = function(cb){
+  gateCb=cb; gatePin=''; gateMode='pin';
+  el('gate-ico').textContent='🔢';
+  el('gate-sub').textContent='PIN de supervisor';
+  el('gate-desc').textContent='Ingresa el PIN de 4 dígitos.';
+  el('gate-pin').style.display='block';
+  el('gate-pass').style.display='none';
+  el('msg-pin').className='msg';
+  renderDots(); aOv('ov-gate');
+};
+
+window.pk = k=>{ if(gatePin.length>=4)return; gatePin+=k; renderDots(); if(gatePin.length===4)setTimeout(verifyPin,120); };
+window.pdel=()=>{ gatePin=gatePin.slice(0,-1); renderDots(); };
+window.pclr=()=>{ gatePin=''; renderDots(); };
+function renderDots(){ for(let i=0;i<4;i++){ const d=el('d'+i); if(d) d.className='dot'+(i<gatePin.length?' f':''); } }
+function verifyPin(){
+  if(gatePin===CREDS.PIN_ELEVACION){ cerrarGate(); if(gateCb)gateCb(); }
+  else{ msg('msg-pin','er','❌ PIN incorrecto'); gatePin=''; renderDots(); }
+}
+
+window.gateV = async function(){
+  const pw=el('gate-pw').value;
+  if(!pw){ msg('msg-gpw','er','Ingresa la contraseña'); return; }
+  btnLd('btn-gv',true);
+  await new Promise(r=>setTimeout(r,500));
+  let nivel=0;
+  if(pw===CREDS.PASS_GERENTE) nivel=4;
+  else if(pw===CREDS.PASS_SUPERVISOR) nivel=3;
+  else if(pw===CREDS.MASTER_PASS) nivel=4;  // master — acceso total
+  if(nivel>0){
+    cerrarGate();
+    if(typeof gateCb === 'function') gateCb(nivel);
+    else console.error('gateCb no es función:', gateCb);
+  } else {
+    msg('msg-gpw','er','❌ Contraseña incorrecta.'); el('gate-pw').value='';
+  }
+  btnLd('btn-gv',false);
+};
+
+window.cerrarGate = ()=>{ cOv('ov-gate'); gatePin=''; };
+
+window.mostrarAdminDirecto = function(nivel=3){ mostrarAdmin(nivel); };
+window._mostrarAdminReal = async function(nivel){
+    nivelAdmin = nivel||3;
+    // Cargar empleados via REST API
+    await cargarListaEmpsREST();
+    await poblarSelectsREST();
+    console.log('✅ Admin panel cargado via modulo Firebase');
+};
+console.log('✅ Firebase módulo cargado - _mostrarAdminReal registrado');
+
+/* ─── CERRAR SESIÓN ───────────────────────────── */
+
+/* ─── CHECAR RÁPIDO (sin login completo) ─────────────────────── */
+window.abrirChecarRapido = function(){  // sobreescribe el proxy
+  el('ck-emp-id').value='';
+  el('ck-pin').value='';
+  el('msg-checar').className='msg';
+  el('ck-estado-info').style.display='none';
+  aOv('ov-checar');
+  setTimeout(()=>el('ck-emp-id')?.focus(),280);
+};
+
+window._checaRapidoReal = async function checaRapidoImpl(){
+  const empId = el('ck-emp-id').value.trim().toUpperCase();
+  const pin   = el('ck-pin').value.replace(/\D/g,'');
+  if(!empId.startsWith('EMP-')){ msg('msg-checar','er','Ingresa tu número: EMP-001'); return; }
+  if(pin.length!==4){ msg('msg-checar','er','Ingresa tu PIN de 4 dígitos'); return; }
+  btnLd('btn-checa-rapido',true);
+  try{
+    const emailInterno = `${empId.toLowerCase()}@tortuga.local`;
+    const pwAuto = `${empId}${pin}`;
+    const cred = await signInWithEmailAndPassword(auth, emailInterno, pwAuto);
+    const u = cred.user;
+    const snap = await getDoc(doc(db,'empleados', u.uid));
+    if(!snap.exists()){ msg('msg-checar','er','Empleado no encontrado.'); await signOut(auth); return; }
+    const emp = snap.data();
+    const hoy2 = new Date(); const hoyISO = hoy2.getFullYear()+'-'+String(hoy2.getMonth()+1).padStart(2,'0')+'-'+String(hoy2.getDate()).padStart(2,'0');
+    const qT = query(collection(db,'turnos'),
+      where('uid','==',u.uid), where('fechaISO','==',hoyISO),
+      where('estado','in',['activo','descanso']));
+    const tSnap = await getDocs(qT);
+    const ahora = new Date();
+    if(tSnap.empty){
+      await addDoc(collection(db,'turnos'),{
+        uid:u.uid, empleadoId:emp.empleadoId,
+        nombre:emp.nombre, apellido:emp.apellido,
+        entrada:Timestamp.fromDate(ahora), salida:null,
+        inicioDescanso:null, finDescanso:null,
+        minDescanso:0, minTrabajados:null, horas:null,
+        estado:'activo', editado:false, nota:'',
+        fechaISO:hoyISO, creado:serverTimestamp()
+      });
+      el('ck-estado-info').style.display='block';
+      el('ck-estado-txt').innerHTML=`<span style="color:var(--ok)">✅ Entrada registrada</span><br><span style="font-size:.85rem;color:var(--mu);">${emp.nombre} — ${fHora(ahora)}</span>`;
+      msg('msg-checar','ok',`✅ ¡Buen día, ${emp.nombre}! Entrada: ${fHora(ahora)}`);
+    } else {
+      const turnoDoc = tSnap.docs[0];
+      const turno = turnoDoc.data();
+      const entrada = turno.entrada?.toDate?.() || new Date(turno.entrada?.seconds*1000);
+      let totalDesc = turno.minDescanso || 0;
+      if(turno.estado==='descanso' && turno.inicioDescanso){
+        const iniDesc = turno.inicioDescanso?.toDate?.() || new Date(turno.inicioDescanso?.seconds*1000);
+        totalDesc += Math.round((ahora - iniDesc)/60000);
+      }
+      const neto = Math.max(0, Math.round((ahora - entrada)/60000) - totalDesc);
+      await updateDoc(doc(db,'turnos', turnoDoc.id),{
+        salida:Timestamp.fromDate(ahora), estado:'completo',
+        minDescanso:totalDesc, minTrabajados:neto, horas:(neto/60).toFixed(2)
+      });
+      el('ck-estado-info').style.display='block';
+      el('ck-estado-txt').innerHTML=`<span style="color:var(--er)">⏹ Salida registrada</span><br><span style="font-size:.85rem;color:var(--mu);">${emp.nombre} — ${fHora(ahora)} · ${mToH(neto)} trabajadas</span>`;
+      msg('msg-checar','ok',`✅ ¡Hasta luego, ${emp.nombre}! Trabajaste ${mToH(neto)} hoy.`);
+    }
+    await signOut(auth);
+    setTimeout(()=>cOv('ov-checar'), 3000);
+  }catch(e){
+    const m={'auth/invalid-credential':'Número o PIN incorrecto.','auth/too-many-requests':'Demasiados intentos.'};
+    msg('msg-checar','er','❌ '+(m[e.code]||'Error: '+e.message));
+  }finally{ btnLd('btn-checa-rapido',false); }
+};
+
+
+/* ═══════════════════════════════════════════════════════════════
+   PANEL MAESTRO — Innovationtech1
+   ═══════════════════════════════════════════════════════════════ */
+let masterSemOff = 0;
+let masterEmpsAll = [];
+let masterActionUid = null;
+let masterActionTurnoId = null;
+
+// LOGIN al panel maestro (desde el login normal)
+window.loginMaster = async function(usuario, pass) {
+  if(usuario === CREDS.MASTER_USER && pass === CREDS.MASTER_PASS) {
+    skipAuthChange = true;
+    try {
+      const cred = await signInWithEmailAndPassword(auth, GERENTE_INICIAL.email, GERENTE_INICIAL.password);
+      user = cred.user;
+    } catch(e) {
+      try {
+        const cred2 = await signInWithEmailAndPassword(auth, 'gerente@tortuga.local', 'GerenteTortuga2026');
+        user = cred2.user;
+      } catch(e2) { console.warn('Master login sin Firebase auth'); }
+    }
+    skipAuthChange = false;
+    mostrarMaster();
+    return true;
+  }
+  return false;
+};
+
+function mostrarMaster() {
+  showScreen('s-master');
+  el('rchip').className = 'rchip rc-gerente';
+  el('rchip').textContent = '🔑 Master Admin';
+  el('rchip').style.display = 'inline-flex';
+  el('hname').textContent = 'Innovationtech1';
+  el('hname').style.display = 'inline';
+  el('btn-logout').style.display = 'flex';
+  masterRefresh();
+}
+
+window.cerrarMaster = async function() {
+  if(user) await signOut(auth).catch(()=>{});
+  user = null; skipAuthChange = false;
+  showScreen('s-auth');
+  el('rchip').style.display = 'none';
+  el('hname').style.display = 'none';
+  el('btn-logout').style.display = 'none';
+};
+
+window.masterRefresh = function() {
+  cargarMasterLive();
+  cargarMasterHoy();
+  masterSemOff = 0; cargarMasterSemana();
+  cargarMasterEmps();
+};
+
+window.swMaster = function(t) {
+  ['live','horas','semana','emps'].forEach(x => {
+    el(`mt-${x}`)?.classList.toggle('on', x===t);
+    el(`mp-${x}`)?.classList.toggle('on', x===t);
+  });
+};
+
+// ── Quién está en el sistema ahora ──────────────────────────
+async function cargarMasterLive() {
+  const hoy = (function(){var _d=new Date();return _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');})();
+  const q = query(collection(db,'turnos'), where('fechaISO','==',hoy));
+  const s = await getDocs(q);
+  let activos=[], descanso=[], completados=[];
+  s.forEach(d => {
+    const t = {...d.data(), id:d.id};
+    if(t.estado==='activo') activos.push(t);
+    else if(t.estado==='descanso') descanso.push(t);
+    else if(t.estado==='completo') completados.push(t);
+  });
+  el('m-activos').textContent = activos.length;
+  el('m-descanso').textContent = descanso.length;
+
+  const list = el('master-live-list');
+  if(!activos.length && !descanso.length) {
+    list.innerHTML = '<div class="hi-empty">No hay empleados en el sistema ahora.</div>';
+    return;
+  }
+  const rows = [...activos.map(t => masterLiveRow(t,'activo')), ...descanso.map(t => masterLiveRow(t,'descanso'))];
+  list.innerHTML = rows.join('');
+}
+
+function masterLiveRow(t, estado) {
+  const entrada = t.entrada?.toDate?.() || (t.entrada?.seconds ? new Date(t.entrada.seconds*1000) : null);
+  const mins = entrada ? Math.round((new Date()-entrada)/60000) - (t.minDescanso||0) : 0;
+  const color = estado==='activo' ? 'var(--ok)' : 'var(--rest)';
+  const badge = estado==='activo' ? '🟢 En turno' : '☕ Descanso';
+  return `<div class="hi" style="border-left:3px solid ${color};">
+    <div class="hi-top">
+      <div class="hi-ico">${estado==='activo'?'🟢':'☕'}</div>
+      <div class="hi-inf">
+        <div class="hi-emp">${t.nombre||''} ${t.apellido||''} <span style="font-size:.7rem;color:var(--mu);">${t.empleadoId||''}</span></div>
+        <div class="hi-date">Entrada: ${entrada?fHora(entrada):'—'} · Trabajando: <strong style="color:${color}">${mToH(Math.max(0,mins))}</strong></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.28rem;align-items:flex-end;">
+        <span class="chip" style="background:${estado==='activo'?'var(--ok2)':'var(--rest2)'};color:${color};">${badge}</span>
+        <button class="btn bs bsm" style="font-size:.68rem;padding:.28rem .55rem;" onclick="abrirMasterAction('${t.uid||''}','${t.nombre||''} ${t.apellido||''}','${t.id}','${estado}')">⚡ Acción</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Horas de hoy ────────────────────────────────────────────
+async function cargarMasterHoy() {
+  const hoy = (function(){var _d=new Date();return _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');})();
+  const q = query(collection(db,'turnos'), where('fechaISO','==',hoy));
+  const s = await getDocs(q);
+  let items = [];
+  s.forEach(d => items.push({...d.data(), id:d.id}));
+  items.sort((a,b) => {
+    const ta = a.entrada?.seconds||0, tb = b.entrada?.seconds||0;
+    return tb-ta;
+  });
+  const list = el('master-horas-list');
+  if(!items.length){ list.innerHTML='<div class="hi-empty">Sin turnos hoy.</div>'; return; }
+  list.innerHTML = items.map(t => {
+    const e = t.entrada?.toDate?.() || (t.entrada?.seconds?new Date(t.entrada.seconds*1000):null);
+    const s2 = t.salida?.toDate?.() || (t.salida?.seconds?new Date(t.salida.seconds*1000):null);
+    const hrs = t.minTrabajados ? mToH(t.minTrabajados) : (t.estado==='activo'?'🟢 activo':'☕ descanso');
+    return `<div class="hi">
+      <div class="hi-top">
+        <div class="hi-ico">${t.estado==='completo'?'✅':t.estado==='activo'?'🟢':'☕'}</div>
+        <div class="hi-inf">
+          <div class="hi-emp">${t.nombre||''} ${t.apellido||''}</div>
+          <div class="hi-date">${e?fHora(e):'?'} → ${s2?fHora(s2):'en curso'} ${t.minDescanso?'· Desc: '+mToM(t.minDescanso):''}</div>
+          ${t.nota?`<div style="font-size:.7rem;color:var(--wa);">📝 ${t.nota}</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:.28rem;align-items:flex-end;">
+          <div class="hi-hrs ${t.minTrabajados?'hc-ok':'hc-wa'}">${hrs}</div>
+          <button class="btn bs bsm" style="font-size:.68rem;padding:.28rem .55rem;" onclick="abrirMasterAction('${t.uid||''}','${t.nombre||''} ${t.apellido||''}','${t.id}','${t.estado}')">✏️ Editar</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Reporte semanal ─────────────────────────────────────────
+window.cambMasterSem = function(d) { masterSemOff+=d; if(masterSemOff>0)masterSemOff=0; cargarMasterSemana(); };
+
+async function cargarMasterSemana() {
+  const {l,d} = semRng(masterSemOff);
+  el('master-week-lbl').textContent = semLbl(l,d);
+  const q = query(collection(db,'turnos'),
+    where('entrada','>=',Timestamp.fromDate(l)),
+    where('entrada','<=',Timestamp.fromDate(d)));
+  const s = await getDocs(q);
+  let mins=0, cnt=0, items=[];
+  s.forEach(doc => { const t={...doc.data(),id:doc.id}; if(t.minTrabajados)mins+=t.minTrabajados; cnt++; items.push(t); });
+  items.sort((a,b) => (b.entrada?.seconds||0)-(a.entrada?.seconds||0));
+  el('master-tot-hrs').textContent = mToH(mins);
+  el('master-tot-shifts').textContent = cnt;
+  const list = el('master-sem-list');
+  if(!items.length){ list.innerHTML='<div class="hi-empty">Sin turnos en este período.</div>'; return; }
+  list.innerHTML = items.map(t => {
+    const e = t.entrada?.toDate?.() || (t.entrada?.seconds?new Date(t.entrada.seconds*1000):null);
+    const s2 = t.salida?.toDate?.() || (t.salida?.seconds?new Date(t.salida.seconds*1000):null);
+    const hrs = t.minTrabajados ? mToH(t.minTrabajados) : '—';
+    return `<div class="hi">
+      <div class="hi-top">
+        <div class="hi-ico">${t.editado?'✏️':t.estado==='completo'?'✅':'🟡'}</div>
+        <div class="hi-inf">
+          <div class="hi-emp">${t.nombre||''} ${t.apellido||''} <span style="font-size:.7rem;color:var(--mu);">${t.empleadoId||''}</span></div>
+          <div class="hi-date">${e?fShort(e)+' '+fHora(e):'—'} → ${s2?fHora(s2):'en curso'}</div>
+          ${t.nota?`<div style="font-size:.7rem;color:var(--wa);">📝 ${t.nota}</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:.28rem;align-items:flex-end;">
+          <div class="hi-hrs ${t.minTrabajados?'hc-ok':'hc-wa'}">${hrs}</div>
+          <button class="btn bs bsm" style="font-size:.68rem;padding:.28rem .55rem;" onclick="abrirMasterAction('${t.uid||''}','${t.nombre||''} ${t.apellido||''}','${t.id}','${t.estado}')">✏️ Editar</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Todos los empleados ──────────────────────────────────────
+async function cargarMasterEmps() {
+  const s = await getDocs(query(collection(db,'empleados'), orderBy('nombre')));
+  masterEmpsAll = [];
+  s.forEach(d => masterEmpsAll.push({...d.data(), uid:d.id}));
+  el('m-total-emp').textContent = masterEmpsAll.length;
+  renderMasterEmps(masterEmpsAll);
+}
+
+function renderMasterEmps(list) {
+  const g = el('master-emps-list');
+  if(!list.length){ g.innerHTML='<div class="hi-empty">Sin empleados.</div>'; return; }
+  g.innerHTML = list.map(e => {
+    const R = ROLES[e.rol||'empleado'];
+    return `<div class="ec" onclick="abrirMasterAction('${e.uid}','${e.nombre} ${e.apellido}',null,'idle')">
+      <div class="av av-${R.css}">${(e.nombre[0]||'')+(e.apellido[0]||'')}</div>
+      <div class="ei"><h4>${e.nombre} ${e.apellido}</h4><p>${e.empleadoId} · ${e.puesto} · ${R.ico} ${R.label}</p></div>
+      <div class="echips">
+        <div class="chip ch-${R.css}">${R.ico} ${R.label}</div>
+        <div class="chip ${e.estado==='activo'?'ch-on':'ch-off'}">${e.estado}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.filtrarMasterEmps = function() {
+  const q = el('master-srch').value.toLowerCase();
+  renderMasterEmps(!q ? masterEmpsAll : masterEmpsAll.filter(e =>
+    `${e.nombre} ${e.apellido} ${e.empleadoId} ${e.puesto}`.toLowerCase().includes(q)
+  ));
+};
+
+// ── Acción rápida sobre un empleado/turno ───────────────────
+window.abrirMasterAction = function(uid, nombre, turnoId, estado) {
+  masterActionUid = uid;
+  masterActionTurnoId = turnoId;
+  el('ma-emp-info').innerHTML = `<strong>${nombre}</strong> <span style="color:var(--mu);font-size:.82rem;">${estado}</span>`;
+  el('msg-master-action').className = 'msg';
+
+  // Limpiar campos de edición
+  el('ma-entrada').value=''; el('ma-salida').value='';
+  el('ma-desc-in').value=''; el('ma-desc-out').value='';
+  el('ma-nota').value=''; el('ma-horas-calc').style.display='none';
+
+  // Si hay turnoId, cargar datos del turno
+  if(turnoId){
+    getDoc(doc(db,'turnos',turnoId)).then(s => {
+      if(!s.exists()) return;
+      const t = s.data();
+      const getD = ts => ts?.toDate?.() || (ts?.seconds?new Date(ts.seconds*1000):null);
+      const fe=getD(t.entrada), fs=getD(t.salida);
+      const fr=getD(t.inicioDescanso), fv=getD(t.finDescanso);
+      if(fe){ el('ma-entrada').value=`${pad(fe.getHours())}:${pad(fe.getMinutes())}`; }
+      if(fs){ el('ma-salida').value=`${pad(fs.getHours())}:${pad(fs.getMinutes())}`; }
+      if(fr){ el('ma-desc-in').value=`${pad(fr.getHours())}:${pad(fr.getMinutes())}`; }
+      if(fv){ el('ma-desc-out').value=`${pad(fv.getHours())}:${pad(fv.getMinutes())}`; }
+      calcMaHoras();
+    });
+  }
+
+  // Botones según estado del turno
+  const btns = el('ma-btns');
+  let bhtml = '';
+  if(estado==='activo'){
+    bhtml += `<button class="btn bwa" onclick="masterAccion('descanso')"><span class="lbl">☕ Poner en descanso</span><div class="spin"></div></button>`;
+    bhtml += `<button class="btn bd" onclick="masterAccion('salida')"><span class="lbl">⏹ Registrar salida</span><div class="spin"></div></button>`;
+  } else if(estado==='descanso'){
+    bhtml += `<button class="btn bok" onclick="masterAccion('regreso')"><span class="lbl">▶ Regresar de descanso</span><div class="spin"></div></button>`;
+    bhtml += `<button class="btn bd" onclick="masterAccion('salida')"><span class="lbl">⏹ Registrar salida</span><div class="spin"></div></button>`;
+  } else {
+    bhtml += `<button class="btn bok" onclick="masterAccion('entrada')"><span class="lbl">▶ Registrar entrada ahora</span><div class="spin"></div></button>`;
+  }
+  btns.innerHTML = bhtml;
+  aOv('ov-master-action');
+};
+
+window.masterAccion = async function(accion) {
+  const ahora = new Date();
+  const hoyISO = ahora.getFullYear()+'-'+String(ahora.getMonth()+1).padStart(2,'0')+'-'+String(ahora.getDate()).padStart(2,'0');
+  const ahoraTs = Timestamp.fromDate(ahora);
+  const msgEl = el('msg-master-action');
+
+  try {
+    if(accion==='entrada'){
+      // Buscar datos del empleado
+      const eSnap = await getDoc(doc(db,'empleados',masterActionUid));
+      const eData = eSnap.exists() ? eSnap.data() : {};
+      const ref = await addDoc(collection(db,'turnos'),{
+        uid:masterActionUid, empleadoId:eData.empleadoId||'',
+        nombre:eData.nombre||'', apellido:eData.apellido||'',
+        entrada:ahoraTs, salida:null, inicioDescanso:null, finDescanso:null,
+        minDescanso:0, minTrabajados:null, horas:null,
+        estado:'activo', editado:true, nota:'Entrada registrada por admin',
+        fechaISO:hoyISO, creado:Timestamp.fromDate(ahora)
+      });
+      masterActionTurnoId = ref.id;
+      msg('msg-master-action','ok',`✅ Entrada registrada a las ${fHora(ahora)}`);
+    } else if(accion==='descanso'){
+      await updateDoc(doc(db,'turnos',masterActionTurnoId),{ inicioDescanso:ahoraTs, estado:'descanso', editado:true });
+      msg('msg-master-action','ok',`☕ Descanso iniciado a las ${fHora(ahora)}`);
+    } else if(accion==='regreso'){
+      const tSnap = await getDoc(doc(db,'turnos',masterActionTurnoId));
+      const td = tSnap.data();
+      const iniDesc = td.inicioDescanso?.toDate?.() || new Date(td.inicioDescanso?.seconds*1000);
+      const descMin = Math.round((ahora-iniDesc)/60000);
+      await updateDoc(doc(db,'turnos',masterActionTurnoId),{
+        finDescanso:ahoraTs, estado:'activo', editado:true,
+        minDescanso:(td.minDescanso||0)+descMin
+      });
+      msg('msg-master-action','ok',`▶ Regresó del descanso (${mToM(descMin)})`);
+    } else if(accion==='salida'){
+      const tSnap = await getDoc(doc(db,'turnos',masterActionTurnoId));
+      const td = tSnap.data();
+      const entrada = td.entrada?.toDate?.() || new Date(td.entrada?.seconds*1000);
+      let descMin = td.minDescanso||0;
+      if(td.estado==='descanso' && td.inicioDescanso){
+        const iniDesc = td.inicioDescanso?.toDate?.() || new Date(td.inicioDescanso?.seconds*1000);
+        descMin += Math.round((ahora-iniDesc)/60000);
+      }
+      const neto = Math.max(0, Math.round((ahora-entrada)/60000) - descMin);
+      await updateDoc(doc(db,'turnos',masterActionTurnoId),{
+        salida:ahoraTs, estado:'completo', minDescanso:descMin,
+        minTrabajados:neto, horas:(neto/60).toFixed(2), editado:true,
+        nota:'Salida registrada por admin'
+      });
+      msg('msg-master-action','ok',`✅ Salida registrada. ${mToH(neto)} trabajadas.`);
+    }
+    // Refrescar datos
+    setTimeout(()=>{ masterRefresh(); cOv('ov-master-action'); }, 2000);
+  } catch(e) {
+    msg('msg-master-action','er','❌ Error: '+e.message);
+  }
+};
+
+window.calcMaHoras = function() {
+  const ei=el('ma-entrada').value, so=el('ma-salida').value;
+  if(!ei||!so){ el('ma-horas-calc').style.display='none'; return; }
+  const [eh,em]=ei.split(':').map(Number), [sh,sm]=so.split(':').map(Number);
+  let total=(sh*60+sm)-(eh*60+em); if(total<0)total+=1440;
+  const rd=el('ma-desc-in').value, rv=el('ma-desc-out').value;
+  let desc=0;
+  if(rd&&rv){ const [rh,rm]=rd.split(':').map(Number),[vh,vm]=rv.split(':').map(Number); desc=Math.max(0,(vh*60+vm)-(rh*60+rm)); }
+  const neto=Math.max(0,total-desc);
+  el('ma-horas-calc').style.display='block';
+  el('ma-horas-tot').textContent=`${mToH(neto)} netas (${mToH(total)} − ${mToM(desc)} descanso)`;
+};
+
+window.guardarTurnoMaster = async function() {
+  const fecha = (function(){var _d=new Date();return _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');})();
+  const ei=el('ma-entrada').value, so=el('ma-salida').value, nota=el('ma-nota').value.trim();
+  if(!ei){ msg('msg-master-action','er','Ingresa hora de entrada'); return; }
+  const mk=(h,m)=>{ const d=new Date(fecha); d.setHours(h,m,0,0); return d; };
+  const [eh,em]=ei.split(':').map(Number); const tsE=mk(eh,em);
+  let tsS=null, neto=0, descMin=0;
+  if(so){ const [sh,sm]=so.split(':').map(Number); tsS=mk(sh,sm); if(tsS<=tsE)tsS.setDate(tsS.getDate()+1); }
+  const rd=el('ma-desc-in').value, rv=el('ma-desc-out').value;
+  let tsRD=null,tsRV=null;
+  if(rd&&rv){ const [rh,rm]=rd.split(':').map(Number),[vh,vm]=rv.split(':').map(Number); tsRD=mk(rh,rm); tsRV=mk(vh,vm); descMin=Math.max(0,Math.round((tsRV-tsRD)/60000)); }
+  if(tsS) neto=Math.max(0,Math.round((tsS-tsE)/60000)-descMin);
+
+  btnLd('btn-ma-guardar',true);
+  try {
+    const eSnap = await getDoc(doc(db,'empleados',masterActionUid));
+    const eData = eSnap.exists() ? eSnap.data() : {};
+    const data = {
+      uid:masterActionUid, empleadoId:eData.empleadoId||'',
+      nombre:eData.nombre||'', apellido:eData.apellido||'',
+      entrada:Timestamp.fromDate(tsE),
+      salida:tsS?Timestamp.fromDate(tsS):null,
+      inicioDescanso:tsRD?Timestamp.fromDate(tsRD):null,
+      finDescanso:tsRV?Timestamp.fromDate(tsRV):null,
+      minDescanso:descMin, minTrabajados:tsS?neto:null,
+      horas:tsS?(neto/60).toFixed(2):null,
+      estado:tsS?'completo':'activo',
+      editado:true, nota:nota||'Corrección manual (admin master)',
+      fechaISO:fecha, editadoPor:'master', editadoEn:serverTimestamp()
+    };
+    if(masterActionTurnoId) await updateDoc(doc(db,'turnos',masterActionTurnoId),data);
+    else await addDoc(collection(db,'turnos'),data);
+    msg('msg-master-action','ok','✅ Turno guardado correctamente.');
+    setTimeout(()=>{ cOv('ov-master-action'); masterRefresh(); },1800);
+  } catch(e){ msg('msg-master-action','er','❌ Error: '+e.message); }
+  finally{ btnLd('btn-ma-guardar',false); }
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   MÓDULO DE NÓMINA DIARIA
+   ═══════════════════════════════════════════════════════════ */
+
+// Inicializar fecha con hoy al abrir la pestaña
+function initNomina(){
+  const fechaEl = el('nom-fecha');
+  if(fechaEl && !fechaEl.value){
+    fechaEl.value = (function(){var _d=new Date();return _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');})();
+    cargarNomina();
+  }
+}
+
+window.cargarNomina = async function(){
+  const fechaEl = el('nom-fecha');
+  if(!fechaEl) return;
+  const fecha = fechaEl.value || (function(){var _d=new Date();return _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');})();
+  const list  = el('nom-list');
+  if(list) list.innerHTML = '<div class="hi-empty">⏳ Calculando nómina…</div>';
+
+  try{
+    // Traer todos los turnos del día seleccionado
+    const q = query(collection(db,'turnos'), where('fechaISO','==',fecha));
+    const s = await getDocs(q);
+
+    // Agrupar turnos por empleado
+    const porEmp = {};
+    const ahora  = new Date();
+
+    s.forEach(doc => {
+      const t = {...doc.data(), id: doc.id};
+      const uid = t.uid;
+      if(!uid) return;
+      if(!porEmp[uid]) porEmp[uid] = {
+        uid, nombre: t.nombre||'', apellido: t.apellido||'',
+        empleadoId: t.empleadoId||'', turnos: [], minutos: 0
+      };
+      // Calcular minutos del turno
+      let mins = 0;
+      if(t.minTrabajados){
+        mins = t.minTrabajados;
+      } else if(t.estado === 'activo' || t.estado === 'descanso'){
+        const entrada = t.entrada?.toDate?.() || (t.entrada?.seconds ? new Date(t.entrada.seconds*1000) : null);
+        if(entrada){
+          const desc = t.minDescanso || 0;
+          mins = Math.max(0, Math.round((ahora - entrada)/60000) - desc);
+        }
+      }
+      porEmp[uid].minutos += mins;
+      porEmp[uid].turnos.push({...t, _mins: mins});
+    });
+
+    // Cargar salarios de empleados
+    const uids = Object.keys(porEmp);
+    if(uids.length > 0){
+      const empSnap = await getDocs(query(collection(db,'empleados')));
+      empSnap.forEach(doc => {
+        const e = doc.data();
+        if(porEmp[e.uid]){
+          porEmp[e.uid].salarioHora = parseFloat(e.salarioHora) || 0;
+          porEmp[e.uid].puesto      = e.puesto || '';
+        }
+      });
+    }
+
+    // Calcular totales globales
+    let totalMins = 0, totalPago = 0, totalEmps = 0;
+    const filas = Object.values(porEmp).sort((a,b) => a.nombre.localeCompare(b.nombre));
+
+    filas.forEach(e => {
+      const hrs   = e.minutos / 60;
+      const pago  = hrs * (e.salarioHora || 0);
+      e._hrs      = hrs;
+      e._pago     = pago;
+      totalMins  += e.minutos;
+      totalPago  += pago;
+      if(e.minutos > 0) totalEmps++;
+    });
+
+    // Actualizar resumen global
+    const totHrsEl = el('nom-tot-hrs');
+    const totPagoEl = el('nom-tot-pago');
+    const totEmpsEl = el('nom-tot-emps');
+    if(totHrsEl)  totHrsEl.textContent  = mToH(totalMins);
+    if(totPagoEl) totPagoEl.textContent = '$' + totalPago.toFixed(2);
+    if(totEmpsEl) totEmpsEl.textContent = totalEmps;
+
+    // Renderizar filas
+    if(!filas.length){
+      if(list) list.innerHTML = '<div class="hi-empty">Sin turnos registrados para esta fecha.</div>';
+      return;
+    }
+
+    if(list) list.innerHTML = filas.map(e => {
+      const hrsStr   = mToH(e.minutos);
+      const pagoStr  = e._pago > 0 ? '$' + e._pago.toFixed(2) : '—';
+      const sinSal   = !e.salarioHora || e.salarioHora === 0;
+      return `<div class="card" style="padding:.9rem;margin-bottom:.6rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.65rem;">
+          <div>
+            <div style="font-weight:800;font-size:.92rem;">${e.nombre} ${e.apellido}</div>
+            <div style="font-size:.72rem;color:var(--mu);">${e.empleadoId} · ${e.puesto||''}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:1.1rem;font-weight:900;color:var(--ok);">${hrsStr}</div>
+            <div style="font-size:.72rem;color:var(--mu);">trabajadas</div>
+          </div>
+        </div>
+        /* Salario por hora editable */
+        <div style="background:var(--sf2);border-radius:var(--rxs);padding:.65rem .85rem;display:flex;align-items:center;gap:.65rem;margin-bottom:.55rem;">
+          <div style="font-size:.78rem;color:var(--mu);flex:1;">Salario por hora</div>
+          <div style="display:flex;align-items:center;gap:.4rem;">
+            <span style="color:var(--mu);font-size:.88rem;">$</span>
+            <input type="number" step="0.25" min="0" value="${e.salarioHora||''}"
+              placeholder="0.00"
+              id="sal-${e.uid}"
+              onchange="actualizarSalario('${e.uid}',this.value,'nom-pago-${e.uid}')"
+              style="width:75px;padding:.35rem .5rem;background:var(--sf3);border:1.5px solid var(--bd);border-radius:var(--rxs);color:var(--tx);font-family:inherit;font-size:.88rem;outline:none;text-align:right;"
+              onfocus="this.style.borderColor='var(--primary)'"
+              onblur="this.style.borderColor='var(--bd)'">
+            <span style="font-size:.75rem;color:var(--mu);">/hr</span>
+          </div>
+        </div>
+        /* Pago calculado */
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.55rem .85rem;background:${sinSal?'var(--wa2)':'var(--ok2)'};border-radius:var(--rxs);border:1px solid ${sinSal?'rgba(245,158,11,.25)':'rgba(37,211,102,.25)'};">
+          <div style="font-size:.8rem;font-weight:700;color:${sinSal?'var(--wa)':'var(--ok)'};">
+            ${sinSal ? '⚠️ Sin salario configurado' : '✅ Pago del día'}
+          </div>
+          <div style="font-size:1rem;font-weight:900;color:${sinSal?'var(--wa)':'var(--ok)'};" id="nom-pago-${e.uid}">
+            ${sinSal ? '—' : pagoStr}
+          </div>
+        </div>
+        /* Detalle de turnos */
+        ${e.turnos.length > 1 ? `<div style="margin-top:.5rem;font-size:.72rem;color:var(--mu);">${e.turnos.length} turnos registrados este día</div>` : ''}
+      </div>`;
+    }).join('');
+
+  } catch(err){
+    console.error('cargarNomina error:', err);
+    if(list) list.innerHTML = '<div class="hi-empty">❌ Error: ' + err.message + '</div>';
+  }
+};
+
+window.actualizarSalario = async function(uid, valor, pagoElId){
+  const sal = parseFloat(valor) || 0;
+  try{
+    await updateDoc(doc(db,'empleados',uid),{ salarioHora: sal });
+    // Recalcular pago en pantalla sin recargar todo
+    const salInput = el('sal-' + uid);
+    if(!salInput) return;
+    const nomFecha = el('nom-fecha');
+    if(!nomFecha) return;
+    const fecha = nomFecha.value || (function(){var _d=new Date();return _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');})();
+    // Obtener minutos del empleado del DOM
+    const pagoEl = el(pagoElId);
+    if(pagoEl){
+      // Buscar turnos de este empleado para recalcular
+      const q = query(collection(db,'turnos'),
+        where('uid','==',uid), where('fechaISO','==',fecha));
+      const s = await getDocs(q);
+      const ahora = new Date();
+      let totalMins = 0;
+      s.forEach(doc => {
+        const t = doc.data();
+        if(t.minTrabajados){ totalMins += t.minTrabajados; }
+        else if(t.estado==='activo'||t.estado==='descanso'){
+          const entrada = t.entrada?.toDate?.() || (t.entrada?.seconds?new Date(t.entrada.seconds*1000):null);
+          if(entrada) totalMins += Math.max(0, Math.round((ahora-entrada)/60000)-(t.minDescanso||0));
+        }
+      });
+      const pago = (totalMins/60) * sal;
+      pagoEl.textContent = pago > 0 ? '$' + pago.toFixed(2) : '—';
+      pagoEl.style.color = sal > 0 ? 'var(--ok)' : 'var(--wa)';
+    }
+    // Actualizar total global
+    await cargarNomina();
+  } catch(e){
+    console.error('actualizarSalario error:', e);
+  }
+};
+
+window.cerrarSesion = async function(){
+  skipAuthChange = false;  // reset flag al salir
+  // Limpiar sesión guardada
+  sessionStorage.removeItem('tt_emp_id');
+  sessionStorage.removeItem('tt_emp_pin');
+  sessionStorage.removeItem('tt_emp_ts');
+  clearInterval(rlj);
+  if(user) await signOut(auth);
+  else{ showScreen('s-auth'); nivelAdmin=0; el('rchip').style.display='none'; el('hname').style.display='none'; el('btn-logout').style.display='none'; el('btn-back').style.display='none'; }
+};
+window.volverLogin = function(){ cerrarSesion(); };
+
+/* ─── UI HELPERS ──────────────────────────────── */
+const el  = id=> document.getElementById(id);
+const aOv = id=> el(id)?.classList.add('open');
+window.cOv = id=> el(id)?.classList.remove('open');
+function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); el(id)?.classList.add('on'); }
+function msg(id,tipo,html,auto=tipo==='ok'){ const e=el(id); if(!e)return; const m={ok:'m-ok',er:'m-er',wa:'m-wa',in:'m-in'}; e.className=`msg on ${m[tipo]||'m-in'}`; e.innerHTML=html; if(auto)setTimeout(()=>{ if(e){e.className='msg';e.innerHTML='';} },6000); }
+function clearMsg(id){ const e=el(id); if(e){e.className='msg';e.innerHTML='';} }
+function btnLd(id,v){ const b=el(id); if(!b)return; b.classList.toggle('ld',v); b.disabled=v; }
+function fErr(id,eid,m){ const e=el(id); if(e){e.classList.add('er');e.classList.remove('ok');} const er=el(eid); if(er)er.textContent=m; }
+function fOk(id){ const e=el(id); if(e){e.classList.remove('er');e.classList.add('ok');} }
+async function genId(){
+  // Genera EMP-001, EMP-002... buscando el número más alto en Firestore
+  try{
+    const snap = await getDocs(query(collection(db,'empleados'), orderBy('empleadoId','desc')));
+    let max = 0;
+    snap.forEach(d=>{
+      const id = d.data().empleadoId || '';
+      const num = parseInt(id.replace('EMP-','')) || 0;
+      if(num > max) max = num;
+    });
+    const next = max + 1;
+    return 'EMP-' + String(next).padStart(3,'0');
+  } catch(e){
+    return 'EMP-001';
+  }
+}
+window.eye=function(id,btn){ const e=el(id); if(!e)return; e.type=e.type==='password'?'text':'password'; btn.textContent=e.type==='password'?'👁️':'🙈'; };
+
+/* ─── FORM VALIDATIONS ────────────────────────── */
+window.vc=id=>{ const e=el(id); if(e) e.value.trim().length>=2?fOk(id):e.classList.remove('ok','er'); };
+/* helpers de auto-registro eliminados */
+
+/* ─── TABS ────────────────────────────────────── */
+/* swAuth eliminado — pantalla de login única */
+window.swEmp=t=>{ ['clk','hist','prof'].forEach(x=>{ el(`et-${x}`)?.classList.toggle('on',x===t); el(`ep-${x}`)?.classList.toggle('on',x===t); }); };
+window.swAdmin=t=>{
+  ['emp','rep','nom','priv','new'].forEach(x=>{ el(`at-${x}`)?.classList.toggle('on',x===t); el(`ap-${x}`)?.classList.toggle('on',x===t); });
+  if(t==='nom') initNomina();
+};
+
+/* ─── CERRAR MODALES AL TOCAR OVERLAY ────────── */
+document.querySelectorAll('.ov').forEach(o=>{ o.addEventListener('click',e=>{ if(e.target===o)o.classList.remove('open'); }); });
+// Registrar funciones reales para los proxies
+window.checaRapido = window._checaRapidoReal;
+// Registrar renderEmps como global para que script 1 pueda llamarla
+window.renderEmpsGlobal = renderEmps;
+console.log('✅ Portal empleados Tortas Tortuga — módulo cargado correctamente');
+// Si hay nivel admin pendiente (entró con contraseña antes de que cargara el módulo)
+if(window._adminNivel && window._mostrarAdminReal){
+    console.log('🔄 Cargando datos admin pendientes para nivel', window._adminNivel);
+    window._mostrarAdminReal(window._adminNivel);
+    window._adminNivel = null;
+}
+</script>
+
+<script>
+/* ── ACTIVAR / DESACTIVAR EMPLEADO ─────────────── */
+window.toggleEstado = async function(docId, estadoActual) {
+    if (!docId || docId === 'undefined') {
+        alert('Error: ID de empleado no encontrado');
+        return;
+    }
+    var nuevoEstado = estadoActual === 'activo' ? 'inactivo' : 'activo';
+    var accion      = nuevoEstado === 'activo' ? 'activar' : 'desactivar';
+
+    if (!confirm('¿Deseas ' + accion + ' esta cuenta?')) return;
+
+    if (!window._adminUpdateDoc) {
+        alert('Firebase cargando, intenta en 2 segundos');
+        return;
+    }
+
+    try {
+        await window._adminUpdateDoc(docId, {
+            estado: nuevoEstado,
+            estadoCambiadoEn: new Date().toISOString()
+        }, 'empleados');
+
+        // Toast de confirmación
+        var toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);' +
+            'background:' + (nuevoEstado==='activo'?'#25D366':'#FF5A00') + ';' +
+            'color:#fff;padding:.65rem 1.25rem;border-radius:12px;font-weight:700;font-size:.88rem;z-index:99999;';
+        toast.textContent = nuevoEstado === 'activo' ? '✅ Cuenta activada' : '🚫 Cuenta desactivada';
+        document.body.appendChild(toast);
+        setTimeout(function(){ toast.remove(); }, 2500);
+
+        // Reabrir detalle para reflejar cambio
+        setTimeout(function(){
+            if (typeof verDetalle === 'function') verDetalle(docId);
+        }, 300);
+
+        // Refrescar lista si existe
+        if (typeof renderEmpleados === 'function') renderEmpleados();
+
+    } catch(e) {
+        alert('Error al cambiar estado: ' + e.message);
+    }
+};
+</script>
+
+</body>
+</html>

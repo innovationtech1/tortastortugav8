@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🧑‍🍳 Cocina — Tortas Tortuga</title>
+<link rel="icon" href="../favicon.ico">
+<style>
+:root {
+  --bg:#0D0D0D; --surface:#1A1A1A; --surface2:#222;
+  --border:rgba(255,255,255,.1); --text:#fff; --muted:#888;
+  --orange:#FF5A00; --blue:#3B82F6; --green:#25D366;
+  --yellow:#FBB724; --red:#FF4444; --purple:#A78BFA;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',sans-serif;min-height:100vh;}
+
+/* Header */
+.header{background:#111;border-bottom:2px solid var(--orange);padding:.7rem 1rem;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;gap:.5rem;flex-wrap:wrap;}
+.logo{font-size:1rem;font-weight:900;color:var(--orange);}
+.stats{display:flex;gap:.75rem;}
+.stat{text-align:center;}
+.stat-val{font-size:1.3rem;font-weight:900;}
+.stat-lbl{font-size:.6rem;color:var(--muted);text-transform:uppercase;}
+.header-btns{display:flex;gap:.4rem;align-items:center;}
+.hbtn{background:rgba(255,255,255,.06);border:1px solid var(--border);
+  color:var(--muted);border-radius:8px;padding:.3rem .65rem;
+  font-family:inherit;font-size:.75rem;cursor:pointer;}
+
+/* Alert */
+#alert-banner{display:none;background:linear-gradient(135deg,var(--orange),#FF8800);
+  color:#fff;text-align:center;padding:.65rem;font-size:1rem;font-weight:800;
+  animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+
+/* Tabs */
+.tabs{display:flex;gap:0;background:#111;border-bottom:1px solid var(--border);}
+.tab{flex:1;padding:.6rem;text-align:center;font-size:.82rem;font-weight:700;
+  cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:.15s;}
+.tab.active{color:var(--orange);border-bottom-color:var(--orange);}
+
+/* Grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));
+  gap:.85rem;padding:.85rem;}
+
+/* Card */
+.kcard{background:var(--surface);border:2px solid #333;border-radius:14px;overflow:hidden;animation:fadeIn .3s;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.kcard.nuevo  {border-color:var(--orange);box-shadow:0 0 18px rgba(255,90,0,.25);}
+.kcard.prep   {border-color:var(--blue);}
+.kcard.listo  {border-color:var(--green);}
+.kcard.entregado{border-color:#333;opacity:.75;}
+
+.kcard-head{padding:.6rem .9rem;display:flex;align-items:center;justify-content:space-between;}
+.kcard.nuevo   .kcard-head{background:rgba(255,90,0,.18);}
+.kcard.prep    .kcard-head{background:rgba(59,130,246,.18);}
+.kcard.listo   .kcard-head{background:rgba(37,211,102,.12);}
+.kcard.entregado .kcard-head{background:rgba(255,255,255,.04);}
+
+.kticket{font-size:.95rem;font-weight:900;color:var(--yellow);}
+.kcliente{font-size:.78rem;color:var(--text);font-weight:700;}
+.ktimer{font-size:.75rem;font-weight:700;padding:.18rem .45rem;border-radius:20px;background:rgba(0,0,0,.3);}
+.ktimer.ok    {color:var(--green);}
+.ktimer.warn  {color:var(--yellow);}
+.ktimer.late  {color:var(--red);animation:pulse .8s infinite;}
+
+.kcard-items{padding:.65rem .9rem;border-top:1px solid var(--border);}
+.kitem{padding:.35rem 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:.82rem;}
+.kitem:last-child{border-bottom:none;}
+.kitem-name{color:var(--text);font-weight:600;}
+.kitem-mods{font-size:.72rem;color:var(--yellow);margin-top:.1rem;}
+
+.kcard-actions{padding:.6rem .9rem;display:flex;gap:.4rem;border-top:1px solid var(--border);}
+.kbtn{flex:1;padding:.5rem;border-radius:8px;border:none;font-family:inherit;
+  font-size:.78rem;font-weight:700;cursor:pointer;transition:.15s;}
+.kbtn-cook  {background:rgba(59,130,246,.2);border:1px solid rgba(59,130,246,.5);color:var(--blue);}
+.kbtn-ready {background:rgba(37,211,102,.2);border:1px solid rgba(37,211,102,.5);color:var(--green);}
+.kbtn-done  {background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--muted);}
+.kbtn-edit  {background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.4);color:var(--purple);}
+
+/* Empty */
+.empty{text-align:center;padding:3.5rem;color:#333;grid-column:1/-1;}
+.empty-ico{font-size:3rem;}
+.empty-lbl{font-size:.9rem;color:#444;margin-top:.5rem;}
+
+/* ═══ MODAL EDITOR ═══ */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9000;
+  display:none;align-items:flex-end;justify-content:center;}
+.modal-ov.open{display:flex;}
+.modal{background:#1C1C1C;border:1px solid rgba(255,255,255,.12);
+  border-radius:20px 20px 0 0;width:100%;max-width:560px;
+  max-height:90vh;display:flex;flex-direction:column;}
+.modal-handle{width:32px;height:4px;background:rgba(255,255,255,.15);
+  border-radius:4px;margin:.8rem auto .4rem;flex-shrink:0;}
+.modal-head{padding:.5rem 1rem .75rem;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+.modal-title{font-size:.95rem;font-weight:800;color:var(--orange);}
+.modal-close{background:none;border:1px solid var(--border);color:var(--muted);
+  border-radius:8px;padding:.25rem .6rem;cursor:pointer;font-size:.85rem;}
+.modal-body{flex:1;overflow-y:auto;padding:0 1rem 1rem;-webkit-overflow-scrolling:touch;}
+
+/* Editor items */
+.edit-item{background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:.7rem;margin-bottom:.5rem;}
+.edit-item-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;}
+.edit-item-name{font-size:.85rem;font-weight:700;color:var(--text);}
+.edit-item-precio{font-size:.85rem;color:var(--green);font-weight:700;}
+.edit-mods-input{width:100%;background:#111;border:1px solid var(--border);
+  color:var(--text);border-radius:8px;padding:.4rem .65rem;
+  font-family:inherit;font-size:.78rem;margin-top:.3rem;}
+.edit-item-del{background:rgba(255,68,68,.15);border:1px solid rgba(255,68,68,.3);
+  color:var(--red);border-radius:6px;padding:.2rem .5rem;
+  font-size:.75rem;cursor:pointer;font-family:inherit;}
+
+/* Add item section */
+.add-section{background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);
+  border-radius:10px;padding:.75rem;margin-top:.5rem;}
+.add-section-title{font-size:.78rem;color:var(--purple);font-weight:700;margin-bottom:.5rem;}
+.add-row{display:flex;gap:.4rem;}
+.add-input{flex:1;background:#111;border:1px solid var(--border);color:var(--text);
+  border-radius:8px;padding:.4rem .65rem;font-family:inherit;font-size:.78rem;}
+.add-btn{background:rgba(167,139,250,.2);border:1px solid rgba(167,139,250,.4);
+  color:var(--purple);border-radius:8px;padding:.4rem .75rem;
+  font-family:inherit;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap;}
+
+/* Status buttons in editor */
+.status-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.4rem;margin:.65rem 0;}
+.status-opt{padding:.55rem;border-radius:8px;border:1.5px solid var(--border);
+  color:var(--muted);font-family:inherit;font-size:.78rem;font-weight:700;
+  cursor:pointer;text-align:center;transition:.15s;}
+.status-opt.selected{border-color:var(--orange);color:var(--orange);background:rgba(255,90,0,.1);}
+
+/* Save btn */
+.save-btn{width:100%;padding:.82rem;background:linear-gradient(135deg,var(--orange),#FF8800);
+  color:#fff;border:none;border-radius:11px;font-family:inherit;
+  font-size:.92rem;font-weight:800;cursor:pointer;margin-top:.65rem;}
+.cancel-btn{width:100%;padding:.68rem;background:transparent;
+  border:1px solid var(--border);color:var(--muted);
+  border-radius:11px;font-family:inherit;font-size:.85rem;cursor:pointer;margin-top:.4rem;}
+</style>
+</head>
+<body>
+
+<div id="alert-banner">🔔 ¡NUEVA ORDEN!</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">🐢 Cocina</div>
+  <div class="stats">
+    <div class="stat"><div class="stat-val" id="cnt-n" style="color:var(--orange)">0</div><div class="stat-lbl">Nuevas</div></div>
+    <div class="stat"><div class="stat-val" id="cnt-p" style="color:var(--blue)">0</div><div class="stat-lbl">Cocina</div></div>
+    <div class="stat"><div class="stat-val" id="cnt-l" style="color:var(--green)">0</div><div class="stat-lbl">Listos</div></div>
+    <div class="stat"><div class="stat-val" id="cnt-e" style="color:var(--muted)">0</div><div class="stat-lbl">Entregados</div></div>
+  </div>
+  <div class="header-btns">
+    <button class="hbtn" onclick="window.location.href='../ordenar.html'" style="background:rgba(255,90,0,.2);border-color:rgba(255,90,0,.5);color:#FF5A00;">🏪 Tienda</button>
+    <button class="hbtn" onclick="window.location.href='admin.html'" style="background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.4);color:#3B82F6;">⚙️ Admin</button>
+    <button class="hbtn" id="sound-btn" onclick="toggleSound()">🔊 ON</button>
+    <span id="clock" style="font-size:.75rem;color:var(--muted);"></span>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active" data-tab="activas" onclick="setTab('activas')">🍳 En Proceso</div>
+  <div class="tab" data-tab="listas"  onclick="setTab('listas')">✅ Listas</div>
+  <div class="tab" data-tab="historial" onclick="setTab('historial')">📋 Historial</div>
+</div>
+
+<!-- Grid -->
+<div class="grid" id="kds-grid"></div>
+
+<!-- ═══ MODAL EDITOR ═══ -->
+<div class="modal-ov" id="edit-modal" onclick="if(event.target===this)cerrarEditor()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-head">
+      <div class="modal-title" id="edit-modal-title">✏️ Editar Orden</div>
+      <button class="modal-close" onclick="cerrarEditor()">✕</button>
+    </div>
+    <div class="modal-body" id="edit-modal-body"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import {
+    getFirestore, collection, onSnapshot, updateDoc, deleteDoc,
+    doc, addDoc, serverTimestamp
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const FB_CONFIG = {
+    apiKey:"AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k",
+    authDomain:"tortas-tortuga.firebaseapp.com",
+    projectId:"tortas-tortuga",
+    storageBucket:"tortas-tortuga.firebasestorage.app",
+    messagingSenderId:"828578668114",
+    appId:"1:828578668114:web:747331efe534341d97098b"
+};
+const app = getApps().length ? getApps()[0] : initializeApp(FB_CONFIG);
+const db  = getFirestore(app);
+
+/* ── Estado global ─────────────────────────────────────────── */
+function _playBell(doble) {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        function beep(freq, start, dur) {
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.connect(g); g.connect(ctx.destination);
+            o.frequency.value = freq;
+            o.type = 'sine';
+            g.gain.setValueAtTime(0, ctx.currentTime + start);
+            g.gain.linearRampToValueAtTime(0.4, ctx.currentTime + start + 0.01);
+            g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+            o.start(ctx.currentTime + start);
+            o.stop(ctx.currentTime + start + dur);
+        }
+        beep(880, 0, 0.3);
+        beep(660, 0.15, 0.3);
+        beep(880, 0.3, 0.4);
+        if (doble) { beep(880, 0.9, 0.3); beep(660, 1.05, 0.3); beep(880, 1.2, 0.4); }
+    } catch(e) {}
+}
+
+let todos       = [];
+let tabActual   = 'activas';
+let soundOn     = true;
+let prevNuevas  = 0;
+let editPedido  = null;
+let timerInterval;
+
+/* ── REST API de Cocina ─────────────────────────────────────── */
+const KitchenAPI = {
+    // Cambiar estado de un pedido (registra timestamp del cambio)
+    setEstado: async (id, estado) => {
+        const updates = { estado };
+        // Registrar cuándo pasó a cada estado
+        if (estado.includes('preparación'))  updates['tiempos.enCocina']  = Date.now();
+        else if (estado.includes('Listo'))    updates['tiempos.lista']     = Date.now();
+        else if (estado.includes('Entregado')) updates['tiempos.entregada'] = Date.now();
+        await updateDoc(doc(db,'pedidos',id), updates);
+    },
+    // Actualizar items y modificaciones de un pedido
+    updateItems: async (id, itemsData) => {
+        const itemsStr = itemsData.map(i =>
+            i.nombre + (i.modificaciones?.length ? ' (' + i.modificaciones.join(', ') + ')' : '') + ' - $' + (i.precio||0).toFixed(2)
+        ).join(' | ');
+        await updateDoc(doc(db,'pedidos',id), { itemsData, items: itemsStr });
+    },
+    // Eliminar un pedido completo
+    deletePedido: async (id) => {
+        await deleteDoc(doc(db,'pedidos',id));
+    },
+    // Añadir nota interna a un pedido
+    addNota: async (id, nota) => {
+        await updateDoc(doc(db,'pedidos',id), { notaCocina: nota });
+    },
+    // Cambiar cliente/nombre
+    updateCliente: async (id, cliente) => {
+        await updateDoc(doc(db,'pedidos',id), { cliente });
+    }
+};
+window.KitchenAPI = KitchenAPI;
+
+/* ── Reloj ─────────────────────────────────────────────────── */
+setInterval(() => {
+    document.getElementById('clock').textContent =
+        new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}, 1000);
+
+/* ── Sound ─────────────────────────────────────────────────── */
+window.toggleSound = () => {
+    soundOn = !soundOn;
+    document.getElementById('sound-btn').textContent = soundOn ? '🔊 ON' : '🔇 OFF';
+};
+function playBell(doble=false) {
+    _playBell(doble);
+}
+
+/* ── Tabs ───────────────────────────────────────────────────── */
+window.setTab = (tab) => {
+    tabActual = tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab===tab));
+    renderGrid();
+};
+
+/* ── Timer helpers ─────────────────────────────────────────── */
+function timerClass(secs) {
+    const m = secs/60;
+    return m < 10 ? 'ok' : m < 20 ? 'warn' : 'late';
+}
+function timerTxt(secs) {
+    const m = Math.floor(secs/60), s = Math.floor(secs%60);
+    return m < 1 ? s+'s' : m+'m'+(s<10?'0'+s:s)+'s';
+}
+
+/* ── Parse items ────────────────────────────────────────────── */
+function parseItems(p) {
+    if (p.itemsData && Array.isArray(p.itemsData) && p.itemsData.length) return p.itemsData;
+    if (!p.items) return [];
+    return p.items.split(' | ').map(s => {
+        const idx = s.lastIndexOf(' - $');
+        const nombre = idx>0 ? s.slice(0,idx) : s;
+        const precio = idx>0 ? parseFloat(s.slice(idx+4)) || 0 : 0;
+        return { nombre, precio, modificaciones:[] };
+    });
+}
+
+/* ── Render card ────────────────────────────────────────────── */
+function renderCard(p) {
+    const ahora  = Date.now();
+    const ts     = p.creado?.seconds ? p.creado.seconds*1000 : ahora;
+    const secs   = (ahora-ts)/1000;
+    const est    = p.estado || '';
+    const cls    = est.includes('preparación') ? 'prep'
+                 : est.includes('Listo')       ? 'listo'
+                 : est.includes('Entregado')   ? 'entregado'
+                 : 'nuevo';
+    const ticket = p.folioStr || ('#' + (p.id||'').slice(-4).toUpperCase());
+    const hora   = new Date(ts).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    const items  = parseItems(p);
+
+    const acciones = cls === 'nuevo'
+        ? `<button class="kbtn kbtn-cook" onclick="setEstado('${p.id}','En preparación 🧑‍🍳')">🍳 En Cocina</button>
+           <button class="kbtn kbtn-edit" onclick="abrirEditor('${p.id}')">✏️ Editar</button>`
+        : cls === 'prep'
+        ? `<button class="kbtn kbtn-ready" onclick="setEstado('${p.id}','Listo ✅')">✅ Listo</button>
+           <button class="kbtn kbtn-edit"  onclick="abrirEditor('${p.id}')">✏️ Editar</button>`
+        : cls === 'listo'
+        ? `<button class="kbtn kbtn-done"  onclick="setEstado('${p.id}','Entregado 🎉')">🎉 Entregar</button>
+           <button class="kbtn kbtn-edit"  onclick="abrirEditor('${p.id}')">✏️ Editar</button>`
+        : `<button class="kbtn kbtn-edit" style="flex:1" onclick="abrirEditor('${p.id}')">✏️ Ver / Editar</button>`;
+
+    return `<div class="kcard ${cls}" id="kcard-${p.id}">
+        <div class="kcard-head">
+            <div>
+                <div class="kticket">#${ticket} <span style="font-size:.68rem;color:var(--muted);font-weight:400;">${hora}</span></div>
+                <div class="kcliente">${p.cliente||p.nombre||'Cliente'} ${p.notaCocina?'<span style="color:var(--yellow);font-size:.7rem;">📝 '+p.notaCocina+'</span>':''}</div>
+            </div>
+            <div class="ktimer ${timerClass(secs)}">${timerTxt(secs)}</div>
+        </div>
+        <div class="kcard-items">
+            ${items.map(i=>`
+                <div class="kitem">
+                    <div class="kitem-name">${i.nombre}</div>
+                    ${i.modificaciones?.length ? `<div class="kitem-mods">⚠️ ${i.modificaciones.join(' · ')}</div>` : ''}
+                </div>`).join('')}
+        </div>
+        <div class="kcard-actions">${acciones}</div>
+    </div>`;
+}
+
+/* ── Render grid ─────────────────────────────────────────────── */
+function renderGrid() {
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    const hoyFin = new Date(); hoyFin.setHours(23,59,59,999);
+
+    let pedidos = todos.filter(p => {
+        const ts = p.creado?.seconds ? new Date(p.creado.seconds*1000) : null;
+        return !ts || (ts >= hoy && ts <= hoyFin);
+    });
+
+    if (tabActual === 'activas') {
+        pedidos = pedidos.filter(p => !p.estado?.includes('Entregado') && !p.estado?.includes('Listo') && !p.estado?.includes('Cancelado'));
+        pedidos.sort((a,b) => {
+            const o = {'Nuevo':0,'Nuevo 🆕':0,'En preparación 🧑‍🍳':1};
+            return (o[a.estado]??0) - (o[b.estado]??0);
+        });
+    } else if (tabActual === 'listas') {
+        pedidos = pedidos.filter(p => p.estado?.includes('Listo'));
+    } else {
+        pedidos = pedidos.filter(p => p.estado?.includes('Entregado') || p.estado?.includes('Cancelado'));
+        pedidos.sort((a,b) => (b.creado?.seconds||0) - (a.creado?.seconds||0));
+    }
+
+    // Contadores totales hoy
+    const todosHoy = todos.filter(p => {
+        const ts = p.creado?.seconds ? new Date(p.creado.seconds*1000) : null;
+        return !ts || (ts >= hoy && ts <= hoyFin);
+    });
+    document.getElementById('cnt-n').textContent = todosHoy.filter(p=>p.estado?.includes('Nuevo')).length;
+    document.getElementById('cnt-p').textContent = todosHoy.filter(p=>p.estado?.includes('preparación')).length;
+    document.getElementById('cnt-l').textContent = todosHoy.filter(p=>p.estado?.includes('Listo')).length;
+    document.getElementById('cnt-e').textContent = todosHoy.filter(p=>p.estado?.includes('Entregado')).length;
+
+    const grid = document.getElementById('kds-grid');
+    if (!pedidos.length) {
+        const msgs = {
+            activas: '¡Sin órdenes pendientes!',
+            listas: 'Sin órdenes listas por entregar',
+            historial: 'Sin órdenes entregadas hoy'
+        };
+        grid.innerHTML = `<div class="empty"><div class="empty-ico">🍳</div><div class="empty-lbl">${msgs[tabActual]}</div></div>`;
+        return;
+    }
+    grid.innerHTML = pedidos.map(renderCard).join('');
+}
+
+/* ── setEstado ──────────────────────────────────────────────── */
+window.setEstado = async (id, estado) => {
+    try { await KitchenAPI.setEstado(id, estado); }
+    catch(e) { alert('Error: ' + e.message); }
+};
+
+/* ── EDITOR COMPLETO ────────────────────────────────────────── */
+window.abrirEditor = (id) => {
+    editPedido = todos.find(p => p.id === id);
+    if (!editPedido) return;
+    const ticket = (todos.find(p=>p.id===id)||{}).folioStr || ('#'+id.slice(-4).toUpperCase());
+    document.getElementById('edit-modal-title').textContent = '✏️ Orden #' + ticket;
+    renderEditor();
+    document.getElementById('edit-modal').classList.add('open');
+};
+
+window.cerrarEditor = () => {
+    document.getElementById('edit-modal').classList.remove('open');
+    editPedido = null;
+};
+
+function renderEditor() {
+    if (!editPedido) return;
+    const p     = editPedido;
+    const items = parseItems(p);
+    const est   = p.estado || 'Nuevo';
+
+    const statusOpts = [
+        {val:'Nuevo 🆕',lbl:'🆕 Nueva'},
+        {val:'En preparación 🧑‍🍳',lbl:'🍳 En Cocina'},
+        {val:'Listo ✅',lbl:'✅ Listo'},
+        {val:'Entregado 🎉',lbl:'🎉 Entregado'}
+    ];
+
+    document.getElementById('edit-modal-body').innerHTML = `
+
+        /* Estado */
+        <div style="margin-bottom:.85rem;">
+            <div style="font-size:.75rem;color:var(--muted);font-weight:700;margin-bottom:.4rem;">ESTADO DE LA ORDEN</div>
+            <div class="status-grid">
+                ${statusOpts.map(s=>`
+                    <button class="status-opt ${est===s.val||est.includes(s.val.split(' ')[0])?'selected':''}"
+                        onclick="selectEstado('${s.val}',this)">${s.lbl}</button>
+                `).join('')}
+            </div>
+        </div>
+
+        /* Cliente */
+        <div style="margin-bottom:.85rem;">
+            <div style="font-size:.75rem;color:var(--muted);font-weight:700;margin-bottom:.4rem;">CLIENTE</div>
+            <input id="edit-cliente" value="${p.cliente||p.nombre||''}"
+                style="width:100%;background:#111;border:1px solid var(--border);color:var(--text);
+                       border-radius:8px;padding:.45rem .75rem;font-family:inherit;font-size:.85rem;">
+        </div>
+
+        /* Nota cocina */
+        <div style="margin-bottom:.85rem;">
+            <div style="font-size:.75rem;color:var(--muted);font-weight:700;margin-bottom:.4rem;">📝 NOTA PARA COCINA</div>
+            <input id="edit-nota" value="${p.notaCocina||''}" placeholder="Ej: extra salsa, sin hielo..."
+                style="width:100%;background:#111;border:1px solid var(--border);color:var(--text);
+                       border-radius:8px;padding:.45rem .75rem;font-family:inherit;font-size:.82rem;">
+        </div>
+
+        /* Items */
+        <div style="font-size:.75rem;color:var(--muted);font-weight:700;margin-bottom:.4rem;">PRODUCTOS</div>
+        <div id="edit-items-list">
+            ${items.map((item,idx)=>`
+                <div class="edit-item" id="edit-item-${idx}">
+                    <div class="edit-item-header">
+                        <div class="edit-item-name">${item.nombre}</div>
+                        <div style="display:flex;align-items:center;gap:.4rem;">
+                            <span class="edit-item-precio">$${(item.precio||0).toFixed(2)}</span>
+                            <button class="edit-item-del" onclick="eliminarItem(${idx})">✕ Quitar</button>
+                        </div>
+                    </div>
+                    <input class="edit-mods-input" id="mods-${idx}"
+                        value="${(item.modificaciones||[]).join(', ')}"
+                        placeholder="Modificaciones: sin cebolla, extra salsa...">
+                </div>
+            `).join('')}
+        </div>
+
+        /* Agregar producto */
+        <div class="add-section" style="margin-top:.65rem;">
+            <div class="add-section-title">➕ Agregar Producto</div>
+            <div class="add-row" style="margin-bottom:.4rem;">
+                <input class="add-input" id="add-nombre" placeholder="Nombre del producto">
+                <input class="add-input" id="add-precio" type="number" placeholder="$0.00" style="max-width:80px;">
+            </div>
+            <input class="add-input" id="add-mods" placeholder="Modificaciones (opcional)" style="width:100%;margin-bottom:.4rem;">
+            <button class="add-btn" style="width:100%;" onclick="agregarItem()">➕ Agregar</button>
+        </div>
+
+        /* Botones */
+        <button class="save-btn" onclick="guardarCambios()">💾 Guardar Cambios</button>
+        <button class="cancel-btn" onclick="cerrarEditor()">Cancelar</button>
+        <div style="margin-top:.65rem;padding-top:.65rem;border-top:1px solid var(--border);">
+            <button onclick="confirmarEliminar('${p.id}')"
+                style="width:100%;padding:.6rem;background:rgba(255,68,68,.1);
+                       border:1px solid rgba(255,68,68,.3);color:var(--red);
+                       border-radius:10px;font-family:inherit;font-size:.82rem;
+                       font-weight:700;cursor:pointer;">
+                🗑️ Eliminar esta orden
+            </button>
+        </div>
+    `;
+}
+
+let estadoSeleccionado = null;
+window.selectEstado = (val, btn) => {
+    estadoSeleccionado = val;
+    document.querySelectorAll('.status-opt').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+};
+
+window.eliminarItem = (idx) => {
+    if (!editPedido) return;
+    let items = parseItems(editPedido);
+    if (!confirm(`¿Quitar "${items[idx]?.nombre}"?`)) return;
+    items.splice(idx, 1);
+    editPedido._tempItems = items;
+    renderEditor();
+    // Restaurar estado seleccionado
+    if (estadoSeleccionado) {
+        document.querySelectorAll('.status-opt').forEach(b => {
+            if (b.textContent.includes(estadoSeleccionado.split(' ')[0])) b.classList.add('selected');
+        });
+    }
+};
+
+window.agregarItem = () => {
+    const nombre = document.getElementById('add-nombre')?.value.trim();
+    const precio = parseFloat(document.getElementById('add-precio')?.value) || 0;
+    const mods   = document.getElementById('add-mods')?.value.trim();
+    if (!nombre) { alert('Escribe el nombre del producto'); return; }
+
+    let items = editPedido._tempItems || parseItems(editPedido);
+    items.push({ nombre, precio, modificaciones: mods ? [mods] : [] });
+    editPedido._tempItems = items;
+    renderEditor();
+};
+
+window.guardarCambios = async () => {
+    if (!editPedido) return;
+    const id = editPedido.id;
+
+    try {
+        // Recoger items actualizados con modificaciones editadas
+        let items = editPedido._tempItems || parseItems(editPedido);
+        const itemsDivs = document.querySelectorAll('[id^="mods-"]');
+        itemsDivs.forEach((inp, idx) => {
+            if (items[idx]) {
+                const modsStr = inp.value.trim();
+                items[idx].modificaciones = modsStr ? modsStr.split(',').map(s=>s.trim()).filter(Boolean) : [];
+            }
+        });
+
+        // Guardar estado
+        const nuevoEstado = estadoSeleccionado || editPedido.estado;
+        const cliente     = document.getElementById('edit-cliente')?.value.trim() || editPedido.cliente;
+        const nota        = document.getElementById('edit-nota')?.value.trim() || '';
+
+        // Actualizar en Firestore
+        await KitchenAPI.updateItems(id, items);
+        await KitchenAPI.setEstado(id, nuevoEstado);
+        await KitchenAPI.updateCliente(id, cliente);
+        await KitchenAPI.addNota(id, nota);
+
+        // Limpiar temp
+        editPedido._tempItems = null;
+        estadoSeleccionado    = null;
+        cerrarEditor();
+
+        // Toast visual
+        const toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#25D366;color:#fff;padding:.65rem 1.25rem;border-radius:12px;font-weight:700;font-size:.88rem;z-index:9999;';
+        toast.textContent = '✅ Orden actualizada';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2500);
+
+    } catch(e) {
+        alert('Error al guardar: ' + e.message);
+    }
+};
+
+window.confirmarEliminar = async (id) => {
+    if (!confirm('⚠️ ¿Eliminar esta orden permanentemente? Esta acción no se puede deshacer.')) return;
+    try {
+        await KitchenAPI.deletePedido(id);
+        cerrarEditor();
+    } catch(e) { alert('Error: ' + e.message); }
+};
+
+/* ── onSnapshot ─────────────────────────────────────────────── */
+let _kdsUnsub = null;
+function iniciarKDS(){
+  if(_kdsUnsub) try{_kdsUnsub();}catch(e){}
+  _kdsUnsub = onSnapshot(collection(db,'pedidos'), snap => {
+    todos = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    const nuevas = todos.filter(p => {
+        const ts = p.creado?.seconds ? new Date(p.creado.seconds*1000) : null;
+        return ts && ts >= hoy && (p.estado?.includes('Nuevo'));
+    }).length;
+
+    if (nuevas > prevNuevas) {
+        const diff = nuevas - prevNuevas;
+        playBell(diff > 1);
+        const b = document.getElementById('alert-banner');
+        b.textContent = `🔔 ${diff} NUEVA${diff>1?'S':''} ORDEN${diff>1?'ES':''}`;
+        b.style.display = 'block';
+        setTimeout(()=>{ b.style.display='none'; }, 5000);
+        document.title = `🔔 ${nuevas} NUEVA(S) — Cocina`;
+        setTimeout(()=>{ document.title='🧑‍🍳 Cocina — Tortas Tortuga'; }, 6000);
+        if (Notification.permission==='granted') {
+            new Notification('🐢 Nueva Orden — Cocina', {
+                body: diff + ' nueva(s) orden(es)',
+                icon:'../favicon.ico', tag:'cocina'
+            });
+        }
+    }
+    prevNuevas = nuevas;
+
+    // Actualizar editor si está abierto
+    if (editPedido) {
+        const updated = todos.find(p=>p.id===editPedido.id);
+        if (updated && !editPedido._tempItems) editPedido = updated;
+    }
+
+    renderGrid();
+  });
+}
+
+// Iniciar el KDS (conectar a Firebase)
+iniciarKDS();
+
+// Actualizar timers cada 15s
+setInterval(renderGrid, 15000);
+
+// Pedir permiso notificaciones
+if ('Notification' in window && Notification.permission==='default') {
+    Notification.requestPermission();
+}
+</script>
+</body>
+</html>

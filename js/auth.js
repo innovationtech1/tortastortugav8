@@ -4,10 +4,13 @@ import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult,
     GoogleAuthProvider,
     sendPasswordResetEmail,
     sendEmailVerification,
-    onAuthStateChanged
+    onAuthStateChanged,
+    signOut
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import {
     doc, setDoc, getDoc, collection, query, where, getDocs, serverTimestamp
@@ -15,9 +18,45 @@ import {
 
 const googleProvider = new GoogleAuthProvider();
 
-// ─── GUARD: Si ya tiene sesión, redirigir al menú ───────────────
+// ── Exponer para script no-módulo (cajero login) ──────────────
+window._authInstance = auth;
+window._dbInstance   = db;
+window._signInWithEmailAndPassword = signInWithEmailAndPassword;
+window._signOut = signOut;
+
+// ─── DETECTAR MÓVIL ──────────────────────────────────────────────
+const esMobil = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+// ─── MANEJAR RESULTADO DE REDIRECT (para móviles) ────────────────
+// Cuando Google redirige de vuelta, capturar el resultado aquí
+getRedirectResult(auth).then(async (result) => {
+    if (!result) return; // no hay redirect pendiente
+    const user = result.user;
+    const perfil = await obtenerPerfil(user.uid);
+    if (!perfil) {
+        const username = user.email.split('@')[0]
+            .replace(/[^a-zA-Z0-9_]/g, '').toLowerCase().slice(0, 20) || 'usuario';
+        await guardarPerfil(user.uid, {
+            nombre: user.displayName || 'Usuario',
+            username: username + Math.floor(Math.random() * 99),
+            telefono: '',
+            email: user.email,
+            metodo: 'google'
+        });
+    }
+    window.location.href = '../ordenar.html';
+}).catch((err) => {
+    // Ignorar errores normales de "no hay redirect pendiente"
+    if (err.code && err.code !== 'auth/no-auth-event') {
+        console.warn('Redirect result error:', err.code);
+    }
+});
+
+// ─── GUARD: Si ya tiene sesión, redirigir al menú ────────────────
 onAuthStateChanged(auth, (user) => {
     if (user) {
+        // No redirigir si es un login de cajero — el módulo cajero maneja la redirección
+        if (sessionStorage.getItem('tt_cajero_logging_in') === 'true') return;
         window.location.href = '../ordenar.html';
     }
 });
@@ -79,11 +118,25 @@ async function obtenerPerfil(uid) {
 
 // ─── TABS ────────────────────────────────────────────────────────
 window.switchTab = function(tab) {
-    document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+    // Ocultar todos los forms
+    document.querySelectorAll('.auth-form').forEach(f => {
+        f.classList.remove('active');
+        f.style.display = 'none';
+    });
     document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-    document.getElementById(`form-${tab}`).classList.add('active');
+
+    // Mostrar el form seleccionado
+    const targetForm = document.getElementById(`form-${tab}`);
+    if (targetForm) {
+        targetForm.classList.add('active');
+        targetForm.style.display = 'flex';
+    }
     if (tab !== 'forgot') document.getElementById(`tab-${tab}`)?.classList.add('active');
     clearMessages();
+
+    // Focus primer input
+    if (tab === 'cajero') setTimeout(() => document.getElementById('cajero-id')?.focus(), 100);
+    if (tab === 'login')  setTimeout(() => document.getElementById('login-email')?.focus(), 100);
 };
 
 function clearMessages() {
@@ -186,13 +239,16 @@ document.getElementById('reg-username')?.addEventListener('input', (e) => {
 // ─── GOOGLE SIGN-IN (LOGIN Y REGISTRO) ───────────────────────────
 async function loginConGoogle() {
     try {
+        if (esMobil) {
+            // En móvil usar redirect (más confiable en Safari/Chrome iOS)
+            await signInWithRedirect(auth, googleProvider);
+            return; // la página recarga — getRedirectResult() lo maneja
+        }
+        // En escritorio usar popup
         const result = await signInWithPopup(auth, googleProvider);
         const user = result.user;
-
-        // Verificar si ya tiene perfil
         const perfil = await obtenerPerfil(user.uid);
         if (!perfil) {
-            // Nuevo usuario con Google → crear perfil básico
             const username = user.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '').toLowerCase().slice(0, 20) || 'usuario';
             await guardarPerfil(user.uid, {
                 nombre: user.displayName || 'Usuario',
@@ -204,11 +260,19 @@ async function loginConGoogle() {
         }
         window.location.href = '../ordenar.html';
     } catch (err) {
-        console.error(err);
-        const msg = err.code === 'auth/popup-closed-by-user'
-            ? 'Cerraste el popup antes de completar el login.'
+        if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
+            // Popup bloqueado — intentar con redirect como fallback
+            try {
+                await signInWithRedirect(auth, googleProvider);
+            } catch(e2) {
+                showMsg('msg-login', '⚠️ No se pudo abrir Google. Verifica que los popups no estén bloqueados.');
+            }
+            return;
+        }
+        const msgTxt = err.code === 'auth/popup-closed-by-user'
+            ? 'Cerraste la ventana de Google antes de completar el login.'
             : 'Error con Google Sign-In. Intenta de nuevo.';
-        showMsg('msg-login', '⚠️ ' + msg);
+        showMsg('msg-login', '⚠️ ' + msgTxt);
     }
 }
 

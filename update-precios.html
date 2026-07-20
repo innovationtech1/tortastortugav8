@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Actualizar Precios — Tortas Tortuga</title>
+<style>
+  body{font-family:system-ui;background:#111;color:#fff;padding:1.5rem;max-width:600px;margin:0 auto;}
+  h2{color:#FF5A00;}
+  .item{background:#1c1c1c;border-radius:8px;padding:.6rem .9rem;margin:.3rem 0;display:flex;justify-content:space-between;font-size:.85rem;}
+  .ok{color:#25D366;} .err{color:#F44336;} .wait{color:#FBB724;}
+  button{background:#FF5A00;color:#fff;border:none;border-radius:10px;padding:.8rem 2rem;font-size:1rem;font-weight:700;cursor:pointer;width:100%;margin-top:1rem;}
+  #log{margin-top:1rem;}
+</style>
+</head>
+<body>
+<h2>📦 Actualizar Precios de Productos</h2>
+<p style="color:#888;font-size:.85rem;">Este script actualiza los precios correctos en Firestore.</p>
+<button onclick="actualizarTodo()" id="btn">▶ Iniciar Actualización</button>
+<div id="log"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, getDocs, updateDoc, doc, writeBatch }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const fb = initializeApp({
+  apiKey:"AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k",
+  authDomain:"tortas-tortuga.firebaseapp.com",
+  projectId:"tortas-tortuga"
+});
+const db = getFirestore(fb);
+
+const PRECIOS = {
+  "1. original torta tortuga":   {precio:17, categoria:"tortas"},
+  "2. turkey or ham tortuga":    {precio:17, categoria:"tortas"},
+  "3. pork head chz tortuga":    {precio:17, categoria:"tortas"},
+  "4. shrimp tortuga":           {precio:20, categoria:"tortas"},
+  "5. only meat no veggies":     {precio:16, categoria:"tortas"},
+  "6. vegan tortuga":            {precio:13, categoria:"tortas"},
+  "7. kids tortuga":             {precio: 9, categoria:"tortas"},
+  "botana japonesa":             {precio:10, categoria:"botanas"},
+  "botana platter":              {precio:12, categoria:"botanas"},
+  "bottle drinks":               {precio: 5, categoria:"drinks"},
+  "caguama botana":              {precio:20, categoria:"bebidas"},
+  "caguama michelada":           {precio:15, categoria:"bebidas"},
+  "caguama sola":                {precio:12, categoria:"bebidas"},
+  "cucumbersitos":               {precio: 8, categoria:"botanas"},
+  "el squirt ruso":              {precio:12, categoria:"drinks"},
+  "miche tortuga":               {precio:15, categoria:"drinks"},
+  "new! la special double t":    {precio:20, categoria:"tortas"},
+  "shrimp botana":               {precio:20, categoria:"botanas"},
+  "sides & extras":              {precio: 5, categoria:"botanas"},
+  "the hangover monster":        {precio:13, categoria:"drinks"},
+  "topochico preparado":         {precio:12, categoria:"drinks"},
+  "caguama":                     {precio:20, categoria:"bebidas"},
+};
+
+window.actualizarTodo = async function() {
+  const btn = document.getElementById('btn');
+  const log = document.getElementById('log');
+  btn.disabled = true;
+  btn.textContent = '⏳ Actualizando...';
+  log.innerHTML = '<div class="wait">Cargando productos de Firestore...</div>';
+
+  try {
+    const snap = await getDocs(collection(db, 'productos'));
+    const docs = snap.docs;
+    log.innerHTML = '<div class="wait">'+docs.length+' productos encontrados. Actualizando...</div>';
+
+    const batch = writeBatch(db);
+    let updated = 0, skipped = 0;
+
+    docs.forEach(d => {
+      const nombre = (d.data().nombre || '').toLowerCase().trim();
+      let match = null;
+
+      // Exact match
+      if (PRECIOS[nombre]) { match = PRECIOS[nombre]; }
+      else {
+        // Partial match
+        for (const [k,v] of Object.entries(PRECIOS)) {
+          if (nombre.includes(k) || k.includes(nombre)) { match = v; break; }
+        }
+      }
+
+      if (match) {
+        batch.update(doc(db,'productos',d.id), {
+          precio:    match.precio,
+          _precio:   match.precio,
+          categoria: match.categoria,
+          variantes: [{ label: 'Precio base', precio: match.precio }]
+        });
+        updated++;
+      } else {
+        skipped++;
+      }
+    });
+
+    await batch.commit();
+
+    // Build result
+    let html = '<div class="ok" style="font-weight:700;margin-bottom:.5rem;">✅ '+updated+' productos actualizados</div>';
+    snap.docs.forEach(d => {
+      const nombre = (d.data().nombre || '').toLowerCase().trim();
+      let match = null;
+      if (PRECIOS[nombre]) match = PRECIOS[nombre];
+      else for (const [k,v] of Object.entries(PRECIOS)) { if (nombre.includes(k)||k.includes(nombre)){match=v;break;} }
+      if (match) {
+        html += '<div class="item"><span>'+d.data().nombre+'</span><span class="ok">$'+match.precio.toFixed(2)+'</span></div>';
+      } else {
+        html += '<div class="item"><span>'+d.data().nombre+'</span><span class="wait">sin match</span></div>';
+      }
+    });
+    if (skipped > 0) html += '<div class="wait" style="margin-top:.5rem;">⚠️ '+skipped+' sin match (no modificados)</div>';
+
+    log.innerHTML = html;
+    btn.textContent = '✅ Completado';
+    btn.style.background = '#25D366';
+
+  } catch(e) {
+    log.innerHTML = '<div class="err">❌ Error: '+e.message+'</div>';
+    btn.disabled = false;
+    btn.textContent = '▶ Reintentar';
+  }
+};
+</script>
+</body>
+</html>

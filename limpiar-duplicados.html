@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Limpiar Duplicados - Tortas Tortuga</title>
+<style>
+  body{background:#0d0d0d;color:#fff;font-family:system-ui,-apple-system,sans-serif;padding:1.5rem;max-width:900px;margin:0 auto;}
+  h1{color:#FF5A00;font-size:1.3rem;}
+  .card{background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:1rem;margin-bottom:1rem;}
+  button{padding:.7rem 1.2rem;border:none;border-radius:10px;font-family:inherit;font-size:.9rem;font-weight:800;cursor:pointer;margin-right:.5rem;}
+  .btn-scan{background:#3B82F6;color:#fff;}
+  .btn-clean{background:linear-gradient(135deg,#FF5A00,#FF8C00);color:#fff;}
+  .btn-clean:disabled{opacity:.4;cursor:not-allowed;}
+  pre{background:#000;padding:.8rem;border-radius:8px;overflow-x:auto;font-size:.75rem;max-height:400px;overflow-y:auto;}
+  .grupo{border-left:3px solid #FF5A00;padding-left:.8rem;margin:.6rem 0;}
+  .keep{color:#25D366;}
+  .del{color:#F44336;}
+  .warn{background:rgba(251,183,36,.1);border:1px solid rgba(251,183,36,.4);border-radius:8px;padding:.8rem;color:#FBB724;font-size:.85rem;}
+  .btn-nav{background:rgba(255,255,255,.06);border:1.5px solid rgba(255,90,0,.4);color:#FF5A00;}
+  .btn-nav:hover{background:rgba(255,90,0,.12);}
+</style>
+</head>
+<body>
+<h1>Limpiar productos duplicados</h1>
+
+<div class="warn">
+  Esta herramienta borra documentos duplicados de Firestore. La accion no se puede deshacer.
+  Primero escanea para ver que se va a borrar.
+</div>
+
+<div class="card">
+  <button class="btn-scan" onclick="escanear()">1. Escanear duplicados</button>
+  <button class="btn-clean" id="btn-limpiar" onclick="limpiar()" disabled>2. Eliminar duplicados</button>
+</div>
+
+<div class="card">
+  <input id="buscar-prod" placeholder="Escribe el nombre de un producto (ej: cerveza)"
+    style="width:100%;box-sizing:border-box;padding:.6rem;background:#0d0d0d;border:1.5px solid rgba(255,90,0,.4);color:#fff;border-radius:8px;font-family:inherit;font-size:.85rem;margin-bottom:.5rem;">
+  <button class="btn-scan" onclick="inspeccionar()">Inspeccionar producto</button>
+</div>
+
+<div class="card" style="display:flex;gap:.5rem;flex-wrap:wrap;">
+  <button class="btn-nav" onclick="window.open('ordenar.html?v=' + Date.now(), '_blank')">
+    Ver Tienda / Menu
+  </button>
+  <button class="btn-nav" onclick="window.open('pages/admin.html?v=' + Date.now(), '_blank')">
+    Ir a Admin
+  </button>
+  <button class="btn-nav" onclick="window.open('pages/cocina.html?v=' + Date.now(), '_blank')">
+    Ir a Cocina
+  </button>
+</div>
+
+<div class="card">
+  <div id="resultado">Presiona "Escanear duplicados" para empezar.</div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, getDocs, deleteDoc, doc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const app = initializeApp({
+  apiKey: "AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k",
+  authDomain: "tortas-tortuga.firebaseapp.com",
+  projectId: "tortas-tortuga",
+  storageBucket: "tortas-tortuga.firebasestorage.app",
+  messagingSenderId: "586554873297",
+  appId: "1:586554873297:web:c0e0e2fbe1a29b0b3ed83e"
+});
+const db = getFirestore(app);
+
+let aBorrar = [];
+
+// Puntua un producto: gana el mas completo
+function puntuar(p) {
+  let pts = 0;
+  if (p.imagen && p.imagen.startsWith('data:')) pts += 100;  // imagen subida por el usuario
+  else if (p.imagen) pts += 10;                               // imagen por ruta
+  if (p.variantes && p.variantes.length) pts += 5;
+  if (p.variantes && p.variantes.length > 1) pts += 3;
+  if (p.descripcion) pts += 2;
+  if (p.precio > 0) pts += 1;
+  return pts;
+}
+
+window.escanear = async function() {
+  const out = document.getElementById('resultado');
+  out.innerHTML = 'Escaneando...';
+  aBorrar = [];
+
+  try {
+    const snap = await getDocs(collection(db, 'productos'));
+    const grupos = {};
+
+    snap.docs.forEach(d => {
+      const data = d.data();
+      const key = (data.nombre || '').toLowerCase().trim();
+      if (!key) return;
+      if (!grupos[key]) grupos[key] = [];
+      grupos[key].push({ id: d.id, data: data, pts: puntuar(data) });
+    });
+
+    let html = '<b>Total de documentos: ' + snap.docs.length + '</b><br>';
+    let dupCount = 0;
+    let html2 = '';
+
+    Object.keys(grupos).sort().forEach(key => {
+      const g = grupos[key];
+      if (g.length <= 1) return;
+      dupCount += g.length - 1;
+
+      // Ordenar por puntaje: el mejor primero
+      g.sort((a,b) => b.pts - a.pts);
+      const ganador = g[0];
+      const perdedores = g.slice(1);
+      perdedores.forEach(p => aBorrar.push(p.id));
+
+      html2 += '<div class="grupo"><b>' + key + '</b> (' + g.length + ' copias)<br>';
+      html2 += '<span class="keep">CONSERVAR: ' + ganador.id + ' (pts:' + ganador.pts +
+               ', imagen: ' + (ganador.data.imagen ? (ganador.data.imagen.startsWith('data:') ? 'SUBIDA' : 'ruta') : 'ninguna') + ')</span><br>';
+      perdedores.forEach(p => {
+        html2 += '<span class="del">BORRAR: ' + p.id + ' (pts:' + p.pts + ')</span><br>';
+      });
+      html2 += '</div>';
+    });
+
+    html += '<b>Productos unicos: ' + Object.keys(grupos).length + '</b><br>';
+    html += '<b style="color:#F44336">Documentos a borrar: ' + dupCount + '</b><br><br>';
+    out.innerHTML = html + html2;
+
+    document.getElementById('btn-limpiar').disabled = aBorrar.length === 0;
+  } catch(e) {
+    out.innerHTML = '<span class="del">Error: ' + e.message + '</span>';
+  }
+};
+
+window.inspeccionar = async function() {
+  const termino = (document.getElementById('buscar-prod').value || '').toLowerCase().trim();
+  const out = document.getElementById('resultado');
+  if (!termino) { out.innerHTML = 'Escribe parte del nombre de un producto'; return; }
+
+  out.innerHTML = 'Buscando...';
+  try {
+    const snap = await getDocs(collection(db, 'productos'));
+    let html = '';
+    let encontrados = 0;
+
+    snap.docs.forEach(d => {
+      const data = d.data();
+      const nombre = (data.nombre || '').toLowerCase();
+      if (nombre.indexOf(termino) < 0) return;
+      encontrados++;
+
+      const img = data.imagen || '';
+      let imgDesc, imgColor;
+      if (!img) { imgDesc = 'SIN IMAGEN'; imgColor = '#F44336'; }
+      else if (img.startsWith('data:')) { imgDesc = 'IMAGEN SUBIDA (' + Math.round(img.length/1024) + ' KB)'; imgColor = '#25D366'; }
+      else { imgDesc = 'RUTA: ' + img; imgColor = '#FBB724'; }
+
+      html += '<div class="grupo">';
+      html += '<b>' + (data.nombre||'?') + '</b><br>';
+      html += 'docId: <code>' + d.id + '</code><br>';
+      html += 'imagen: <span style="color:' + imgColor + '">' + imgDesc + '</span><br>';
+      html += 'categoria: ' + (data.categoria||'?') + ' | precio: $' + (data.precio||0) + '<br>';
+      html += 'puntaje: ' + puntuar(data) + '<br>';
+      if (img.startsWith('data:')) {
+        html += '<img src="' + img + '" style="width:120px;height:80px;object-fit:cover;border-radius:6px;margin-top:.4rem;">';
+      }
+      html += '<br><button class="btn-nav" style="margin-top:.4rem;padding:.35rem .7rem;font-size:.75rem;" onclick="borrarUno(\'' + d.id + '\')">Borrar este</button>';
+      html += '</div>';
+    });
+
+    out.innerHTML = encontrados
+      ? '<b>' + encontrados + ' documento(s) encontrados para "' + termino + '"</b><br>' + html
+      : 'No se encontro ningun producto con "' + termino + '"';
+  } catch(e) {
+    out.innerHTML = '<span class="del">Error: ' + e.message + '</span>';
+  }
+};
+
+window.borrarUno = async function(id) {
+  if (!confirm('Borrar el documento ' + id + '?')) return;
+  try {
+    await deleteDoc(doc(db, 'productos', id));
+    alert('Borrado. Presiona "Inspeccionar" de nuevo para ver el estado actual.');
+    window.inspeccionar();
+  } catch(e) {
+    alert('Error al borrar: ' + e.message);
+  }
+};
+
+window.limpiar = async function() {
+  if (!aBorrar.length) return;
+  if (!confirm('Se borraran ' + aBorrar.length + ' documentos duplicados. Continuar?')) return;
+
+  const out = document.getElementById('resultado');
+  let ok = 0, fail = 0;
+
+  for (const id of aBorrar) {
+    try {
+      await deleteDoc(doc(db, 'productos', id));
+      ok++;
+      out.innerHTML = 'Borrando... ' + ok + '/' + aBorrar.length;
+    } catch(e) {
+      fail++;
+      console.error('Error al borrar', id, e);
+    }
+  }
+
+  out.innerHTML = '<b class="keep">Listo: ' + ok + ' borrados</b>' +
+                  (fail ? '<br><b class="del">' + fail + ' fallaron (revisa la consola)</b>' : '') +
+                  '<br><br>Abre el menu para verificar.';
+  aBorrar = [];
+  document.getElementById('btn-limpiar').disabled = true;
+};
+</script>
+</body>
+</html>

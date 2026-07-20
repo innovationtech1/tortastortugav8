@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Entrar - Tortas Tortuga</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/auth.css">
+<style>
+  /* Ajustes especificos para el login por telefono */
+  .paso { display:none; }
+  .paso.activo { display:block; }
+  .code-input { text-align:center !important; font-size:1.8rem !important; letter-spacing:.5rem !important; font-weight:800 !important; }
+  .codigo-demo {
+    background:rgba(251,183,36,.1); border:1px solid rgba(251,183,36,.3);
+    border-radius:12px; padding:.9rem; margin-bottom:1rem; text-align:center;
+  }
+  .codigo-demo .cd-label { font-size:.7rem; color:#FBB724; text-transform:uppercase; letter-spacing:.05em; font-weight:700; }
+  .codigo-demo .cd-code { font-size:1.8rem; font-weight:900; color:#FBB724; letter-spacing:.4rem; margin-top:.2rem; }
+  .demo-badge {
+    background:rgba(167,139,250,.12); border:1px solid rgba(167,139,250,.3);
+    color:#A78BFA; font-size:.68rem; padding:.35rem .8rem; border-radius:20px;
+    display:inline-block; margin:0 auto 1rem; font-weight:700;
+  }
+  .btn-volver { background:none !important; box-shadow:none !important; color:#888 !important; font-size:.85rem !important; font-weight:600 !important; margin-top:.6rem !important; }
+</style>
+</head>
+<body>
+
+<div class="auth-bg">
+    <div class="auth-card">
+
+        <div class="auth-logo">
+            <span class="logo-emoji">🐢</span>
+            <h1 class="logo-text">Tortas Tortuga</h1>
+            <p class="logo-sub">Entra con tu teléfono para ordenar</p>
+        </div>
+
+        <div style="text-align:center;">
+            <span class="demo-badge">⚙️ MODO DEMO — código simulado</span>
+        </div>
+
+        <!-- PASO 1: Telefono -->
+        <div id="paso-telefono" class="paso activo">
+            <div class="field-wrap">
+                <label class="field-label">Tu nombre</label>
+                <input type="text" id="nombre" class="field-input" placeholder="Ej: Juan" autocomplete="off">
+            </div>
+
+            <div class="field-wrap">
+                <label class="field-label">Tu teléfono</label>
+                <input type="tel" id="telefono" class="field-input" inputmode="tel" placeholder="210-555-1234" autocomplete="off">
+            </div>
+
+            <div class="auth-message" id="status-1"></div>
+
+            <button class="btn-primary" onclick="enviarCodigo()" id="btn-enviar">
+                <span class="btn-text">Enviar código</span>
+            </button>
+        </div>
+
+        <!-- PASO 2: Codigo -->
+        <div id="paso-codigo" class="paso">
+            <div class="codigo-demo">
+                <div class="cd-label">Tu código (demo)</div>
+                <div class="cd-code" id="codigo-mostrado">----</div>
+            </div>
+
+            <div class="field-wrap">
+                <label class="field-label">Escribe el código de 4 dígitos</label>
+                <input type="tel" id="codigo-input" class="field-input code-input" inputmode="numeric" maxlength="4" placeholder="----" autocomplete="off">
+            </div>
+
+            <div class="auth-message" id="status-2"></div>
+
+            <button class="btn-primary" onclick="verificarCodigo()" id="btn-verificar">
+                <span class="btn-text">Verificar y entrar</span>
+            </button>
+            <button class="btn-primary btn-volver" onclick="volverPaso1()">← Cambiar teléfono</button>
+        </div>
+
+        <div style="text-align:center;margin-top:1.2rem;">
+            <a href="auth.html" style="color:#888;font-size:.8rem;text-decoration:none;">¿Eres cajero? Entra aquí →</a>
+        </div>
+
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const app = initializeApp({
+  apiKey: "AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k",
+  authDomain: "tortas-tortuga.firebaseapp.com",
+  projectId: "tortas-tortuga",
+  storageBucket: "tortas-tortuga.firebasestorage.app",
+  messagingSenderId: "586554873297",
+  appId: "1:586554873297:web:c0e0e2fbe1a29b0b3ed83e"
+});
+const db = getFirestore(app);
+
+let _codigoGenerado = null;
+let _datosCliente = null;
+
+function showStatus(id, msg, tipo) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'auth-message ' + (tipo || '');
+    el.style.color = tipo === 'error' ? '#F44336' : (tipo === 'success' ? '#25D366' : '#FBB724');
+    el.style.display = 'block';
+}
+
+window.enviarCodigo = function() {
+    const nombre = (document.getElementById('nombre').value || '').trim();
+    const tel = (document.getElementById('telefono').value || '').trim();
+    const soloDigitos = tel.replace(/[^0-9]/g, '');
+
+    if (!nombre) { showStatus('status-1', 'Escribe tu nombre', 'error'); return; }
+    if (soloDigitos.length < 10) { showStatus('status-1', 'Escribe un teléfono válido de 10 dígitos', 'error'); return; }
+
+    // ── MODO DEMO: generar codigo de 4 digitos y mostrarlo ──
+    // Para SMS real: aqui iria signInWithPhoneNumber de Firebase Phone Auth
+    _codigoGenerado = String(Math.floor(1000 + Math.random() * 9000));
+    _datosCliente = { nombre: nombre, telefono: soloDigitos };
+
+    document.getElementById('codigo-mostrado').textContent = _codigoGenerado;
+    showStatus('status-1', 'Código generado (en SMS real llegaría a tu teléfono)', 'success');
+
+    setTimeout(function(){
+        document.getElementById('paso-telefono').classList.remove('activo');
+        document.getElementById('paso-codigo').classList.add('activo');
+        document.getElementById('codigo-input').focus();
+    }, 800);
+};
+
+window.verificarCodigo = async function() {
+    const ingresado = (document.getElementById('codigo-input').value || '').trim();
+
+    if (ingresado !== _codigoGenerado) {
+        showStatus('status-2', 'Código incorrecto. Revisa e intenta de nuevo.', 'error');
+        return;
+    }
+
+    showStatus('status-2', 'Verificando...', 'info');
+
+    try {
+        const clienteId = 'cliente_' + _datosCliente.telefono;
+        await setDoc(doc(db, 'clientes', clienteId), {
+            nombre: _datosCliente.nombre,
+            telefono: _datosCliente.telefono,
+            ultimoAcceso: new Date().toISOString(),
+        }, { merge: true });
+    } catch(e) {
+        console.warn('No se pudo guardar el cliente:', e);
+    }
+
+    sessionStorage.setItem('tt_cliente_nombre', _datosCliente.nombre);
+    sessionStorage.setItem('tt_cliente_telefono', _datosCliente.telefono);
+    sessionStorage.setItem('tt_cliente_ts', Date.now().toString());
+
+    showStatus('status-2', '¡Bienvenido ' + _datosCliente.nombre + '!', 'success');
+
+    setTimeout(function(){ window.location.href = '../ordenar.html'; }, 900);
+};
+
+window.volverPaso1 = function() {
+    document.getElementById('paso-codigo').classList.remove('activo');
+    document.getElementById('paso-telefono').classList.add('activo');
+    var s = document.getElementById('status-2');
+    if (s) s.style.display = 'none';
+};
+</script>
+</body>
+</html>

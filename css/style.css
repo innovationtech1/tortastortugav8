@@ -34,6 +34,8 @@ html {
     scroll-behavior: smooth;
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
+    overflow-x: hidden;
+    max-width: 100vw;
 }
 
 body {
@@ -41,9 +43,9 @@ body {
     background-color: var(--bg-darker);
     color: var(--text-light);
     overflow-x: hidden;
+    overflow-y: auto;
     min-height: 100vh;
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -262,8 +264,8 @@ h1 {
 
 .menu-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 30px;
+    grid-template-columns: repeat(auto-fit, minmax(min(350px, 100%), 1fr));
+    gap: 20px;
 }
 
 .menu-item {
@@ -412,10 +414,12 @@ h1 {
     -webkit-backdrop-filter: blur(12px);
     position: sticky;
     top: 0;
-    padding: 1rem 2rem;
+    padding: 0.75rem 1rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     z-index: 100;
@@ -425,23 +429,44 @@ h1 {
     font-size: 1.5rem;
     font-weight: 800;
     color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    text-decoration: none;
+}
+.app-logo img {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
 }
 
 .cart-icon {
-    font-size: 1.5rem;
     cursor: pointer;
     position: relative;
-    padding: 0.5rem;
-    border-radius: 50%;
-    transition: background 0.2s;
+    padding: .45rem .5rem;
+    border-radius: 12px;
+    background: rgba(255,90,0,.1);
+    border: 1.5px solid rgba(255,90,0,.25);
+    color: #FF5A00;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .2s, transform .15s;
+    -webkit-tap-highlight-color: transparent;
 }
+.cart-icon:active { transform: scale(.92); }
 
 .cart-icon:hover { background: rgba(255, 255, 255, 0.1); }
 
 .header-actions {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .clear-cart-btn {
@@ -475,18 +500,21 @@ h1 {
 
 #cart-count {
     position: absolute;
-    top: 0;
-    right: 0;
-    background: var(--primary);
-    color: white;
-    font-size: 0.8rem;
-    font-weight: bold;
+    top: -6px;
+    right: -6px;
+    background: #FF5A00;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 900;
     height: 20px;
-    width: 20px;
+    min-width: 20px;
+    padding: 0 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
+    border-radius: 10px;
+    border: 2px solid #121212;
+    box-shadow: 0 2px 6px rgba(255,90,0,.5);
 }
 
 .signout-btn {
@@ -809,16 +837,48 @@ h1 {
     pointer-events: all;
 }
 
+/* ══ CARRITO RESPONSIVE ══
+   Movil: pantalla completa
+   Tablet: 70% del ancho
+   Escritorio: hasta 900px (permite ver items en 2 columnas) */
 .cart-container {
     background: var(--surface);
     width: 100%;
-    max-width: 450px;
+    max-width: 100%;
     height: 100%;
+    max-height: 100dvh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
     transform: translateX(100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+}
+
+@media (min-width: 700px) {
+    .cart-container { max-width: 70%; }
+}
+@media (min-width: 1100px) {
+    .cart-container { max-width: 900px; }
+}
+
+/* Lista de productos: siempre debe crecer y ocupar el espacio disponible */
+/* min-height:0 es CLAVE: sin esto, un hijo flex con overflow
+   no puede encogerse y empuja al footer fuera de la pantalla */
+#cart-items {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto;
+}
+
+/* En pantallas anchas: 2 columnas, pero sin romper el flex del contenedor */
+@media (min-width: 950px) {
+    #cart-items {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0;
+        align-content: start;
+    }
 }
 
 .modal-overlay.active .cart-container {
@@ -1234,16 +1294,20 @@ h1 {
 .mods-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.65);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     display: flex;
     align-items: flex-end;
     justify-content: center;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.3s;
-    z-index: 2000;
+    transition: opacity 0.25s;
+    z-index: 5000;
+}
+.mods-overlay.open {
+    opacity: 1;
+    pointer-events: all;
 }
 
 .mods-overlay.active { opacity: 1; pointer-events: all; }
@@ -1303,24 +1367,31 @@ h1 {
 .mod-chip {
     display: inline-flex;
     align-items: center;
-    padding: 0.4rem 0.85rem;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
     border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    background: rgba(255, 255, 255, 0.04);
-    color: var(--text-muted);
-    font-size: 0.85rem;
+    border: 1.5px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.6);
+    font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.18s, border-color 0.18s, color 0.18s;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
     user-select: none;
 }
 
 .mod-chip input[type="checkbox"] { display: none; }
 
+.mod-chip:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+}
+
 .mod-chip.selected {
-    background: rgba(255, 90, 0, 0.18);
-    border-color: var(--primary);
-    color: var(--primary);
+    background: #FF5A00 !important;
+    border-color: #FF5A00 !important;
+    color: #fff !important;
+    font-weight: 700;
 }
 
 .mod-chip:hover:not(.selected) {
@@ -1538,4 +1609,207 @@ h1 {
 
 @media (max-width: 440px) {
     .sides-grid { grid-template-columns: 1fr; }
+}
+
+/* ── MOBILE RESPONSIVE FIXES ──────────────────────────────── */
+@media (max-width: 480px) {
+    html, body {
+        overflow-x: hidden !important;
+        max-width: 100vw !important;
+    }
+    .app-header {
+        padding: 0.6rem 0.85rem;
+    }
+    .app-logo img {
+        width: 38px;
+        height: 38px;
+    }
+    .signout-btn {
+        padding: 0.3rem 0.55rem;
+        font-size: 0.72rem;
+    }
+    .menu-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        padding: 0;
+    }
+    .app-menu-section {
+        padding: 0 0.75rem 2rem;
+    }
+    .hero-section {
+        padding: 2rem 1rem;
+    }
+    .cart-sidebar {
+        width: 100% !important;
+        max-width: 100vw !important;
+    }
+}
+
+/* ── SELECTOR DE CANTIDAD EN TARJETAS ─────────────────────── */
+.qty-add-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.qty-selector {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: rgba(255,255,255,0.06);
+    border: 1.5px solid rgba(255,90,0,0.35);
+    border-radius: 10px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.qty-btn {
+    background: none;
+    border: none;
+    color: var(--primary, #FF5A00);
+    font-size: 1.2rem;
+    font-weight: 700;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.qty-btn:hover { background: rgba(255,90,0,0.15); }
+.qty-btn:active { background: rgba(255,90,0,0.28); }
+
+.qty-num {
+    min-width: 28px;
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #fff;
+    transition: transform 0.15s;
+    display: inline-block;
+}
+
+.qty-add-row .add-to-cart {
+    flex: 1;
+    margin: 0;
+    padding: 0.6rem 0.5rem;
+    font-size: 0.88rem;
+    transition: background 0.2s, color 0.2s;
+}
+
+/* ── MOD CHIPS MEJORADOS ─────────────────────────────────── */
+.mod-section-title {
+    font-size: .72rem;
+    font-weight: 800;
+    color: rgba(255,255,255,.4);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin: .85rem 0 .45rem;
+}
+.mod-chips-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+    margin-bottom: .2rem;
+}
+.mod-chip:active {
+    transform: scale(.96);
+}
+.mods-confirm-btn {
+    transition: background .2s, transform .1s;
+}
+.mods-confirm-btn:active { transform: scale(.97); }
+
+/* ── VARIANTE SELECT ─────────────────────────────── */
+.var-select {
+    -webkit-appearance: none;
+    appearance: none;
+    background: #0d0d0d url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23FF5A00' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 0.65rem center;
+    padding-right: 2rem !important;
+    color: #fff;
+    border: 1.5px solid rgba(255,90,0,.5);
+    border-radius: 10px;
+    cursor: pointer;
+}
+.var-select option {
+    background: #1a1a1a;
+    color: #fff;
+    padding: .4rem;
+}
+.var-select:focus {
+    border-color: #FF5A00;
+    box-shadow: 0 0 0 2px rgba(255,90,0,.2);
+}
+
+
+/* ══ CARRITO: mejoras responsive ══ */
+
+/* El footer (desglose + boton) no se estira mas alla de lo comodo */
+/* El footer (desglose + boton) no crece, se mantiene compacto */
+#cart-modal .cart-container > div:last-child {
+    flex-shrink: 0;
+}
+
+@media (min-width: 950px) {
+    /* Separador entre columnas del grid */
+    #cart-items > div {
+        border-right: 1px solid rgba(255,255,255,.04);
+    }
+    #cart-items > div:nth-child(even) {
+        border-right: none;
+    }
+}
+
+/* Desglose compacto: no debe robar espacio a los productos */
+#cart-desglose {
+    flex-shrink: 0;
+}
+
+/* En pantallas muy anchas, centrar el contenido del carrito */
+@media (min-width: 1400px) {
+    .cart-container { max-width: 1000px; }
+}
+
+/* Tabs de cuentas: scroll horizontal en movil, wrap en escritorio */
+@media (min-width: 900px) {
+    #cuentas-tabs {
+        flex-wrap: wrap;
+        overflow-x: visible;
+    }
+}
+
+/* Items del carrito: area de toque comoda en tactil */
+@media (hover: none) {
+    #cart-items button {
+        min-width: 36px;
+        min-height: 36px;
+    }
+}
+
+
+/* ══ PANTALLA COMPLETA DE PRODUCTOS ══ */
+#lista-completa-modal {
+    justify-content: center !important;
+}
+#lista-completa-container {
+    max-height: 100dvh;
+}
+/* En escritorio: 2 columnas para ver mas productos */
+@media (min-width: 1000px) {
+    #lc-items {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        align-content: start;
+    }
+    #lc-items > div {
+        border-right: 1px solid rgba(255,255,255,.04);
+    }
+    #lc-items > div:nth-child(even) {
+        border-right: none;
+    }
 }

@@ -1,6 +1,6 @@
 import { db } from './firebase-config.js';
 import {
-    collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy
+    collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, onSnapshot
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const COL = 'productos';
@@ -249,80 +249,409 @@ export async function eliminarProducto(id) {
     await deleteDoc(doc(db, COL, id));
 }
 
-export async function renderMenu() {
-    const containers = {
-        tortas: document.getElementById('menu-container'),
-        drinks: document.getElementById('drinks-container'),
-        botanas: document.getElementById('botanas-container')
+
+
+/* ── CREAR TARJETA DE PRODUCTO (POS) ──────────────── */
+function crearCard(p) {
+    if (!window._cardCounter) window._cardCounter = 0;
+    window._cardCounter++;
+    const _slug = (p.nombre||'prod').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,12);
+    const pid   = (p.productId || p._docId || _slug) + '_' + window._cardCounter;
+    const vars  = p.variantes || [];
+
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#1E1E1E;border-radius:18px;border:1px solid rgba(255,255,255,.07);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 4px 20px rgba(0,0,0,.45);';
+
+    // Badge
+    const badgeTxt = p.badge ? p.badge.texto : '';
+    const badgeEl = badgeTxt
+        ? '<span style="position:absolute;top:.55rem;left:.55rem;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);color:#FBB724;font-size:.68rem;font-weight:900;letter-spacing:.05em;padding:.22rem .65rem;border-radius:20px;pointer-events:none;">' + badgeTxt + '</span>'
+        : '';
+
+    // Incluye
+    const incluyeRaw = (p.incluye || '').replace(/^[✅ ]+/, '').trim();
+    const incluyeEl = incluyeRaw
+        ? '<div style="font-size:.7rem;color:#25D366;font-weight:600;margin:.2rem 0;">✅ ' + incluyeRaw + '</div>'
+        : '';
+
+    // Variantes
+    let varEl = '';
+    if (vars.length > 1) {
+        const opts = vars.map(function(v,i){
+            var lbl = (v.label || '').trim() || ('Opción ' + String.fromCharCode(65+i));
+            var pr  = parseFloat(v.precio) || 0;
+            // Si el label ya trae precio, no duplicarlo
+            var txt = /\$\s*\d/.test(lbl) ? lbl : (lbl + ' — $' + pr.toFixed(2));
+            return '<option value="'+i+'">'+txt+'</option>';
+        }).join('');
+        varEl = '<select id="var-'+pid+'" class="var-select" style="width:100%;background:#0d0d0d;border:1.5px solid rgba(255,90,0,.5);color:#fff;border-radius:10px;padding:.42rem .65rem;font-family:inherit;font-size:.78rem;margin:.3rem 0;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;">'+opts+'</select>';
+    } else if (vars.length === 1) {
+        // Una sola variante: mostrar SIEMPRE el precio.
+        // Si el label es genérico ("Precio base"), mostrar solo el precio.
+        var _v   = vars[0];
+        var _pr  = parseFloat(_v.precio) || parseFloat(p.precio) || 0;
+        var _lbl = (_v.label || '').trim();
+        var _generico = !_lbl || /^precio base$/i.test(_lbl);
+        // Si el label ya trae el precio (ej "COMBO A — $17"), no duplicarlo
+        var _labelTraePrecio = /\$\s*\d/.test(_lbl);
+        var _texto;
+        if (_generico) {
+            _texto = '$' + _pr.toFixed(2);
+        } else if (_labelTraePrecio) {
+            _texto = _lbl;
+        } else {
+            _texto = _lbl + ' — $' + _pr.toFixed(2);
+        }
+        varEl = '<div style="font-size:.88rem;color:#FF5A00;font-weight:800;margin:.2rem 0;">'+_texto+'</div>';
+    } else if (p.precio) {
+        varEl = '<div style="font-size:.88rem;color:#FF5A00;font-weight:800;margin:.2rem 0;">$'+(parseFloat(p.precio)||0).toFixed(2)+'</div>';
+    }
+
+    const imgSrc = p.imagen || 'img/torta-original.png';
+    console.log('[MENU]', p.nombre, '| docId:', p.productId || p._docId || '?', '| imagen:',
+        !p.imagen ? 'SIN IMAGEN (usa fallback torta)' :
+        (p.imagen.indexOf('data:') === 0 ? 'BASE64 ' + Math.round(p.imagen.length/1024) + 'KB' : p.imagen));
+
+    card.innerHTML =
+        '<div style="position:relative;width:100%;height:170px;overflow:hidden;flex-shrink:0;">' +
+            '<img src="'+imgSrc+'" alt="'+(p.nombre||'')+'" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;">' +
+            badgeEl +
+        '</div>' +
+        '<div style="padding:.75rem .9rem .9rem;display:flex;flex-direction:column;flex:1;gap:.15rem;">' +
+            '<h3 style="font-size:.9rem;font-weight:800;color:#fff;margin:0;line-height:1.25;">'+(p.nombre||'')+'</h3>' +
+            '<p style="font-size:.7rem;color:#888;margin:0;line-height:1.4;">'+(p.descripcion||'')+'</p>' +
+            incluyeEl +
+            varEl +
+            '<div style="display:flex;align-items:center;gap:.4rem;margin-top:auto;padding-top:.5rem;">' +
+                '<button class="btn-agregar-card" style="flex:1;padding:.6rem;background:linear-gradient(135deg,#FF5A00,#FF8C00);border:none;color:#fff;border-radius:10px;font-family:inherit;font-size:.82rem;font-weight:800;cursor:pointer;box-shadow:0 3px 8px rgba(255,90,0,.35);">🛒 Agregar</button>' +
+                '<div style="display:flex;align-items:center;flex-shrink:0;">' +
+                    '<button class="qty-btn qty-minus" type="button" style="width:30px;height:30px;border-radius:8px 0 0 8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,90,0,.3);color:#FF5A00;font-size:1.1rem;font-weight:800;cursor:pointer;">−</button>' +
+                    '<span class="qty-num" style="min-width:30px;height:30px;line-height:30px;text-align:center;font-weight:800;font-size:.9rem;color:#fff;background:rgba(255,255,255,.06);">0</span>' +
+                    '<button class="qty-btn qty-plus" type="button" style="width:30px;height:30px;border-radius:0 8px 8px 0;background:rgba(255,255,255,.08);border:1px solid rgba(255,90,0,.3);color:#FF5A00;font-size:1.1rem;font-weight:800;cursor:pointer;">+</button>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+    // ── ELEMENTOS ──
+    const qtyEl    = card.querySelector('.qty-num');
+    const btnAgr   = card.querySelector('.btn-agregar-card');
+    const btnPlus  = card.querySelector('.qty-plus');
+    const btnMinus = card.querySelector('.qty-minus');
+
+    // Helper: obtener variante seleccionada
+    function getVariante() {
+        const sel = card.querySelector('.var-select');
+        if (sel && vars.length > 1) return vars[parseInt(sel.value)] || vars[0];
+        return vars[0] || { label: p.nombre, precio: p.precio || 0 };
+    }
+
+    // ── + incrementa contador ──
+    btnPlus.onclick = function() {
+        qtyEl.textContent = (parseInt(qtyEl.textContent)||0) + 1;
     };
-    Object.values(containers).forEach(el => { if (el) el.innerHTML = ''; });
 
-    const productos = [...PRODUCTOS_INICIALES].sort((a, b) => a.orden - b.orden);
+    // ── − decrementa contador ──
+    btnMinus.onclick = function() {
+        qtyEl.textContent = Math.max(0, (parseInt(qtyEl.textContent)||0) - 1);
+    };
 
-    productos.forEach(p => {
-        if (!p.disponible) return;
-        const card = crearCard(p);
-        const container = containers[p.categoria];
-        if (container) container.appendChild(card);
+    // ── AGREGAR: mete al carrito directamente + abre modal para editar ──
+    btnAgr.onclick = function() {
+        const cantidad = parseInt(qtyEl.textContent) || 0;
+
+        if (cantidad < 1) {
+            qtyEl.style.background = 'rgba(244,67,54,.4)';
+            setTimeout(function(){ qtyEl.style.background = 'rgba(255,255,255,.06)'; }, 600);
+            alert('⚠️ Primero presiona + para elegir la cantidad');
+            return;
+        }
+
+        const variante = getVariante();
+        const precio   = parseFloat(variante.precio) || parseFloat(p.precio) || 0;
+
+        // Garantizar _cuentasSys
+        if (!window._cuentasSys) {
+            window._cuentasSys = {
+                cuentas: [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }],
+                activa: 1, counter: 1
+            };
+        }
+        var CS = window._cuentasSys;
+        var ca = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+        if (!ca) { ca = CS.cuentas[0]; CS.activa = ca.id; }
+
+        // Agregar los items DIRECTAMENTE al carrito
+        for (var i = 0; i < cantidad; i++) {
+            // Guardar el indice y la lista completa de variantes para poder
+            // cambiarla despues desde el carrito sin volver al menu.
+            var varIdx = vars.indexOf(variante);
+            if (varIdx < 0) varIdx = 0;
+
+            ca.items.push({
+                id:             pid,
+                nombre:         p.nombre || 'Producto',
+                precio:         precio,
+                precioBase:     precio,
+                variante:       variante.label || '',
+                varianteIdx:    varIdx,
+                variantesDisp:  vars.map(function(v){
+                                    return { label: v.label || '', precio: parseFloat(v.precio) || 0 };
+                                }),
+                categoria:      p.categoria || 'tortas',
+                tipo:           p.tipo || 'torta',
+                modificaciones: [],
+            });
+        }
+        
+
+        // Guardar referencia al último item para editar desde el modal
+        window._lastAddedIndices = [];
+        for (var j = ca.items.length - cantidad; j < ca.items.length; j++) {
+            window._lastAddedIndices.push(j);
+        }
+        window._lastAddedCuenta = ca.id;
+
+        // Resetear contador
+        qtyEl.textContent = '0';
+
+        // Renderizar carrito
+        if (window.renderCuentasTabs) window.renderCuentasTabs();
+        if (window.renderCartItems)   window.renderCartItems();
+
+        // Abrir carrito
+        var cm = document.getElementById('cart-modal');
+        if (cm) cm.classList.add('active');
+        var ci = document.getElementById('cart-icon');
+        if (ci) { ci.style.transform = 'scale(1.3)'; setTimeout(function(){ ci.style.transform = ''; }, 250); }
+    };
+
+    // Callback cuando el modal confirma
+    card._onItemAdded = function(){ qtyEl.textContent = '0'; };
+    card._pid = pid;
+    card._productoData = p;
+    card._getQty = function(){ return parseInt(qtyEl.textContent)||0; };
+    card._getVariante = getVariante;
+
+    if (!window._menuCards) window._menuCards = {};
+    window._menuCards[pid] = card;
+    return card;
+}
+
+// ── MENÚ EN TIEMPO REAL ──────────────────────────────────────────────────────
+let _menuUnsub = null;
+
+
+
+function _limpiarMenuContainers() {
+    window._cardCounter = 0; // Reset counter en cada re-render
+    ['menu-container','drinks-container','botanas-container'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
     });
 }
 
-function escapeAttr(str) {
-    if (!str) return '';
-    return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+function _renderProductos(productos) {
+    // Exponer los productos globalmente para el slider de bebidas
+    window._menuProductos = productos;
+    _limpiarMenuContainers();
+
+    const containers = {
+        tortas:     document.getElementById('menu-container'),
+        drinks:     document.getElementById('drinks-container'),
+        botanas:    document.getElementById('botanas-container'),
+        bebidas:    document.getElementById('drinks-container'),
+        extras:     document.getElementById('botanas-container'),
+        combos:     document.getElementById('botanas-container'),
+        especiales: document.getElementById('botanas-container'),
+    };
+
+    // Deduplicar por nombre
+    const seen = new Set();
+    const uniq = productos.filter(function(p) {
+        const key = (p.nombre || '').toLowerCase().trim();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+    uniq.sort(function(a, b) { return (a.orden||99) - (b.orden||99); });
+
+    uniq.forEach(function(p) {
+        if (!p.disponible && p.disponible !== undefined) return;
+        const card = crearCard(p);
+        const cat  = (p.categoria || 'tortas').toLowerCase();
+        const cont = containers[cat] || containers.tortas;
+        if (cont) cont.appendChild(card);
+    });
 }
 
-function crearCard(p) {
-    const card = document.createElement('div');
-    card.className = 'product-card';
-    if (!p.imagen) card.classList.add('drink-card');
+export async function renderMenu() {
+    // Solo cargar una vez
+    if (window._menuCargado) return;
+    window._menuCargado = true;
 
-    let html = '';
+    _limpiarMenuContainers();
+    const mc = document.getElementById('menu-container');
+    if (mc) mc.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">Cargando menú...</div>';
 
-    if (p.imagen) {
-        html += `<div class="card-img-wrap">
-            <img src="${p.imagen}" alt="${escapeAttr(p.nombre)}" class="card-img" loading="lazy" onerror="this.style.display='none'">`;
-        if (p.badge) {
-            html += `<div class="card-badge ${p.badge.clase}">${p.badge.texto}</div>`;
+    try {
+        const snapshot = await getDocs(collection(db, 'productos'));
+
+        if (snapshot.empty) {
+            _renderProductos([...PRODUCTOS_INICIALES]);
+            return;
         }
-        html += `</div>`;
-    }
 
-    const isTorta = p.tipo === 'torta';
-    html += `<div class="card-body">
-        <h3 class="product-title">${p.nombre}</h3>`;
-    if (p.descripcion) {
-        html += `<p class="product-desc">${p.descripcion}</p>`;
-    }
-    if (p.incluye) {
-        html += `<div class="product-includes">${p.incluye}</div>`;
-    }
-    if (p.variantes && p.variantes.length) {
-        html += `<select class="size-selector" id="select-${p.productId}">`;
-        p.variantes.forEach(v => {
-            html += `<option value="${v.precio}">${escapeAttr(v.label)}</option>`;
-        });
-        html += `</select>`;
-    }
-    html += `<button class="add-to-cart">${isTorta ? '➕ Agregar al Pedido' : '➕ Agregar'}</button>
-    </div>`;
+        // Deduplicar por nombre — preferir el documento MÁS COMPLETO
+        const byNombre = {};
+        const duplicados = {};
+        snapshot.docs.forEach(function(d) {
+            const data = d.data();
+            const key = (data.nombre || '').toLowerCase().trim();
+            if (!key) return;
 
-    card.innerHTML = html;
+            duplicados[key] = (duplicados[key] || 0) + 1;
+            const existing = byNombre[key];
 
-    const btn = card.querySelector('.add-to-cart');
-    if (btn) {
-        btn.addEventListener('click', () => {
-            if (!p.variantes || !p.variantes.length) return;
-            const sel = document.getElementById(`select-${p.productId}`);
-            const precio = parseFloat(sel.value);
-            if (isTorta) {
-                window.addToCart(p.productId, p.nombre, precio);
-            } else {
-                const label = sel.options[sel.selectedIndex].text;
-                window.addDrink(p.nombre, precio, label);
+            if (!existing) {
+                byNombre[key] = Object.assign({}, data, { _docId: d.id });
+                return;
+            }
+
+            // Puntuar cada versión: gana la que tenga imagen propia y variantes
+            function puntuar(p) {
+                var pts = 0;
+                if (p.imagen && p.imagen.indexOf('data:') === 0) pts += 10; // imagen subida
+                else if (p.imagen) pts += 3;                                 // imagen por ruta
+                if (p.variantes && p.variantes.length) pts += 2;
+                if (p.descripcion) pts += 1;
+                return pts;
+            }
+            const nuevo = Object.assign({}, data, { _docId: d.id });
+            if (puntuar(nuevo) >= puntuar(existing)) {
+                byNombre[key] = nuevo;
             }
         });
-    }
 
-    return card;
+        // Avisar de duplicados en Firestore
+        Object.keys(duplicados).forEach(function(k) {
+            if (duplicados[k] > 1) {
+                console.warn('⚠️ "' + k + '" tiene ' + duplicados[k] + ' documentos duplicados en Firestore');
+            }
+        });
+
+        const fsProds = Object.values(byNombre).map(function(data) {
+            let pr = parseFloat(data.precio || data._precio || 0);
+            if (!pr && data.variantes && data.variantes.length) {
+                pr = parseFloat(data.variantes[0].precio || 0);
+            }
+            const base = PRODUCTOS_INICIALES.find(function(p) {
+                return (p.nombre||'').toLowerCase().slice(0,10) ===
+                       (data.nombre||'').toLowerCase().slice(0,10);
+            }) || {};
+            return {
+                productId:   data._docId,
+                nombre:      data.nombre      || base.nombre      || '',
+                descripcion: data.descripcion || base.descripcion || '',
+                categoria:   data.categoria   || base.categoria   || 'tortas',
+                precio:      pr,
+                variantes:   (data.variantes && data.variantes.length)
+                                ? data.variantes
+                                : (base.variantes || [{ label:'Precio base', precio: pr }]),
+                // PRIORIDAD: imagen de Firestore (la que subió el usuario) → estática → fallback
+                imagen:      data.imagen  || base.imagen  || 'img/torta-original.png',
+                badge:       data.badge   || base.badge   || null,
+                incluye:     data.incluye || base.incluye || null,
+                tipo:        data.tipo    || base.tipo    || 'torta',
+                disponible:  data.activo  !== false,
+                orden:       data.orden   || base.orden || 99,
+            };
+        });
+
+        _renderProductos(fsProds);
+    } catch(e) {
+        console.warn('Menu Firestore error, usando estatico:', e);
+        _renderProductos([...PRODUCTOS_INICIALES]);
+    }
 }
+
+
+export function actualizarBotonAgregarTodo() {
+    // FAB eliminado — no necesario
+    return;
+    let totalItems = 0;
+    let totalProductos = 0;
+    document.querySelectorAll('.qty-num').forEach(el => {
+        const q = parseInt(el.textContent) || 0;
+        if (q > 0) { totalItems += q; totalProductos++; }
+    });
+    const fab = document.getElementById('fab-agregar-todo');
+    const fabCount = document.getElementById('fab-count');
+    if (!fab) return;
+    if (totalItems > 0) {
+        fab.style.display = 'flex';
+        if (fabCount) fabCount.textContent = totalItems + ' producto' + (totalItems > 1 ? 's' : '');
+    } else {
+        fab.style.display = 'none';
+    }
+}
+
+window.agregarTodoAlCarrito = function() {
+    const cs = window._cuentasSys;
+    if (!cs) return;
+    const cActiva = cs.cuentas.find(x => x.id === cs.activa);
+    if (!cActiva) return;
+
+    let totalAgregados = 0;
+
+    document.querySelectorAll('.qty-num').forEach(qtyEl => {
+        const qty = parseInt(qtyEl.textContent) || 0;
+        if (qty === 0) return;
+
+        // Extraer pid del id del elemento
+        const pid = qtyEl.id.replace('qty-', '');
+        if (!pid) return;
+
+        // Obtener variante y precio desde la tarjeta
+        const cardRef2 = window._menuCards && window._menuCards[pid];
+        const variante = cardRef2 ? cardRef2._getVariante() : null;
+        const precio   = variante ? (parseFloat(variante.precio) || 0) : 0;
+        const label    = variante ? (variante.label || '') : '';
+
+        // Obtener nombre — usar cache de tarjetas (_menuCards) o fallback
+        const cardRef = window._menuCards && window._menuCards[pid];
+        const nombre  = cardRef && cardRef._productoData
+            ? cardRef._productoData.nombre
+            : (qtyEl.closest('[data-nombre]')?.getAttribute('data-nombre') || pid);
+
+        // Agregar qty veces al carrito activo
+        for (let i = 0; i < qty; i++) {
+            cActiva.items.push({
+                id: pid,
+                nombre: nombre,
+                precio: precio,
+                modificaciones: label ? [label] : []
+            });
+            totalAgregados++;
+        }
+    });
+
+    if (totalAgregados === 0) return;
+
+    // Render y abrir carrito
+    if (window.renderCuentasTabs) window.renderCuentasTabs();
+    if (window.renderCartItems)   window.renderCartItems();
+    const cm = document.getElementById('cart-modal');
+    if (cm) cm.classList.add('active');
+
+    // Reset todas las cantidades a 0
+    document.querySelectorAll('.qty-num').forEach(el => el.textContent = '0');
+    document.querySelectorAll('.add-to-cart').forEach(b => b.style.display = 'none');
+    actualizarBotonAgregarTodo();
+
+    // Feedback FAB
+    const fab = document.getElementById('fab-agregar-todo');
+    if (fab) {
+        fab.style.background = '#25D366';
+        setTimeout(() => { fab.style.background = ''; }, 1000);
+    }
+};
