@@ -264,7 +264,7 @@ function buildOrderData() {
     const ubicacion = clientLocation
         ? `📍 GPS: ${clientLocation.lat.toFixed(5)}, ${clientLocation.lon.toFixed(5)}`
         : obtenerDireccionTexto();
-    return { nombre, telefono, tipo, items, total: `$${total.toFixed(2)}`, ubicacion, totalNum: total };
+    return { nombre, telefono, tipo, items, total: `$${total.toFixed(2)}`, ubicacion, totalNum: total, clienteUid: sessionStorage.getItem('tt_cliente_uid') || null };
 }
 
 function obtenerDireccionTexto() {
