@@ -677,9 +677,8 @@ window.abrirSplit = function() {
     document.getElementById('split-panel').classList.add('open');
 };
 
-window.cerrarSplit = function() {
-    document.getElementById('split-panel').classList.remove('open');
-};
+// NOTA: cerrarSplit se define una sola vez más abajo (con animación de
+// fade-out). Aquí había una copia vieja sin esa animación, sobrescrita.
 
 // ── NUEVA CUENTA ───────────────────────────────────────────────
 window.nuevaCuenta = function() {
@@ -1014,37 +1013,9 @@ function addItemToCuentaActiva(item) {
     }
 }
 
-// ── Render tabs de cuentas ────────────────────────────────────
-window.renderCuentasTabs = function() {
-    const CS = window._cuentasSys;
-    if (!CS) return;
-    const tabs = document.getElementById('cuentas-tabs');
-    if (!tabs) return;
-
-    let html = '';
-    CS.cuentas.forEach(c => {
-        const tot    = c.items.reduce((s, i) => s + i.precio, 0);
-        const active = c.id === CS.activa ? 'active' : '';
-        html += '<div class="ctab ' + active + '" onclick="switchCuenta(' + c.id + ')" ' +
-            'style="border-color:' + (active ? c.color : 'rgba(255,255,255,.12)') + ';">' +
-            '<span class="ctab-nom" style="color:' + (active ? c.color : '#fff') + ';display:block;">' + c.nombre + '</span>' +
-            '<span class="ctab-tot" style="display:block;">$' + tot.toFixed(2) + '</span>' +
-        '</div>';
-    });
-    html += '<button onclick="agregarNuevaCuenta()" class="ctab-add">+ Nueva cuenta</button>';
-    tabs.innerHTML = html;
-
-    // Mostrar/ocultar botón eliminar en actions bar
-    const btnDel = document.getElementById('btn-eliminar-cuenta');
-    if (btnDel) btnDel.style.display = CS.cuentas.length > 1 ? 'block' : 'none';
-
-    const lbl = document.getElementById('cuenta-label-active');
-    const cActiva = CS.cuentas.find(c => c.id === CS.activa);
-    if (lbl && cActiva) {
-        lbl.textContent = cActiva.nombre.toUpperCase();
-        lbl.style.color = cActiva.color;
-    }
-};
+// NOTA: renderCuentasTabs se define una sola vez más abajo (busca
+// "window.renderCuentasTabs =" en la sección con _CS()). Aquí había una
+// copia vieja que quedaba sobrescrita y nunca se ejecutaba de verdad.
 
 // ── Render items de cuenta activa ─────────────────────────────
 window.renderCartItems = function() {
@@ -1165,16 +1136,8 @@ window.renderCartItems = function() {
 
 };
 
-window.agregarNuevaCuenta = function() {
-    CS.counter++;
-    const color = CUENTA_COLORS[(CS.cuentas.length) % CUENTA_COLORS.length];
-    CS.cuentas.push({ id: CS.counter, nombre: 'Cuenta ' + CS.counter, items: [], color });
-    CS.activa = CS.counter;
-    renderCuentasTabs();
-    renderCartItems();
-    // Abrir modal para poner nombre
-    setTimeout(() => mostrarNombreCuenta(), 200);
-};
+// NOTA: agregarNuevaCuenta se define una sola vez más abajo (con límite
+// de 8 cuentas y usando _CS()). Aquí había una copia vieja sobrescrita.
 
 window.moverItemCuenta = function(itemIdx, toCid) {
     const from = CS.cuentas.find(c => c.id === CS.activa);
@@ -1976,6 +1939,14 @@ window.renderCuentasTabs = function() {
     if (lbl && cActiva) {
         lbl.textContent = cActiva.nombre.toUpperCase();
         lbl.style.color = cActiva.color;
+    }
+
+    // Placeholder "Asignar mesa / nombre" cuando la cuenta sigue con su
+    // nombre por defecto (antes vivia en un hook aparte que nunca corria)
+    var display = document.getElementById('nombre-cuenta-display');
+    if (display && cActiva) {
+        var esDefault = cActiva.nombre === ('Cuenta ' + cActiva.id);
+        display.textContent = esDefault ? 'Asignar mesa / nombre' : cActiva.nombre;
     }
 
     // Sincronizar input de nombre
