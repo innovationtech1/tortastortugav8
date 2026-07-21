@@ -48,7 +48,7 @@
                 <li><a href="#menu" onclick="cerrarMenu()">📋 Menú</a></li>
                 <li><a href="#sides" onclick="cerrarMenu()">🍟 Extras</a></li>
                 <li class="nav-sep"></li>
-                <li><a href="ordenar.html" class="cta-button" style="padding: 8px 20px; font-size: 0.9rem;">🛒 Ordenar</a></li>
+                <li><a href="pages/bienvenida.html" class="cta-button" style="padding: 8px 20px; font-size: 0.9rem;">🛒 Ordenar</a></li>
                 <li><a href="pages/admin.html" style="padding: 8px 16px; font-size: 0.9rem; border-radius:20px; border:1px solid rgba(255,90,0,.3); color:#FF5A00;">Admin</a></li>
                 <li><a href="pages/cocina.html" target="_blank" style="padding: 8px 16px; font-size: 0.9rem; border-radius:20px; border:1px solid rgba(251,191,36,.3); color:#FBB724;">🧑‍🍳 Cocina</a></li>
                 <li><a href="pages/bienvenida.html" id="nav-login-link" style="padding: 8px 16px; font-size: 0.9rem; border-radius:20px; border:1px solid rgba(37,211,102,.4); color:#25D366; background:rgba(37,211,102,.08);">🔑 <span id="nav-login-text">Iniciar sesión</span></a></li>
@@ -72,7 +72,7 @@
                     <p> 210-TORTA-10 | 210-86782-10</p>
                     <p> Lun - Sab: 10:00 AM - 6:00 PM</p>
                 </div>
-                <a href="ordenar.html" class="cta-button">Ordenar</a>
+                <a href="pages/bienvenida.html" class="cta-button">Ordenar</a>
             </div>
         </section>
 
@@ -225,7 +225,7 @@
             <p style="color: var(--primary); font-weight: bold; margin-bottom: 10px;">San Antonio Area - We Cater! Schedule your order at least 60 minutes in advance.</p>
             <p style="color: var(--text-muted); font-size: 0.9rem;">$30 Minimum purchase for schedule an order w/ $5 delivery fee OR $60 free delivery.</p>
             <div style="margin-top: 20px;">
-                <a href="ordenar.html" class="cta-button">Ordenar</a>
+                <a href="pages/bienvenida.html" class="cta-button">Ordenar</a>
             </div>
         </footer>
     </main>
@@ -274,32 +274,32 @@ window.addEventListener('appinstalled', function() {
 </script>
 
 
+<script src="js/perfil-barra.js?v=1784605504"></script>
 <script>
-// Mostrar el cajero activo en el boton de login (si hay sesion)
+// Mostrar el cajero/empleado/cliente activo en el boton de login (si hay sesion)
 (function() {
     function actualizarLoginNav() {
-        var nombre = sessionStorage.getItem('tt_cliente_nombre') || sessionStorage.getItem('tt_cajero_nombre');
-        var ts = parseInt(sessionStorage.getItem('tt_cajero_ts') || '0');
-        var VEINTE_MIN = 20 * 60 * 1000;
+        var sesion = window.TT_getSesion ? window.TT_getSesion() : null;
         var link = document.getElementById('nav-login-link');
         var txt = document.getElementById('nav-login-text');
         if (!link || !txt) return;
 
-        if (nombre && (Date.now() - ts < VEINTE_MIN)) {
-            // Sesion activa: mostrar nombre y permitir cerrar sesion
-            txt.textContent = nombre.split(' ')[0];  // primer nombre
-            link.innerHTML = '👤 <span id="nav-login-text">' + nombre.split(' ')[0] + '</span> · Salir';
+        if (sesion) {
+            // Sesion activa (cliente, empleado o cajero): mostrar nombre y permitir cerrar sesion
+            var primerNombre = sesion.nombre.split(' ')[0];
+            txt.textContent = primerNombre;
+            link.innerHTML = '👤 <span id="nav-login-text">' + primerNombre + '</span> · Salir';
             link.href = '#';
             link.onclick = function(e) {
                 e.preventDefault();
-                if (confirm('¿Cerrar sesión de ' + nombre + '?')) {
-                    sessionStorage.removeItem('tt_cajero_id');
-                    sessionStorage.removeItem('tt_cajero_nombre');
-                    sessionStorage.removeItem('tt_cajero_rol');
-                    sessionStorage.removeItem('tt_cajero_ts');
-                    sessionStorage.removeItem('tt_cliente_nombre');
-                    sessionStorage.removeItem('tt_cliente_telefono');
-                    sessionStorage.removeItem('tt_cliente_ts');
+                if (confirm('¿Cerrar sesión de ' + sesion.nombre + '?')) {
+                    if (window._perfilCerrarSesion) {
+                        // Reusa la limpieza centralizada de perfil-barra.js pero sin su propio confirm
+                        ['tt_cliente_nombre','tt_cliente_telefono','tt_cliente_ts','tt_cliente_uid',
+                         'tt_cajero_id','tt_cajero_nombre','tt_cajero_rol','tt_cajero_ts',
+                         'tt_emp_id','tt_emp_pin','tt_emp_ts','tt_emp_docid','tt_emp_nombre','tt_emp_rol'
+                        ].forEach(function(k){ sessionStorage.removeItem(k); });
+                    }
                     location.reload();
                 }
             };
@@ -355,6 +355,5 @@ window.cerrarMenu = function() {
 // Cerrar con tecla Escape
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape') cerrarMenu(); });
 </script>
-<script src="js/perfil-barra.js?v=1784522139"></script>
 </body>
 </html>
