@@ -35,7 +35,7 @@
             };
         }
 
-        // 3. Cliente (login por entrar.html)
+        // 3. Cliente (login por entrar.html — telefono o cuenta con email)
         var cliNombre = sessionStorage.getItem('tt_cliente_nombre');
         var cliTs = parseInt(sessionStorage.getItem('tt_cliente_ts') || '0');
         if (cliNombre && (ahora - cliTs < VEINTE_MIN)) {
@@ -43,11 +43,18 @@
                 tipo: 'cliente',
                 nombre: cliNombre,
                 telefono: sessionStorage.getItem('tt_cliente_telefono') || '',
+                uid: sessionStorage.getItem('tt_cliente_uid') || null,
             };
         }
 
         return null; // sin sesion
     }
+
+    // ── Helper unico y compartido: cualquier pagina puede llamar a
+    // window.TT_getSesion() en vez de reimplementar esta logica de
+    // "revisa emp, si no hay revisa cajero, si no hay revisa cliente".
+    window.TT_getSesion = detectarSesion;
+    window.TT_SESION_VIGENCIA_MS = VEINTE_MIN;
 
     // Emoji e info segun el rol
     function estiloRol(rol) {
@@ -134,7 +141,7 @@
 
     window._perfilCerrarSesion = function() {
         if (!confirm('¿Cerrar sesión?')) return;
-        ['tt_cliente_nombre','tt_cliente_telefono','tt_cliente_ts',
+        ['tt_cliente_nombre','tt_cliente_telefono','tt_cliente_ts','tt_cliente_uid',
          'tt_cajero_id','tt_cajero_nombre','tt_cajero_rol','tt_cajero_ts',
          'tt_emp_id','tt_emp_pin','tt_emp_ts','tt_emp_docid','tt_emp_nombre','tt_emp_rol'
         ].forEach(function(k){ sessionStorage.removeItem(k); });
