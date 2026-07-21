@@ -237,12 +237,12 @@ function updateCart() {
 }
 
 window.removeItem = function(i) { cart.splice(i, 1); updateCart(); };
-window._limpiarCarrito = window.limpiarCarrito = function() {
-    if (!cart.length) return;
-    if (confirm(`¿Vaciar el carrito? (${cart.length} artículo${cart.length > 1 ? 's' : ''})`)) {
-        cart = []; updateCart(); location.reload();
-    }
-};
+// NOTA: limpiarCarrito se define una sola vez más abajo, junto con el resto
+// de la lógica de cuentas múltiples (buscar "window.limpiarCarrito =" en
+// este archivo). Antes había una segunda definición aquí (versión antigua
+// de carrito único) que quedaba sobrescrita en tiempo de ejecución y nunca
+// se ejecutaba de verdad — se eliminó para evitar que alguien la edite
+// pensando que hace algo.
 
 // ─── VALIDACIONES ────────────────────────────────────────────────
 function validarFormulario() {
@@ -1252,16 +1252,9 @@ window.cerrarNombreModal = function() {
     if (ov) ov.classList.remove('open');
 };
 
-window.guardarNombreCuenta = function() {
-    const c = CS.cuentas.find(c => c.id === CS.activa);
-    const inp = document.getElementById('nombre-cuenta-input');
-    if (c && inp && inp.value.trim()) {
-        c.nombre = inp.value.trim();
-        renderCuentasTabs();
-        renderCartItems();
-    }
-    cerrarNombreModal();
-};
+// NOTA: guardarNombreCuenta se define una sola vez más abajo (buscar
+// "window.guardarNombreCuenta =" en la sección de gestión de cuentas),
+// donde también se usa _CS() para evitar referencias a un objeto CS viejo.
 
 // ── Enviar orden por WhatsApp (cuenta activa) ─────────────────
 window._ordenCuentaId = null;
@@ -1795,9 +1788,14 @@ window.guardarNombreCuenta = function(valor) {
     var CS = _CS();
     var c = CS.cuentas.find(function(x){ return x.id === CS.activa; });
     if (!c) return;
-    var nombre = (valor || '').trim();
+    // Si no me pasan un valor explícito (ningún call site lo hace hoy),
+    // lo tomo directo del input del modal.
+    var inp = document.getElementById('nombre-cuenta-input');
+    var nombre = (valor !== undefined ? valor : (inp ? inp.value : '')).trim();
     c.nombre = nombre || ('Cuenta ' + c.id);
     window.renderCuentasTabs();
+    if (window.renderCartItems) window.renderCartItems();
+    if (window.cerrarNombreModal) window.cerrarNombreModal();
 };
 
 // ── Eliminar la cuenta activa (con validación) ──
