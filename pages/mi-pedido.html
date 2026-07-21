@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mi Pedido — Tortas Tortuga</title>
+<link rel="icon" href="../favicon.ico">
+<script>
+// ── ACCESO SOLO CLIENTE CON SESION ────────────────────────────
+// Si no hay sesion de cliente (ni de staff, que tiene su propio tablero
+// completo en cocina.html), no hay nada que mostrar aqui: al login.
+(function() {
+    var VEINTE_MIN = 20 * 60 * 1000;
+    var cliNombre = sessionStorage.getItem('tt_cliente_nombre');
+    var cliTs = parseInt(sessionStorage.getItem('tt_cliente_ts') || '0');
+    var empId = sessionStorage.getItem('tt_emp_id');
+    var empTs = parseInt(sessionStorage.getItem('tt_emp_ts') || '0');
+    var cajNombre = sessionStorage.getItem('tt_cajero_nombre');
+    var cajTs = parseInt(sessionStorage.getItem('tt_cajero_ts') || '0');
+
+    var hayCliente = cliNombre && (Date.now() - cliTs < VEINTE_MIN);
+    var esStaff = (empId && (Date.now() - empTs < VEINTE_MIN)) ||
+                  (cajNombre && (Date.now() - cajTs < VEINTE_MIN));
+
+    if (!hayCliente && !esStaff) {
+        window.location.replace('bienvenida.html');
+    }
+    // Si es staff y llega aqui por error, mandarlo a su tablero de verdad
+    if (esStaff) {
+        window.location.replace('cocina.html');
+    }
+})();
+</script>
+<style>
+:root {
+  --bg:#0D0D0D; --surface:#1A1A1A; --border:rgba(255,255,255,.1); --text:#fff; --muted:#888;
+  --orange:#FF5A00; --blue:#3B82F6; --green:#25D366; --yellow:#FBB724; --red:#FF4444;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',sans-serif;min-height:100vh;}
+.header{background:#111;border-bottom:2px solid var(--orange);padding:.9rem 1.1rem;
+  display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.logo{font-size:1rem;font-weight:900;color:var(--orange);}
+.hbtn{background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--muted);
+  border-radius:8px;padding:.4rem .8rem;font-family:inherit;font-size:.78rem;cursor:pointer;text-decoration:none;}
+main{max-width:640px;margin:0 auto;padding:1.2rem 1rem 3rem;}
+.aviso{background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.3);color:#A78BFA;
+  border-radius:12px;padding:.7rem .9rem;font-size:.78rem;margin-bottom:1.1rem;text-align:center;}
+.pedido-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:1.1rem;margin-bottom:1rem;}
+.pedido-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;}
+.pedido-folio{font-size:1.05rem;font-weight:900;color:var(--orange);}
+.pedido-estado{font-size:.72rem;font-weight:800;padding:.3rem .7rem;border-radius:20px;text-transform:uppercase;letter-spacing:.03em;}
+.est-nuevo{background:rgba(59,130,246,.15);color:var(--blue);}
+.est-cocina{background:rgba(251,183,36,.15);color:var(--yellow);}
+.est-listo{background:rgba(37,211,102,.15);color:var(--green);}
+.est-entregado{background:rgba(255,255,255,.08);color:#999;}
+.est-cancelado{background:rgba(255,68,68,.15);color:var(--red);}
+.pedido-items{font-size:.85rem;color:#ccc;white-space:pre-line;line-height:1.6;margin-bottom:.6rem;}
+.pedido-total{font-weight:800;font-size:.95rem;text-align:right;color:#fff;}
+.vacio{text-align:center;color:#666;font-size:.9rem;padding:3rem 1rem;}
+.progreso{display:flex;gap:.3rem;margin:.7rem 0;}
+.progreso .paso{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.08);}
+.progreso .paso.activo{background:var(--orange);}
+</style>
+</head>
+<body>
+
+<div class="header">
+    <div class="logo">🐢 Mi Pedido</div>
+    <a href="../ordenar.html" class="hbtn">🛒 Ordenar más</a>
+</div>
+
+<main>
+    <div class="aviso">👁️ Solo puedes ver tus propios pedidos aquí. Esta es una vista de solo lectura.</div>
+    <div id="lista-pedidos">
+        <div class="vacio">Cargando tus pedidos…</div>
+    </div>
+</main>
+
+<script type="module">
+import { db } from '../js/firebase-config.js';
+import { collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const uid = sessionStorage.getItem('tt_cliente_uid') || null;
+const telefono = (sessionStorage.getItem('tt_cliente_telefono') || '').replace(/\D/g,'');
+
+const ORDEN_ESTADO = ['Nuevo', 'En preparación', 'Listo', 'Entregado'];
+
+function claseEstado(estado) {
+    if (!estado) return 'est-nuevo';
+    if (estado.includes('Cancelado')) return 'est-cancelado';
+    if (estado.includes('Entregado')) return 'est-entregado';
+    if (estado.includes('Listo')) return 'est-listo';
+    if (estado.includes('preparaci')) return 'est-cocina';
+    return 'est-nuevo';
+}
+
+function pasoActual(estado) {
+    if (!estado) return 0;
+    if (estado.includes('Listo')) return 2;
+    if (estado.includes('preparaci')) return 1;
+    if (estado.includes('Entregado')) return 3;
+    return 0;
+}
+
+function esMio(p) {
+    // Cuenta con email (uid verificable) — coincidencia confiable.
+    if (uid && p.clienteUid && p.clienteUid === uid) return true;
+    // Login rapido por telefono — coincidencia por numero (solo de interfaz,
+    // no blindada a nivel de servidor; ver nota de seguridad en firestore.rules).
+    if (telefono && (p.telefono || '').replace(/\D/g,'') === telefono) return true;
+    return false;
+}
+
+function renderPedidos(pedidos) {
+    const cont = document.getElementById('lista-pedidos');
+    if (!pedidos.length) {
+        cont.innerHTML = '<div class="vacio">Todavía no tienes pedidos. ¡Haz el primero! 🌯</div>';
+        return;
+    }
+    pedidos.sort((a, b) => (b.creado?.seconds || 0) - (a.creado?.seconds || 0));
+    cont.innerHTML = pedidos.map(p => {
+        const paso = pasoActual(p.estado);
+        const pasos = [0,1,2].map(i => `<div class="paso ${i <= paso ? 'activo' : ''}"></div>`).join('');
+        return `
+        <div class="pedido-card">
+            <div class="pedido-top">
+                <span class="pedido-folio">${p.folioStr || '#---'}</span>
+                <span class="pedido-estado ${claseEstado(p.estado)}">${(p.estado || 'Nuevo').replace(/[^\w\sáéíóúñ]/gi,'').trim()}</span>
+            </div>
+            <div class="progreso">${pasos}</div>
+            <div class="pedido-items">${(p.items || '').replace(/</g,'&lt;')}</div>
+            <div class="pedido-total">${p.total || ''}</div>
+        </div>`;
+    }).join('');
+}
+
+onSnapshot(collection(db, 'pedidos'), snap => {
+    const todos = [];
+    snap.forEach(d => todos.push({ id: d.id, ...d.data() }));
+    renderPedidos(todos.filter(esMio));
+}, err => {
+    document.getElementById('lista-pedidos').innerHTML =
+        '<div class="vacio">No se pudieron cargar tus pedidos. Intenta de nuevo más tarde.</div>';
+    console.error(err);
+});
+</script>
+
+<script src="../js/perfil-barra.js?v=1784605504"></script>
+</body>
+</html>
