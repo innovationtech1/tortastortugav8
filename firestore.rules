@@ -48,6 +48,16 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ── TURNOS (checador individual: entrada/salida por empleado) ──
+    // El "Checar rápido" a veces funciona SIN Firebase Auth (valida por
+    // empleadoId+pin directo en Firestore) — por diseño, para que el
+    // checador funcione incluso si el login de Firebase Auth falla.
+    // Por eso queda publico, igual que /clientes.
+    match /turnos/{turnoId} {
+      allow read:  if true;
+      allow write: if true;
+    }
+
     // ── TURNOS DE CAJA ──
     // Solo autenticados (corte de caja)
     match /turnos_caja/{turnoId} {
