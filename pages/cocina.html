@@ -7,6 +7,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🧑‍🍳 Cocina — Tortas Tortuga</title>
 <link rel="icon" href="../favicon.ico">
+<script>
+// ── ACCESO SOLO STAFF ─────────────────────────────────────────
+// Si quien entra es un cliente (no empleado/cajero), lo mandamos a la
+// vista de solo lectura de su propio pedido, no a este tablero completo.
+(function() {
+    var VEINTE_MIN = 20 * 60 * 1000;
+    var empId = sessionStorage.getItem('tt_emp_id');
+    var empTs = parseInt(sessionStorage.getItem('tt_emp_ts') || '0');
+    var cajNombre = sessionStorage.getItem('tt_cajero_nombre');
+    var cajTs = parseInt(sessionStorage.getItem('tt_cajero_ts') || '0');
+
+    var esStaff = (empId && (Date.now() - empTs < VEINTE_MIN)) ||
+                  (cajNombre && (Date.now() - cajTs < VEINTE_MIN));
+
+    if (!esStaff) {
+        window.location.replace('mi-pedido.html');
+    }
+})();
+</script>
 <style>
 :root {
   --bg:#0D0D0D; --surface:#1A1A1A; --surface2:#222;
