@@ -122,12 +122,22 @@ window.verificarGerente = async function() {
             ? '✅ Existe un registro EMP-GERENTE en Firestore (PIN actual: <b>' + (empData.pin || '????') + '</b>, rol: ' + (empData.rol || '?') + ')'
             : '⚠️ No existe ningún registro EMP-GERENTE en Firestore.');
 
-        // 2. Intentar iniciar sesión con la cuenta de Firebase Auth esperada
+        // 2. Intentar iniciar sesión con la cuenta de Firebase Auth esperada (esquema actual)
         let cred = await signInWithEmailAndPassword(auth, GERENTE.email, GERENTE.password).catch(() => null);
+        let viaLegacy = false;
+
+        // 2b. Si falla, intentar con el esquema viejo (gerente@tortuga.local)
+        // que es el que aparece en tu Firestore actual
+        if (!cred && empData && empData.email && empData.email !== GERENTE.email) {
+            cred = await signInWithEmailAndPassword(auth, empData.email, 'GerenteTortuga2026').catch(() => null);
+            if (cred) viaLegacy = true;
+        }
 
         if (cred) {
-            pasos.push('✅ La cuenta de Firebase Auth (' + GERENTE.email + ') existe y el PIN 1234 es válido.');
-            // Asegurar que también tenga su doc en Firestore con ese mismo uid
+            if (viaLegacy) pasos.push('✅ Entré con el correo viejo (' + empData.email + ') y la contraseña legacy.');
+            else pasos.push('✅ La cuenta de Firebase Auth (' + GERENTE.email + ') existe y el PIN 1234 es válido.');
+
+            // Ya autenticado — reparar TODO de una vez: email, PIN y contraseña real
             const ref = doc(db, 'empleados', cred.user.uid);
             const snapUid = await getDoc(ref);
             if (!snapUid.exists()) {
@@ -139,19 +149,42 @@ window.verificarGerente = async function() {
                     salarioHora: 0, estado: 'activo', turnoActivo: false,
                 });
                 pasos.push('🔧 Le faltaba su registro en Firestore — creado.');
-            } else if (snapUid.data().pin !== GERENTE.pin || snapUid.data().estado === 'inactivo') {
-                await updateDoc(ref, { pin: GERENTE.pin, estado: 'activo' });
-                pasos.push('🔧 El PIN o el estado no coincidían — corregido a PIN 1234, activo.');
+            } else {
+                const d = snapUid.data();
+                const necesitaFix = d.pin !== GERENTE.pin || d.estado === 'inactivo' || d.email !== GERENTE.email;
+                if (necesitaFix) {
+                    await updateDoc(ref, { pin: GERENTE.pin, estado: 'activo', email: GERENTE.email });
+                    pasos.push('🔧 Corregí el PIN a 1234, el estado a activo, y el correo guardado en Firestore.');
+                }
+            }
+            // Si entramos por el esquema viejo, migrar la contraseña real al esquema nuevo
+            if (viaLegacy) {
+                try {
+                    await updatePassword(cred.user, GERENTE.password);
+                    pasos.push('🔧 Actualicé la contraseña real de Firebase Auth al esquema nuevo (EMP-GERENTE + PIN).');
+                } catch(ePw) {
+                    pasos.push('⚠️ No pude actualizar la contraseña real: ' + ePw.message);
+                }
             }
             await signOut(auth);
         } else {
-            // No existe la cuenta de Auth con esas credenciales exactas
+            // No pudimos autenticarnos con ningún esquema conocido
             if (empDoc) {
-                // Hay un doc en Firestore pero el login de Auth no coincide —
-                // lo más seguro es solo actualizar el PIN en Firestore, sin
-                // tocar la cuenta de Auth (podría tener otro correo/uid).
-                await updateDoc(doc(db, 'empleados', empDoc.id), { pin: GERENTE.pin, estado: 'activo' });
-                pasos.push('🔧 Encontré el registro pero el PIN no coincidía con la cuenta de Auth esperada — actualicé el PIN a 1234 y el estado a activo en Firestore. Intenta entrar de nuevo con EMP-GERENTE + 1234.');
+                // Sin sesión real, las reglas de Firestore bloquean la escritura
+                // a propósito (nadie sin login puede tocar /empleados). Hay que
+                // arreglarlo manualmente desde Firebase Console esta vez.
+                try {
+                    await updateDoc(doc(db, 'empleados', empDoc.id), { pin: GERENTE.pin, estado: 'activo' });
+                    pasos.push('🔧 Encontré el registro y actualicé el PIN a 1234 y el estado a activo. Intenta entrar de nuevo con EMP-GERENTE + 1234.');
+                } catch(ePerm) {
+                    pasos.push(
+                        '❌ No pude autenticarme con ningún correo/contraseña conocido para esta cuenta, ' +
+                        'y las reglas de Firestore bloquean la escritura sin sesión (a propósito, por seguridad). ' +
+                        '<br><br>Arréglalo manualmente en <b>Firebase Console → Firestore Database → empleados → ' +
+                        (empDoc.id) + '</b>: cambia el campo <code>pin</code> a <code>1234</code> y ' +
+                        '<code>estado</code> a <code>activo</code>. Documento: <code>' + empDoc.id + '</code>.'
+                    );
+                }
             } else {
                 // No hay nada — crear todo desde cero
                 const newCred = await createUserWithEmailAndPassword(auth, GERENTE.email, GERENTE.password);
