@@ -2,23 +2,26 @@
   "name": "Tortas Tortuga — San Antonio",
   "short_name": "Tortas Tortuga",
   "description": "Las mejores tortas de San Antonio, Texas. ¡Pide ahora por WhatsApp!",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "/tortastortugav8/index.html",
+  "scope": "/tortastortugav8/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#121212",
   "theme_color": "#FF5A00",
   "lang": "es",
-  "categories": ["food", "shopping"],
+  "categories": [
+    "food",
+    "shopping"
+  ],
   "icons": [
     {
-      "src": "icons/icon-192.png",
+      "src": "/tortastortugav8/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "icons/icon-512.png",
+      "src": "/tortastortugav8/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
