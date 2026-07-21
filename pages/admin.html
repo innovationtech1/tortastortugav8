@@ -2,6 +2,29 @@
 <html lang="es">
 <head>
 <script>
+// ── ACCESO SOLO GERENTE / SUPERVISOR ──────────────────────────
+// admin.html no tenia ninguna proteccion: cualquiera que entrara por
+// URL directa veia todo. Ahora exige una sesion real de nivel gerente
+// o supervisor (empleados.html con PIN, o auth.html con email+contraseña).
+(function() {
+    var VEINTE_MIN = 20 * 60 * 1000;
+    var ROLES_ADMIN = ['gerente', 'supervisor'];
+
+    var empRol = sessionStorage.getItem('tt_emp_rol');
+    var empTs  = parseInt(sessionStorage.getItem('tt_emp_ts') || '0');
+    var cajRol = sessionStorage.getItem('tt_cajero_rol');
+    var cajTs  = parseInt(sessionStorage.getItem('tt_cajero_ts') || '0');
+
+    var accesoValido =
+        (empRol && ROLES_ADMIN.indexOf(empRol) !== -1 && (Date.now() - empTs < VEINTE_MIN)) ||
+        (cajRol && ROLES_ADMIN.indexOf(cajRol) !== -1 && (Date.now() - cajTs < VEINTE_MIN));
+
+    if (!accesoValido) {
+        window.location.replace('empleados.html');
+    }
+})();
+</script>
+<script>
 /* ── Normaliza rutas de imagen para páginas dentro de /pages/ ──
    Los productos guardan rutas como 'img/foto.png' (relativas a la raíz).
    Desde /pages/admin.html eso resuelve a /pages/img/foto.png (404).
