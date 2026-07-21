@@ -1327,14 +1327,24 @@ function mostrarEmp(){
 function renderAccesosPrivilegiados(){
   const cont = document.getElementById('emp-accesos-priv');
   if(!cont) return;
-  if(nivelActual < 3){ cont.innerHTML=''; cont.style.display='none'; return; }
   cont.style.display='block';
-  cont.innerHTML = `
+
+  // Botones disponibles para CUALQUIER empleado con sesion activa
+  let html = `
     <div class="card" style="border-color:rgba(255,90,0,.25);">
       <div class="card-hd">🔑 Accesos de ${ROLES[rolActual].label}</div>
-      <button class="btn bp" style="margin-bottom:.5rem;" onclick="mostrarAdmin(nivelActual)">⚙️ Panel Admin</button>
-      <button class="btn bs" onclick="mostrarMaster()">📊 Panel Maestro (vista en vivo)</button>
-    </div>`;
+      <button class="btn bs" style="margin-bottom:.5rem;" onclick="window.location.href='../ordenar.html'">🏪 Ir a la Tienda</button>
+      <button class="btn bs" onclick="window.location.href='cocina.html'">🍳 Ver Cocina</button>`;
+
+  // Botones extra solo para gerente/supervisor (nivel 3+)
+  if(nivelActual >= 3){
+    html += `
+      <button class="btn bp" style="margin-top:.5rem;margin-bottom:.5rem;" onclick="mostrarAdmin(nivelActual)">⚙️ Panel Admin</button>
+      <button class="btn bs" onclick="mostrarMaster()">📊 Panel Maestro (vista en vivo)</button>`;
+  }
+
+  html += `</div>`;
+  cont.innerHTML = html;
 }
 
 function renderPerfil(){
