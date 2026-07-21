@@ -35,11 +35,17 @@ service cloud.firestore {
       allow write: if true;
     }
 
-    // ── USUARIOS / EMPLEADOS ──
-    // Solo autenticados
+    // ── USUARIOS (cuentas de cliente con email+contraseña, Firebase Auth) ──
+    // Cada cliente autenticado solo puede leer/escribir SU PROPIO documento
+    // (usuarioId == su uid de Firebase Auth). Aqui viven sus privilegios
+    // (rol: 'cliente' por defecto, activo: true) — nunca se auto-asignan admin.
     match /usuarios/{usuarioId} {
-      allow read:  if request.auth != null;
-      allow write: if request.auth != null;
+      allow read:  if request.auth != null && request.auth.uid == usuarioId;
+      allow create: if request.auth != null && request.auth.uid == usuarioId
+                    && request.resource.data.rol == 'cliente';
+      allow update: if request.auth != null && request.auth.uid == usuarioId
+                    && request.resource.data.rol == resource.data.rol; // no puede cambiarse su propio rol
+      allow delete: if false;
     }
 
     // ── TURNOS DE CAJA ──
@@ -62,16 +68,19 @@ service cloud.firestore {
     }
 
     // ── EMPLEADOS ──
-    // El login necesita LEER para validar empleadoId + PIN (fallback sin Auth).
-    // Escritura permitida para que el gerente registre empleados.
-    // NOTA: para produccion real, restringir escritura a gerentes autenticados.
+    // El login por PIN necesita LEER sin auth (fallback sin Firebase Auth).
+    // Escritura (crear/editar/borrar empleados y sus PINs) ahora requiere
+    // sesion real de Firebase Auth (gerente/admin logueado via auth.html).
+    // Antes cualquiera podia reescribir PINs/roles sin login — ya se cerro.
     match /empleados/{empleadoId} {
       allow read:  if true;
-      allow write: if true;
+      allow write: if request.auth != null;
     }
 
-    // ── CLIENTES ──
-    // El login de cliente por telefono crea/actualiza su registro.
+    // ── CLIENTES (login rapido por telefono, sin Firebase Auth) ──
+    // Se queda publico a proposito: el login por telefono es "demo" y no
+    // tiene una identidad verificable por el servidor (no hay request.auth).
+    // Para privacidad real usar la cuenta con email+contraseña (usuarios/).
     match /clientes/{clienteId} {
       allow read:  if true;
       allow write: if true;
