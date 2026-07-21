@@ -783,7 +783,7 @@ function abrirGatePass(tipo, cb){
     setTimeout(function(){ var p=document.getElementById('gate-pw'); if(p)p.focus(); },300);
 }
 function mostrarAdminDirecto(nivel){ window._adminNivel = nivel || 3; }
-async async function checaRapido(){
+async function checaRapido(){
     var empId = (document.getElementById('ck-emp-id').value||'').trim().toUpperCase();
     var pin   = (document.getElementById('ck-pin').value||'').replace(/\D/g,'');
     var msgEl = document.getElementById('msg-checar');
