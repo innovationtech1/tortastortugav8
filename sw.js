@@ -1,5 +1,5 @@
 // Service Worker — NETWORK ONLY para HTML/JS (sin caché de código)
-const CACHE_NAME = 'tortas-v1784509763';
+const CACHE_NAME = 'tortas-v1784600791';
 
 self.addEventListener('install', e => { self.skipWaiting(); });
 
