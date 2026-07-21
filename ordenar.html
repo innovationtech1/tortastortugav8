@@ -220,18 +220,9 @@ function abrirCarrito() {
     if (cm) cm.classList.add('active');
 }
 
-function limpiarCarrito() {
-    if (window._limpiarCarrito) window._limpiarCarrito();
-    else {
-        var CS = window._cuentasSys;
-        if (CS) {
-            CS.cuentas = [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }];
-            CS.activa = 1; CS.counter = 1;
-            if (window.renderCuentasTabs) window.renderCuentasTabs();
-            if (window.renderCartItems) window.renderCartItems();
-        }
-    }
-}
+// NOTA: limpiarCarrito ya no se redefine aquí. window.limpiarCarrito
+// (definido una sola vez en js/app.js, junto a la lógica de cuentas
+// múltiples) es lo que realmente se ejecuta al hacer clic en "Vaciar".
 
 /* addToCart y addDrink — expuestas globalmente para menu.js */
 function addToCart(id, nombre, precio, qty) {
@@ -1044,15 +1035,8 @@ function cerrarNombreModal() {
     var ov = document.getElementById('nombre-modal-overlay');
     if (ov) ov.classList.remove('open');
 }
-function guardarNombreCuenta() {
-    var cs = window._cuentasSys;
-    var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
-    var inp = document.getElementById('nombre-cuenta-input');
-    if (c && inp && inp.value.trim()) c.nombre = inp.value.trim();
-    cerrarNombreModal();
-    window.renderCuentasTabs();
-    window.renderCartItems();
-}
+// NOTA: guardarNombreCuenta ya no se redefine aquí. window.guardarNombreCuenta
+// (definido una sola vez en js/app.js) es lo que realmente se ejecuta.
 function limpiarCuentaActual() {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
@@ -2004,7 +1988,11 @@ function enviarOrdenModal() {
 <div id="nombre-modal-overlay" onclick="if(event.target===this)cerrarNombreModal()">
   <div id="nombre-modal">
     <div style="font-weight:800;font-size:.95rem;margin-bottom:.85rem;color:#fff;">✏️ Nombre de la cuenta</div>
-    
+
+    <input id="nombre-cuenta-input" type="text" maxlength="20" placeholder="Nombre del cliente..."
+      style="width:100%;box-sizing:border-box;padding:.7rem;margin-bottom:.75rem;background:#1C1C1C;
+      border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-family:inherit;font-size:.9rem;">
+
     <div style="display:flex;gap:.5rem;">
       <button onclick="guardarNombreCuenta()" style="flex:1;padding:.7rem;background:linear-gradient(135deg,#FF5A00,#FF8800);
         color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;">
@@ -2623,26 +2611,11 @@ window.editarNombreCuenta = function() {
     inp.select();
 };
 
-window.guardarNombreCuenta = function() {
-    var cs   = window._cuentasSys;
-    var inp  = document.getElementById('nombre-cuenta-input');
-    var wrap = document.getElementById('nombre-cuenta-input-wrap');
-    var btn  = document.getElementById('btn-nombre-cuenta');
-    if (!inp || !wrap || !cs) return;
+// NOTA: guardarNombreCuenta ya no se redefine aquí tampoco. La única
+// definición vigente vive en js/app.js y ahora lee el input del modal
+// directamente (ver #nombre-modal-overlay más arriba en este archivo).
 
-    var nuevoNombre = inp.value.trim();
-    if (nuevoNombre) {
-        var c = cs.cuentas.find(function(x){ return x.id === cs.activa; });
-        if (c) {
-            c.nombre = nuevoNombre;
-            if (window.renderCartItems) window.renderCartItems();
-        }
-    }
-    wrap.style.display = 'none';
-    if (btn) btn.style.display = 'block';
-};
-
-// Guardar con Enter, cancelar con Escape
+// Guardar con Enter dentro del modal de nombre de cuenta
 document.addEventListener('DOMContentLoaded', function() {
     var inp = document.getElementById('nombre-cuenta-input');
     if (!inp) return;
@@ -2650,16 +2623,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.key === 'Enter') {
             e.preventDefault();
             window.guardarNombreCuenta();
-        } else if (e.key === 'Escape') {
-            var wrap = document.getElementById('nombre-cuenta-input-wrap');
-            var btn  = document.getElementById('btn-nombre-cuenta');
-            if (wrap) wrap.style.display = 'none';
-            if (btn)  btn.style.display  = 'block';
         }
-    });
-    // Guardar al perder el foco
-    inp.addEventListener('blur', function() {
-        setTimeout(window.guardarNombreCuenta, 150);
     });
 });
 </script>
