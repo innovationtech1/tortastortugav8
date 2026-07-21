@@ -25,6 +25,14 @@
     display:inline-block; margin:0 auto 1rem; font-weight:700;
   }
   .btn-volver { background:none !important; box-shadow:none !important; color:#888 !important; font-size:.85rem !important; font-weight:600 !important; margin-top:.6rem !important; }
+  .modo-tabs { display:flex; gap:.4rem; margin-bottom:1.1rem; background:rgba(255,255,255,.04); border-radius:12px; padding:.3rem; }
+  .modo-tab { flex:1; background:none; border:none; color:#888; font-family:inherit; font-size:.78rem; font-weight:700; padding:.6rem .4rem; border-radius:9px; cursor:pointer; transition:.15s; }
+  .modo-tab.activo { background:rgba(255,90,0,.15); color:#FF5A00; }
+  .cuenta-tabs { display:flex; gap:.4rem; margin-bottom:1rem; }
+  .cuenta-tab { flex:1; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.1); color:#999; font-family:inherit; font-size:.82rem; font-weight:700; padding:.55rem; border-radius:9px; cursor:pointer; }
+  .cuenta-tab.activo { border-color:#FF5A00; color:#FF5A00; background:rgba(255,90,0,.08); }
+  .cuenta-paso { display:none; }
+  .cuenta-paso.activo { display:block; }
 </style>
 </head>
 <body>
@@ -35,9 +43,16 @@
         <div class="auth-logo">
             <span class="logo-emoji">🐢</span>
             <h1 class="logo-text">Tortas Tortuga</h1>
-            <p class="logo-sub">Entra con tu teléfono para ordenar</p>
+            <p class="logo-sub">Entra para ordenar</p>
         </div>
 
+        <!-- SELECTOR DE MODO -->
+        <div class="modo-tabs">
+            <button class="modo-tab activo" id="tab-telefono" onclick="cambiarModo('telefono')">📱 Teléfono rápido</button>
+            <button class="modo-tab" id="tab-cuenta" onclick="cambiarModo('cuenta')">✉️ Cuenta con email</button>
+        </div>
+
+        <div id="modo-telefono-wrap">
         <div style="text-align:center;">
             <span class="demo-badge">⚙️ MODO DEMO — código simulado</span>
         </div>
@@ -80,27 +95,80 @@
             </button>
             <button class="btn-primary btn-volver" onclick="volverPaso1()">← Cambiar teléfono</button>
         </div>
+        </div>
+
+        <!-- MODO CUENTA (email + contraseña, Firebase Auth real) -->
+        <div id="modo-cuenta-wrap" style="display:none;">
+
+            <div class="cuenta-tabs">
+                <button class="cuenta-tab activo" id="tab-login" onclick="cambiarCuentaTab('login')">Iniciar sesión</button>
+                <button class="cuenta-tab" id="tab-registro" onclick="cambiarCuentaTab('registro')">Crear cuenta</button>
+            </div>
+
+            <!-- LOGIN -->
+            <div id="cuenta-login" class="cuenta-paso activo">
+                <div class="field-wrap">
+                    <label class="field-label">Email</label>
+                    <input type="email" id="login-email" class="field-input" placeholder="tu@email.com" autocomplete="username">
+                </div>
+                <div class="field-wrap">
+                    <label class="field-label">Contraseña</label>
+                    <input type="password" id="login-pass" class="field-input" autocomplete="current-password">
+                </div>
+                <div class="auth-message" id="status-login"></div>
+                <button class="btn-primary" onclick="loginConCuenta()">Entrar</button>
+                <button class="btn-primary btn-volver" onclick="mostrarRecuperar()">¿Olvidaste tu contraseña?</button>
+            </div>
+
+            <!-- REGISTRO -->
+            <div id="cuenta-registro" class="cuenta-paso">
+                <div class="field-wrap">
+                    <label class="field-label">Tu nombre</label>
+                    <input type="text" id="reg-nombre" class="field-input" placeholder="Ej: Juan Pérez" autocomplete="name">
+                </div>
+                <div class="field-wrap">
+                    <label class="field-label">Teléfono (opcional)</label>
+                    <input type="tel" id="reg-telefono" class="field-input" placeholder="210-555-1234" autocomplete="tel">
+                </div>
+                <div class="field-wrap">
+                    <label class="field-label">Email</label>
+                    <input type="email" id="reg-email" class="field-input" placeholder="tu@email.com" autocomplete="username">
+                </div>
+                <div class="field-wrap">
+                    <label class="field-label">Contraseña</label>
+                    <input type="password" id="reg-pass" class="field-input" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+                </div>
+                <div class="auth-message" id="status-registro"></div>
+                <button class="btn-primary" onclick="registrarCuenta()">Crear mi cuenta</button>
+            </div>
+
+            <!-- RECUPERAR CONTRASEÑA -->
+            <div id="cuenta-recuperar" class="cuenta-paso">
+                <p style="color:#999;font-size:.85rem;margin-bottom:.8rem;">Te enviamos un correo para restablecer tu contraseña.</p>
+                <div class="field-wrap">
+                    <label class="field-label">Email</label>
+                    <input type="email" id="rec-email" class="field-input" placeholder="tu@email.com">
+                </div>
+                <div class="auth-message" id="status-recuperar"></div>
+                <button class="btn-primary" onclick="enviarRecuperacion()">Enviar enlace</button>
+                <button class="btn-primary btn-volver" onclick="cambiarCuentaTab('login')">← Volver</button>
+            </div>
+        </div>
 
         <div style="text-align:center;margin-top:1.2rem;">
-            <a href="auth.html" style="color:#888;font-size:.8rem;text-decoration:none;">¿Eres cajero? Entra aquí →</a>
+            <a href="auth.html" style="color:#888;font-size:.8rem;text-decoration:none;">¿Eres empleado o cajero? Entra aquí →</a>
         </div>
 
     </div>
 </div>
 
 <script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-
-const app = initializeApp({
-  apiKey: "AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k",
-  authDomain: "tortas-tortuga.firebaseapp.com",
-  projectId: "tortas-tortuga",
-  storageBucket: "tortas-tortuga.firebasestorage.app",
-  messagingSenderId: "586554873297",
-  appId: "1:586554873297:web:c0e0e2fbe1a29b0b3ed83e"
-});
-const db = getFirestore(app);
+import { auth, db } from '../js/firebase-config.js';
+import { doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import {
+    createUserWithEmailAndPassword, signInWithEmailAndPassword,
+    sendPasswordResetEmail, updateProfile
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 let _codigoGenerado = null;
 let _datosCliente = null;
@@ -114,6 +182,35 @@ function showStatus(id, msg, tipo) {
     el.style.display = 'block';
 }
 
+/* ── Selector Telefono / Cuenta ─────────────────────────────── */
+window.cambiarModo = function(modo) {
+    document.getElementById('tab-telefono').classList.toggle('activo', modo === 'telefono');
+    document.getElementById('tab-cuenta').classList.toggle('activo', modo === 'cuenta');
+    document.getElementById('modo-telefono-wrap').style.display = modo === 'telefono' ? 'block' : 'none';
+    document.getElementById('modo-cuenta-wrap').style.display = modo === 'cuenta' ? 'block' : 'none';
+};
+
+window.cambiarCuentaTab = function(tab) {
+    ['login','registro','recuperar'].forEach(function(t) {
+        var el = document.getElementById('cuenta-' + t);
+        if (el) el.classList.toggle('activo', t === tab);
+    });
+    document.getElementById('tab-login')?.classList.toggle('activo', tab === 'login');
+    document.getElementById('tab-registro')?.classList.toggle('activo', tab === 'registro');
+};
+
+window.mostrarRecuperar = function() { window.cambiarCuentaTab('recuperar'); };
+
+/* ── Guardar sesion de cliente (comun a telefono y cuenta) ──── */
+function guardarSesionCliente(nombre, telefono, uid) {
+    sessionStorage.setItem('tt_cliente_nombre', nombre);
+    sessionStorage.setItem('tt_cliente_telefono', telefono || '');
+    sessionStorage.setItem('tt_cliente_ts', Date.now().toString());
+    if (uid) sessionStorage.setItem('tt_cliente_uid', uid);
+    else sessionStorage.removeItem('tt_cliente_uid');
+}
+
+/* ── LOGIN POR TELEFONO (modo demo, sin Firebase Auth) ──────── */
 window.enviarCodigo = function() {
     const nombre = (document.getElementById('nombre').value || '').trim();
     const tel = (document.getElementById('telefono').value || '').trim();
@@ -158,9 +255,7 @@ window.verificarCodigo = async function() {
         console.warn('No se pudo guardar el cliente:', e);
     }
 
-    sessionStorage.setItem('tt_cliente_nombre', _datosCliente.nombre);
-    sessionStorage.setItem('tt_cliente_telefono', _datosCliente.telefono);
-    sessionStorage.setItem('tt_cliente_ts', Date.now().toString());
+    guardarSesionCliente(_datosCliente.nombre, _datosCliente.telefono, null);
 
     showStatus('status-2', '¡Bienvenido ' + _datosCliente.nombre + '!', 'success');
 
@@ -172,6 +267,95 @@ window.volverPaso1 = function() {
     document.getElementById('paso-telefono').classList.add('activo');
     var s = document.getElementById('status-2');
     if (s) s.style.display = 'none';
+};
+
+/* ── CUENTA CON EMAIL + CONTRASEÑA (Firebase Auth real) ─────── */
+window.loginConCuenta = async function() {
+    const email = (document.getElementById('login-email').value || '').trim();
+    const pass  = document.getElementById('login-pass').value;
+
+    if (!email || !pass) { showStatus('status-login', 'Completa email y contraseña', 'error'); return; }
+
+    showStatus('status-login', 'Entrando...', 'info');
+    try {
+        const cred = await signInWithEmailAndPassword(auth, email, pass);
+        let nombre = cred.user.displayName || email.split('@')[0];
+        let telefono = '';
+        try {
+            const snap = await getDoc(doc(db, 'usuarios', cred.user.uid));
+            if (snap.exists()) {
+                nombre = snap.data().nombre || nombre;
+                telefono = snap.data().telefono || '';
+            }
+        } catch(e) {}
+
+        guardarSesionCliente(nombre, telefono, cred.user.uid);
+        showStatus('status-login', '¡Bienvenido ' + nombre + '!', 'success');
+        setTimeout(function(){ window.location.href = '../ordenar.html'; }, 700);
+    } catch(e) {
+        const msgs = {
+            'auth/invalid-credential': 'Email o contraseña incorrectos.',
+            'auth/user-not-found': 'No existe una cuenta con ese email.',
+            'auth/wrong-password': 'Contraseña incorrecta.',
+            'auth/too-many-requests': 'Demasiados intentos. Espera un momento.',
+        };
+        showStatus('status-login', msgs[e.code] || 'Error al entrar. Intenta de nuevo.', 'error');
+    }
+};
+
+window.registrarCuenta = async function() {
+    const nombre = (document.getElementById('reg-nombre').value || '').trim();
+    const telefono = (document.getElementById('reg-telefono').value || '').replace(/[^0-9]/g, '');
+    const email = (document.getElementById('reg-email').value || '').trim();
+    const pass  = document.getElementById('reg-pass').value;
+
+    if (!nombre) { showStatus('status-registro', 'Escribe tu nombre', 'error'); return; }
+    if (!email) { showStatus('status-registro', 'Escribe tu email', 'error'); return; }
+    if (pass.length < 8) { showStatus('status-registro', 'La contraseña debe tener mínimo 8 caracteres', 'error'); return; }
+
+    showStatus('status-registro', 'Creando tu cuenta...', 'info');
+    try {
+        const cred = await createUserWithEmailAndPassword(auth, email, pass);
+        try { await updateProfile(cred.user, { displayName: nombre }); } catch(e) {}
+
+        // Privilegios basicos por defecto: rol 'cliente', activo, nunca admin.
+        await setDoc(doc(db, 'usuarios', cred.user.uid), {
+            nombre: nombre,
+            telefono: telefono || '',
+            email: email,
+            rol: 'cliente',
+            activo: true,
+            creadoEn: new Date().toISOString(),
+        });
+
+        guardarSesionCliente(nombre, telefono, cred.user.uid);
+        showStatus('status-registro', '¡Cuenta creada! Bienvenido ' + nombre, 'success');
+        setTimeout(function(){ window.location.href = '../ordenar.html'; }, 800);
+    } catch(e) {
+        const msgs = {
+            'auth/email-already-in-use': 'Ya existe una cuenta con ese email. Intenta iniciar sesión.',
+            'auth/invalid-email': 'El email no es válido.',
+            'auth/weak-password': 'La contraseña es muy débil.',
+        };
+        showStatus('status-registro', msgs[e.code] || 'Error al crear la cuenta. Intenta de nuevo.', 'error');
+    }
+};
+
+window.enviarRecuperacion = async function() {
+    const email = (document.getElementById('rec-email').value || '').trim();
+    if (!email) { showStatus('status-recuperar', 'Escribe tu email', 'error'); return; }
+
+    showStatus('status-recuperar', 'Enviando...', 'info');
+    try {
+        await sendPasswordResetEmail(auth, email);
+        showStatus('status-recuperar', 'Listo, revisa tu correo para el enlace de recuperación.', 'success');
+    } catch(e) {
+        const msgs = {
+            'auth/user-not-found': 'No existe una cuenta con ese email.',
+            'auth/invalid-email': 'El email no es válido.',
+        };
+        showStatus('status-recuperar', msgs[e.code] || 'No se pudo enviar el correo. Intenta de nuevo.', 'error');
+    }
 };
 </script>
 </body>
