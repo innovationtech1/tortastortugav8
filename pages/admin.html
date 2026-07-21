@@ -231,6 +231,7 @@ window.normalizarRutaImagen = function(src) {
         <button class="filter-btn" data-filter="preparación">🧑‍🍳 En preparación</button>
         <button class="filter-btn" data-filter="Listo">✅ Listos</button>
         <button class="filter-btn" data-filter="Entregado">🎉 Entregados</button>
+        <button class="filter-btn" data-filter="archivados" style="border-color:rgba(167,139,250,.3);color:#A78BFA;">🗂️ Archivados</button>
     </div>
 
     <!-- BUSCADOR INTELIGENTE POS -->
@@ -531,11 +532,14 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
         const clearBtn = document.getElementById('clear-search');
         const searchStats = document.getElementById('search-stats');
         if(clearBtn) clearBtn.style.display = searchText ? 'flex' : 'none';
-        document.getElementById('stat-total').textContent = pedidosDB.length;
-        document.getElementById('stat-nuevos').textContent = pedidosDB.filter(p => p.estado?.includes('Nuevo')).length;
-        document.getElementById('stat-prep').textContent = pedidosDB.filter(p => p.estado?.includes('preparación')).length;
-        document.getElementById('stat-entregados').textContent = pedidosDB.filter(p => p.estado?.includes('Entregado')).length;
-        let filtrados = filtroActual === 'todos' ? pedidosDB : pedidosDB.filter(p => p.estado?.includes(filtroActual));
+        const activos = pedidosDB.filter(p => !p.archivado);
+        document.getElementById('stat-total').textContent = activos.length;
+        document.getElementById('stat-nuevos').textContent = activos.filter(p => p.estado?.includes('Nuevo')).length;
+        document.getElementById('stat-prep').textContent = activos.filter(p => p.estado?.includes('preparación')).length;
+        document.getElementById('stat-entregados').textContent = activos.filter(p => p.estado?.includes('Entregado')).length;
+        let filtrados = filtroActual === 'archivados' ? pedidosDB.filter(p => p.archivado)
+                      : filtroActual === 'todos' ? activos
+                      : activos.filter(p => p.estado?.includes(filtroActual));
         if (searchText) {
             filtrados = filtrados.filter(p => {
                 const ticket = p.id.slice(-4).toLowerCase();
@@ -667,7 +671,9 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
                 </td>
                 <td>${pagoHTML}</td>
                 <td><select class="status-select ${estadoCls}" data-id="${p.id}" style="width:100%"><option ${p.estado?.includes('Nuevo') ? 'selected' : ''}>Nuevo 🆕</option><option ${p.estado?.includes('preparación') ? 'selected' : ''}>En preparación 🧑‍🍳</option><option ${p.estado?.includes('Listo') ? 'selected' : ''}>Listo ✅</option><option ${p.estado?.includes('Entregado') ? 'selected' : ''}>Entregado 🎉</option><option ${p.estado?.includes('Cancelado') ? 'selected' : ''}>Cancelado ❌</option></select></td>
-                <td style="text-align:right"><button class="delete-btn" data-id="${p.id}" title="Eliminar permanentemente">🗑️</button></td>
+                <td style="text-align:right">${p.archivado
+                    ? `<button class="delete-btn restore-btn" data-id="${p.id}" title="Volver a mostrar en el panel" style="background:rgba(37,211,102,.15);color:#25D366;">↩️</button>`
+                    : `<button class="delete-btn" data-id="${p.id}" title="Quitar de la pantalla (se guarda para reportes)">🗑️</button>`}</td>
             </tr>`;
         }).join('');
         document.querySelectorAll('.status-select').forEach(select => {
@@ -676,11 +682,19 @@ if (sessionStorage.getItem('tt_admin_logged') === 'true') {
                 try { await updateDoc(doc(db, 'pedidos', id), { estado: e.target.value }); } catch(error) { alert('Error al actualizar estado.'); }
             });
         });
-        document.querySelectorAll('.delete-btn').forEach(btn => {
+        document.querySelectorAll('.restore-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const id = e.currentTarget.getAttribute('data-id');
-                if (confirm('⚠️ ¿Eliminar este pedido PERMANENTEMENTE?')) {
-                    try { await deleteDoc(doc(db, 'pedidos', id)); } catch(error) { alert('Error al eliminar.'); }
+                try { await updateDoc(doc(db, 'pedidos', id), { archivado: false }); }
+                catch(error) { alert('Error al restaurar.'); }
+            });
+        });
+        document.querySelectorAll('.delete-btn:not(.restore-btn)').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const id = e.currentTarget.getAttribute('data-id');
+                if (confirm('¿Quitar este pedido de la pantalla? Sigue guardado y disponible en reportes/ventas, solo deja de mostrarse aquí.')) {
+                    try { await updateDoc(doc(db, 'pedidos', id), { archivado: true, archivadoEn: new Date().toISOString() }); }
+                    catch(error) { alert('Error al archivar.'); }
                 }
             });
         });
