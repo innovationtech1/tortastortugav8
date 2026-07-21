@@ -49,11 +49,33 @@ window._cuentasSys = window._cuentasSys || {
 window._pendingItem = window._pendingItem || null;
 /* ── SESIÓN DE CAJERO ──────────────────────────────────────── */
 (function() {
-    var cajeroId     = sessionStorage.getItem('tt_cajero_id');
-    var cajeroNombre = sessionStorage.getItem('tt_cajero_nombre');
-    var cajeroRol    = sessionStorage.getItem('tt_cajero_rol');
-    var cajeroTs     = parseInt(sessionStorage.getItem('tt_cajero_ts') || '0');
     var VEINTE_MIN   = 20 * 60 * 1000;
+
+    // Leer sesion de CAJERO (login por auth.html) O de EMPLEADO (login por empleados.html).
+    // Unificamos ambas para que quien entre por cualquier via quede como cajero activo.
+    var cajeroId, cajeroNombre, cajeroRol, cajeroTs;
+
+    var cajTs = parseInt(sessionStorage.getItem('tt_cajero_ts') || '0');
+    var empTs = parseInt(sessionStorage.getItem('tt_emp_ts') || '0');
+
+    if (sessionStorage.getItem('tt_cajero_nombre') && (Date.now() - cajTs < VEINTE_MIN)) {
+        // Sesion via auth.html
+        cajeroId     = sessionStorage.getItem('tt_cajero_id');
+        cajeroNombre = sessionStorage.getItem('tt_cajero_nombre');
+        cajeroRol    = sessionStorage.getItem('tt_cajero_rol');
+        cajeroTs     = cajTs;
+    } else if (sessionStorage.getItem('tt_emp_id') && (Date.now() - empTs < VEINTE_MIN)) {
+        // Sesion via empleados.html — convertir a formato cajero
+        cajeroId     = sessionStorage.getItem('tt_emp_id');
+        cajeroNombre = sessionStorage.getItem('tt_emp_nombre') || sessionStorage.getItem('tt_emp_id');
+        cajeroRol    = sessionStorage.getItem('tt_emp_rol') || 'cajero';
+        cajeroTs     = empTs;
+        // Espejar a las claves tt_cajero_* para que admin (cobro) tambien las lea
+        sessionStorage.setItem('tt_cajero_id', cajeroId);
+        sessionStorage.setItem('tt_cajero_nombre', cajeroNombre);
+        sessionStorage.setItem('tt_cajero_rol', cajeroRol);
+        sessionStorage.setItem('tt_cajero_ts', Date.now().toString());
+    }
 
     if (cajeroId && cajeroNombre && (Date.now() - cajeroTs < VEINTE_MIN)) {
         window._cajeroActivo = { id: cajeroId, nombre: cajeroNombre, rol: cajeroRol };
@@ -1123,7 +1145,7 @@ function cerrarOrdenModal() {
 }
 </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=1784498934">
+    <link rel="stylesheet" href="css/style.css?v=1784602614">
     <script type="module">
         import { auth, db } from './js/firebase-config.js';
         import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -1706,7 +1728,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1784498934"></script>
+<script type="module" src="js/app.js?v=1784602614"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -1812,7 +1834,7 @@ function enviarOrdenModal() {
 
 </script>
 <script type="module">
-    import { seedProductos, renderMenu } from './js/menu.js?v=1784498934';
+    import { seedProductos, renderMenu } from './js/menu.js?v=1784602614';
     (async () => {
         try {
             await seedProductos();
