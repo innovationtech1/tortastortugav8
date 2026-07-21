@@ -29,6 +29,13 @@
   <div id="resultado"></div>
 </div>
 
+<div class="card" style="border-color:rgba(255,90,0,.3);">
+  <h3 style="color:#FF5A00;margin-top:0;">👑 Cuenta de Gerente (EMP-GERENTE)</h3>
+  <p style="font-size:.85rem;color:#ccc;line-height:1.6;">Verifica si existe una cuenta activa de gerente con PIN <code>1234</code>. Si no existe, o el PIN no coincide, la crea/repara automáticamente sin borrar nada más.</p>
+  <button onclick="verificarGerente()">🔧 Verificar / Reparar cuenta de Gerente</button>
+  <div id="resultado-gerente"></div>
+</div>
+
 <div class="card">
   <h3 style="color:#FBB724;margin-top:0;">📋 Cómo funciona el login</h3>
   <p style="font-size:.88rem;line-height:1.6;color:#ccc;">
@@ -41,18 +48,22 @@
 </div>
 
 <script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { db, auth } from '../js/firebase-config.js';
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, query, where }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updatePassword, signOut }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
-const app = initializeApp({
-  apiKey: "AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k",
-  authDomain: "tortas-tortuga.firebaseapp.com",
-  projectId: "tortas-tortuga",
-  storageBucket: "tortas-tortuga.firebasestorage.app",
-  messagingSenderId: "586554873297",
-  appId: "1:586554873297:web:c0e0e2fbe1a29b0b3ed83e"
-});
-const db = getFirestore(app);
+const GERENTE = {
+  empId: 'EMP-GERENTE',
+  pin: '1234',
+  email: 'emp-gerente@tortuga.local',
+  password: 'EMP-GERENTE1234',
+  nombre: 'Gerente',
+  apellido: 'Principal',
+  puesto: 'Gerente General',
+  rol: 'gerente',
+};
 
 window.cargarEmpleados = async function() {
     const cont = document.getElementById('resultado');
@@ -91,6 +102,74 @@ window.cargarEmpleados = async function() {
         cont.innerHTML = html;
     } catch(e) {
         cont.innerHTML = '<p class="warn">Error al cargar: ' + e.message + '<br><br>Puede ser un problema de permisos de Firestore.</p>';
+        console.error(e);
+    }
+};
+
+window.verificarGerente = async function() {
+    const cont = document.getElementById('resultado-gerente');
+    cont.innerHTML = '<div class="loading">Verificando...</div>';
+    const pasos = [];
+
+    try {
+        // 1. Buscar el doc en Firestore por empleadoId
+        const q = query(collection(db, 'empleados'), where('empleadoId', '==', GERENTE.empId));
+        const snap = await getDocs(q);
+        let empDoc = snap.empty ? null : snap.docs[0];
+        let empData = empDoc ? empDoc.data() : null;
+
+        pasos.push(empDoc
+            ? '✅ Existe un registro EMP-GERENTE en Firestore (PIN actual: <b>' + (empData.pin || '????') + '</b>, rol: ' + (empData.rol || '?') + ')'
+            : '⚠️ No existe ningún registro EMP-GERENTE en Firestore.');
+
+        // 2. Intentar iniciar sesión con la cuenta de Firebase Auth esperada
+        let cred = await signInWithEmailAndPassword(auth, GERENTE.email, GERENTE.password).catch(() => null);
+
+        if (cred) {
+            pasos.push('✅ La cuenta de Firebase Auth (' + GERENTE.email + ') existe y el PIN 1234 es válido.');
+            // Asegurar que también tenga su doc en Firestore con ese mismo uid
+            const ref = doc(db, 'empleados', cred.user.uid);
+            const snapUid = await getDoc(ref);
+            if (!snapUid.exists()) {
+                await setDoc(ref, {
+                    uid: cred.user.uid, empleadoId: GERENTE.empId,
+                    nombre: GERENTE.nombre, apellido: GERENTE.apellido,
+                    email: GERENTE.email, telefono: '2100000000',
+                    puesto: GERENTE.puesto, rol: GERENTE.rol, pin: GERENTE.pin,
+                    salarioHora: 0, estado: 'activo', turnoActivo: false,
+                });
+                pasos.push('🔧 Le faltaba su registro en Firestore — creado.');
+            } else if (snapUid.data().pin !== GERENTE.pin || snapUid.data().estado === 'inactivo') {
+                await updateDoc(ref, { pin: GERENTE.pin, estado: 'activo' });
+                pasos.push('🔧 El PIN o el estado no coincidían — corregido a PIN 1234, activo.');
+            }
+            await signOut(auth);
+        } else {
+            // No existe la cuenta de Auth con esas credenciales exactas
+            if (empDoc) {
+                // Hay un doc en Firestore pero el login de Auth no coincide —
+                // lo más seguro es solo actualizar el PIN en Firestore, sin
+                // tocar la cuenta de Auth (podría tener otro correo/uid).
+                await updateDoc(doc(db, 'empleados', empDoc.id), { pin: GERENTE.pin, estado: 'activo' });
+                pasos.push('🔧 Encontré el registro pero el PIN no coincidía con la cuenta de Auth esperada — actualicé el PIN a 1234 y el estado a activo en Firestore. Intenta entrar de nuevo con EMP-GERENTE + 1234.');
+            } else {
+                // No hay nada — crear todo desde cero
+                const newCred = await createUserWithEmailAndPassword(auth, GERENTE.email, GERENTE.password);
+                await setDoc(doc(db, 'empleados', newCred.user.uid), {
+                    uid: newCred.user.uid, empleadoId: GERENTE.empId,
+                    nombre: GERENTE.nombre, apellido: GERENTE.apellido,
+                    email: GERENTE.email, telefono: '2100000000',
+                    puesto: GERENTE.puesto, rol: GERENTE.rol, pin: GERENTE.pin,
+                    salarioHora: 0, estado: 'activo', turnoActivo: false,
+                });
+                await signOut(auth);
+                pasos.push('🔧 No existía nada — creé la cuenta desde cero: EMP-GERENTE / PIN 1234.');
+            }
+        }
+
+        cont.innerHTML = '<div class="cred">' + pasos.join('<br>') + '<br><br>✅ Listo. Intenta entrar con <b>EMP-GERENTE</b> y PIN <b>1234</b>.</div>';
+    } catch(e) {
+        cont.innerHTML = '<p class="warn">❌ Error: ' + e.message + '<br>Código: ' + (e.code || 'desconocido') + '</p>';
         console.error(e);
     }
 };
