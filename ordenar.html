@@ -82,8 +82,7 @@ window._pendingItem = window._pendingItem || null;
         sessionStorage.setItem('tt_cajero_ts', Date.now().toString());
 
         // Mostrar UI cajero — funciona con DOM ya cargado o pendiente
-        function mostrarUICajero() {
-            var banner = document.getElementById('cajero-banner');
+        function mostrarUICajero() {            var banner = document.getElementById('cajero-banner');
             var nomEl  = document.getElementById('cajero-nombre-header');
             var btnCaj = document.getElementById('btn-cajero-header');
             if (banner) banner.style.display = 'flex';
@@ -106,6 +105,38 @@ window._pendingItem = window._pendingItem || null;
         sessionStorage.removeItem('tt_cajero_nombre');
         sessionStorage.removeItem('tt_cajero_rol');
         sessionStorage.removeItem('tt_cajero_ts');
+    }
+
+    /* ── LOGIN OBLIGATORIO PARA ORDENAR ──────────────────────────
+       Si no hay sesion de staff (cajero/empleado) NI de cliente
+       (telefono o cuenta con email), no se puede usar esta pantalla.
+       Se manda a bienvenida.html para elegir "soy cliente" / "soy empleado". */
+    var hayStaff = !!(cajeroId && cajeroNombre && (Date.now() - cajeroTs < VEINTE_MIN));
+    var cliNombre = sessionStorage.getItem('tt_cliente_nombre');
+    var cliTs = parseInt(sessionStorage.getItem('tt_cliente_ts') || '0');
+    var hayCliente = !!(cliNombre && (Date.now() - cliTs < VEINTE_MIN));
+
+    if (!hayStaff && !hayCliente) {
+        window.location.replace('pages/bienvenida.html');
+        return;
+    }
+
+    // Si hay cliente logueado (sin sesion de staff), precargar su nombre/telefono
+    // en el formulario para dejar claro "quien esta ordenando" y evitar que lo
+    // vuelva a escribir.
+    if (hayCliente && !hayStaff) {
+        window._clienteActivo = { nombre: cliNombre, telefono: sessionStorage.getItem('tt_cliente_telefono') || '' };
+        function precargarCliente() {
+            var n = document.getElementById('customer-name');
+            var t = document.getElementById('customer-phone');
+            if (n && !n.value) n.value = cliNombre;
+            if (t && !t.value) t.value = window._clienteActivo.telefono;
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', precargarCliente);
+        } else {
+            precargarCliente();
+        }
     }
 })();
 
