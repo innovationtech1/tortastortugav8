@@ -321,29 +321,9 @@ window.renderCartItems = function() {
     actualizarBotones();
 };
 
-window.renderCuentasTabs = function() {
-    var tabs = document.getElementById('cuentas-tabs');
-    if (!tabs) return;
-    var cs = window._cuentasSys;
-    if (!cs) return;
-    var h = '';
-    cs.cuentas.forEach(function(c) {
-        var tot = c.items.reduce(function(s,i){ return s+i.precio; }, 0);
-        var active = c.id === cs.activa ? 'active' : '';
-        h += '<div class="ctab ' + active + '" onclick="switchCuenta(' + c.id + ')" ' +
-            'style="border-color:' + (active ? c.color : 'rgba(255,255,255,.12)') + ';">' +
-            '<span class="ctab-nom" style="color:' + (active ? c.color : '#fff') + ';display:block;">' + c.nombre + '</span>' +
-            '<span class="ctab-tot" style="display:block;">$' + tot.toFixed(2) + '</span>' +
-            '</div>';
-    });
-    h += '<button onclick="agregarNuevaCuenta()" class="ctab-add">+ Nueva cuenta</button>';
-    tabs.innerHTML = h;
-    var btnDel = document.getElementById('btn-eliminar-cuenta');
-    if (btnDel) btnDel.style.display = cs.cuentas.length > 1 ? 'block' : 'none';
-    var lbl = document.getElementById('cuenta-label-active');
-    var cActiva = cs.cuentas.find(function(x){ return x.id === cs.activa; });
-    if (lbl && cActiva) { lbl.textContent = cActiva.nombre.toUpperCase(); lbl.style.color = cActiva.color; }
-};
+// NOTA: renderCuentasTabs vive una sola vez en js/app.js (incluye ahi el
+// placeholder "Asignar mesa / nombre" que antes dependia de un hook aparte
+// que nunca llegaba a ejecutarse). Aqui habia una copia vieja, eliminada.
 
 function addDrink(nombre, precio, detalle) {
     var item = { nombre: nombre, precio: precio || 0, modificaciones: detalle ? [detalle] : [] };
@@ -2624,23 +2604,9 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(initNombreInput, 500);
 })();
 
-window.editarNombreCuenta = function() {
-    var cs  = window._cuentasSys;
-    var inp = document.getElementById('nombre-cuenta-input');
-    var wrap = document.getElementById('nombre-cuenta-input-wrap');
-    var btn  = document.getElementById('btn-nombre-cuenta');
-    if (!inp || !wrap || !cs) return;
-
-    var c = cs.cuentas.find(function(x){ return x.id === cs.activa; });
-    if (!c) return;
-
-    // Mostrar input con valor actual
-    inp.value = c.nombre || '';
-    wrap.style.display = 'block';
-    btn.style.display = 'none';
-    inp.focus();
-    inp.select();
-};
+// NOTA: editarNombreCuenta real vive en js/app.js (la usa el panel de
+// dividir cuenta). Aquí había una versión muerta de un paradigma de UI
+// (input con wrap/mostrar-ocultar) que ya no existe en este HTML.
 
 // NOTA: guardarNombreCuenta ya no se redefine aquí tampoco. La única
 // definición vigente vive en js/app.js y ahora lee el input del modal
@@ -2951,18 +2917,10 @@ document.addEventListener('click', function(e) {
         window.cerrarModalNombreCuenta();
     };
 
-    // Sincronizar el display cuando cambia de cuenta
-    var _origRenderTabs = window.renderCuentasTabs;
-    window.renderCuentasTabs = function() {
-        if (_origRenderTabs) _origRenderTabs();
-        var CS = window._cuentasSys;
-        var c = CS ? CS.cuentas.find(function(x){ return x.id === CS.activa; }) : null;
-        var display = document.getElementById('nombre-cuenta-display');
-        if (display && c) {
-            var esDefault = c.nombre === ('Cuenta ' + c.id);
-            display.textContent = esDefault ? 'Asignar mesa / nombre' : c.nombre;
-        }
-    };
+    // NOTA: el placeholder "Asignar mesa / nombre" ya vive dentro de
+    // renderCuentasTabs en js/app.js — este hook aparte nunca sobrevivía
+    // a la carga del módulo (app.js siempre reasignaba la función después),
+    // así que nunca se ejecutaba de verdad. Se elimina.
 })();
 </script>
 
