@@ -106,49 +106,38 @@
             </a>
         </div>
 
-        <div class="divisor"><span>o</span></div>
-
-        <a href="../ordenar.html" style="display:block;text-align:center;color:#888;font-size:.85rem;text-decoration:none;padding:.5rem;">
-            Ordenar sin registrarme →
-        </a>
-
+        <div class="divisor"><span>Necesitas una cuenta para ordenar</span></div>
     </div>
 </div>
 
+<script src="../js/perfil-barra.js?v=1784605504"></script>
 <script>
 // Detectar sesion activa y mostrar bienvenida
 (function() {
-    var VEINTE_MIN = 20 * 60 * 1000;
-
-    var cliNombre = sessionStorage.getItem('tt_cliente_nombre');
-    var cliTs = parseInt(sessionStorage.getItem('tt_cliente_ts') || '0');
-    var cajNombre = sessionStorage.getItem('tt_cajero_nombre');
-    var cajRol = sessionStorage.getItem('tt_cajero_rol');
-    var cajTs = parseInt(sessionStorage.getItem('tt_cajero_ts') || '0');
+    var sesion = window.TT_getSesion ? window.TT_getSesion() : null;
 
     var wb = document.getElementById('welcome-back');
     var wbNom = document.getElementById('wb-nombre');
     var wbSub = document.getElementById('wb-sub');
     var intro = document.getElementById('intro-text');
 
-    if (cajNombre && (Date.now() - cajTs < VEINTE_MIN)) {
-        // Cajero con sesion
-        wbNom.textContent = 'Hola, ' + cajNombre.split(' ')[0] + '!';
-        wbSub.textContent = 'Sesión de ' + (cajRol || 'cajero') + ' activa';
-        wb.style.display = 'block';
-        if (intro) intro.textContent = 'O entra con otra cuenta:';
-    } else if (cliNombre && (Date.now() - cliTs < VEINTE_MIN)) {
-        // Cliente con sesion
-        wbNom.textContent = 'Hola, ' + cliNombre.split(' ')[0] + '!';
+    if (!sesion) return;
+
+    if (sesion.tipo === 'empleado') {
+        wbNom.textContent = 'Hola, ' + sesion.nombre.split(' ')[0] + '!';
+        wbSub.textContent = 'Sesión de ' + (sesion.rol || 'empleado') + ' activa';
+    } else {
+        wbNom.textContent = 'Hola, ' + sesion.nombre.split(' ')[0] + '!';
         wbSub.textContent = 'Listo para hacer tu pedido';
-        wb.style.display = 'block';
-        if (intro) intro.textContent = 'O entra con otra cuenta:';
     }
+    wb.style.display = 'block';
+    if (intro) intro.textContent = 'O entra con otra cuenta:';
 })();
 
 window.cerrarSesion = function() {
-    ['tt_cliente_nombre','tt_cliente_telefono','tt_cliente_ts',
-     'tt_cajero_id','tt_cajero_nombre','tt_cajero_rol','tt_cajero_ts'].forEach(function(k){
+    ['tt_cliente_nombre','tt_cliente_telefono','tt_cliente_ts','tt_cliente_uid',
+     'tt_cajero_id','tt_cajero_nombre','tt_cajero_rol','tt_cajero_ts',
+     'tt_emp_id','tt_emp_pin','tt_emp_ts','tt_emp_docid','tt_emp_nombre','tt_emp_rol'].forEach(function(k){
         sessionStorage.removeItem(k);
     });
     location.reload();
