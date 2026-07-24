@@ -20,11 +20,23 @@ service cloud.firestore {
     // ── PEDIDOS ──
     // Crear: cualquiera puede enviar una orden
     // Leer/actualizar: cocina y admin necesitan acceso
-    // Borrar: nunca desde el cliente (los pedidos son registro historico)
+    // Borrar: solo si ya esta archivado Y hay sesion real autenticada
+    // (gerente/supervisor) — nunca se puede borrar un pedido activo.
     match /pedidos/{pedidoId} {
       allow read:   if true;
       allow create: if true;
       allow update: if true;
+      allow delete: if request.auth != null && resource.data.archivado == true;
+    }
+
+    // ── VENTAS (registro contable permanente) ──
+    // Se crea al "Cerrar Sistema" desde el panel admin: copia cada pedido
+    // archivado con su estado de pago antes de borrarlo de /pedidos.
+    // Nunca se borra ni se edita desde la app — es el historial contable.
+    match /ventas/{ventaId} {
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if false;
       allow delete: if false;
     }
 
