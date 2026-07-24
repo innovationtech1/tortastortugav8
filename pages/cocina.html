@@ -656,6 +656,18 @@ function iniciarKDS(){
 // Iniciar el KDS (conectar a Firebase)
 iniciarKDS();
 
+// ── Reconexión de seguridad ─────────────────────────────────────
+// Un listener en tiempo real puede caerse en silencio si la pantalla
+// se queda abierta muchas horas o hay un corte breve de red — sin
+// esto, la única forma de verlo era refrescando la página a mano.
+// Se reconecta solo cada 2 minutos, y también al volver a la pestaña
+// o recuperar internet.
+setInterval(iniciarKDS, 2 * 60 * 1000);
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') iniciarKDS();
+});
+window.addEventListener('online', iniciarKDS);
+
 // Actualizar timers cada 15s
 setInterval(renderGrid, 15000);
 
