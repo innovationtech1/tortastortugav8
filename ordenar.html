@@ -161,6 +161,9 @@ window._pendingItem = window._pendingItem || null;
                     btn.style.display = 'none';
                 }
             });
+            // Mostrar el acceso a "Mi Pedido" — cada cliente ve solo el suyo
+            var btnMiPedido = document.getElementById('btn-mi-pedido');
+            if (btnMiPedido) btnMiPedido.style.display = 'inline-flex';
         }
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', ocultarHerramientasStaff);
@@ -1307,6 +1310,7 @@ function cerrarOrdenModal() {
         <button class="signout-btn" onclick="window.location.href='index.html'" title="Ir al inicio"> Inicio</button>
         <button class="signout-btn" onclick="window.open('pages/cocina.html','_blank')" title="Cocina KDS" style="background:rgba(251,191,36,.15);border-color:rgba(251,191,36,.3);color:#FBB724;">🧑‍🍳 Cocina</button>
         <button class="signout-btn" onclick="window.location.href='perfil.html'" title="Mi perfil y puntos" style="background:rgba(255,215,0,.15);border-color:rgba(255,215,0,.3);color:#FFD700;" id="btn-perfil">⭐ Mis Puntos</button>
+        <button class="signout-btn" onclick="window.open('pages/mi-pedido.html','_blank')" title="Ver mis pedidos" style="display:none;background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.3);color:#3B82F6;" id="btn-mi-pedido">📦 Mi Pedido</button>
         <button class="signout-btn" onclick="window.location.href='pages/admin.html'" title="Panel de Administrador"> Admin</button>
         <button id="btn-cajero-header" onclick="mostrarPanelCajero()"
             style="display:none;background:rgba(255,90,0,.15);border-color:rgba(255,90,0,.4);
