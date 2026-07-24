@@ -1178,11 +1178,27 @@ function cerrarOrdenModal() {
             // El menú es público — no redirigir si no hay sesión
             window._firebaseUser = user || null;
             if (!user) {
-                // Sin sesión: mostrar botón de login en header, ocultar puntos
                 const btnPerfil = document.getElementById('btn-perfil');
                 if (btnPerfil) {
-                    btnPerfil.textContent = '🔑 Iniciar sesión';
-                    btnPerfil.onclick = () => window.location.href = 'pages/auth.html';
+                    // Solo mostrar "Iniciar sesión" si TAMPOCO hay sesión por
+                    // teléfono (cliente) ni por PIN (empleado/cajero) — antes
+                    // esto solo miraba Firebase Auth y por eso seguía
+                    // apareciendo "Iniciar sesión" aunque ya estuvieras
+                    // logueado como cliente o empleado.
+                    const VEINTE_MIN = 20 * 60 * 1000;
+                    const cliTs = parseInt(sessionStorage.getItem('tt_cliente_ts') || '0');
+                    const cajTs = parseInt(sessionStorage.getItem('tt_cajero_ts') || '0');
+                    const empTs = parseInt(sessionStorage.getItem('tt_emp_ts') || '0');
+                    const hayCliente = sessionStorage.getItem('tt_cliente_nombre') && (Date.now() - cliTs < VEINTE_MIN);
+                    const hayStaff = (sessionStorage.getItem('tt_cajero_nombre') && (Date.now() - cajTs < VEINTE_MIN)) ||
+                                     (sessionStorage.getItem('tt_emp_id') && (Date.now() - empTs < VEINTE_MIN));
+
+                    if (hayCliente || hayStaff) {
+                        btnPerfil.style.display = 'none';
+                    } else {
+                        btnPerfil.textContent = '🔑 Iniciar sesión';
+                        btnPerfil.onclick = () => window.location.href = 'pages/bienvenida.html';
+                    }
                 }
                 return; // Permitir usar el menú sin login
             }
