@@ -741,189 +741,82 @@ async function checaRapido(){
     if(btn){ btn.disabled=true; btn.querySelector('.lbl').textContent='Verificando…'; }
     showMsg('in','⏳ Verificando…');
 
-    var API_KEY = 'AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k';
-    var PROJECT = 'tortas-tortuga';
-    var emailInterno = empId.toLowerCase() + '@tortuga.local';
-    var pwAuto = empId + pin;
-
     try{
-        // 1. Login con Firebase Auth REST API
-        var authRes = await fetch(
-            'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + API_KEY,
-            { method:'POST', headers:{'Content-Type':'application/json'},
-              body: JSON.stringify({ email: emailInterno, password: pwAuto, returnSecureToken: true }) }
-        );
-        var authData = await authRes.json();
-
-        if(authData.error){
-            // Fallback: buscar en Firestore directamente por empleadoId + pin
-            var snapQ = await getDocs(query(
-                collection(db, 'empleados'),
-                where('empleadoId','==', empId),
-                where('pin','==', pin)
-            ));
-            if(snapQ.empty){
-                var m = { 'INVALID_LOGIN_CREDENTIALS':'Número o PIN incorrecto.',
-                          'TOO_MANY_ATTEMPTS_TRY_LATER':'Demasiados intentos. Espera unos minutos.' };
-                showMsg('er','❌ ' + (m[authData.error.message] || 'Número o PIN incorrecto.'));
-                return;
-            }
-            // Empleado encontrado en Firestore — checar sin Firebase Auth
-            var empDocFS  = snapQ.docs[0];
-            var empDataFS = empDocFS.data();
-            var uidFS     = empDocFS.id;
-            var nombreFS  = empDataFS.nombre || empId;
-            var ahoraFS   = new Date();
-            var hoyISOFS  = hoyISO;
-            var fHoraFS   = function(d){ return d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:true}); };
-            var mToHFS    = function(m){ return Math.floor(m/60)+'h '+Math.round(m%60)+'m'; };
-
-            // Buscar turno activo de hoy
-            var qFS = query(collection(db,'turnos'),
-                where('uid','==', uidFS),
-                where('fechaISO','==', hoyISOFS));
-            var snapT = await getDocs(qFS);
-            var turnoActivoFS = null;
-            snapT.forEach(function(d){
-                var t = d.data();
-                if(t.estado==='activo'||t.estado==='descanso') turnoActivoFS = {id:d.id, ...t};
-            });
-
-            if(!turnoActivoFS){
-                // ENTRADA
-                await addDoc(collection(db,'turnos'),{
-                    uid:uidFS, empleadoId:empId,
-                    nombre:nombreFS, apellido:empDataFS.apellido||'',
-                    entrada:Timestamp.fromDate(ahoraFS), salida:null,
-                    inicioDescanso:null, finDescanso:null,
-                    minDescanso:0, minTrabajados:null, horas:null,
-                    estado:'activo', editado:false, nota:'',
-                    fechaISO:hoyISOFS, creado:serverTimestamp()
-                });
-                document.getElementById('ck-estado-info').style.display='block';
-                document.getElementById('ck-estado-txt').innerHTML =
-                    '<span style="color:#25D366">✅ Entrada registrada</span><br>' +
-                    '<span style="font-size:.85rem;color:#888">'+nombreFS+' — '+fHoraFS(ahoraFS)+'</span>';
-                showMsg('ok','✅ ¡Buen día, '+nombreFS+'! Entrada: '+fHoraFS(ahoraFS));
-            } else {
-                // SALIDA
-                var entradaFS = turnoActivoFS.entrada?.toDate?.() || (turnoActivoFS.entrada?.seconds ? new Date(turnoActivoFS.entrada.seconds*1000) : ahoraFS);
-                var descFS    = turnoActivoFS.minDescanso || 0;
-                var brutoFS   = Math.round((ahoraFS - entradaFS)/60000);
-                var netoFS    = Math.max(0, Math.min(brutoFS, 960) - descFS);
-                await updateDoc(doc(db,'turnos',turnoActivoFS.id),{
-                    salida:Timestamp.fromDate(ahoraFS),
-                    estado:'completo',
-                    minTrabajados:netoFS,
-                    horas:parseFloat((netoFS/60).toFixed(2))
-                });
-                document.getElementById('ck-estado-info').style.display='block';
-                document.getElementById('ck-estado-txt').innerHTML =
-                    '<span style="color:#FF4444">⏹ Salida registrada</span><br>' +
-                    '<span style="font-size:.85rem;color:#888">'+nombreFS+' — '+fHoraFS(ahoraFS)+' · '+mToHFS(netoFS)+' trabajadas</span>';
-                showMsg('ok','✅ ¡Hasta luego, '+nombreFS+'! Trabajaste '+mToHFS(netoFS)+' hoy.');
-            }
+        // Verificar directo contra Firestore (empleadoId + pin) — el mismo
+        // método confiable que ya usa el login normal. Antes esto primero
+        // intentaba autenticar con Firebase Auth vía REST, y si esa cuenta
+        // recibía demasiados intentos fallidos (por pruebas repetidas),
+        // Firebase bloqueaba temporalmente ESE intento y mostraba
+        // "Demasiados intentos" aunque el PIN fuera correcto.
+        var snapQ = await getDocs(query(
+            collection(db, 'empleados'),
+            where('empleadoId','==', empId),
+            where('pin','==', pin)
+        ));
+        if(snapQ.empty){
+            showMsg('er','❌ Número o PIN incorrecto.');
             return;
         }
-        var uid   = authData.localId;
-        var token = authData.idToken;
-        var _hd = new Date(); var hoyISO = _hd.getFullYear()+'-'+String(_hd.getMonth()+1).padStart(2,'0')+'-'+String(_hd.getDate()).padStart(2,'0');
-        var ahora  = new Date();
 
-        // 2. Buscar empleado en Firestore
-        var empRes = await fetch(
-            'https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents/empleados/'+uid,
-            { headers:{ 'Authorization':'Bearer '+token } }
-        );
-        var empData = await empRes.json();
-        if(!empData.fields){ showMsg('er','❌ Perfil de empleado no encontrado.'); return; }
-        var nombre = empData.fields.nombre?.stringValue || empId;
+        var empDoc  = snapQ.docs[0];
+        var empData = empDoc.data();
+        if (empData.estado === 'inactivo') {
+            showMsg('er','❌ Cuenta desactivada. Contacta a tu supervisor.');
+            return;
+        }
 
-        // 3. Buscar turno activo de hoy
-        var turnosRes = await fetch(
-            'https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents:runQuery',
-            { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-              body: JSON.stringify({ structuredQuery:{
-                from:[{collectionId:'turnos'}],
-                where:{ compositeFilter:{ op:'AND', filters:[
-                    {fieldFilter:{field:{fieldPath:'uid'},op:'EQUAL',value:{stringValue:uid}}},
-                    {fieldFilter:{field:{fieldPath:'fechaISO'},op:'EQUAL',value:{stringValue:hoyISO}}},
-                    {fieldFilter:{field:{fieldPath:'estado'},op:'IN',value:{arrayValue:{values:[
-                        {stringValue:'activo'},{stringValue:'descanso'}
-                    ]}}}}
-                ]}},
-                limit: 1
-              }})
-            }
-        );
-        var turnosData = await turnosRes.json();
-        var turnoDoc = turnosData[0]?.document;
+        var uid     = empDoc.id;
+        var nombre  = empData.nombre || empId;
+        var ahora   = new Date();
+        var hoyISO  = ahora.getFullYear()+'-'+String(ahora.getMonth()+1).padStart(2,'0')+'-'+String(ahora.getDate()).padStart(2,'0');
+        var fHora   = function(d){ return d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:true}); };
+        var mToH    = function(m){ return Math.floor(m/60)+'h '+Math.round(m%60)+'m'; };
 
-        var fHora = function(d){ return d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:true}); };
-        var mToH  = function(m){ return Math.floor(m/60)+'h '+Math.round(m%60)+'m'; };
+        // Buscar turno activo de hoy
+        var qT = query(collection(db,'turnos'),
+            where('uid','==', uid),
+            where('fechaISO','==', hoyISO));
+        var snapT = await getDocs(qT);
+        var turnoActivo = null;
+        snapT.forEach(function(d){
+            var t = d.data();
+            if(t.estado==='activo'||t.estado==='descanso') turnoActivo = {id:d.id, ...t};
+        });
 
-        if(!turnoDoc){
-            // SIN turno → CHECAR ENTRADA
-            var entradaISO = ahora.toISOString();
-            await fetch(
-                'https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents/turnos',
-                { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-                  body: JSON.stringify({ fields:{
-                    uid:{stringValue:uid},
-                    empleadoId:{stringValue:empId},
-                    nombre:{stringValue:nombre},
-                    apellido:{stringValue:empData.fields.apellido?.stringValue||''},
-                    entrada:{timestampValue:entradaISO},
-                    estado:{stringValue:'activo'},
-                    fechaISO:{stringValue:hoyISO},
-                    minDescanso:{integerValue:0},
-                    editado:{booleanValue:false},
-                    nota:{stringValue:''}
-                  }})
-                }
-            );
+        if(!turnoActivo){
+            // ENTRADA
+            await addDoc(collection(db,'turnos'),{
+                uid:uid, empleadoId:empId,
+                nombre:nombre, apellido:empData.apellido||'',
+                entrada:Timestamp.fromDate(ahora), salida:null,
+                inicioDescanso:null, finDescanso:null,
+                minDescanso:0, minTrabajados:null, horas:null,
+                estado:'activo', editado:false, nota:'',
+                fechaISO:hoyISO, creado:serverTimestamp()
+            });
             document.getElementById('ck-estado-info').style.display='block';
             document.getElementById('ck-estado-txt').innerHTML =
                 '<span style="color:#25D366">✅ Entrada registrada</span><br>' +
                 '<span style="font-size:.85rem;color:#888">'+nombre+' — '+fHora(ahora)+'</span>';
             showMsg('ok','✅ ¡Buen día, '+nombre+'! Entrada: '+fHora(ahora));
-            // Sin auto-cierre
-
         } else {
-            // CON turno → CHECAR SALIDA
-            var turnoId = turnoDoc.name.split('/').pop();
-            var entradaStr = turnoDoc.fields.entrada?.timestampValue;
-            var entrada = entradaStr ? new Date(entradaStr) : ahora;
-            var totalDesc = parseInt(turnoDoc.fields.minDescanso?.integerValue||0);
-            var neto = Math.max(0, Math.round((ahora - entrada)/60000) - totalDesc);
-
-            await fetch(
-                'https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents/turnos/'+turnoId+'?updateMask.fieldPaths=salida&updateMask.fieldPaths=estado&updateMask.fieldPaths=minTrabajados&updateMask.fieldPaths=horas',
-                { method:'PATCH', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-                  body: JSON.stringify({ fields:{
-                    ...turnoDoc.fields,
-                    salida:{timestampValue:ahora.toISOString()},
-                    estado:{stringValue:'completo'},
-                    minTrabajados:{integerValue:neto},
-                    horas:{doubleValue:parseFloat((neto/60).toFixed(2))}
-                  }})
-                }
-            );
+            // SALIDA
+            var entrada = turnoActivo.entrada?.toDate?.() || (turnoActivo.entrada?.seconds ? new Date(turnoActivo.entrada.seconds*1000) : ahora);
+            var desc    = turnoActivo.minDescanso || 0;
+            var bruto   = Math.round((ahora - entrada)/60000);
+            var neto    = Math.max(0, Math.min(bruto, 960) - desc);
+            await updateDoc(doc(db,'turnos',turnoActivo.id),{
+                salida:Timestamp.fromDate(ahora),
+                estado:'completo',
+                minTrabajados:neto,
+                horas:parseFloat((neto/60).toFixed(2))
+            });
             document.getElementById('ck-estado-info').style.display='block';
             document.getElementById('ck-estado-txt').innerHTML =
                 '<span style="color:#FF4444">⏹ Salida registrada</span><br>' +
                 '<span style="font-size:.85rem;color:#888">'+nombre+' — '+fHora(ahora)+' · '+mToH(neto)+' trabajadas</span>';
             showMsg('ok','✅ ¡Hasta luego, '+nombre+'! Trabajaste '+mToH(neto)+' hoy.');
-            // Sin auto-cierre — el empleado cierra manualmente
         }
-
-        // 4. Cerrar sesión REST
-        await fetch(
-            'https://securetoken.googleapis.com/v1/token?key='+API_KEY,
-            { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
-              body:'grant_type=refresh_token&refresh_token='+authData.refreshToken }
-        );
-
     } catch(e){
         showMsg('er','❌ Error de conexión: '+e.message);
     } finally {
