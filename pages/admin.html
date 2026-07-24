@@ -263,6 +263,22 @@ window.normalizarRutaImagen = function(src) {
         <button class="filter-btn" data-filter="archivados" style="border-color:rgba(167,139,250,.3);color:#A78BFA;">🗂️ Archivados</button>
     </div>
 
+    <!-- ACCIONES SOBRE ARCHIVADOS — solo visibles en esa pestaña -->
+    <div id="acciones-archivados" style="display:none;padding:0 0.85rem 1rem;gap:.6rem;flex-wrap:wrap;">
+        <button id="btn-cerrar-sistema" onclick="cerrarSistemaVentas()"
+            style="flex:1;min-width:220px;padding:.75rem 1rem;background:rgba(37,211,102,.12);
+                   border:1px solid rgba(37,211,102,.4);color:#25D366;border-radius:10px;
+                   font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
+            💾 Cerrar Sistema (guardar en Ventas)
+        </button>
+        <button id="btn-eliminar-archivados" onclick="eliminarArchivadasPermanente()"
+            style="flex:1;min-width:220px;padding:.75rem 1rem;background:rgba(244,67,54,.12);
+                   border:1px solid rgba(244,67,54,.4);color:#F44336;border-radius:10px;
+                   font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
+            🗑️ Eliminar Archivadas Permanentemente
+        </button>
+    </div>
+
     <!-- BUSCADOR INTELIGENTE POS -->
     <div class="search-container" style="padding: 0 0.85rem; margin-bottom: 1rem; position: relative;">
         <div style="position: relative; display: flex; align-items: center;">
@@ -549,6 +565,8 @@ window.normalizarRutaImagen = function(src) {
         let filtrados = filtroActual === 'archivados' ? pedidosDB.filter(p => p.archivado)
                       : filtroActual === 'todos' ? activos
                       : activos.filter(p => p.estado?.includes(filtroActual));
+        const accionesArchivados = document.getElementById('acciones-archivados');
+        if (accionesArchivados) accionesArchivados.style.display = (filtroActual === 'archivados') ? 'flex' : 'none';
         if (searchText) {
             filtrados = filtrados.filter(p => {
                 const ticket = p.id.slice(-4).toLowerCase();
@@ -708,6 +726,74 @@ window.normalizarRutaImagen = function(src) {
             });
         });
     }
+
+    // ── CERRAR SISTEMA: guarda todas las archivadas en /ventas (con
+    //    estado de pago incluido) para llevar el control contable, y
+    //    despues las borra de /pedidos para dejar limpio el operativo. ──
+    window.cerrarSistemaVentas = async function() {
+        const archivadas = pedidosDB.filter(p => p.archivado);
+        if (!archivadas.length) { alert('No hay órdenes archivadas para guardar.'); return; }
+        if (!confirm(`Esto va a guardar ${archivadas.length} orden(es) archivada(s) en el registro de Ventas (con su estado de pago), y luego las va a quitar de la lista operativa. ¿Continuar?`)) return;
+
+        const btn = document.getElementById('btn-cerrar-sistema');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Guardando en Ventas...'; }
+
+        let guardadas = 0, errores = 0;
+        for (const p of archivadas) {
+            try {
+                await addDoc(collection(db, 'ventas'), {
+                    pedidoOriginalId: p.id,
+                    ticketId: p.id.slice(-4).toUpperCase(),
+                    cliente: p.cliente || p.nombre || '—',
+                    telefono: p.telefono || '',
+                    items: p.items || '',
+                    total: p.total || '',
+                    tipo: p.tipo || 'pickup',
+                    estado: p.estado || '',
+                    estadoPago: p.estadoPago || 'Pendiente',
+                    metodoPagoReal: p.metodoPagoReal || p.metodoPago || '',
+                    cajeroNombre: p.cajeroNombre || '',
+                    cobradoPor: p.cobradoPor || '',
+                    fechaOriginal: p.creado || null,
+                    cerradoEn: new Date().toISOString(),
+                });
+                await deleteDoc(doc(db, 'pedidos', p.id));
+                guardadas++;
+            } catch(err) {
+                console.error('Error guardando en ventas:', p.id, err);
+                errores++;
+            }
+        }
+
+        if (btn) { btn.disabled = false; btn.textContent = '💾 Cerrar Sistema (guardar en Ventas)'; }
+        alert(`✅ ${guardadas} orden(es) guardada(s) en Ventas.` + (errores ? `\n⚠️ ${errores} tuvieron error (revisa la consola).` : ''));
+    };
+
+    // ── ELIMINAR ARCHIVADAS PERMANENTEMENTE — borra de verdad, sin pasar
+    //    por Ventas. Requiere confirmar dos veces por ser irreversible. ──
+    window.eliminarArchivadasPermanente = async function() {
+        const archivadas = pedidosDB.filter(p => p.archivado);
+        if (!archivadas.length) { alert('No hay órdenes archivadas para eliminar.'); return; }
+        if (!confirm(`⚠️ Esto va a BORRAR PARA SIEMPRE ${archivadas.length} orden(es) archivada(s). No se pueden recuperar después y NO se guardan en Ventas. ¿Seguro que quieres continuar?`)) return;
+        if (!confirm('Última confirmación: esta acción es irreversible. ¿Eliminar de verdad?')) return;
+
+        const btn = document.getElementById('btn-eliminar-archivados');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Eliminando...'; }
+
+        let eliminadas = 0, errores = 0;
+        for (const p of archivadas) {
+            try {
+                await deleteDoc(doc(db, 'pedidos', p.id));
+                eliminadas++;
+            } catch(err) {
+                console.error('Error eliminando:', p.id, err);
+                errores++;
+            }
+        }
+
+        if (btn) { btn.disabled = false; btn.textContent = '🗑️ Eliminar Archivadas Permanentemente'; }
+        alert(`🗑️ ${eliminadas} orden(es) eliminada(s) para siempre.` + (errores ? `\n⚠️ ${errores} tuvieron error (revisa la consola). Puede ser que las reglas de Firestore no estén publicadas todavía.` : ''));
+    };
 
     let currentOrderId = null;
     window.abrirCaja = (id, ticket, total) => { currentOrderId = id; document.getElementById('caja-ticket-id').textContent = '#' + ticket; document.getElementById('caja-total-monto').textContent = total; document.getElementById('caja-modal').classList.add('active'); };
