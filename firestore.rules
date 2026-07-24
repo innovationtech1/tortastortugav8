@@ -34,10 +34,6 @@ service cloud.firestore {
     // ── VENTAS (registro contable permanente) ──
     // Se crea al "Cerrar Sistema" desde el panel admin: copia cada pedido
     // archivado con su estado de pago antes de borrarlo de /pedidos.
-    // Nunca se borra ni se edita desde la app — es el historial contable.
-    // ── VENTAS (registro contable permanente) ──
-    // Se crea al "Cerrar Sistema" desde el panel admin: copia cada pedido
-    // archivado con su estado de pago antes de borrarlo de /pedidos.
     // Publico (igual que pedidos) porque el modo PIN no genera sesion de
     // Firebase Auth. Nunca se borra ni se edita desde la app.
     match /ventas/{ventaId} {
