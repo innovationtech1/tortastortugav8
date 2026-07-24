@@ -722,111 +722,10 @@ function abrirChecarRapido(){
     }
 }
 function cOv(id){ var e=document.getElementById(id); if(e) e.classList.remove('open'); }
-async function checaRapido(){
-    var empId = (document.getElementById('ck-emp-id').value||'').trim().toUpperCase();
-    var pin   = (document.getElementById('ck-pin').value||'').replace(/\D/g,'');
-    var msgEl = document.getElementById('msg-checar');
-    var btn   = document.getElementById('btn-checa-rapido');
-
-    function showMsg(tipo, txt){
-        if(!msgEl) return;
-        var cls = {ok:'msg on m-ok', er:'msg on m-er', in:'msg on m-in', wa:'msg on m-wa'};
-        msgEl.className = cls[tipo]||cls.in;
-        msgEl.innerHTML = txt;
-    }
-
-    if(!empId.startsWith('EMP-')){ showMsg('er','Ingresa tu número: EMP-001 o EMP-GERENTE'); return; }
-    if(pin.length!==4){ showMsg('er','Ingresa tu PIN de 4 dígitos'); return; }
-
-    if(btn){ btn.disabled=true; btn.querySelector('.lbl').textContent='Verificando…'; }
-    showMsg('in','⏳ Verificando…');
-
-    try{
-        // Verificar directo contra Firestore (empleadoId + pin) — el mismo
-        // método confiable que ya usa el login normal. Antes esto primero
-        // intentaba autenticar con Firebase Auth vía REST, y si esa cuenta
-        // recibía demasiados intentos fallidos (por pruebas repetidas),
-        // Firebase bloqueaba temporalmente ESE intento y mostraba
-        // "Demasiados intentos" aunque el PIN fuera correcto.
-        var snapQ = await getDocs(query(
-            collection(db, 'empleados'),
-            where('empleadoId','==', empId),
-            where('pin','==', pin)
-        ));
-        if(snapQ.empty){
-            showMsg('er','❌ Número o PIN incorrecto.');
-            return;
-        }
-
-        var empDoc  = snapQ.docs[0];
-        var empData = empDoc.data();
-        if (empData.estado === 'inactivo') {
-            showMsg('er','❌ Cuenta desactivada. Contacta a tu supervisor.');
-            return;
-        }
-
-        var uid     = empDoc.id;
-        var nombre  = empData.nombre || empId;
-        var ahora   = new Date();
-        var hoyISO  = ahora.getFullYear()+'-'+String(ahora.getMonth()+1).padStart(2,'0')+'-'+String(ahora.getDate()).padStart(2,'0');
-        var fHora   = function(d){ return d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:true}); };
-        var mToH    = function(m){ return Math.floor(m/60)+'h '+Math.round(m%60)+'m'; };
-
-        // Buscar turno activo de hoy
-        var qT = query(collection(db,'turnos'),
-            where('uid','==', uid),
-            where('fechaISO','==', hoyISO));
-        var snapT = await getDocs(qT);
-        var turnoActivo = null;
-        snapT.forEach(function(d){
-            var t = d.data();
-            if(t.estado==='activo'||t.estado==='descanso') turnoActivo = {id:d.id, ...t};
-        });
-
-        if(!turnoActivo){
-            // ENTRADA
-            await addDoc(collection(db,'turnos'),{
-                uid:uid, empleadoId:empId,
-                nombre:nombre, apellido:empData.apellido||'',
-                entrada:Timestamp.fromDate(ahora), salida:null,
-                inicioDescanso:null, finDescanso:null,
-                minDescanso:0, minTrabajados:null, horas:null,
-                estado:'activo', editado:false, nota:'',
-                fechaISO:hoyISO, creado:serverTimestamp()
-            });
-            document.getElementById('ck-estado-info').style.display='block';
-            document.getElementById('ck-estado-txt').innerHTML =
-                '<span style="color:#25D366">✅ Entrada registrada</span><br>' +
-                '<span style="font-size:.85rem;color:#888">'+nombre+' — '+fHora(ahora)+'</span>';
-            showMsg('ok','✅ ¡Buen día, '+nombre+'! Entrada: '+fHora(ahora));
-        } else {
-            // SALIDA
-            var entrada = turnoActivo.entrada?.toDate?.() || (turnoActivo.entrada?.seconds ? new Date(turnoActivo.entrada.seconds*1000) : ahora);
-            var desc    = turnoActivo.minDescanso || 0;
-            if (turnoActivo.estado === 'descanso' && turnoActivo.inicioDescanso) {
-                var iniDesc = turnoActivo.inicioDescanso?.toDate?.() || (turnoActivo.inicioDescanso?.seconds ? new Date(turnoActivo.inicioDescanso.seconds*1000) : ahora);
-                desc += Math.round((ahora - iniDesc)/60000);
-            }
-            var bruto   = Math.round((ahora - entrada)/60000);
-            var neto    = Math.max(0, Math.min(bruto, 960) - desc);
-            await updateDoc(doc(db,'turnos',turnoActivo.id),{
-                salida:Timestamp.fromDate(ahora),
-                estado:'completo',
-                minTrabajados:neto,
-                horas:parseFloat((neto/60).toFixed(2))
-            });
-            document.getElementById('ck-estado-info').style.display='block';
-            document.getElementById('ck-estado-txt').innerHTML =
-                '<span style="color:#FF4444">⏹ Salida registrada</span><br>' +
-                '<span style="font-size:.85rem;color:#888">'+nombre+' — '+fHora(ahora)+' · '+mToH(neto)+' trabajadas</span>';
-            showMsg('ok','✅ ¡Hasta luego, '+nombre+'! Trabajaste '+mToH(neto)+' hoy.');
-        }
-    } catch(e){
-        showMsg('er','❌ Error de conexión: '+e.message);
-    } finally {
-        if(btn){ btn.disabled=false; btn.querySelector('.lbl').textContent='Verificar y checar'; }
-    }
-}
+// NOTA: checaRapido() se movió al <script type="module"> de abajo,
+// porque necesita getDocs/query/etc. de Firestore, que solo existen
+// dentro del módulo. Definirla aquí (en un script clásico) causaba
+// "getDocs is not defined" al hacer clic en el botón.
 /* ─── FUNCIONES REST API (independientes del módulo) ─────────── */
 var _restToken = null;
 
@@ -2322,8 +2221,113 @@ window.abrirChecarRapido = function(){  // sobreescribe el proxy
 // se cargaba después y sobrescribía silenciosamente la versión de arriba
 // ya arreglada — esa copia intentaba Firebase Auth primero SIN respaldo
 // de Firestore, y por eso "Demasiados intentos" seguía apareciendo pase
-// lo que pase. Se eliminó por completo; checaRapido() (arriba) es ahora
-// la única definición.
+// lo que pase. Se eliminó por completo.
+//
+// checaRapido() vive AQUÍ (dentro del módulo) y no en el <script> clásico
+// de arriba, porque necesita getDocs/query/collection/etc. de Firestore,
+// que solo existen dentro de este <script type="module">. Definirla en
+// el script clásico causaba "getDocs is not defined" al hacer clic.
+window.checaRapido = async function(){
+    var empId = (document.getElementById('ck-emp-id').value||'').trim().toUpperCase();
+    var pin   = (document.getElementById('ck-pin').value||'').replace(/\D/g,'');
+    var msgEl = document.getElementById('msg-checar');
+    var btn   = document.getElementById('btn-checa-rapido');
+
+    function showMsg(tipo, txt){
+        if(!msgEl) return;
+        var cls = {ok:'msg on m-ok', er:'msg on m-er', in:'msg on m-in', wa:'msg on m-wa'};
+        msgEl.className = cls[tipo]||cls.in;
+        msgEl.innerHTML = txt;
+    }
+
+    if(!empId.startsWith('EMP-')){ showMsg('er','Ingresa tu número: EMP-001 o EMP-GERENTE'); return; }
+    if(pin.length!==4){ showMsg('er','Ingresa tu PIN de 4 dígitos'); return; }
+
+    if(btn){ btn.disabled=true; btn.querySelector('.lbl').textContent='Verificando…'; }
+    showMsg('in','⏳ Verificando…');
+
+    try{
+        // Verificar directo contra Firestore (empleadoId + pin) — el mismo
+        // método confiable que ya usa el login normal.
+        var snapQ = await getDocs(query(
+            collection(db, 'empleados'),
+            where('empleadoId','==', empId),
+            where('pin','==', pin)
+        ));
+        if(snapQ.empty){
+            showMsg('er','❌ Número o PIN incorrecto.');
+            return;
+        }
+
+        var empDoc  = snapQ.docs[0];
+        var empDataCk = empDoc.data();
+        if (empDataCk.estado === 'inactivo') {
+            showMsg('er','❌ Cuenta desactivada. Contacta a tu supervisor.');
+            return;
+        }
+
+        var uid     = empDoc.id;
+        var nombre  = empDataCk.nombre || empId;
+        var ahora   = new Date();
+        var hoyISO  = ahora.getFullYear()+'-'+String(ahora.getMonth()+1).padStart(2,'0')+'-'+String(ahora.getDate()).padStart(2,'0');
+        var fHoraCk = function(d){ return d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:true}); };
+        var mToHCk  = function(m){ return Math.floor(m/60)+'h '+Math.round(m%60)+'m'; };
+
+        // Buscar turno activo de hoy
+        var qT = query(collection(db,'turnos'),
+            where('uid','==', uid),
+            where('fechaISO','==', hoyISO));
+        var snapT = await getDocs(qT);
+        var turnoActivo = null;
+        snapT.forEach(function(d){
+            var t = d.data();
+            if(t.estado==='activo'||t.estado==='descanso') turnoActivo = {id:d.id, ...t};
+        });
+
+        if(!turnoActivo){
+            // ENTRADA
+            await addDoc(collection(db,'turnos'),{
+                uid:uid, empleadoId:empId,
+                nombre:nombre, apellido:empDataCk.apellido||'',
+                entrada:Timestamp.fromDate(ahora), salida:null,
+                inicioDescanso:null, finDescanso:null,
+                minDescanso:0, minTrabajados:null, horas:null,
+                estado:'activo', editado:false, nota:'',
+                fechaISO:hoyISO, creado:serverTimestamp()
+            });
+            document.getElementById('ck-estado-info').style.display='block';
+            document.getElementById('ck-estado-txt').innerHTML =
+                '<span style="color:#25D366">✅ Entrada registrada</span><br>' +
+                '<span style="font-size:.85rem;color:#888">'+nombre+' — '+fHoraCk(ahora)+'</span>';
+            showMsg('ok','✅ ¡Buen día, '+nombre+'! Entrada: '+fHoraCk(ahora));
+        } else {
+            // SALIDA
+            var entrada = turnoActivo.entrada?.toDate?.() || (turnoActivo.entrada?.seconds ? new Date(turnoActivo.entrada.seconds*1000) : ahora);
+            var desc    = turnoActivo.minDescanso || 0;
+            if (turnoActivo.estado === 'descanso' && turnoActivo.inicioDescanso) {
+                var iniDesc = turnoActivo.inicioDescanso?.toDate?.() || (turnoActivo.inicioDescanso?.seconds ? new Date(turnoActivo.inicioDescanso.seconds*1000) : ahora);
+                desc += Math.round((ahora - iniDesc)/60000);
+            }
+            var bruto   = Math.round((ahora - entrada)/60000);
+            var neto    = Math.max(0, Math.min(bruto, 960) - desc);
+            await updateDoc(doc(db,'turnos',turnoActivo.id),{
+                salida:Timestamp.fromDate(ahora),
+                estado:'completo',
+                minTrabajados:neto,
+                horas:parseFloat((neto/60).toFixed(2))
+            });
+            document.getElementById('ck-estado-info').style.display='block';
+            document.getElementById('ck-estado-txt').innerHTML =
+                '<span style="color:#FF4444">⏹ Salida registrada</span><br>' +
+                '<span style="font-size:.85rem;color:#888">'+nombre+' — '+fHoraCk(ahora)+' · '+mToHCk(neto)+' trabajadas</span>';
+            showMsg('ok','✅ ¡Hasta luego, '+nombre+'! Trabajaste '+mToHCk(neto)+' hoy.');
+        }
+    } catch(e){
+        showMsg('er','❌ Error de conexión: '+e.message);
+    } finally {
+        if(btn){ btn.disabled=false; btn.querySelector('.lbl').textContent='Verificar y checar'; }
+    }
+};
 
 
 /* ═══════════════════════════════════════════════════════════════
