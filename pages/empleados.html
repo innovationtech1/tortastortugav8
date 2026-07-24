@@ -283,7 +283,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'Out
   <div class="hdr-r">
     <span class="rchip" id="rchip"></span>
     <span class="hname" id="hname"></span>
-    <button class="ibtn" id="btn-back" onclick="volverLogin()">← Salir</button>
+    <button class="ibtn" id="btn-back" onclick="volverLogin()">← Volver</button>
     <button class="ibtn" id="btn-logout" onclick="cerrarSesion()">Salir →</button>
   </div>
 </header>
@@ -1608,7 +1608,7 @@ window.guardarTelefono = async function(){
 async function mostrarAdmin(nivel){
   nivelAdmin=nivel;
   showScreen('s-admin');
-  el('btn-logout').style.display='none';
+  el('btn-logout').style.display='flex';
   el('btn-back').style.display='flex';
   el('rchip').className=`rchip rc-${nivel>=4?'gerente':'supervisor'}`;
   el('rchip').textContent=nivel>=4?'👑 Gerente':'🛡️ Supervisor';
@@ -1634,6 +1634,10 @@ async function mostrarAdmin(nivel){
   semOffA=0; cargarRep();
   poblarSelects();
 }
+// Expuesta en window: los onclick="" del HTML corren en el scope global,
+// no en el scope de este <script type="module">, así que sin esto el
+// botón "Panel Admin" no podía llamar a esta función (bug real encontrado).
+window.mostrarAdmin = mostrarAdmin;
 
 /* ════════════════════════════════════════════════
    CONTROL DE TURNO — ESTADOS: off / activo / descanso / completo
@@ -3018,7 +3022,16 @@ window.cerrarSesion = async function(){
   if(user) await signOut(auth);
   else{ showScreen('s-auth'); nivelAdmin=0; el('rchip').style.display='none'; el('hname').style.display='none'; el('btn-logout').style.display='none'; el('btn-back').style.display='none'; }
 };
-window.volverLogin = function(){ cerrarSesion(); };
+window.volverLogin = function(){
+  // Este botón es "regresar", no "cerrar sesión" — si hay una sesión de
+  // empleado activa, vuelve al panel de empleado (Mi Turno/Perfil/etc),
+  // sin cerrar la sesión. El cierre de sesión real vive en btn-logout.
+  if (empData) {
+    mostrarEmp();
+  } else {
+    cerrarSesion();
+  }
+};
 
 /* ─── UI HELPERS ──────────────────────────────── */
 const el  = id=> document.getElementById(id);
