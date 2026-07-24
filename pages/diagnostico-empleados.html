@@ -29,6 +29,15 @@
   <div id="resultado"></div>
 </div>
 
+<div class="card" style="border-color:rgba(59,130,246,.3);">
+  <h3 style="color:#3B82F6;margin-top:0;">🧪 Probar la consulta exacta del login</h3>
+  <p style="font-size:.85rem;color:#ccc;">Corre la MISMA consulta que usa el portal para entrar, con el número y PIN que tú escribas.</p>
+  <input type="text" id="test-empid" placeholder="EMP-GERENTE" style="width:100%;padding:.6rem;margin-bottom:.5rem;background:#1C1C1C;border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;">
+  <input type="text" id="test-pin" placeholder="1234" style="width:100%;padding:.6rem;margin-bottom:.5rem;background:#1C1C1C;border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;">
+  <button onclick="probarConsultaLogin()">🧪 Probar</button>
+  <div id="resultado-test"></div>
+</div>
+
 <div class="card" style="border-color:rgba(255,90,0,.3);">
   <h3 style="color:#FF5A00;margin-top:0;">👑 Cuenta de Gerente (EMP-GERENTE)</h3>
   <p style="font-size:.85rem;color:#ccc;line-height:1.6;">Verifica si existe una cuenta activa de gerente con PIN <code>1234</code>. Si no existe, o el PIN no coincide, la crea/repara automáticamente sin borrar nada más.</p>
@@ -91,6 +100,9 @@ window.cargarEmpleados = async function() {
             html += '<div class="emp-row">📧 ' + (e.email || '(sin email)') + '</div>';
             html += '<div class="emp-row">📞 ' + (e.telefono || '(sin teléfono)') + '</div>';
             html += '<div class="emp-row">Estado: ' + (e.estado || 'activo') + '</div>';
+            html += '<div class="emp-row" style="color:#666;font-size:.72rem;">🔬 empleadoId: ' +
+                JSON.stringify(empId) + ' (' + empId.length + ' car.) · pin: ' +
+                JSON.stringify(pin) + ' (' + String(pin).length + ' car.)</div>';
             html += '<div class="cred">';
             html += 'Para entrar usa:<br>';
             html += 'Número: <b>' + empId + '</b><br>';
@@ -102,6 +114,40 @@ window.cargarEmpleados = async function() {
         cont.innerHTML = html;
     } catch(e) {
         cont.innerHTML = '<p class="warn">Error al cargar: ' + e.message + '<br><br>Puede ser un problema de permisos de Firestore.</p>';
+        console.error(e);
+    }
+};
+
+window.probarConsultaLogin = async function() {
+    const cont = document.getElementById('resultado-test');
+    const empId = (document.getElementById('test-empid').value || '').trim().toUpperCase();
+    const pin = (document.getElementById('test-pin').value || '').replace(/\D/g,'');
+    cont.innerHTML = '<div class="loading">Probando...</div>';
+
+    try {
+        // Paso 1: solo por empleadoId (para ver si el ID en si coincide)
+        const q1 = query(collection(db,'empleados'), where('empleadoId','==', empId));
+        const s1 = await getDocs(q1);
+
+        // Paso 2: la consulta exacta y completa que usa el login
+        const q2 = query(collection(db,'empleados'), where('empleadoId','==', empId), where('pin','==', pin));
+        const s2 = await getDocs(q2);
+
+        let out = '<div class="cred">';
+        out += 'Buscando: empleadoId=' + JSON.stringify(empId) + ', pin=' + JSON.stringify(pin) + '<br><br>';
+        out += 'Paso 1 (solo empleadoId): ' + (s1.empty ? '❌ 0 resultados' : '✅ ' + s1.size + ' resultado(s)') + '<br>';
+        if (!s1.empty) {
+            s1.forEach(d => {
+                const data = d.data();
+                out += '&nbsp;&nbsp;→ doc <code>' + d.id + '</code>: pin real = ' + JSON.stringify(data.pin) + '<br>';
+            });
+        }
+        out += '<br>Paso 2 (empleadoId + pin, la consulta real del login): ' +
+            (s2.empty ? '❌ 0 resultados — AQUÍ ESTÁ EL PROBLEMA' : '✅ ' + s2.size + ' resultado(s) — debería dejarte entrar');
+        out += '</div>';
+        cont.innerHTML = out;
+    } catch(e) {
+        cont.innerHTML = '<p class="warn">❌ Error: ' + e.message + '</p>';
         console.error(e);
     }
 };
