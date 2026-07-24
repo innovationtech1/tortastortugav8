@@ -103,7 +103,7 @@ window.normalizarRutaImagen = function(src) {
         .btn-empleados:hover { background: rgba(167,139,250,0.15) !important; border-color: #A78BFA !important; color: #A78BFA !important; }
 
         /* Table */
-        .table-wrapper { padding: 0 0.5rem 2rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .table-wrapper { padding: 0 0.75rem 2rem 0.5rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         table { width: 100%; border-collapse: collapse; min-width: 700px; }
         thead tr { background: var(--surface2); }
         th { padding: 0.75rem 1rem; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); border-bottom: 1px solid var(--border); }
@@ -112,12 +112,16 @@ window.normalizarRutaImagen = function(src) {
 
         /* ══ ANCHOS DE COLUMNA ══
            La columna Cliente/Contacto (2da) es la mas ancha porque
-           contiene nombre, telefono, botones y ubicacion. */
-        th:nth-child(1), td:nth-child(1) { width: 14%; min-width: 130px; }   /* Ticket/Hora */
-        th:nth-child(2), td:nth-child(2) { width: 30%; min-width: 260px; }   /* Cliente/Contacto - MAS ANCHA */
-        th:nth-child(3), td:nth-child(3) { width: 28%; min-width: 200px; }   /* Orden */
-        th:nth-child(4), td:nth-child(4) { width: 16%; min-width: 140px; }   /* Estado de Pago */
+           contiene nombre, telefono, botones y ubicacion.
+           Antes la columna de acciones (6ta, boton de borrar) no tenia
+           ancho asignado y las otras 5 ya sumaban 100% — por eso se
+           salia del margen. Ahora las 6 suman 100% correctamente. */
+        th:nth-child(1), td:nth-child(1) { width: 13%; min-width: 120px; }   /* Ticket/Hora */
+        th:nth-child(2), td:nth-child(2) { width: 26%; min-width: 240px; }   /* Cliente/Contacto - MAS ANCHA */
+        th:nth-child(3), td:nth-child(3) { width: 24%; min-width: 190px; }   /* Orden */
+        th:nth-child(4), td:nth-child(4) { width: 15%; min-width: 140px; }   /* Estado de Pago */
         th:nth-child(5), td:nth-child(5) { width: 12%; min-width: 110px; }   /* Estado de Cocina */
+        th:nth-child(6), td:nth-child(6) { width: 10%; min-width: 64px; }    /* Acciones (borrar/restaurar) */
 
         /* La tabla usa todo el ancho disponible */
         table { width: 100%; table-layout: fixed; }
@@ -127,8 +131,8 @@ window.normalizarRutaImagen = function(src) {
         .order-total { font-weight: 700; color: var(--green); white-space: nowrap; }
 
         /* Badges & Buttons */
-        .status-select { padding: 0.3rem 0.6rem; border-radius: 20px; border: none; font-family: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; outline: none; transition: 0.2s; }
-        .delete-btn { background: rgba(244,67,54,0.1); border: 1px solid rgba(244,67,54,0.2); border-radius: 8px; padding: 0.35rem; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
+        .status-select { padding: 0.3rem 0.6rem; border-radius: 20px; border: none; font-family: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; outline: none; transition: 0.2s; box-sizing: border-box; max-width: 100%; }
+        .delete-btn { background: rgba(244,67,54,0.1); border: 1px solid rgba(244,67,54,0.2); border-radius: 8px; padding: 0.45rem 0.55rem; cursor: pointer; transition: 0.2s; font-size: 0.95rem; line-height: 1; flex-shrink: 0; }
         .delete-btn:hover { background: rgba(244,67,54,0.25); transform: scale(1.05); }
         .status-nuevo       { background: rgba(37,211,102,0.15); color: #25D366; }
         .status-prep        { background: rgba(255,214,0,0.15);  color: #FFD600; }
@@ -156,9 +160,9 @@ window.normalizarRutaImagen = function(src) {
         .btn-digital  { background: #2196F3; color: white; } .btn-digital:hover  { background: #1976d2; }
         .btn-close    { background: transparent; border: 1px solid var(--border); color: var(--text); margin-top: 1rem; }
         
-        .btn-cobrar-grid { background: rgba(244,67,54,0.15); color: #F44336; border: 1px solid rgba(244,67,54,0.3); border-radius: 8px; padding: 0.4rem 0.8rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; font-family: inherit; }
+        .btn-cobrar-grid { background: rgba(244,67,54,0.15); color: #F44336; border: 1px solid rgba(244,67,54,0.3); border-radius: 8px; padding: 0.4rem 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem; font-family: inherit; width: 100%; box-sizing: border-box; }
         .btn-cobrar-grid:hover { background: #F44336; color: white; }
-        .pagado-badge { background: rgba(37,211,102,0.15); color: #25D366; border-radius: 8px; padding: 0.4rem 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.4rem; }
+        .pagado-badge { background: rgba(37,211,102,0.15); color: #25D366; border-radius: 8px; padding: 0.4rem 0.8rem; font-weight: 700; display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; width: 100%; box-sizing: border-box; }
     </style>
 
 <style>
@@ -676,7 +680,7 @@ window.normalizarRutaImagen = function(src) {
                 </td>
                 <td>${pagoHTML}</td>
                 <td><select class="status-select ${estadoCls}" data-id="${p.id}" style="width:100%"><option ${p.estado?.includes('Nuevo') ? 'selected' : ''}>Nuevo 🆕</option><option ${p.estado?.includes('preparación') ? 'selected' : ''}>En preparación 🧑‍🍳</option><option ${p.estado?.includes('Listo') ? 'selected' : ''}>Listo ✅</option><option ${p.estado?.includes('Entregado') ? 'selected' : ''}>Entregado 🎉</option><option ${p.estado?.includes('Cancelado') ? 'selected' : ''}>Cancelado ❌</option></select></td>
-                <td style="text-align:right">${p.archivado
+                <td style="text-align:center;padding-right:.75rem;">${p.archivado
                     ? `<button class="delete-btn restore-btn" data-id="${p.id}" title="Volver a mostrar en el panel" style="background:rgba(37,211,102,.15);color:#25D366;">↩️</button>`
                     : `<button class="delete-btn" data-id="${p.id}" title="Quitar de la pantalla (se guarda para reportes)">🗑️</button>`}</td>
             </tr>`;
