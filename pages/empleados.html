@@ -63,6 +63,22 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'Out
 .card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:1.35rem;margin-bottom:.85rem;}
 .card-hd{font-size:.93rem;font-weight:700;margin-bottom:.95rem;display:flex;align-items:center;gap:.45rem;}
 
+.acceso-btn{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;
+  background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);
+  padding:1rem .6rem;cursor:pointer;font-family:inherit;color:var(--tx);
+  transition:transform .12s ease, border-color .12s ease, background .12s ease;
+}
+.acceso-btn:hover{ transform:translateY(-2px); border-color:rgba(255,255,255,.2); background:var(--sf3); }
+.acceso-btn:active{ transform:translateY(0); }
+.acceso-btn-priv{ border-color:rgba(255,90,0,.25); background:rgba(255,90,0,.05); }
+.acceso-btn-priv:hover{ border-color:rgba(255,90,0,.45); background:rgba(255,90,0,.09); }
+.acceso-ico{
+  width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:1.25rem;flex-shrink:0;
+}
+.acceso-txt{ font-size:.82rem;font-weight:700;text-align:center;line-height:1.2; }
+
 /* LOGO HERO */
 .hero{text-align:center;padding:1.5rem 0 1rem;}
 .turtle{font-size:3.5rem;animation:bob 3s ease-in-out infinite;}
@@ -1125,21 +1141,43 @@ function renderAccesosPrivilegiados(){
   if(!cont) return;
   cont.style.display='block';
 
-  // Botones disponibles para CUALQUIER empleado con sesion activa
+  // NOTA: el onclick="" de un botón corre en el scope global del HTML,
+  // no en el de este <script type="module"> — por eso hay que meter el
+  // VALOR de nivelActual directo en el string (${nivelActual}), no el
+  // nombre de la variable. Antes decía onclick="mostrarAdmin(nivelActual)"
+  // y tronaba en silencio ("nivelActual is not defined") porque esa
+  // variable no existe fuera del módulo. Este era el bug real detrás de
+  // "Panel Admin no funciona".
+
   let html = `
     <div class="card" style="border-color:rgba(255,90,0,.25);">
       <div class="card-hd">🔑 Accesos de ${ROLES[rolActual].label}</div>
-      <button class="btn bs" style="margin-bottom:.5rem;" onclick="window.location.href='../ordenar.html'">🏪 Ir a la Tienda</button>
-      <button class="btn bs" onclick="window.location.href='cocina.html'">🍳 Ver Cocina</button>`;
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;">
+        <button class="acceso-btn" onclick="window.location.href='../ordenar.html'">
+          <span class="acceso-ico" style="background:rgba(37,211,102,.15);color:var(--ok);">🏪</span>
+          <span class="acceso-txt">Ir a la Tienda</span>
+        </button>
+        <button class="acceso-btn" onclick="window.location.href='cocina.html'">
+          <span class="acceso-ico" style="background:rgba(251,183,36,.15);color:#FBB724;">🍳</span>
+          <span class="acceso-txt">Ver Cocina</span>
+        </button>`;
 
   // Botones extra solo para gerente/supervisor (nivel 3+)
   if(nivelActual >= 3){
     html += `
-      <button class="btn bp" style="margin-top:.5rem;margin-bottom:.5rem;" onclick="mostrarAdmin(nivelActual)">⚙️ Panel Admin</button>
-      <button class="btn bs" onclick="mostrarMaster()">📊 Panel Maestro (vista en vivo)</button>`;
+        <button class="acceso-btn acceso-btn-priv" onclick="mostrarAdmin(${nivelActual})">
+          <span class="acceso-ico" style="background:rgba(255,90,0,.18);color:var(--primary);">⚙️</span>
+          <span class="acceso-txt">Panel Admin</span>
+        </button>
+        <button class="acceso-btn acceso-btn-priv" onclick="mostrarMaster()">
+          <span class="acceso-ico" style="background:rgba(167,139,250,.15);color:var(--sup);">📊</span>
+          <span class="acceso-txt">Panel Maestro</span>
+        </button>`;
   }
 
-  html += `</div>`;
+  html += `
+      </div>
+    </div>`;
   cont.innerHTML = html;
 }
 
