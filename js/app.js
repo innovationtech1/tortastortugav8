@@ -420,6 +420,22 @@ window.generarWhatsApp = async function() {
 
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
     cartModal.classList.remove('active');
+
+    // Si quien ordena es un cliente (no staff), mostrar confirmación con
+    // enlace directo a "Mi Pedido" para que pueda seguir su propio estatus.
+    if (window._clienteActivo) {
+        const banner = document.createElement('div');
+        banner.style.cssText = 'position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);' +
+            'background:#1A1A1A;border:1px solid rgba(59,130,246,.4);border-radius:14px;' +
+            'padding:.9rem 1.1rem;z-index:9999;display:flex;align-items:center;gap:.8rem;' +
+            'box-shadow:0 8px 24px rgba(0,0,0,.4);max-width:90vw;';
+        banner.innerHTML = '<span style="font-size:.85rem;color:#ccc;">✅ ¡Pedido enviado!</span>' +
+            '<a href="pages/mi-pedido.html" target="_blank" style="background:rgba(59,130,246,.15);' +
+            'border:1px solid rgba(59,130,246,.3);color:#3B82F6;padding:.4rem .8rem;border-radius:9px;' +
+            'font-size:.8rem;font-weight:700;text-decoration:none;white-space:nowrap;">📦 Ver mi pedido</a>';
+        document.body.appendChild(banner);
+        setTimeout(() => banner.remove(), 8000);
+    }
 };
 
 // ─── BOTONES PRINCIPALES ─────────────────────────────────────────
