@@ -107,19 +107,15 @@ window._pendingItem = window._pendingItem || null;
         sessionStorage.removeItem('tt_cajero_ts');
     }
 
-    /* ── LOGIN OBLIGATORIO PARA ORDENAR ──────────────────────────
-       Si no hay sesion de staff (cajero/empleado) NI de cliente
-       (telefono o cuenta con email), no se puede usar esta pantalla.
-       Se manda a bienvenida.html para elegir "soy cliente" / "soy empleado". */
+    /* ── LOGIN YA NO ES OBLIGATORIO PARA ORDENAR ─────────────────
+       Antes esto mandaba a bienvenida.html si no había sesión. Se quitó
+       a pedido — ahora cualquiera puede ordenar como invitado. Si SÍ hay
+       sesión (cliente o staff), el resto de la lógica de abajo sigue
+       aplicando (precarga de datos, ocultar herramientas de staff, etc). */
     var hayStaff = !!(cajeroId && cajeroNombre && (Date.now() - cajeroTs < VEINTE_MIN));
     var cliNombre = sessionStorage.getItem('tt_cliente_nombre');
     var cliTs = parseInt(sessionStorage.getItem('tt_cliente_ts') || '0');
     var hayCliente = !!(cliNombre && (Date.now() - cliTs < VEINTE_MIN));
-
-    if (!hayStaff && !hayCliente) {
-        window.location.replace('pages/bienvenida.html');
-        return;
-    }
 
     // Si hay cliente logueado (sin sesion de staff), precargar su nombre/telefono
     // en el formulario para dejar claro "quien esta ordenando" y evitar que lo
