@@ -137,6 +137,36 @@ window._pendingItem = window._pendingItem || null;
         } else {
             precargarCliente();
         }
+
+        // ── PRIVILEGIOS DE CLIENTE ─────────────────────────────────
+        // Un cliente que ordena para sí mismo no necesita ver ni usar
+        // las herramientas de staff: Cocina, Admin, el botón de Cajero,
+        // ni las pestañas de "múltiples cuentas" (eso es para manejar
+        // varias mesas/clientes a la vez, algo que solo hace el cajero).
+        function ocultarHerramientasStaff() {
+            var idsAOcultar = [
+                'btn-cajero-header',   // botón "🏪 Cajero"
+                'cuentas-tabs',        // barra de pestañas de cuentas múltiples
+                'btn-eliminar-cuenta', // eliminar cuenta activa
+            ];
+            idsAOcultar.forEach(function(id) {
+                var elx = document.getElementById(id);
+                if (elx) elx.style.display = 'none';
+            });
+            // Los botones de Cocina/Admin no tienen id propio — se ocultan
+            // por su onclick, ya que son fijos en el encabezado.
+            document.querySelectorAll('.signout-btn').forEach(function(btn) {
+                var oc = btn.getAttribute('onclick') || '';
+                if (oc.indexOf('cocina.html') !== -1 || oc.indexOf('admin.html') !== -1) {
+                    btn.style.display = 'none';
+                }
+            });
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', ocultarHerramientasStaff);
+        } else {
+            ocultarHerramientasStaff();
+        }
     }
 })();
 
