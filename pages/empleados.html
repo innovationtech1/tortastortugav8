@@ -1854,65 +1854,61 @@ window.loginEmp = async function(){
   if(!ok) return;
   btnLd('btn-login',true);
   try{
-    const emailInterno = `${empId.toLowerCase()}@tortuga.local`;
-    const pwAuto = `${empId}${pin}`;
-    await signInWithEmailAndPassword(auth, emailInterno, pwAuto);
-    // ✅ Login exitoso — guardar sesión por 20 minutos
-    sessionStorage.setItem('tt_emp_id', empId);
-    sessionStorage.setItem('tt_emp_pin', pin);
-    sessionStorage.setItem('tt_emp_ts', Date.now().toString());
-    // Guardar nombre y rol para la barra de perfil
-    try {
-      const qN = query(collection(db,'empleados'), where('empleadoId','==', empId));
-      const snN = await getDocs(qN);
-      if (!snN.empty) {
-        const eN = snN.docs[0].data();
-        const nomN = ((eN.nombre||'') + ' ' + (eN.apellido||'')).trim();
-        sessionStorage.setItem('tt_emp_nombre', nomN || empId);
-        sessionStorage.setItem('tt_emp_rol', eN.rol || eN.puesto || 'empleado');
-      } else if (empId === 'EMP-GERENTE') {
-        sessionStorage.setItem('tt_emp_nombre', 'Gerente Principal');
-        sessionStorage.setItem('tt_emp_rol', 'gerente');
-      }
-    } catch(eN) {}
-  } catch(e) {
-    // Firebase Auth falló — intentar login directo con Firestore (cajeros sin Auth)
-    try {
-      const qPin = query(collection(db,'empleados'),
-        where('empleadoId','==', empId),
-        where('pin','==', pin));
-      const snapPin = await getDocs(qPin);
-      if (snapPin.empty) {
-        msg('msg-login','er','❌ Número o PIN incorrecto.');
-        return;
-      }
-      // Empleado encontrado en Firestore sin Firebase Auth
-      const empDoc = snapPin.docs[0];
-      empData      = { ...empDoc.data(), id: empDoc.id };
-      if (empData.estado === 'inactivo') {
-        msg('msg-login','er','❌ Cuenta desactivada. Contacta a tu supervisor.');
-        return;
-      }
-      rolActual   = empData.rol || 'empleado';
-      nivelActual = ROLES[rolActual]?.nivel || 1;
-      // Guardar sesión como PIN-only (sin Firebase Auth)
-      sessionStorage.setItem('tt_emp_id',   empId);
-      sessionStorage.setItem('tt_emp_pin',  pin);
-      sessionStorage.setItem('tt_emp_docid', empDoc.id);
-      sessionStorage.setItem('tt_emp_ts',   Date.now().toString());
-      // Guardar nombre y rol para la barra de perfil
-      sessionStorage.setItem('tt_emp_nombre', ((empData.nombre||'') + ' ' + (empData.apellido||'')).trim() || empId);
-      sessionStorage.setItem('tt_emp_rol', empData.rol || empData.puesto || 'empleado');
-      // user = null para pin-only, pero empData está disponible
-      user = null;
-      mostrarEmp();
-    } catch(e2) {
-      const m = {
-        'auth/too-many-requests':'Demasiados intentos. Espera unos minutos.',
-        'auth/network-request-failed':'Sin conexión. Verifica tu internet.',
-      };
-      msg('msg-login','er','❌ '+(m[e.code]||'Número o PIN incorrecto.'));
+    // 1. Verificar primero contra Firestore — rápido y confiable, no
+    //    depende de Firebase Auth ni de sus límites de intentos fallidos.
+    //    Antes esto intentaba Firebase Auth PRIMERO, y como esta cuenta
+    //    usa un correo distinto al esquema actual, siempre fallaba —
+    //    acumulando intentos fallidos hasta que Firebase bloqueaba
+    //    temporalmente ("Demasiados intentos") aunque el PIN fuera correcto.
+    const qPin = query(collection(db,'empleados'),
+      where('empleadoId','==', empId),
+      where('pin','==', pin));
+    const snapPin = await getDocs(qPin);
+    if (snapPin.empty) {
+      msg('msg-login','er','❌ Número o PIN incorrecto.');
+      return;
     }
+    const empDoc = snapPin.docs[0];
+    empData = { ...empDoc.data(), id: empDoc.id };
+    if (empData.estado === 'inactivo') {
+      msg('msg-login','er','❌ Cuenta desactivada. Contacta a tu supervisor.');
+      return;
+    }
+    rolActual   = empData.rol || 'empleado';
+    nivelActual = ROLES[rolActual]?.nivel || 1;
+
+    // 2. Intentar TAMBIÉN Firebase Auth como mejora opcional (sesión más
+    //    fuerte). Si falla por cualquier motivo (cuenta legacy, rate
+    //    limit, etc.) no pasa nada — ya tenemos acceso válido por PIN.
+    let firebaseAuthOk = false;
+    try {
+      const emailInterno = `${empId.toLowerCase()}@tortuga.local`;
+      const pwAuto = `${empId}${pin}`;
+      skipAuthChange = true;
+      const cred = await signInWithEmailAndPassword(auth, emailInterno, pwAuto);
+      user = cred.user;
+      firebaseAuthOk = true;
+      skipAuthChange = false;
+    } catch(eAuth) {
+      skipAuthChange = false;
+      /* seguimos en modo PIN-only, sin problema */
+    }
+
+    sessionStorage.setItem('tt_emp_id',   empId);
+    sessionStorage.setItem('tt_emp_pin',  pin);
+    sessionStorage.setItem('tt_emp_ts',   Date.now().toString());
+    sessionStorage.setItem('tt_emp_nombre', ((empData.nombre||'') + ' ' + (empData.apellido||'')).trim() || empId);
+    sessionStorage.setItem('tt_emp_rol', empData.rol || empData.puesto || 'empleado');
+    if (!firebaseAuthOk) {
+      sessionStorage.setItem('tt_emp_docid', empDoc.id);
+      user = null;
+    }
+    mostrarEmp();
+  } catch(e){
+    const m = {
+      'auth/network-request-failed':'Sin conexión. Verifica tu internet.',
+    };
+    msg('msg-login','er','❌ '+(m[e.code]||'Error al iniciar sesión. Intenta de nuevo.'));
   } finally { btnLd('btn-login',false); }
 };
 
