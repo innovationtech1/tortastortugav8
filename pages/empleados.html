@@ -803,6 +803,10 @@ async function checaRapido(){
             // SALIDA
             var entrada = turnoActivo.entrada?.toDate?.() || (turnoActivo.entrada?.seconds ? new Date(turnoActivo.entrada.seconds*1000) : ahora);
             var desc    = turnoActivo.minDescanso || 0;
+            if (turnoActivo.estado === 'descanso' && turnoActivo.inicioDescanso) {
+                var iniDesc = turnoActivo.inicioDescanso?.toDate?.() || (turnoActivo.inicioDescanso?.seconds ? new Date(turnoActivo.inicioDescanso.seconds*1000) : ahora);
+                desc += Math.round((ahora - iniDesc)/60000);
+            }
             var bruto   = Math.round((ahora - entrada)/60000);
             var neto    = Math.max(0, Math.min(bruto, 960) - desc);
             await updateDoc(doc(db,'turnos',turnoActivo.id),{
@@ -2314,64 +2318,12 @@ window.abrirChecarRapido = function(){  // sobreescribe el proxy
   setTimeout(()=>el('ck-emp-id')?.focus(),280);
 };
 
-window._checaRapidoReal = async function checaRapidoImpl(){
-  const empId = el('ck-emp-id').value.trim().toUpperCase();
-  const pin   = el('ck-pin').value.replace(/\D/g,'');
-  if(!empId.startsWith('EMP-')){ msg('msg-checar','er','Ingresa tu número: EMP-001'); return; }
-  if(pin.length!==4){ msg('msg-checar','er','Ingresa tu PIN de 4 dígitos'); return; }
-  btnLd('btn-checa-rapido',true);
-  try{
-    const emailInterno = `${empId.toLowerCase()}@tortuga.local`;
-    const pwAuto = `${empId}${pin}`;
-    const cred = await signInWithEmailAndPassword(auth, emailInterno, pwAuto);
-    const u = cred.user;
-    const snap = await getDoc(doc(db,'empleados', u.uid));
-    if(!snap.exists()){ msg('msg-checar','er','Empleado no encontrado.'); await signOut(auth); return; }
-    const emp = snap.data();
-    const hoy2 = new Date(); const hoyISO = hoy2.getFullYear()+'-'+String(hoy2.getMonth()+1).padStart(2,'0')+'-'+String(hoy2.getDate()).padStart(2,'0');
-    const qT = query(collection(db,'turnos'),
-      where('uid','==',u.uid), where('fechaISO','==',hoyISO),
-      where('estado','in',['activo','descanso']));
-    const tSnap = await getDocs(qT);
-    const ahora = new Date();
-    if(tSnap.empty){
-      await addDoc(collection(db,'turnos'),{
-        uid:u.uid, empleadoId:emp.empleadoId,
-        nombre:emp.nombre, apellido:emp.apellido,
-        entrada:Timestamp.fromDate(ahora), salida:null,
-        inicioDescanso:null, finDescanso:null,
-        minDescanso:0, minTrabajados:null, horas:null,
-        estado:'activo', editado:false, nota:'',
-        fechaISO:hoyISO, creado:serverTimestamp()
-      });
-      el('ck-estado-info').style.display='block';
-      el('ck-estado-txt').innerHTML=`<span style="color:var(--ok)">✅ Entrada registrada</span><br><span style="font-size:.85rem;color:var(--mu);">${emp.nombre} — ${fHora(ahora)}</span>`;
-      msg('msg-checar','ok',`✅ ¡Buen día, ${emp.nombre}! Entrada: ${fHora(ahora)}`);
-    } else {
-      const turnoDoc = tSnap.docs[0];
-      const turno = turnoDoc.data();
-      const entrada = turno.entrada?.toDate?.() || new Date(turno.entrada?.seconds*1000);
-      let totalDesc = turno.minDescanso || 0;
-      if(turno.estado==='descanso' && turno.inicioDescanso){
-        const iniDesc = turno.inicioDescanso?.toDate?.() || new Date(turno.inicioDescanso?.seconds*1000);
-        totalDesc += Math.round((ahora - iniDesc)/60000);
-      }
-      const neto = Math.max(0, Math.round((ahora - entrada)/60000) - totalDesc);
-      await updateDoc(doc(db,'turnos', turnoDoc.id),{
-        salida:Timestamp.fromDate(ahora), estado:'completo',
-        minDescanso:totalDesc, minTrabajados:neto, horas:(neto/60).toFixed(2)
-      });
-      el('ck-estado-info').style.display='block';
-      el('ck-estado-txt').innerHTML=`<span style="color:var(--er)">⏹ Salida registrada</span><br><span style="font-size:.85rem;color:var(--mu);">${emp.nombre} — ${fHora(ahora)} · ${mToH(neto)} trabajadas</span>`;
-      msg('msg-checar','ok',`✅ ¡Hasta luego, ${emp.nombre}! Trabajaste ${mToH(neto)} hoy.`);
-    }
-    await signOut(auth);
-    setTimeout(()=>cOv('ov-checar'), 3000);
-  }catch(e){
-    const m={'auth/invalid-credential':'Número o PIN incorrecto.','auth/too-many-requests':'Demasiados intentos.'};
-    msg('msg-checar','er','❌ '+(m[e.code]||'Error: '+e.message));
-  }finally{ btnLd('btn-checa-rapido',false); }
-};
+// NOTA: existía una segunda copia de esta función (_checaRapidoReal) que
+// se cargaba después y sobrescribía silenciosamente la versión de arriba
+// ya arreglada — esa copia intentaba Firebase Auth primero SIN respaldo
+// de Firestore, y por eso "Demasiados intentos" seguía apareciendo pase
+// lo que pase. Se eliminó por completo; checaRapido() (arriba) es ahora
+// la única definición.
 
 
 /* ═══════════════════════════════════════════════════════════════
@@ -2965,7 +2917,8 @@ window.swAdmin=t=>{
 /* ─── CERRAR MODALES AL TOCAR OVERLAY ────────── */
 document.querySelectorAll('.ov').forEach(o=>{ o.addEventListener('click',e=>{ if(e.target===o)o.classList.remove('open'); }); });
 // Registrar funciones reales para los proxies
-window.checaRapido = window._checaRapidoReal;
+// NOTA: ya no se reasigna checaRapido — la única definición (arriba,
+// basada en Firestore) es la que se usa siempre.
 // Registrar renderEmps como global para que script 1 pueda llamarla
 window.renderEmpsGlobal = renderEmps;
 console.log('✅ Portal empleados Tortas Tortuga — módulo cargado correctamente');
