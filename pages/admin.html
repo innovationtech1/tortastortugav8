@@ -434,7 +434,8 @@ window.normalizarRutaImagen = function(src) {
     }
     import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, addDoc, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-    const ADMIN_PASSWORD = 'tortuga2025';
+    // NOTA: ya no hay contraseña de admin — el acceso lo controla el gate
+    // de sesión real (gerente/supervisor) al inicio del <head>.
     let pedidosDB = [];
     let filtroActual = 'todos';
     let _unsubscribePedidos = null;
