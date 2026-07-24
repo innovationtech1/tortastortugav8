@@ -264,19 +264,26 @@ window.normalizarRutaImagen = function(src) {
     </div>
 
     <!-- ACCIONES SOBRE ARCHIVADOS — solo visibles en esa pestaña -->
-    <div id="acciones-archivados" style="display:none;padding:0 0.85rem 1rem;gap:.6rem;flex-wrap:wrap;">
-        <button id="btn-cerrar-sistema" onclick="cerrarSistemaVentas()"
-            style="flex:1;min-width:220px;padding:.75rem 1rem;background:rgba(37,211,102,.12);
-                   border:1px solid rgba(37,211,102,.4);color:#25D366;border-radius:10px;
-                   font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
-            💾 Cerrar Sistema (guardar en Ventas)
-        </button>
-        <button id="btn-eliminar-archivados" onclick="eliminarArchivadasPermanente()"
-            style="flex:1;min-width:220px;padding:.75rem 1rem;background:rgba(244,67,54,.12);
-                   border:1px solid rgba(244,67,54,.4);color:#F44336;border-radius:10px;
-                   font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
-            🗑️ Eliminar Archivadas Permanentemente
-        </button>
+    <div id="acciones-archivados" style="display:none;padding:0 0.85rem 1rem;flex-direction:column;gap:.6rem;">
+        <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.85rem;color:#ccc;">
+            <input type="checkbox" id="chk-seleccionar-todas" style="width:18px;height:18px;accent-color:#F44336;cursor:pointer;">
+            Seleccionar todas
+            <span id="contador-seleccionados" style="color:#888;font-size:.78rem;">(0 seleccionadas)</span>
+        </label>
+        <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
+            <button id="btn-cerrar-sistema" onclick="cerrarSistemaVentas()"
+                style="flex:1;min-width:220px;padding:.75rem 1rem;background:rgba(37,211,102,.12);
+                       border:1px solid rgba(37,211,102,.4);color:#25D366;border-radius:10px;
+                       font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
+                💾 Cerrar Sistema (guardar en Ventas)
+            </button>
+            <button id="btn-eliminar-archivados" onclick="eliminarArchivadasPermanente()"
+                style="flex:1;min-width:220px;padding:.75rem 1rem;background:rgba(244,67,54,.12);
+                       border:1px solid rgba(244,67,54,.4);color:#F44336;border-radius:10px;
+                       font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
+                🗑️ Eliminar Seleccionadas
+            </button>
+        </div>
     </div>
 
     <!-- BUSCADOR INTELIGENTE POS -->
@@ -644,7 +651,10 @@ window.normalizarRutaImagen = function(src) {
                 }).join('');
             }
             return `<tr>
-                <td><span class="order-id" style="font-size:1.1rem;color:var(--yellow)">#${displayTicket}</span><br><small style="color:var(--muted)">${hora}</small>${timerHTML}<button class="print-btn" onclick="window.imprimirTicket('${ticketId}')" style="margin-top:6px; font-size:0.7rem; padding:2px 5px; background:var(--surface2); color:white; border:1px solid var(--border); border-radius:4px; cursor:pointer; width:100%;">🖨️ Imprimir</button>
+                <td>${p.archivado ? `<label style="display:flex;align-items:center;gap:.4rem;margin-bottom:.4rem;cursor:pointer;">
+                        <input type="checkbox" class="chk-archivado" data-id="${p.id}" style="width:18px;height:18px;accent-color:#F44336;cursor:pointer;">
+                        <span style="font-size:.7rem;color:#888;">Seleccionar</span>
+                    </label>` : ''}<span class="order-id" style="font-size:1.1rem;color:var(--yellow)">#${displayTicket}</span><br><small style="color:var(--muted)">${hora}</small>${timerHTML}<button class="print-btn" onclick="window.imprimirTicket('${ticketId}')" style="margin-top:6px; font-size:0.7rem; padding:2px 5px; background:var(--surface2); color:white; border:1px solid var(--border); border-radius:4px; cursor:pointer; width:100%;">🖨️ Imprimir</button>
     ${(p.cajeroNombre && p.cajeroNombre !== 'Sistema') ? `<div style="margin-top:6px;font-size:0.68rem;color:#888;">👤 Tomó: <span style="color:#A78BFA;font-weight:600;">${p.cajeroNombre}</span></div>` : ''}
     ${p.cobradoPor ? `<div style="font-size:0.68rem;color:#888;margin-top:2px;">💵 Cobró: <span style="color:#25D366;font-weight:600;">${p.cobradoPor}</span></div>` : ''}
     </td>
@@ -703,6 +713,11 @@ window.normalizarRutaImagen = function(src) {
                     : `<button class="delete-btn" data-id="${p.id}" title="Quitar de la pantalla (se guarda para reportes)">🗑️</button>`}</td>
             </tr>`;
         }).join('');
+        document.querySelectorAll('.chk-archivado').forEach(chk => {
+            chk.addEventListener('change', actualizarContadorSeleccionados);
+        });
+        actualizarContadorSeleccionados();
+
         document.querySelectorAll('.status-select').forEach(select => {
             select.addEventListener('change', async (e) => {
                 const id = e.target.getAttribute('data-id');
@@ -726,6 +741,20 @@ window.normalizarRutaImagen = function(src) {
             });
         });
     }
+
+    // ── Selección de archivadas para borrar ──────────────────────
+    function actualizarContadorSeleccionados() {
+        const n = document.querySelectorAll('.chk-archivado:checked').length;
+        const el = document.getElementById('contador-seleccionados');
+        if (el) el.textContent = `(${n} seleccionada${n === 1 ? '' : 's'})`;
+        const todas = document.querySelectorAll('.chk-archivado');
+        const chkTodas = document.getElementById('chk-seleccionar-todas');
+        if (chkTodas) chkTodas.checked = todas.length > 0 && n === todas.length;
+    }
+    document.getElementById('chk-seleccionar-todas')?.addEventListener('change', (e) => {
+        document.querySelectorAll('.chk-archivado').forEach(chk => { chk.checked = e.target.checked; });
+        actualizarContadorSeleccionados();
+    });
 
     // ── CERRAR SISTEMA: guarda todas las archivadas en /ventas (con
     //    estado de pago incluido) para llevar el control contable, y
@@ -769,29 +798,31 @@ window.normalizarRutaImagen = function(src) {
         alert(`✅ ${guardadas} orden(es) guardada(s) en Ventas.` + (errores ? `\n⚠️ ${errores} tuvieron error (revisa la consola).` : ''));
     };
 
-    // ── ELIMINAR ARCHIVADAS PERMANENTEMENTE — borra de verdad, sin pasar
-    //    por Ventas. Requiere confirmar dos veces por ser irreversible. ──
+    // ── ELIMINAR SELECCIONADAS PERMANENTEMENTE — borra de verdad, sin
+    //    pasar por Ventas, solo las que el usuario marcó con su casilla.
+    //    Requiere confirmar dos veces por ser irreversible. ──
     window.eliminarArchivadasPermanente = async function() {
-        const archivadas = pedidosDB.filter(p => p.archivado);
-        if (!archivadas.length) { alert('No hay órdenes archivadas para eliminar.'); return; }
-        if (!confirm(`⚠️ Esto va a BORRAR PARA SIEMPRE ${archivadas.length} orden(es) archivada(s). No se pueden recuperar después y NO se guardan en Ventas. ¿Seguro que quieres continuar?`)) return;
+        const idsSeleccionados = Array.from(document.querySelectorAll('.chk-archivado:checked'))
+            .map(chk => chk.getAttribute('data-id'));
+        if (!idsSeleccionados.length) { alert('No has seleccionado ninguna orden. Marca la casilla de las que quieras eliminar.'); return; }
+        if (!confirm(`⚠️ Esto va a BORRAR PARA SIEMPRE ${idsSeleccionados.length} orden(es) seleccionada(s). No se pueden recuperar después y NO se guardan en Ventas. ¿Seguro que quieres continuar?`)) return;
         if (!confirm('Última confirmación: esta acción es irreversible. ¿Eliminar de verdad?')) return;
 
         const btn = document.getElementById('btn-eliminar-archivados');
         if (btn) { btn.disabled = true; btn.textContent = '⏳ Eliminando...'; }
 
         let eliminadas = 0, errores = 0;
-        for (const p of archivadas) {
+        for (const id of idsSeleccionados) {
             try {
-                await deleteDoc(doc(db, 'pedidos', p.id));
+                await deleteDoc(doc(db, 'pedidos', id));
                 eliminadas++;
             } catch(err) {
-                console.error('Error eliminando:', p.id, err);
+                console.error('Error eliminando:', id, err);
                 errores++;
             }
         }
 
-        if (btn) { btn.disabled = false; btn.textContent = '🗑️ Eliminar Archivadas Permanentemente'; }
+        if (btn) { btn.disabled = false; btn.textContent = '🗑️ Eliminar Seleccionadas'; }
         alert(`🗑️ ${eliminadas} orden(es) eliminada(s) para siempre.` + (errores ? `\n⚠️ ${errores} tuvieron error (revisa la consola). Puede ser que las reglas de Firestore no estén publicadas todavía.` : ''));
     };
 
