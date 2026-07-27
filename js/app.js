@@ -412,14 +412,26 @@ function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waU
     document.body.appendChild(ov);
 
     const btnWa = ov.querySelector('#btn-wa-pedido');
-    // Al tocar WhatsApp: abrir el enlace (acción directa del usuario, no bloqueada)
+    // Guardamos aquí la ubicación en cuanto el cliente la comparta, para
+    // integrarla en el mensaje al momento de tocar "Enviar por WhatsApp".
+    ov._ubicacion = null;
+    // Al tocar WhatsApp: armar el enlace final AHORA, agregando la
+    // ubicación (link de Google Maps) si ya se compartió.
     btnWa?.addEventListener('click', () => {
         if (btnWa.disabled) return;
-        window.open(waUrl, '_blank');
+        let urlFinal = waUrl;
+        if (ov._ubicacion && ov._ubicacion.lat && ov._ubicacion.lng) {
+            const mapsLink = 'https://maps.google.com/?q=' + ov._ubicacion.lat + ',' + ov._ubicacion.lng;
+            // El texto del pedido va codificado en el parámetro ?text=.
+            // Le agregamos la ubicación al final, también codificada.
+            const extra = '\n📍 *Ubicación del cliente:*\n' + mapsLink;
+            urlFinal = waUrl + encodeURIComponent(extra);
+        }
+        window.open(urlFinal, '_blank');
     });
 
     // En domicilio: escuchar el pedido en Firestore; cuando el cliente
-    // comparta su ubicación, habilitar el botón de WhatsApp.
+    // comparta su ubicación, habilitar el botón y guardar las coordenadas.
     if (esDomicilio && pedidoId) {
         habilitarWaTrasUbicacion(pedidoId, btnWa, ov);
     }
@@ -435,6 +447,7 @@ async function habilitarWaTrasUbicacion(pedidoId, btnWa, ov) {
         ov._unsub = onSnapshot(ref, (snap) => {
             const d = snap.data();
             if (d && d.ubicacionCliente && btnWa) {
+                ov._ubicacion = d.ubicacionCliente;  // guardar para el mensaje
                 btnWa.disabled = false;
                 btnWa.style.background = 'rgba(37,211,102,.15)';
                 btnWa.style.borderColor = 'rgba(37,211,102,.4)';
