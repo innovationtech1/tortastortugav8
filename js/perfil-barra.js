@@ -144,7 +144,7 @@
         ['tt_cliente_nombre','tt_cliente_telefono','tt_cliente_ts','tt_cliente_uid',
          'tt_cajero_id','tt_cajero_nombre','tt_cajero_rol','tt_cajero_ts',
          'tt_emp_id','tt_emp_pin','tt_emp_ts','tt_emp_docid','tt_emp_nombre','tt_emp_rol'
-        ].forEach(function(k){ sessionStorage.removeItem(k); });
+        ].forEach(function(k){ sessionStorage.removeItem(k); localStorage.removeItem(k); });
         var barra = document.getElementById('perfil-barra');
         if (barra) barra.remove();
         // Redirigir a inicio
