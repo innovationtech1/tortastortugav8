@@ -379,7 +379,7 @@ function mostrarConfirmacionTicket(ticketStr, nombreCliente) {
             <div style="font-size:1rem;color:#ccc;margin-bottom:1rem;">¡Gracias${nombreCliente ? ', ' + nombreCliente.split(' ')[0] : ''}! Tu pedido fue enviado.</div>
             <div style="background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:14px;padding:1rem;margin-bottom:1rem;">
                 <div style="font-size:.75rem;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem;">Tu número de orden</div>
-                <div style="font-size:2.2rem;font-weight:900;color:#25D366;">#${ticketStr}</div>
+                <div style="font-size:2.2rem;font-weight:900;color:#25D366;">#${String(ticketStr).replace(/^#+/, '')}</div>
             </div>
             <div style="font-size:.78rem;color:#888;margin-bottom:1.2rem;">Guarda este número — te sirve para preguntar por tu orden en la tienda o darle seguimiento aquí mismo.</div>
             <div style="display:flex;flex-direction:column;gap:.6rem;">
@@ -1401,6 +1401,11 @@ window.enviarTodasLasCuentas = async function() {
             sessionStorage.setItem('tt_cliente_nombre', nombre);
             sessionStorage.setItem('tt_cliente_telefono', telefono || '');
             sessionStorage.setItem('tt_cliente_ts', Date.now().toString());
+            // También en localStorage: se comparte entre pestañas y "Mi
+            // Pedido" se abre en pestaña nueva (sessionStorage no viaja).
+            localStorage.setItem('tt_cliente_nombre', nombre);
+            localStorage.setItem('tt_cliente_telefono', telefono || '');
+            localStorage.setItem('tt_cliente_ts', Date.now().toString());
             window._clienteActivo = { nombre: nombre, telefono: telefono || '' };
         }
 
@@ -1411,7 +1416,7 @@ window.enviarTodasLasCuentas = async function() {
         const lineas = [
             '🐢 *TORTAS TORTUGA — NUEVO PEDIDO*',
             '━━━━━━━━━━━━━━━━━━━━',
-            '🔖 *TICKET: #' + ticket + '*',
+            '🔖 *TICKET: #' + String(ticket).replace(/^#+/, '') + '*',
             '🗓️ *Fecha:* ' + fechaHora,
             '👤 *Cliente:* ' + nombre + (telefono ? ' · 📞 ' + telefono : ''),
             (tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Domicilio'),
