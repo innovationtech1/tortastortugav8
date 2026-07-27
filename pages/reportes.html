@@ -84,6 +84,9 @@ let _filtrados = [];
 function tsDe(p) {
   if (p.creado?.seconds) return new Date(p.creado.seconds*1000);
   if (p.tomadaEn) return new Date(p.tomadaEn);
+  // Campos de la coleccion 'ventas' (pedidos ya cerrados)
+  if (p.fechaOriginal?.seconds) return new Date(p.fechaOriginal.seconds*1000);
+  if (p.cerradoEn) return new Date(p.cerradoEn);
   return null;
 }
 function totalDe(p) {
@@ -95,9 +98,30 @@ function totalDe(p) {
 
 async function cargar() {
   try {
-    const snap = await getDocs(collection(db, 'pedidos'));
     _todosPedidos = [];
-    snap.forEach(d => _todosPedidos.push({ id: d.id, ...d.data() }));
+    // 1. Pedidos activos (aun no cerrados)
+    const snapPed = await getDocs(collection(db, 'pedidos'));
+    const idsCerrados = new Set();
+
+    // 2. Ventas cerradas (historico permanente de "Cerrar Sistema")
+    let ventas = [];
+    try {
+      const snapVen = await getDocs(collection(db, 'ventas'));
+      snapVen.forEach(d => {
+        const v = { id: d.id, _origen: 'ventas', ...d.data() };
+        ventas.push(v);
+        if (v.pedidoOriginalId) idsCerrados.add(v.pedidoOriginalId);
+      });
+    } catch(e) { /* si no hay coleccion ventas aun, seguimos solo con pedidos */ }
+
+    // Agregar pedidos activos que NO esten ya en ventas (evitar duplicados)
+    snapPed.forEach(d => {
+      if (idsCerrados.has(d.id)) return;
+      _todosPedidos.push({ id: d.id, _origen: 'pedidos', ...d.data() });
+    });
+    // Agregar todas las ventas cerradas
+    ventas.forEach(v => _todosPedidos.push(v));
+
     setPeriodo('hoy');
   } catch(e) {
     document.getElementById('contenido').innerHTML = '<div class="loading">Error al cargar: ' + e.message + '</div>';
