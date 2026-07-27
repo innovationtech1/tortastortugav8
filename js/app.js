@@ -884,7 +884,7 @@ window.ordenarCuenta = function(cid) {
     msg += `_Powered by TortasTortuga.app_`;
 
     const encoded = encodeURIComponent(msg);
-    window.open(`https://wa.me/12108678210?text=${encoded}`, '_blank');
+    window.open(`https://api.whatsapp.com/send?phone=12108678210&text=${encoded}`, '_blank');
 };
 
 // ── ORDENAR TODAS ─────────────────────────────────────────────
@@ -915,7 +915,7 @@ window.ordenarTodas = function() {
     msg += `_Powered by TortasTortuga.app_`;
 
     const encoded = encodeURIComponent(msg);
-    window.open(`https://wa.me/12108678210?text=${encoded}`, '_blank');
+    window.open(`https://api.whatsapp.com/send?phone=12108678210&text=${encoded}`, '_blank');
 };
 
 // ── SINCRONIZAR CARRITO CON SPLIT ─────────────────────────────
@@ -1271,7 +1271,7 @@ window.enviarOrdenModal = function() {
 
     const msg = lineas.join('\n');
     cerrarOrdenModal();
-    window.open('https://wa.me/12108678210?text=' + encodeURIComponent(msg), '_blank');
+    window.open('https://api.whatsapp.com/send?phone=12108678210&text=' + encodeURIComponent(msg), '_blank');
 };
 
 window.enviarTodasLasCuentas = async function() {
@@ -1428,7 +1428,7 @@ window.enviarTodasLasCuentas = async function() {
             '━━━━━━━━━━━━━━━━━━━━',
             '✅ Pedido enviado desde TortasTortuga.com'
         ];
-        const waUrl = 'https://wa.me/12108678210?text=' + encodeURIComponent(lineas.join('\n'));
+        const waUrl = 'https://api.whatsapp.com/send?phone=12108678210&text=' + encodeURIComponent(lineas.join('\n'));
         if (waWindow) { waWindow.location.href = waUrl; }
         else { window.open(waUrl, '_blank'); } // respaldo si el navegador igual bloqueó
 
