@@ -395,6 +395,13 @@ async function guardarEnSheets(data) {
 // ─── ENVIAR POR WHATSAPP ─────────────────────────────────────────
 window.generarWhatsApp = async function() {
     if (!validarFormulario()) return;
+
+    // Abrir la ventana de WhatsApp AHORA MISMO, en blanco, antes de
+    // cualquier await — varios navegadores móviles bloquean window.open()
+    // si ocurre después de una espera asíncrona, porque ya no lo cuentan
+    // como una acción directa del usuario. Le ponemos destino después.
+    const waWindow = window.open('', '_blank');
+
     const data = buildOrderData();
     const result = await guardarPedidoFirebase(data, 'whatsapp');
     await guardarEnSheets({ ...data, metodoPago: 'whatsapp' });
@@ -422,8 +429,20 @@ window.generarWhatsApp = async function() {
         `✅ Pedido enviado desde TortasTortuga.com`
     ].filter(Boolean).join('\n');
 
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+    const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
+    if (waWindow) { waWindow.location.href = waUrl; }
+    else { window.open(waUrl, '_blank'); } // fallback si el navegador bloqueó igual
     cartModal.classList.remove('active');
+
+    // Guest checkout (sin login): crear una sesión ligera con el nombre y
+    // teléfono que acaba de escribir, para que "Mi Pedido" funcione sin
+    // que tenga que loguearse aparte — ya nos dio sus datos al ordenar.
+    if (!window._clienteActivo && data.nombre) {
+        sessionStorage.setItem('tt_cliente_nombre', data.nombre);
+        sessionStorage.setItem('tt_cliente_telefono', data.telefono || '');
+        sessionStorage.setItem('tt_cliente_ts', Date.now().toString());
+        window._clienteActivo = { nombre: data.nombre, telefono: data.telefono || '' };
+    }
 
     // Confirmación en pantalla con el número de ticket bien visible —
     // es el "respaldo" de que el pedido sí se envió, para cualquier
