@@ -82,6 +82,11 @@
     <p class="privacidad">
       Tu ubicacion solo se usa para entregar este pedido. No se comparte con terceros.
     </p>
+
+    <button onclick="regresarAMiPedido()"
+      style="margin-top:1.2rem;padding:.8rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:#ccc;border-radius:12px;font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;width:100%;">
+      &larr; Regresar a mi pedido
+    </button>
   </div>
 
 <script type="module">
@@ -128,6 +133,16 @@ if (!pedidoId) {
         }
     })();
 }
+
+window.regresarAMiPedido = function() {
+    // Volver a la vista del cliente. Si venimos desde ahi (misma app),
+    // history.back es lo mas fluido; si no, ir directo a mi-pedido.
+    if (document.referrer && document.referrer.indexOf('mi-pedido') >= 0) {
+        history.back();
+    } else {
+        window.location.href = 'pages/mi-pedido.html';
+    }
+};
 
 window.guardarReferencia = async function() {
     if (!pedidoId) return;
