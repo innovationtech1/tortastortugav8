@@ -10,40 +10,41 @@
     // Detectar que tipo de sesion hay activa
     function detectarSesion() {
         var ahora = Date.now();
+        function leer(k){ return sessionStorage.getItem(k) || localStorage.getItem(k); }
 
         // 1. Empleado (login por empleados.html)
-        var empId = sessionStorage.getItem('tt_emp_id');
-        var empTs = parseInt(sessionStorage.getItem('tt_emp_ts') || '0');
+        var empId = leer('tt_emp_id');
+        var empTs = parseInt(leer('tt_emp_ts') || '0');
         if (empId && (ahora - empTs < VEINTE_MIN)) {
             return {
                 tipo: 'empleado',
                 id: empId,
-                nombre: sessionStorage.getItem('tt_emp_nombre') || empId,
-                rol: sessionStorage.getItem('tt_emp_rol') || 'empleado',
+                nombre: leer('tt_emp_nombre') || empId,
+                rol: leer('tt_emp_rol') || 'empleado',
             };
         }
 
         // 2. Cajero (login por auth.html)
-        var cajNombre = sessionStorage.getItem('tt_cajero_nombre');
-        var cajTs = parseInt(sessionStorage.getItem('tt_cajero_ts') || '0');
+        var cajNombre = leer('tt_cajero_nombre');
+        var cajTs = parseInt(leer('tt_cajero_ts') || '0');
         if (cajNombre && (ahora - cajTs < VEINTE_MIN)) {
             return {
                 tipo: 'empleado',
-                id: sessionStorage.getItem('tt_cajero_id') || '',
+                id: leer('tt_cajero_id') || '',
                 nombre: cajNombre,
-                rol: sessionStorage.getItem('tt_cajero_rol') || 'cajero',
+                rol: leer('tt_cajero_rol') || 'cajero',
             };
         }
 
         // 3. Cliente (login por entrar.html — telefono o cuenta con email)
-        var cliNombre = sessionStorage.getItem('tt_cliente_nombre');
-        var cliTs = parseInt(sessionStorage.getItem('tt_cliente_ts') || '0');
+        var cliNombre = leer('tt_cliente_nombre');
+        var cliTs = parseInt(leer('tt_cliente_ts') || '0');
         if (cliNombre && (ahora - cliTs < VEINTE_MIN)) {
             return {
                 tipo: 'cliente',
                 nombre: cliNombre,
-                telefono: sessionStorage.getItem('tt_cliente_telefono') || '',
-                uid: sessionStorage.getItem('tt_cliente_uid') || null,
+                telefono: leer('tt_cliente_telefono') || '',
+                uid: leer('tt_cliente_uid') || null,
             };
         }
 
