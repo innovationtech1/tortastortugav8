@@ -57,6 +57,7 @@ main{max-width:640px;margin:0 auto;padding:1.2rem 1rem 3rem;}
 .est-entregado{background:rgba(255,255,255,.08);color:#999;}
 .est-cancelado{background:rgba(255,68,68,.15);color:var(--red);}
 .pedido-items{font-size:.85rem;color:#ccc;white-space:pre-line;line-height:1.6;margin-bottom:.6rem;}
+.pedido-fecha{font-size:.75rem;color:#888;margin-bottom:.5rem;}
 .pedido-total{font-weight:800;font-size:.95rem;text-align:right;color:#fff;}
 .vacio{text-align:center;color:#666;font-size:.9rem;padding:3rem 1rem;}
 .progreso{display:flex;gap:.3rem;margin:.7rem 0;}
@@ -123,12 +124,20 @@ function renderPedidos(pedidos) {
     cont.innerHTML = pedidos.map(p => {
         const paso = pasoActual(p.estado);
         const pasos = [0,1,2].map(i => `<div class="paso ${i <= paso ? 'activo' : ''}"></div>`).join('');
+        // Fecha y hora del pedido (desde el timestamp de creación)
+        let fechaHora = '';
+        const cd = p.creado?.toDate ? p.creado.toDate() : (p.creado?.seconds ? new Date(p.creado.seconds * 1000) : (p.tomadaEn ? new Date(p.tomadaEn) : null));
+        if (cd) {
+            fechaHora = cd.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) +
+                        ' · ' + cd.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+        }
         return `
         <div class="pedido-card">
             <div class="pedido-top">
                 <span class="pedido-folio">${p.folioStr || '#---'}</span>
                 <span class="pedido-estado ${claseEstado(p.estado)}">${(p.estado || 'Nuevo').replace(/[^\w\sáéíóúñ]/gi,'').trim()}</span>
             </div>
+            ${fechaHora ? `<div class="pedido-fecha">🗓️ ${fechaHora}</div>` : ''}
             <div class="progreso">${pasos}</div>
             <div class="pedido-items">${(p.items || '').replace(/</g,'&lt;')}</div>
             <div class="pedido-total">${p.total || ''}</div>
