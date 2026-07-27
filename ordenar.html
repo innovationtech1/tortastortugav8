@@ -1122,7 +1122,7 @@ function ordenarTodasWhatsApp() {
         return s + c.items.reduce(function(ss,i){ return ss+i.precio; }, 0);
     }, 0);
     lineas.push('💰 *TOTAL GENERAL: $' + totalGen.toFixed(2) + '*');
-    window.open('https://wa.me/12108678210?text=' + encodeURIComponent(lineas.join('\n')), '_blank');
+    window.open('https://api.whatsapp.com/send?phone=12108678210&text=' + encodeURIComponent(lineas.join('\n')), '_blank');
 }
 
 function abrirPago() {
@@ -1870,7 +1870,7 @@ function enviarOrdenModal() {
     lineas.push('');
     lineas.push('💰 *Total: $' + total.toFixed(2) + '*');
     cerrarOrdenModal();
-    window.open('https://wa.me/12108678210?text=' + encodeURIComponent(lineas.join('\n')), '_blank');
+    window.open('https://api.whatsapp.com/send?phone=12108678210&text=' + encodeURIComponent(lineas.join('\n')), '_blank');
 }
 
 </script>
