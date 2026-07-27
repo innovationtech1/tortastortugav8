@@ -357,7 +357,7 @@ function renderCard(p) {
     return `<div class="kcard ${cls}" id="kcard-${p.id}">
         <div class="kcard-head">
             <div>
-                <div class="kticket">#${ticket} <span style="font-size:.68rem;color:var(--muted);font-weight:400;">${hora}</span></div>
+                <div class="kticket">#${String(ticket).replace(/^#+/, '')} <span style="font-size:.68rem;color:var(--muted);font-weight:400;">${hora}</span></div>
                 <div class="kcliente">${p.cliente||p.nombre||'Cliente'} ${p.notaCocina?'<span style="color:var(--yellow);font-size:.7rem;">📝 '+p.notaCocina+'</span>':''}</div>
             </div>
             <div class="ktimer ${timerClass(secs)}">${timerTxt(secs)}</div>
@@ -430,7 +430,7 @@ window.abrirEditor = (id) => {
     editPedido = todos.find(p => p.id === id);
     if (!editPedido) return;
     const ticket = (todos.find(p=>p.id===id)||{}).folioStr || ('#'+id.slice(-4).toUpperCase());
-    document.getElementById('edit-modal-title').textContent = '✏️ Orden #' + ticket;
+    document.getElementById('edit-modal-title').textContent = '✏️ Orden #' + String(ticket).replace(/^#+/, '');
     renderEditor();
     document.getElementById('edit-modal').classList.add('open');
 };
