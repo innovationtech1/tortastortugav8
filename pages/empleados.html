@@ -1840,6 +1840,13 @@ window.loginEmp = async function(){
     sessionStorage.setItem('tt_emp_ts',   Date.now().toString());
     sessionStorage.setItem('tt_emp_nombre', ((empData.nombre||'') + ' ' + (empData.apellido||'')).trim() || empId);
     sessionStorage.setItem('tt_emp_rol', empData.rol || empData.puesto || 'empleado');
+    // Duplicar en localStorage: se comparte entre pestañas (Ver Cocina /
+    // Ir a Tienda pueden abrir en pestaña nueva donde sessionStorage no
+    // está disponible), igual que hicimos con la sesión de cliente.
+    localStorage.setItem('tt_emp_id',   empId);
+    localStorage.setItem('tt_emp_ts',   Date.now().toString());
+    localStorage.setItem('tt_emp_nombre', ((empData.nombre||'') + ' ' + (empData.apellido||'')).trim() || empId);
+    localStorage.setItem('tt_emp_rol', empData.rol || empData.puesto || 'empleado');
     if (!firebaseAuthOk) {
       sessionStorage.setItem('tt_emp_docid', empDoc.id);
       user = null;
@@ -2897,10 +2904,10 @@ window.actualizarSalario = async function(uid, valor, pagoElId){
 
 window.cerrarSesion = async function(){
   skipAuthChange = false;  // reset flag al salir
-  // Limpiar sesión guardada
-  sessionStorage.removeItem('tt_emp_id');
-  sessionStorage.removeItem('tt_emp_pin');
-  sessionStorage.removeItem('tt_emp_ts');
+  // Limpiar sesión guardada (session + local, ya que ahora se duplica)
+  ['tt_emp_id','tt_emp_pin','tt_emp_ts','tt_emp_nombre','tt_emp_rol','tt_emp_docid',
+   'tt_cajero_id','tt_cajero_nombre','tt_cajero_rol','tt_cajero_ts'
+  ].forEach(function(k){ sessionStorage.removeItem(k); localStorage.removeItem(k); });
   clearInterval(rlj);
   if(user) await signOut(auth);
   else{ showScreen('s-auth'); nivelAdmin=0; el('rchip').style.display='none'; el('hname').style.display='none'; el('btn-logout').style.display='none'; el('btn-back').style.display='none'; }
