@@ -577,13 +577,14 @@ window.normalizarRutaImagen = function(src) {
         if (searchText) {
             filtrados = filtrados.filter(p => {
                 const ticket = p.id.slice(-4).toLowerCase();
+                const folio = (p.folioStr || '').replace(/^#+/, '').toLowerCase();
                 const nombre = (p.cliente || p.nombre || '').toLowerCase();
                 const tel = (p.telefono || '').toLowerCase();
                 const items = (p.items || '').toLowerCase();
                 const pago = (p.metodoPagoReal || p.metodoPago || '').toLowerCase();
                 const estado = (p.estado || '').toLowerCase();
                 const tipo = (p.tipo || '').toLowerCase();
-                return ticket.includes(searchText) || nombre.includes(searchText) || tel.includes(searchText) || items.includes(searchText) || pago.includes(searchText) || estado.includes(searchText) || tipo.includes(searchText);
+                return ticket.includes(searchText) || folio.includes(searchText) || nombre.includes(searchText) || tel.includes(searchText) || items.includes(searchText) || pago.includes(searchText) || estado.includes(searchText) || tipo.includes(searchText);
             });
             if(searchStats) { searchStats.style.display = 'block'; searchStats.innerHTML = `✨ Mostrando ${filtrados.length} pedido${filtrados.length !== 1 ? 's' : ''} coincidiendo con "${searchText}"`; }
         } else { if(searchStats) searchStats.style.display = 'none'; }
@@ -630,6 +631,11 @@ window.normalizarRutaImagen = function(src) {
                 }
             }
             const ticketId = p.id.slice(-4).toUpperCase();
+            // Numero de orden visible: usar el folio secuencial (#022) que
+            // tambien ve el cliente en "Mi Pedido", para que coincidan en
+            // ambas pantallas. El codigo interno (TCHJ) queda solo como
+            // respaldo si un pedido viejo no tuviera folio.
+            const folioVisible = (p.folioStr ? String(p.folioStr).replace(/^#+/, '') : ticketId);
             const isPaid = p.estadoPago === 'Pagado';
             let pagoHTML = '';
             if (isPaid) {
@@ -643,7 +649,7 @@ window.normalizarRutaImagen = function(src) {
             }
             else { pagoHTML = `<button class="btn-cobrar-grid" onclick="abrirCaja('${p.id}', '${ticketId}', '${p.total}')">🔴 Cobrar ${p.total}</button><br><span class="pay-badge" style="margin-top:4px;display:inline-block">Pide: ${p.metodoPago || '?'}</span>`; }
             const searchText = (document.getElementById('admin-search')?.value || '').trim();
-            let displayTicket = ticketId, displayNombre = p.cliente || p.nombre || '—', displayTel = p.telefono || 'En tienda', displayItems = p.items || '—', displayTipo = tipo;
+            let displayTicket = folioVisible, displayNombre = p.cliente || p.nombre || '—', displayTel = p.telefono || 'En tienda', displayItems = p.items || '—', displayTipo = tipo;
             if (searchText) { displayTicket = resaltar(displayTicket, searchText); displayNombre = resaltar(displayNombre, searchText); displayTel = resaltar(displayTel, searchText); displayItems = resaltar(displayItems, searchText); displayTipo = resaltar(displayTipo, searchText); }
             // Separar cada producto (dividido por " | ") en su propia tarjeta con espacio
             displayItems = displayItems.replace(/\n/g, '<br>');
