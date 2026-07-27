@@ -53,22 +53,25 @@ window._pendingItem = window._pendingItem || null;
 
     // Leer sesion de CAJERO (login por auth.html) O de EMPLEADO (login por empleados.html).
     // Unificamos ambas para que quien entre por cualquier via quede como cajero activo.
+    // Leemos de sessionStorage O localStorage: la tienda puede abrirse en
+    // pestaña nueva, donde sessionStorage no viaja pero localStorage sí.
+    function _leerSes(k){ return sessionStorage.getItem(k) || localStorage.getItem(k); }
     var cajeroId, cajeroNombre, cajeroRol, cajeroTs;
 
-    var cajTs = parseInt(sessionStorage.getItem('tt_cajero_ts') || '0');
-    var empTs = parseInt(sessionStorage.getItem('tt_emp_ts') || '0');
+    var cajTs = parseInt(_leerSes('tt_cajero_ts') || '0');
+    var empTs = parseInt(_leerSes('tt_emp_ts') || '0');
 
-    if (sessionStorage.getItem('tt_cajero_nombre') && (Date.now() - cajTs < VEINTE_MIN)) {
+    if (_leerSes('tt_cajero_nombre') && (Date.now() - cajTs < VEINTE_MIN)) {
         // Sesion via auth.html
-        cajeroId     = sessionStorage.getItem('tt_cajero_id');
-        cajeroNombre = sessionStorage.getItem('tt_cajero_nombre');
-        cajeroRol    = sessionStorage.getItem('tt_cajero_rol');
+        cajeroId     = _leerSes('tt_cajero_id');
+        cajeroNombre = _leerSes('tt_cajero_nombre');
+        cajeroRol    = _leerSes('tt_cajero_rol');
         cajeroTs     = cajTs;
-    } else if (sessionStorage.getItem('tt_emp_id') && (Date.now() - empTs < VEINTE_MIN)) {
+    } else if (_leerSes('tt_emp_id') && (Date.now() - empTs < VEINTE_MIN)) {
         // Sesion via empleados.html — convertir a formato cajero
-        cajeroId     = sessionStorage.getItem('tt_emp_id');
-        cajeroNombre = sessionStorage.getItem('tt_emp_nombre') || sessionStorage.getItem('tt_emp_id');
-        cajeroRol    = sessionStorage.getItem('tt_emp_rol') || 'cajero';
+        cajeroId     = _leerSes('tt_emp_id');
+        cajeroNombre = _leerSes('tt_emp_nombre') || _leerSes('tt_emp_id');
+        cajeroRol    = _leerSes('tt_emp_rol') || 'cajero';
         cajeroTs     = empTs;
         // Espejar a las claves tt_cajero_* para que admin (cobro) tambien las lea
         sessionStorage.setItem('tt_cajero_id', cajeroId);
