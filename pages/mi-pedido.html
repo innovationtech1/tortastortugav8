@@ -151,6 +151,29 @@ function renderPedidos(pedidos) {
             background:${yaCompartio ? 'rgba(37,211,102,.12)' : 'rgba(37,211,102,.15)'};
             border:1px solid rgba(37,211,102,.35);color:#25D366;">
             ${yaCompartio ? '✅ Ubicación enviada — tocar para actualizar' : '📍 Enviar mi ubicación'}</a>`;
+
+        // Armar mensaje de WhatsApp con los datos de este pedido
+        const folioLimpio = String(p.folioStr || '').replace(/^#+/, '') || p.id.slice(-4).toUpperCase();
+        const lineasWa = [
+            '🐢 *TORTAS TORTUGA — PEDIDO*',
+            '━━━━━━━━━━━━━━━━━━━━',
+            '🔖 *TICKET: #' + folioLimpio + '*',
+            fechaHora ? ('🗓️ *Fecha:* ' + fechaHora) : '',
+            '👤 *Cliente:* ' + (p.cliente || p.nombre || '') + ((p.telefono) ? ' · 📞 ' + p.telefono : ''),
+            '',
+            '📋 *Orden:*',
+            (p.items || '').split(' | ').join('\n'),
+            '',
+            '💰 *Total: ' + (p.total || '') + '*',
+            '━━━━━━━━━━━━━━━━━━━━'
+        ].filter(Boolean);
+        const waUrl = 'https://api.whatsapp.com/send?phone=12108678210&text=' + encodeURIComponent(lineasWa.join('\n'));
+        const btnWa = `<a href="${waUrl}" target="_blank"
+            style="display:block;margin-top:.5rem;padding:.6rem;text-align:center;text-decoration:none;
+            border-radius:10px;font-size:.82rem;font-weight:700;
+            background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.4);color:#25D366;">
+            💬 Enviar pedido por WhatsApp</a>`;
+
         return `
         <div class="pedido-card">
             <div class="pedido-top">
@@ -162,6 +185,7 @@ function renderPedidos(pedidos) {
             <div class="pedido-items">${(p.items || '').replace(/</g,'&lt;')}</div>
             <div class="pedido-total">${p.total || ''}</div>
             ${btnUbic}
+            ${btnWa}
         </div>`;
     }).join('');
 }
