@@ -2839,9 +2839,9 @@ document.addEventListener('click', function(e) {
         // Pre-cargar telefono si la cuenta ya tiene uno
         var telInp = document.getElementById('input-telefono-cliente');
         if (telInp) telInp.value = (c && c.telefono) ? c.telefono : '';
-        // Mostrar seccion telefono si la cuenta es Domicilio
+        // Mostrar seccion telefono SIEMPRE (ahora se pide para toda orden)
         var telSec = document.getElementById('telefono-section');
-        if (telSec) telSec.style.display = (c && c.tipoServicio === 'Domicilio') ? 'block' : 'none';
+        if (telSec) telSec.style.display = 'block';
 
         // Limpiar selecciones visuales
         document.querySelectorAll('.tipo-serv-btn, .mesa-btn').forEach(function(b){
@@ -2941,17 +2941,24 @@ document.addEventListener('click', function(e) {
             return;
         }
 
+        // Exigir teléfono de 10 dígitos (se pide para toda orden). El
+        // nombre puede venir de texto escrito o de una mesa asignada.
+        var telInpVal = document.getElementById('input-telefono-cliente');
+        var telDig = telInpVal ? (telInpVal.value || '').replace(/\D/g, '') : '';
+        if (telDig.length < 10) {
+            alert('⚠️ Escribe el teléfono del cliente (10 dígitos) antes de continuar.');
+            if (telInpVal) telInpVal.focus();
+            return;
+        }
+
         c.nombre = nombre;
         // Guardar el tipo de servicio en la cuenta para usarlo al enviar
         c.tipoServicio = _seleccion.tipo || 'Comer aquí';
 
-        // Guardar el telefono (solo relevante para Domicilio)
+        // Guardar el telefono SIEMPRE (antes solo se guardaba para
+        // Domicilio; ahora se pide y guarda para toda orden).
         var telInp = document.getElementById('input-telefono-cliente');
-        if (telInp && _seleccion.tipo === 'Domicilio') {
-            c.telefono = (telInp.value || '').trim();
-        } else {
-            c.telefono = '';
-        }
+        c.telefono = telInp ? (telInp.value || '').trim() : '';
 
         // Actualizar UI
         var display = document.getElementById('nombre-cuenta-display');
