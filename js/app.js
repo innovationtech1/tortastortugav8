@@ -244,211 +244,12 @@ window.removeItem = function(i) { cart.splice(i, 1); updateCart(); };
 // se ejecutaba de verdad — se eliminó para evitar que alguien la edite
 // pensando que hace algo.
 
-// ─── VALIDACIONES ────────────────────────────────────────────────
-function validarFormulario() {
-    const nombre = document.getElementById('customer-name').value.trim();
-    const telefono = document.getElementById('customer-phone').value.replace(/\D/g, '');
-    const esPresencial = document.getElementById('no-phone-checkbox').checked;
-    if (!nombre) { alert('⚠️ Por favor ingresa tu nombre.'); return false; }
-    if (!esPresencial && telefono.length < 10) { alert('⚠️ El teléfono es obligatorio (10 dígitos).'); return false; }
-    if (cart.length === 0) { alert('⚠️ Agrega al menos un artículo.'); return false; }
-    return true;
-}
-
-function buildOrderData() {
-    const nombre = document.getElementById('customer-name').value.trim();
-    const telefono = document.getElementById('customer-phone').value.trim();
-    const tipo = document.querySelector('input[name="order-type"]:checked')?.value || 'pickup';
-    const total = cart.reduce((s, i) => s + i.precio, 0);
-    const items = cart.map(i => `${i.nombre} ($${i.precio})${i.modificaciones?.length ? ' [' + i.modificaciones.join(', ') + ']' : ''}`).join('\n');
-    const ubicacion = clientLocation
-        ? `📍 GPS: ${clientLocation.lat.toFixed(5)}, ${clientLocation.lon.toFixed(5)}`
-        : obtenerDireccionTexto();
-    return { nombre, telefono, tipo, items, total: `$${total.toFixed(2)}`, ubicacion, totalNum: total, clienteUid: sessionStorage.getItem('tt_cliente_uid') || null };
-}
-
-function obtenerDireccionTexto() {
-    const calle = document.getElementById('addr-street')?.value.trim() || '';
-    const ciudad = document.getElementById('addr-city')?.value.trim() || '';
-    const zip = document.getElementById('addr-zip')?.value.trim() || '';
-    return calle ? `${calle}, ${ciudad} ${zip}` : 'No especificada';
-}
-
-// ─── GUARDAR EN FIREBASE ─────────────────────────────────────────
-
-// ═══════════════ FOLIO SECUENCIAL DIARIO ═══════════════
-// Genera número de orden #001, #002... que se reinicia cada día
-async function obtenerFolioDiario() {
-    const hoy = new Date();
-    const fechaKey = hoy.getFullYear() + '-' +
-                     String(hoy.getMonth()+1).padStart(2,'0') + '-' +
-                     String(hoy.getDate()).padStart(2,'0');
-
-    // ── Intento 1: contador en Firestore (compartido entre dispositivos) ──
-    try {
-        const contadorRef = doc(db, 'contadores', 'folio_' + fechaKey);
-        const nuevoFolio = await runTransaction(db, async (transaction) => {
-            const snap = await transaction.get(contadorRef);
-            const actual = snap.exists() ? (snap.data().valor || 0) : 0;
-            const siguiente = actual + 1;
-            transaction.set(contadorRef, { valor: siguiente, fecha: fechaKey }, { merge: true });
-            return siguiente;
-        });
-        // Sincronizar el respaldo local
-        try { localStorage.setItem('folio_' + fechaKey, String(nuevoFolio)); } catch(_) {}
-        return nuevoFolio;
-    } catch (e) {
-        // Firestore no disponible o sin permisos en 'contadores'
-        console.info('Folio: usando contador local (Firestore no disponible para contadores)');
-    }
-
-    // ── Intento 2: contador local del navegador ──
-    try {
-        const key = 'folio_' + fechaKey;
-        const actual = parseInt(localStorage.getItem(key) || '0') || 0;
-        const siguiente = actual + 1;
-        localStorage.setItem(key, String(siguiente));
-        // Limpiar contadores de días anteriores
-        for (let i = 0; i < localStorage.length; i++) {
-            const k = localStorage.key(i);
-            if (k && k.startsWith('folio_') && k !== key) localStorage.removeItem(k);
-        }
-        return siguiente;
-    } catch (e2) {
-        // ── Último recurso: número basado en la hora ──
-        return parseInt(String(Date.now()).slice(-3)) || 1;
-    }
-}
-
-// Formatea el folio como #001
-function formatearFolio(n) {
-    return '#' + String(n).padStart(3, '0');
-}
-
-async function guardarPedidoFirebase(data, metodoPago) {
-    try {
-        // Obtener folio secuencial del día
-        const folio = await obtenerFolioDiario();
-
-        const ref = await addDoc(collection(db, 'pedidos'), {
-            ...data,
-            folio: folio,
-            folioStr: formatearFolio(folio),
-            metodoPago: metodoPago || 'pendiente',
-            estadoPago: 'Por pagar',
-            estado: 'Nuevo 🆕',
-            // Timestamps de trazabilidad (cuándo pasó a cada estado)
-            tiempos: {
-                recibida: Date.now(),
-                enCocina: null,
-                lista:    null,
-                entregada: null,
-            },
-            uid: window._firebaseUser?.uid || 'anonimo',
-            creado: serverTimestamp()
-        });
-
-        const ticketId = formatearFolio(folio);
-        console.log('✅ Pedido guardado:', ref.id);
-
-        // ── SUMAR PUNTOS AL CLIENTE REGISTRADO ──────────────
-        const uid = window._firebaseUser?.uid;
-        if(uid && uid !== 'anonimo' && data.totalNum > 0){
-            try{
-                // Regla de puntos: <$25=15pts, $25-$39.99=30pts, $40+=50pts
-                let pts = 15;
-                if(data.totalNum >= 40)   pts = 50;
-                else if(data.totalNum >= 25) pts = 30;
-
-                await updateDoc(doc(db, 'usuarios', uid), {
-                    puntos:        increment(pts),
-                    puntosGanados: increment(pts),
-                    totalPedidos:  increment(1),
-                    totalGastado:  increment(data.totalNum)
-                });
-                console.log(`⭐ +${pts} puntos para cliente ${uid}`);
-                // Guardar en sesión para mostrar en confirmación
-                window._ultimosPuntos = pts;
-            } catch(e){ console.warn('Puntos no actualizados:', e.message); }
-        }
-
-        return { id: ref.id, ticket: ticketId };
-    } catch(e) {
-        console.warn('Firebase save error:', e);
-        return null;
-    }
-}
-window.guardarPedidoFirebase = guardarPedidoFirebase;
-
-// ─── GUARDAR EN GOOGLE SHEETS ────────────────────────────────────
-async function guardarEnSheets(data) {
-    if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes('TU_')) return;
-    try {
-        await fetch(APPS_SCRIPT_URL, {
-            method: 'POST', mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-    } catch(e) {}
-}
-
-// ─── ENVIAR POR WHATSAPP ─────────────────────────────────────────
-window.generarWhatsApp = async function() {
-    if (!validarFormulario()) return;
-
-    // Abrir la ventana de WhatsApp AHORA MISMO, en blanco, antes de
-    // cualquier await — varios navegadores móviles bloquean window.open()
-    // si ocurre después de una espera asíncrona, porque ya no lo cuentan
-    // como una acción directa del usuario. Le ponemos destino después.
-    const waWindow = window.open('', '_blank');
-
-    const data = buildOrderData();
-    const result = await guardarPedidoFirebase(data, 'whatsapp');
-    await guardarEnSheets({ ...data, metodoPago: 'whatsapp' });
-
-    const ticketStr = result ? result.ticket : 'N/A';
-    const fechaHora = new Date().toLocaleString('es-MX', {
-        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
-
-    const msg = [
-        `🐢 *TORTAS TORTUGA — NUEVO PEDIDO*`,
-        `━━━━━━━━━━━━━━━━━━━━`,
-        `🔖 *TICKET: #${ticketStr}*`,
-        `🗓️ *Fecha:* ${fechaHora}`,
-        `👤 *Cliente:* ${data.nombre}`,
-        `📱 *Teléfono:* ${data.telefono || 'En tienda'}`,
-        `🚗 *Tipo:* ${data.tipo === 'delivery' ? '🛵 Domicilio' : '🏪 Recoger'}`,
-        ``,
-        `📋 *Orden:*`,
-        data.items,
-        ``,
-        `💰 *Total: ${data.total}*`,
-        data.ubicacion !== 'No especificada' ? `📍 *Ubicación:* ${data.ubicacion}` : '',
-        `━━━━━━━━━━━━━━━━━━━━`,
-        `✅ Pedido enviado desde TortasTortuga.com`
-    ].filter(Boolean).join('\n');
-
-    const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
-    if (waWindow) { waWindow.location.href = waUrl; }
-    else { window.open(waUrl, '_blank'); } // fallback si el navegador bloqueó igual
-    cartModal.classList.remove('active');
-
-    // Guest checkout (sin login): crear una sesión ligera con el nombre y
-    // teléfono que acaba de escribir, para que "Mi Pedido" funcione sin
-    // que tenga que loguearse aparte — ya nos dio sus datos al ordenar.
-    if (!window._clienteActivo && data.nombre) {
-        sessionStorage.setItem('tt_cliente_nombre', data.nombre);
-        sessionStorage.setItem('tt_cliente_telefono', data.telefono || '');
-        sessionStorage.setItem('tt_cliente_ts', Date.now().toString());
-        window._clienteActivo = { nombre: data.nombre, telefono: data.telefono || '' };
-    }
-
-    // Confirmación en pantalla con el número de ticket bien visible —
-    // es el "respaldo" de que el pedido sí se envió, para cualquier
-    // cliente (con cuenta o como invitado), no solo los que iniciaron sesión.
-    mostrarConfirmacionTicket(ticketStr, data.nombre);
-};
+// NOTA: validarFormulario(), buildOrderData() y generarWhatsApp() se
+// eliminaron — eran una ruta de checkout muerta que apuntaba a campos
+// (customer-name, customer-phone, checkout-btn) que no existen en la
+// pantalla real. El checkout de verdad es enviarTodasLasCuentas() mas
+// abajo, que ya incluye envio por WhatsApp con ticket/fecha/orden/total
+// y la confirmacion en pantalla (mostrarConfirmacionTicket).
 
 function mostrarConfirmacionTicket(ticketStr, nombreCliente) {
     const ov = document.createElement('div');
@@ -480,15 +281,8 @@ function mostrarConfirmacionTicket(ticketStr, nombreCliente) {
 }
 
 // ─── BOTONES PRINCIPALES ─────────────────────────────────────────
-// checkout-btn y pay-now-btn ahora son por cuenta (modal de orden)
-const _checkoutBtn = document.getElementById('checkout-btn');
-if (_checkoutBtn) _checkoutBtn.addEventListener('click', () => window.generarWhatsApp());
-const _payNowBtn = document.getElementById('pay-now-btn');
-if (_payNowBtn) _payNowBtn.addEventListener('click', () => {
-    if (!validarFormulario()) return;
-    cartModal.classList.remove('active');
-    posModal.classList.add('active');
-});
+// checkout-btn y pay-now-btn ya no existen en la UI real — el envio de
+// orden vive en enviarTodasLasCuentas() (boton dentro del carrito).
 
 // ─── MODAL POS ───────────────────────────────────────────────────
 document.getElementById('close-pos').addEventListener('click', () => {
@@ -1371,8 +1165,15 @@ window.enviarTodasLasCuentas = async function() {
     // Tomar nombre, telefono y tipo de la PRIMERA cuenta con productos.
     // Cada cuenta guarda su propia info (nombre, telefono, tipoServicio).
     var cuentaPrincipal = CS.cuentas.find(function(c){ return c.items.length > 0; }) || CS.cuentas[0];
-    var nombre   = (cuentaPrincipal && cuentaPrincipal.nombre) ? cuentaPrincipal.nombre : 'Cliente';
-    var telefono = (cuentaPrincipal && cuentaPrincipal.telefono) ? cuentaPrincipal.telefono : '';
+    var esNombreGenerico = !cuentaPrincipal || !cuentaPrincipal.nombre || /^Cuenta \d+$/.test(cuentaPrincipal.nombre);
+    // Si hay un cliente logueado, sus datos mandan cuando la cuenta no
+    // tiene nombre/telefono propios — así siempre queda guardado en el
+    // pedido y en el panel admin, sin depender de qué modal se haya usado.
+    var nombre   = (!esNombreGenerico && cuentaPrincipal.nombre) ? cuentaPrincipal.nombre
+                 : (window._clienteActivo && window._clienteActivo.nombre) ? window._clienteActivo.nombre
+                 : (cuentaPrincipal && cuentaPrincipal.nombre) ? cuentaPrincipal.nombre : 'Cliente';
+    var telefono = (cuentaPrincipal && cuentaPrincipal.telefono) ? cuentaPrincipal.telefono
+                 : (window._clienteActivo && window._clienteActivo.telefono) ? window._clienteActivo.telefono : '';
     // Mapear el tipo de servicio a pickup/domicilio
     var tipoServ = (cuentaPrincipal && cuentaPrincipal.tipoServicio) || 'Comer aquí';
     var tipo     = (tipoServ === 'Domicilio') ? 'domicilio' : 'pickup';
@@ -1383,6 +1184,11 @@ window.enviarTodasLasCuentas = async function() {
         alert('⚠️ Agrega productos antes de enviar la orden');
         return;
     }
+
+    // Abrir la ventana de WhatsApp AHORA, en blanco, antes de cualquier
+    // espera async — si se abre después de guardar en Firebase, varios
+    // navegadores móviles la bloquean por no contarla como acción directa.
+    const waWindow = window.open('', '_blank');
 
     // Calcular el total CON impuesto, descuento y propina de cada cuenta.
     // Antes solo se sumaban los precios (sin impuesto) — esto lo corrige.
@@ -1448,6 +1254,7 @@ window.enviarTodasLasCuentas = async function() {
         cajeroId:     (window._cajeroActivo ? window._cajeroActivo.id : 'directo'),
         cajeroNombre: (window._cajeroActivo ? window._cajeroActivo.nombre : 'Sistema'),
         cajeroRol:    (window._cajeroActivo ? window._cajeroActivo.rol : ''),
+        clienteUid:   sessionStorage.getItem('tt_cliente_uid') || null,
         tomadaEn:     new Date().toISOString(),
     };
 
@@ -1471,22 +1278,48 @@ window.enviarTodasLasCuentas = async function() {
         const cm = document.getElementById('cart-modal');
         if (cm) cm.classList.remove('active');
 
-        alert('✅ ¡Orden enviada a cocina!\n\nTicket #' + ticket + '\nCliente: ' + nombre);
+        // Guest checkout (sin login): crear una sesión ligera con el
+        // nombre/teléfono que se acaba de usar, para que "Mi Pedido"
+        // funcione sin tener que loguearse aparte.
+        if (!window._clienteActivo && nombre && nombre !== 'Cliente') {
+            sessionStorage.setItem('tt_cliente_nombre', nombre);
+            sessionStorage.setItem('tt_cliente_telefono', telefono || '');
+            sessionStorage.setItem('tt_cliente_ts', Date.now().toString());
+            window._clienteActivo = { nombre: nombre, telefono: telefono || '' };
+        }
+
+        // Enviar WhatsApp con ticket, fecha, orden completa y total
+        const fechaHora = new Date().toLocaleString('es-MX', {
+            day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+        const lineas = [
+            '🐢 *TORTAS TORTUGA — NUEVO PEDIDO*',
+            '━━━━━━━━━━━━━━━━━━━━',
+            '🔖 *TICKET: #' + ticket + '*',
+            '🗓️ *Fecha:* ' + fechaHora,
+            '👤 *Cliente:* ' + nombre + (telefono ? ' · 📞 ' + telefono : ''),
+            (tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Domicilio'),
+            '',
+            '📋 *Orden:*',
+            itemsStr.split(' | ').join('\n'),
+            '',
+            '💰 *Total: $' + totalGen.toFixed(2) + '*',
+            '━━━━━━━━━━━━━━━━━━━━',
+            '✅ Pedido enviado desde TortasTortuga.com'
+        ];
+        const waUrl = 'https://wa.me/12108678210?text=' + encodeURIComponent(lineas.join('\n'));
+        if (waWindow) { waWindow.location.href = waUrl; }
+        else { window.open(waUrl, '_blank'); } // respaldo si el navegador igual bloqueó
+
+        // Confirmación en pantalla con el ticket bien visible
+        mostrarConfirmacionTicket(ticket, nombre);
     } catch (e) {
         console.error('Error al enviar orden:', e);
         alert('❌ Error al enviar la orden:\n' + (e.message || e) + '\n\nRevisa que tengas conexión a internet.');
+        if (waWindow) waWindow.close();
     } finally {
         if (btn) { btn.innerHTML = btnTxtOrig; btn.disabled = false; }
     }
-
-    /* ── ENVÍO POR WHATSAPP DESACTIVADO (por implementar después) ──
-    let lineas = [
-        '🐢 TORTAS TORTUGA — ORDEN COMPLETA',
-        '👤 ' + nombre + (telefono ? ' · 📞 ' + telefono : ''),
-    ];
-    const msg = lineas.join('\n');
-    window.open('https://wa.me/12108678210?text=' + encodeURIComponent(msg), '_blank');
-    ─────────────────────────────────────────────────────────── */
 };
 
 // ── Patch addToCart confirmarMods → nueva cuenta ───────────────
