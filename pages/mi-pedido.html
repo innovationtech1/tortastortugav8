@@ -144,6 +144,13 @@ function renderPedidos(pedidos) {
             fechaHora = cd.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) +
                         ' · ' + cd.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
         }
+        const yaCompartio = !!p.ubicacionCliente;
+        const btnUbic = `<a href="../ubicacion.html?pedido=${encodeURIComponent(p.id)}"
+            style="display:block;margin-top:.7rem;padding:.6rem;text-align:center;text-decoration:none;
+            border-radius:10px;font-size:.82rem;font-weight:700;
+            background:${yaCompartio ? 'rgba(37,211,102,.12)' : 'rgba(37,211,102,.15)'};
+            border:1px solid rgba(37,211,102,.35);color:#25D366;">
+            ${yaCompartio ? '✅ Ubicación enviada — tocar para actualizar' : '📍 Enviar mi ubicación'}</a>`;
         return `
         <div class="pedido-card">
             <div class="pedido-top">
@@ -154,6 +161,7 @@ function renderPedidos(pedidos) {
             <div class="progreso">${pasos}</div>
             <div class="pedido-items">${(p.items || '').replace(/</g,'&lt;')}</div>
             <div class="pedido-total">${p.total || ''}</div>
+            ${btnUbic}
         </div>`;
     }).join('');
 }
