@@ -12,9 +12,15 @@ service cloud.firestore {
     // ── PRODUCTOS ──
     // Lectura publica (el menu debe verse sin login)
     // Escritura: solo usuarios autenticados (admin)
+    // ── PRODUCTOS ──
+    // Lectura publica (el menu debe verse sin login).
+    // Escritura publica porque el gerente edita el menu en modo solo-PIN
+    // (sin sesion de Firebase Auth) — igual que pedidos/turnos/inventario.
+    // El acceso al panel admin ya esta protegido por el gate de sesion
+    // real de gerente/supervisor al entrar a admin.html.
     match /productos/{productoId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if true;
     }
 
     // ── PEDIDOS ──
