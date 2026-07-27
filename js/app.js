@@ -400,10 +400,15 @@ window.generarWhatsApp = async function() {
     await guardarEnSheets({ ...data, metodoPago: 'whatsapp' });
 
     const ticketStr = result ? result.ticket : 'N/A';
+    const fechaHora = new Date().toLocaleString('es-MX', {
+        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
 
     const msg = [
         `🐢 *TORTAS TORTUGA — NUEVO PEDIDO*`,
         `━━━━━━━━━━━━━━━━━━━━`,
+        `🔖 *TICKET: #${ticketStr}*`,
+        `🗓️ *Fecha:* ${fechaHora}`,
         `👤 *Cliente:* ${data.nombre}`,
         `📱 *Teléfono:* ${data.telefono || 'En tienda'}`,
         `🚗 *Tipo:* ${data.tipo === 'delivery' ? '🛵 Domicilio' : '🏪 Recoger'}`,
@@ -413,7 +418,6 @@ window.generarWhatsApp = async function() {
         ``,
         `💰 *Total: ${data.total}*`,
         data.ubicacion !== 'No especificada' ? `📍 *Ubicación:* ${data.ubicacion}` : '',
-        `🔖 *TICKET: #${ticketStr}*`,
         `━━━━━━━━━━━━━━━━━━━━`,
         `✅ Pedido enviado desde TortasTortuga.com`
     ].filter(Boolean).join('\n');
@@ -421,22 +425,40 @@ window.generarWhatsApp = async function() {
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
     cartModal.classList.remove('active');
 
-    // Si quien ordena es un cliente (no staff), mostrar confirmación con
-    // enlace directo a "Mi Pedido" para que pueda seguir su propio estatus.
-    if (window._clienteActivo) {
-        const banner = document.createElement('div');
-        banner.style.cssText = 'position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);' +
-            'background:#1A1A1A;border:1px solid rgba(59,130,246,.4);border-radius:14px;' +
-            'padding:.9rem 1.1rem;z-index:9999;display:flex;align-items:center;gap:.8rem;' +
-            'box-shadow:0 8px 24px rgba(0,0,0,.4);max-width:90vw;';
-        banner.innerHTML = '<span style="font-size:.85rem;color:#ccc;">✅ ¡Pedido enviado!</span>' +
-            '<a href="pages/mi-pedido.html" target="_blank" style="background:rgba(59,130,246,.15);' +
-            'border:1px solid rgba(59,130,246,.3);color:#3B82F6;padding:.4rem .8rem;border-radius:9px;' +
-            'font-size:.8rem;font-weight:700;text-decoration:none;white-space:nowrap;">📦 Ver mi pedido</a>';
-        document.body.appendChild(banner);
-        setTimeout(() => banner.remove(), 8000);
-    }
+    // Confirmación en pantalla con el número de ticket bien visible —
+    // es el "respaldo" de que el pedido sí se envió, para cualquier
+    // cliente (con cuenta o como invitado), no solo los que iniciaron sesión.
+    mostrarConfirmacionTicket(ticketStr, data.nombre);
 };
+
+function mostrarConfirmacionTicket(ticketStr, nombreCliente) {
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;' +
+        'display:flex;align-items:center;justify-content:center;padding:1rem;';
+    ov.innerHTML = `
+        <div style="background:#1A1A1A;border:1px solid rgba(37,211,102,.4);border-radius:20px;
+                    padding:2rem 1.5rem;text-align:center;max-width:340px;width:100%;
+                    box-shadow:0 20px 60px rgba(0,0,0,.5);">
+            <div style="font-size:2.5rem;margin-bottom:.5rem;">✅</div>
+            <div style="font-size:1rem;color:#ccc;margin-bottom:1rem;">¡Gracias${nombreCliente ? ', ' + nombreCliente.split(' ')[0] : ''}! Tu pedido fue enviado.</div>
+            <div style="background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:14px;padding:1rem;margin-bottom:1rem;">
+                <div style="font-size:.75rem;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem;">Tu número de orden</div>
+                <div style="font-size:2.2rem;font-weight:900;color:#25D366;">#${ticketStr}</div>
+            </div>
+            <div style="font-size:.78rem;color:#888;margin-bottom:1.2rem;">Guarda este número — te sirve para preguntar por tu orden en la tienda o darle seguimiento aquí mismo.</div>
+            <div style="display:flex;flex-direction:column;gap:.6rem;">
+                ${window._clienteActivo ? `<a href="pages/mi-pedido.html" target="_blank" style="background:rgba(59,130,246,.15);
+                    border:1px solid rgba(59,130,246,.3);color:#3B82F6;padding:.7rem;border-radius:10px;
+                    font-size:.85rem;font-weight:700;text-decoration:none;">📦 Ver estado de mi pedido</a>` : ''}
+                <button id="btn-cerrar-confirmacion" style="background:rgba(255,255,255,.06);
+                    border:1px solid rgba(255,255,255,.12);color:#ccc;padding:.7rem;border-radius:10px;
+                    font-size:.85rem;font-weight:700;cursor:pointer;">Cerrar</button>
+            </div>
+        </div>`;
+    document.body.appendChild(ov);
+    ov.querySelector('#btn-cerrar-confirmacion')?.addEventListener('click', () => ov.remove());
+    ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+}
 
 // ─── BOTONES PRINCIPALES ─────────────────────────────────────────
 // checkout-btn y pay-now-btn ahora son por cuenta (modal de orden)
