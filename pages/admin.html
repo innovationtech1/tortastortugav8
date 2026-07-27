@@ -620,7 +620,9 @@ window.normalizarRutaImagen = function(src) {
             let hora = '—'; let timerHTML = '';
             const creadoDate = p.creado?.toDate ? p.creado.toDate() : (p.creado?.seconds ? new Date(p.creado.seconds * 1000) : null);
             if (creadoDate) {
-                hora = creadoDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+                const soloHora = creadoDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+                const soloFecha = creadoDate.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+                hora = `${soloFecha} · ${soloHora}`;
                 if (!p.estado?.includes('Entregado') && !p.estado?.includes('Cancelado')) {
                     const diffMs = new Date() - creadoDate; const diffMins = Math.floor(diffMs / 60000);
                     let color = 'var(--green)'; if (diffMins > 15) color = 'var(--yellow)'; if (diffMins > 25) color = '#F44336';
