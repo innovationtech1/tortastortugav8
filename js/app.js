@@ -1301,6 +1301,18 @@ window.enviarTodasLasCuentas = async function() {
         return;
     }
 
+    // Exigir nombre y teléfono antes de enviar. Si faltan (y no hay un
+    // cliente logueado que los aporte), avisar y abrir el modal para
+    // capturarlos. El nombre no puede ser el genérico "Cuenta N".
+    var telDigitos = (telefono || '').replace(/\D/g, '');
+    var faltaNombre = !nombre || nombre === 'Cliente' || /^Cuenta \d+$/.test(nombre);
+    var faltaTelefono = telDigitos.length < 10;
+    if (faltaNombre || faltaTelefono) {
+        alert('⚠️ Por favor ingresa el nombre y el teléfono del cliente (10 dígitos) antes de enviar la orden.');
+        if (window.abrirModalNombreCuenta) window.abrirModalNombreCuenta();
+        return;
+    }
+
     // Abrir la ventana de WhatsApp AHORA, en blanco, antes de cualquier
     // espera async — si se abre después de guardar en Firebase, varios
     // navegadores móviles la bloquean por no contarla como acción directa.
