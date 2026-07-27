@@ -166,8 +166,14 @@ function renderPedidos(pedidos) {
             '',
             '💰 *Total: ' + (p.total || '') + '*',
             '━━━━━━━━━━━━━━━━━━━━'
-        ].filter(Boolean);
-        const waUrl = 'https://api.whatsapp.com/send?phone=12108678210&text=' + encodeURIComponent(lineasWa.join('\n'));
+        ];
+        // Si el pedido ya tiene ubicación compartida, integrarla al mensaje
+        if (p.ubicacionCliente && p.ubicacionCliente.lat && p.ubicacionCliente.lng) {
+            lineasWa.push('📍 *Ubicación del cliente:*');
+            lineasWa.push('https://maps.google.com/?q=' + p.ubicacionCliente.lat + ',' + p.ubicacionCliente.lng);
+        }
+        const lineasWaFinal = lineasWa.filter(Boolean);
+        const waUrl = 'https://api.whatsapp.com/send?phone=12108678210&text=' + encodeURIComponent(lineasWaFinal.join('\n'));
         const btnWa = `<a href="${waUrl}" target="_blank"
             style="display:block;margin-top:.5rem;padding:.6rem;text-align:center;text-decoration:none;
             border-radius:10px;font-size:.82rem;font-weight:700;
