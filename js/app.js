@@ -367,10 +367,12 @@ async function guardarEnSheets(data) {
     } catch(e) {}
 }
 
-function mostrarConfirmacionTicket(ticketStr, nombreCliente) {
+function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo) {
     const ov = document.createElement('div');
     ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;' +
         'display:flex;align-items:center;justify-content:center;padding:1rem;';
+    // Enlace para compartir ubicacion (util sobre todo en domicilio).
+    const linkUbicacion = pedidoId ? ('ubicacion.html?pedido=' + encodeURIComponent(pedidoId)) : null;
     ov.innerHTML = `
         <div style="background:#1A1A1A;border:1px solid rgba(37,211,102,.4);border-radius:20px;
                     padding:2rem 1.5rem;text-align:center;max-width:340px;width:100%;
@@ -386,6 +388,9 @@ function mostrarConfirmacionTicket(ticketStr, nombreCliente) {
                 ${window._clienteActivo ? `<a href="pages/mi-pedido.html" target="_blank" style="background:rgba(59,130,246,.15);
                     border:1px solid rgba(59,130,246,.3);color:#3B82F6;padding:.7rem;border-radius:10px;
                     font-size:.85rem;font-weight:700;text-decoration:none;">📦 Ver estado de mi pedido</a>` : ''}
+                ${linkUbicacion ? `<a href="${linkUbicacion}" style="background:rgba(37,211,102,.15);
+                    border:1px solid rgba(37,211,102,.3);color:#25D366;padding:.7rem;border-radius:10px;
+                    font-size:.85rem;font-weight:700;text-decoration:none;">📍 Enviar mi ubicación</a>` : ''}
                 <button id="btn-cerrar-confirmacion" style="background:rgba(255,255,255,.06);
                     border:1px solid rgba(255,255,255,.12);color:#ccc;padding:.7rem;border-radius:10px;
                     font-size:.85rem;font-weight:700;cursor:pointer;">Cerrar</button>
@@ -1445,7 +1450,7 @@ window.enviarTodasLasCuentas = async function() {
         else { window.open(waUrl, '_blank'); } // respaldo si el navegador igual bloqueó
 
         // Confirmación en pantalla con el ticket bien visible
-        mostrarConfirmacionTicket(ticket, nombre);
+        mostrarConfirmacionTicket(ticket, nombre, result ? result.id : null, tipo);
     } catch (e) {
         console.error('Error al enviar orden:', e);
         alert('❌ Error al enviar la orden:\n' + (e.message || e) + '\n\nRevisa que tengas conexión a internet.');
