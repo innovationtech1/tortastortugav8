@@ -251,6 +251,122 @@ window.removeItem = function(i) { cart.splice(i, 1); updateCart(); };
 // abajo, que ya incluye envio por WhatsApp con ticket/fecha/orden/total
 // y la confirmacion en pantalla (mostrarConfirmacionTicket).
 
+// ─── FOLIO SECUENCIAL DIARIO + GUARDADO EN FIREBASE ──────────────
+// (recuperadas: se habian borrado por error al limpiar codigo muerto)
+async function obtenerFolioDiario() {
+    const hoy = new Date();
+    const fechaKey = hoy.getFullYear() + '-' +
+                     String(hoy.getMonth()+1).padStart(2,'0') + '-' +
+                     String(hoy.getDate()).padStart(2,'0');
+
+    // ── Intento 1: contador en Firestore (compartido entre dispositivos) ──
+    try {
+        const contadorRef = doc(db, 'contadores', 'folio_' + fechaKey);
+        const nuevoFolio = await runTransaction(db, async (transaction) => {
+            const snap = await transaction.get(contadorRef);
+            const actual = snap.exists() ? (snap.data().valor || 0) : 0;
+            const siguiente = actual + 1;
+            transaction.set(contadorRef, { valor: siguiente, fecha: fechaKey }, { merge: true });
+            return siguiente;
+        });
+        // Sincronizar el respaldo local
+        try { localStorage.setItem('folio_' + fechaKey, String(nuevoFolio)); } catch(_) {}
+        return nuevoFolio;
+    } catch (e) {
+        // Firestore no disponible o sin permisos en 'contadores'
+        console.info('Folio: usando contador local (Firestore no disponible para contadores)');
+    }
+
+    // ── Intento 2: contador local del navegador ──
+    try {
+        const key = 'folio_' + fechaKey;
+        const actual = parseInt(localStorage.getItem(key) || '0') || 0;
+        const siguiente = actual + 1;
+        localStorage.setItem(key, String(siguiente));
+        // Limpiar contadores de días anteriores
+        for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('folio_') && k !== key) localStorage.removeItem(k);
+        }
+        return siguiente;
+    } catch (e2) {
+        // ── Último recurso: número basado en la hora ──
+        return parseInt(String(Date.now()).slice(-3)) || 1;
+    }
+}
+
+// Formatea el folio como #001
+function formatearFolio(n) {
+    return '#' + String(n).padStart(3, '0');
+}
+
+async function guardarPedidoFirebase(data, metodoPago) {
+    try {
+        // Obtener folio secuencial del día
+        const folio = await obtenerFolioDiario();
+
+        const ref = await addDoc(collection(db, 'pedidos'), {
+            ...data,
+            folio: folio,
+            folioStr: formatearFolio(folio),
+            metodoPago: metodoPago || 'pendiente',
+            estadoPago: 'Por pagar',
+            estado: 'Nuevo 🆕',
+            // Timestamps de trazabilidad (cuándo pasó a cada estado)
+            tiempos: {
+                recibida: Date.now(),
+                enCocina: null,
+                lista:    null,
+                entregada: null,
+            },
+            uid: window._firebaseUser?.uid || 'anonimo',
+            creado: serverTimestamp()
+        });
+
+        const ticketId = formatearFolio(folio);
+        console.log('✅ Pedido guardado:', ref.id);
+
+        // ── SUMAR PUNTOS AL CLIENTE REGISTRADO ──────────────
+        const uid = window._firebaseUser?.uid;
+        if(uid && uid !== 'anonimo' && data.totalNum > 0){
+            try{
+                // Regla de puntos: <$25=15pts, $25-$39.99=30pts, $40+=50pts
+                let pts = 15;
+                if(data.totalNum >= 40)   pts = 50;
+                else if(data.totalNum >= 25) pts = 30;
+
+                await updateDoc(doc(db, 'usuarios', uid), {
+                    puntos:        increment(pts),
+                    puntosGanados: increment(pts),
+                    totalPedidos:  increment(1),
+                    totalGastado:  increment(data.totalNum)
+                });
+                console.log(`⭐ +${pts} puntos para cliente ${uid}`);
+                // Guardar en sesión para mostrar en confirmación
+                window._ultimosPuntos = pts;
+            } catch(e){ console.warn('Puntos no actualizados:', e.message); }
+        }
+
+        return { id: ref.id, ticket: ticketId };
+    } catch(e) {
+        console.warn('Firebase save error:', e);
+        return null;
+    }
+}
+window.guardarPedidoFirebase = guardarPedidoFirebase;
+
+// ─── GUARDAR EN GOOGLE SHEETS (recuperada) ───────────────────────
+async function guardarEnSheets(data) {
+    if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes('TU_')) return;
+    try {
+        await fetch(APPS_SCRIPT_URL, {
+            method: 'POST', mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+    } catch(e) {}
+}
+
 function mostrarConfirmacionTicket(ticketStr, nombreCliente) {
     const ov = document.createElement('div');
     ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;' +
