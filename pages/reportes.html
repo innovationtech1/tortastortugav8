@@ -183,9 +183,31 @@ function render() {
     else sub += totalDe(x);
   });
 
-  // Metodos
+  // Metodos de pago: solo cuentan las ordenes YA COBRADAS (estadoPago
+  // 'Pagado'), sumadas en su método real. Las que aún no se cobran se
+  // agrupan aparte como "Por cobrar" para que el desglose sea honesto.
+  // Se normaliza el nombre del método (mayúsculas/espacios) para no
+  // partir "Efectivo" y "efectivo" en dos renglones distintos.
+  function normalizarMetodo(m) {
+    var s = (m || '').toString().trim().toLowerCase();
+    if (!s) return 'pendiente';
+    if (s.indexOf('efec') >= 0) return 'Efectivo';
+    if (s.indexOf('cash') >= 0) return 'Cash App';
+    if (s.indexOf('zelle') >= 0) return 'Zelle';
+    if (s.indexOf('venmo') >= 0) return 'Venmo';
+    if (s.indexOf('tarj') >= 0 || s.indexOf('card') >= 0 || s.indexOf('stripe') >= 0) return 'Tarjeta';
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
   const met = {};
-  p.forEach(x => { const m = x.metodoPagoReal||x.metodoPago||'pendiente'; met[m]=(met[m]||0)+totalDe(x); });
+  let porCobrar = 0;
+  p.forEach(x => {
+    if (x.estadoPago === 'Pagado') {
+      const m = normalizarMetodo(x.metodoPagoReal || x.metodoPago);
+      met[m] = (met[m] || 0) + totalDe(x);
+    } else {
+      porCobrar += totalDe(x);
+    }
+  });
 
   // Cajeros
   const caj = {};
@@ -228,10 +250,18 @@ function render() {
 
   // Metodos
   h += '<div class="seccion"><h3>💳 Métodos de Pago</h3>';
-  const icons = {efectivo:'💵',tarjeta:'💳',zelle:'🟣',cashapp:'🟢',venmo:'🔵',pendiente:'⏳'};
-  Object.entries(met).sort((a,b)=>b[1]-a[1]).forEach(kv => {
-    h += fila((icons[kv[0].toLowerCase()]||'💰')+' '+kv[0], '$'+kv[1].toFixed(2), 'verde');
-  });
+  const icons = {efectivo:'💵',tarjeta:'💳',zelle:'🟣','cash app':'🟢',venmo:'🔵',pendiente:'⏳'};
+  const entradasMet = Object.entries(met).sort((a,b)=>b[1]-a[1]);
+  if (entradasMet.length === 0) {
+    h += fila('Aún no hay cobros registrados', '$0.00', '');
+  } else {
+    entradasMet.forEach(kv => {
+      h += fila((icons[kv[0].toLowerCase()]||'💰')+' '+kv[0], '$'+kv[1].toFixed(2), 'verde');
+    });
+  }
+  if (porCobrar > 0) {
+    h += fila('⏳ Por cobrar', '$'+porCobrar.toFixed(2), 'amarillo');
+  }
   h += '</div>';
 
   // Cajeros
