@@ -367,38 +367,90 @@ async function guardarEnSheets(data) {
     } catch(e) {}
 }
 
-function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo) {
+function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waUrl) {
     const ov = document.createElement('div');
     ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;' +
         'display:flex;align-items:center;justify-content:center;padding:1rem;';
-    // Enlace para compartir ubicacion (util sobre todo en domicilio).
     const linkUbicacion = pedidoId ? ('ubicacion.html?pedido=' + encodeURIComponent(pedidoId)) : null;
+    const esDomicilio = (tipo === 'domicilio' || tipo === 'delivery');
+    // En domicilio, el botón de WhatsApp arranca bloqueado hasta que el
+    // cliente comparta su ubicación. En pickup, está activo de una vez.
+    const waArrancaBloqueado = esDomicilio;
+
     ov.innerHTML = `
         <div style="background:#1A1A1A;border:1px solid rgba(37,211,102,.4);border-radius:20px;
-                    padding:2rem 1.5rem;text-align:center;max-width:340px;width:100%;
-                    box-shadow:0 20px 60px rgba(0,0,0,.5);">
+                    padding:2rem 1.5rem;text-align:center;max-width:360px;width:100%;
+                    box-shadow:0 20px 60px rgba(0,0,0,.5);max-height:90vh;overflow-y:auto;">
             <div style="font-size:2.5rem;margin-bottom:.5rem;">✅</div>
-            <div style="font-size:1rem;color:#ccc;margin-bottom:1rem;">¡Gracias${nombreCliente ? ', ' + nombreCliente.split(' ')[0] : ''}! Tu pedido fue enviado.</div>
+            <div style="font-size:1rem;color:#ccc;margin-bottom:1rem;">¡Gracias${nombreCliente ? ', ' + nombreCliente.split(' ')[0] : ''}! Tu pedido fue registrado.</div>
             <div style="background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:14px;padding:1rem;margin-bottom:1rem;">
                 <div style="font-size:.75rem;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem;">Tu número de orden</div>
                 <div style="font-size:2.2rem;font-weight:900;color:#25D366;">#${String(ticketStr).replace(/^#+/, '')}</div>
             </div>
-            <div style="font-size:.78rem;color:#888;margin-bottom:1.2rem;">Guarda este número — te sirve para preguntar por tu orden en la tienda o darle seguimiento aquí mismo.</div>
+            ${esDomicilio ? `<div id="aviso-ubic" style="font-size:.8rem;color:#FBB724;margin-bottom:1rem;background:rgba(251,183,36,.1);border:1px solid rgba(251,183,36,.3);border-radius:10px;padding:.6rem;">📍 Primero comparte tu ubicación; después se habilitará el envío por WhatsApp.</div>`
+                          : `<div style="font-size:.78rem;color:#888;margin-bottom:1.2rem;">Guarda tu número de orden. Ahora envía tu pedido por WhatsApp para confirmarlo.</div>`}
             <div style="display:flex;flex-direction:column;gap:.6rem;">
                 ${window._clienteActivo ? `<a href="pages/mi-pedido.html" target="_blank" style="background:rgba(59,130,246,.15);
                     border:1px solid rgba(59,130,246,.3);color:#3B82F6;padding:.7rem;border-radius:10px;
                     font-size:.85rem;font-weight:700;text-decoration:none;">📦 Ver estado de mi pedido</a>` : ''}
                 ${linkUbicacion ? `<a href="${linkUbicacion}" style="background:rgba(37,211,102,.15);
                     border:1px solid rgba(37,211,102,.3);color:#25D366;padding:.7rem;border-radius:10px;
-                    font-size:.85rem;font-weight:700;text-decoration:none;">📍 Enviar mi ubicación</a>` : ''}
+                    font-size:.85rem;font-weight:700;text-decoration:none;">📍 ${esDomicilio ? 'Enviar mi ubicación (requerido)' : 'Enviar mi ubicación'}</a>` : ''}
+                <button id="btn-wa-pedido" ${waArrancaBloqueado ? 'disabled' : ''} style="
+                    background:${waArrancaBloqueado ? 'rgba(255,255,255,.06)' : 'rgba(37,211,102,.15)'};
+                    border:1px solid ${waArrancaBloqueado ? 'rgba(255,255,255,.12)' : 'rgba(37,211,102,.4)'};
+                    color:${waArrancaBloqueado ? '#666' : '#25D366'};padding:.7rem;border-radius:10px;
+                    font-size:.85rem;font-weight:700;cursor:${waArrancaBloqueado ? 'not-allowed' : 'pointer'};
+                    font-family:inherit;">
+                    💬 Enviar pedido por WhatsApp${waArrancaBloqueado ? ' 🔒' : ''}
+                </button>
                 <button id="btn-cerrar-confirmacion" style="background:rgba(255,255,255,.06);
                     border:1px solid rgba(255,255,255,.12);color:#ccc;padding:.7rem;border-radius:10px;
                     font-size:.85rem;font-weight:700;cursor:pointer;">Cerrar</button>
             </div>
         </div>`;
     document.body.appendChild(ov);
-    ov.querySelector('#btn-cerrar-confirmacion')?.addEventListener('click', () => ov.remove());
-    ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+
+    const btnWa = ov.querySelector('#btn-wa-pedido');
+    // Al tocar WhatsApp: abrir el enlace (acción directa del usuario, no bloqueada)
+    btnWa?.addEventListener('click', () => {
+        if (btnWa.disabled) return;
+        window.open(waUrl, '_blank');
+    });
+
+    // En domicilio: escuchar el pedido en Firestore; cuando el cliente
+    // comparta su ubicación, habilitar el botón de WhatsApp.
+    if (esDomicilio && pedidoId) {
+        habilitarWaTrasUbicacion(pedidoId, btnWa, ov);
+    }
+
+    ov.querySelector('#btn-cerrar-confirmacion')?.addEventListener('click', () => { if (ov._unsub) ov._unsub(); ov.remove(); });
+    ov.addEventListener('click', (e) => { if (e.target === ov) { if (ov._unsub) ov._unsub(); ov.remove(); } });
+}
+
+async function habilitarWaTrasUbicacion(pedidoId, btnWa, ov) {
+    try {
+        const { doc, onSnapshot } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+        const ref = doc(db, 'pedidos', pedidoId);
+        ov._unsub = onSnapshot(ref, (snap) => {
+            const d = snap.data();
+            if (d && d.ubicacionCliente && btnWa) {
+                btnWa.disabled = false;
+                btnWa.style.background = 'rgba(37,211,102,.15)';
+                btnWa.style.borderColor = 'rgba(37,211,102,.4)';
+                btnWa.style.color = '#25D366';
+                btnWa.style.cursor = 'pointer';
+                btnWa.innerHTML = '💬 Enviar pedido por WhatsApp';
+                const aviso = ov.querySelector('#aviso-ubic');
+                if (aviso) {
+                    aviso.style.color = '#25D366';
+                    aviso.style.background = 'rgba(37,211,102,.1)';
+                    aviso.style.borderColor = 'rgba(37,211,102,.3)';
+                    aviso.innerHTML = '✅ Ubicación recibida. Ya puedes enviar tu pedido por WhatsApp.';
+                }
+            }
+        });
+    } catch(e) { /* si falla el listener, dejar el botón como está */ }
 }
 
 // ─── BOTONES PRINCIPALES ─────────────────────────────────────────
@@ -1318,10 +1370,9 @@ window.enviarTodasLasCuentas = async function() {
         return;
     }
 
-    // Abrir la ventana de WhatsApp AHORA, en blanco, antes de cualquier
-    // espera async — si se abre después de guardar en Firebase, varios
-    // navegadores móviles la bloquean por no contarla como acción directa.
-    const waWindow = window.open('', '_blank');
+    // Ya NO se abre WhatsApp en automático. El mensaje se arma abajo y se
+    // envía cuando el usuario toca el botón en el modal de confirmación
+    // (y en domicilio, solo tras compartir la ubicación).
 
     // Calcular el total CON impuesto, descuento y propina de cada cuenta.
     // Antes solo se sumaban los precios (sin impuesto) — esto lo corrige.
@@ -1426,7 +1477,8 @@ window.enviarTodasLasCuentas = async function() {
             window._clienteActivo = { nombre: nombre, telefono: telefono || '' };
         }
 
-        // Enviar WhatsApp con ticket, fecha, orden completa y total
+        // Armar el mensaje de WhatsApp (NO se envía en automático; se
+        // manda cuando el usuario toca el botón en el modal).
         const fechaHora = new Date().toLocaleString('es-MX', {
             day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
         });
@@ -1446,15 +1498,14 @@ window.enviarTodasLasCuentas = async function() {
             '✅ Pedido enviado desde TortasTortuga.com'
         ];
         const waUrl = 'https://api.whatsapp.com/send?phone=12108678210&text=' + encodeURIComponent(lineas.join('\n'));
-        if (waWindow) { waWindow.location.href = waUrl; }
-        else { window.open(waUrl, '_blank'); } // respaldo si el navegador igual bloqueó
 
-        // Confirmación en pantalla con el ticket bien visible
-        mostrarConfirmacionTicket(ticket, nombre, result ? result.id : null, tipo);
+        // Confirmación en pantalla: pasa la URL de WhatsApp y el tipo para
+        // que el modal decida si habilita el botón de una vez (pickup) o
+        // solo tras compartir ubicación (domicilio).
+        mostrarConfirmacionTicket(ticket, nombre, result ? result.id : null, tipo, waUrl);
     } catch (e) {
         console.error('Error al enviar orden:', e);
         alert('❌ Error al enviar la orden:\n' + (e.message || e) + '\n\nRevisa que tengas conexión a internet.');
-        if (waWindow) waWindow.close();
     } finally {
         if (btn) { btn.innerHTML = btnTxtOrig; btn.disabled = false; }
     }
