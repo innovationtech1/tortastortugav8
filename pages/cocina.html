@@ -249,6 +249,7 @@ let todos       = [];
 let tabActual   = 'activas';
 let soundOn     = true;
 let prevNuevas  = 0;
+let _primeraCarga = true;
 let editPedido  = null;
 let timerInterval;
 
@@ -360,7 +361,7 @@ function renderCard(p) {
                 <div class="kticket">#${String(ticket).replace(/^#+/, '')} <span style="font-size:.68rem;color:var(--muted);font-weight:400;">${hora}</span></div>
                 <div class="kcliente">${p.cliente||p.nombre||'Cliente'} ${p.notaCocina?'<span style="color:var(--yellow);font-size:.7rem;">📝 '+p.notaCocina+'</span>':''}</div>
             </div>
-            <div class="ktimer ${timerClass(secs)}">${timerTxt(secs)}</div>
+            <div class="ktimer ${timerClass(secs)}" data-ts="${ts}" data-tid="ktimer-${p.id}">${timerTxt(secs)}</div>
         </div>
         <div class="kcard-items">
             ${items.map(i=>`
@@ -616,6 +617,7 @@ window.confirmarEliminar = async (id) => {
 let _kdsUnsub = null;
 function iniciarKDS(){
   if(_kdsUnsub) try{_kdsUnsub();}catch(e){}
+  _primeraCarga = true;  // cada (re)conexión: la 1a instantánea solo fija base
   _kdsUnsub = onSnapshot(collection(db,'pedidos'), snap => {
     todos = snap.docs.map(d => ({ id:d.id, ...d.data() }));
 
@@ -624,6 +626,15 @@ function iniciarKDS(){
         const ts = p.creado?.seconds ? new Date(p.creado.seconds*1000) : null;
         return ts && ts >= hoy && (p.estado?.includes('Nuevo'));
     }).length;
+
+    // En la PRIMERA carga solo fijamos la línea base, sin sonar la campana
+    // (si no, sonaría por las órdenes que ya estaban al abrir la pantalla).
+    if (_primeraCarga) {
+        prevNuevas = nuevas;
+        _primeraCarga = false;
+        renderGrid();
+        return;
+    }
 
     if (nuevas > prevNuevas) {
         const diff = nuevas - prevNuevas;
@@ -668,8 +679,19 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('online', iniciarKDS);
 
-// Actualizar timers cada 15s
-setInterval(renderGrid, 15000);
+// Actualizar SOLO los timers cada segundo, en su lugar (ligero, sin
+// redibujar toda la cuadrícula → corre fluido segundo a segundo).
+function actualizarTimers() {
+    const ahora = Date.now();
+    document.querySelectorAll('.ktimer[data-ts]').forEach(el => {
+        const ts = parseInt(el.getAttribute('data-ts')) || ahora;
+        const secs = (ahora - ts) / 1000;
+        el.textContent = timerTxt(secs);
+        el.classList.remove('ok','warn','late');
+        el.classList.add(timerClass(secs));
+    });
+}
+setInterval(actualizarTimers, 1000);
 
 // Pedir permiso notificaciones
 if ('Notification' in window && Notification.permission==='default') {
