@@ -13,10 +13,11 @@
 // vista de solo lectura de su propio pedido, no a este tablero completo.
 (function() {
     var VEINTE_MIN = 20 * 60 * 1000;
-    var empId = sessionStorage.getItem('tt_emp_id');
-    var empTs = parseInt(sessionStorage.getItem('tt_emp_ts') || '0');
-    var cajNombre = sessionStorage.getItem('tt_cajero_nombre');
-    var cajTs = parseInt(sessionStorage.getItem('tt_cajero_ts') || '0');
+    function leer(k){ return sessionStorage.getItem(k) || localStorage.getItem(k); }
+    var empId = leer('tt_emp_id');
+    var empTs = parseInt(leer('tt_emp_ts') || '0');
+    var cajNombre = leer('tt_cajero_nombre');
+    var cajTs = parseInt(leer('tt_cajero_ts') || '0');
 
     var esStaff = (empId && (Date.now() - empTs < VEINTE_MIN)) ||
                   (cajNombre && (Date.now() - cajTs < VEINTE_MIN));
