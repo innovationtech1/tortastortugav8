@@ -208,6 +208,13 @@ function guardarSesionCliente(nombre, telefono, uid) {
     sessionStorage.setItem('tt_cliente_ts', Date.now().toString());
     if (uid) sessionStorage.setItem('tt_cliente_uid', uid);
     else sessionStorage.removeItem('tt_cliente_uid');
+    // Duplicar en localStorage: se comparte entre pestañas, y "Mi Pedido"
+    // se abre en pestaña nueva donde sessionStorage no está disponible.
+    localStorage.setItem('tt_cliente_nombre', nombre);
+    localStorage.setItem('tt_cliente_telefono', telefono || '');
+    localStorage.setItem('tt_cliente_ts', Date.now().toString());
+    if (uid) localStorage.setItem('tt_cliente_uid', uid);
+    else localStorage.removeItem('tt_cliente_uid');
 }
 
 /* ── LOGIN POR TELEFONO (modo demo, sin Firebase Auth) ──────── */
