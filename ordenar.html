@@ -156,6 +156,7 @@ window._pendingItem = window._pendingItem || null;
                 'btn-cajero-header',   // botón "🏪 Cajero"
                 'cuentas-tabs',        // barra de pestañas de cuentas múltiples
                 'btn-eliminar-cuenta', // eliminar cuenta activa
+                'btn-descuento-carrito', // aplicar descuento (solo staff / gerente en admin)
             ];
             idsAOcultar.forEach(function(id) {
                 var elx = document.getElementById(id);
@@ -1523,7 +1524,7 @@ function cerrarOrdenModal() {
                     background:#1A1A1A;">
             <!-- Acciones de dinero -->
             <div style="display:flex;gap:.4rem;margin-bottom:.5rem;">
-                <button onclick="window.abrirModalDescuento()"
+                <button id="btn-descuento-carrito" onclick="window.abrirModalDescuento()"
                     style="flex:1;padding:.45rem;background:rgba(167,139,250,.12);
                            border:1px solid rgba(167,139,250,.3);color:#A78BFA;
                            border-radius:8px;font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer;">
