@@ -11,12 +11,18 @@
 // completo en cocina.html), no hay nada que mostrar aqui: al login.
 (function() {
     var VEINTE_MIN = 20 * 60 * 1000;
-    var cliNombre = sessionStorage.getItem('tt_cliente_nombre');
-    var cliTs = parseInt(sessionStorage.getItem('tt_cliente_ts') || '0');
-    var empId = sessionStorage.getItem('tt_emp_id');
-    var empTs = parseInt(sessionStorage.getItem('tt_emp_ts') || '0');
-    var cajNombre = sessionStorage.getItem('tt_cajero_nombre');
-    var cajTs = parseInt(sessionStorage.getItem('tt_cajero_ts') || '0');
+    // sessionStorage NO se comparte entre pestañas — y "Ver mi pedido"
+    // se abre en pestaña nueva. Por eso leemos también de localStorage
+    // (que sí se comparte) como respaldo.
+    function leer(clave) {
+        return sessionStorage.getItem(clave) || localStorage.getItem(clave);
+    }
+    var cliNombre = leer('tt_cliente_nombre');
+    var cliTs = parseInt(leer('tt_cliente_ts') || '0');
+    var empId = leer('tt_emp_id');
+    var empTs = parseInt(leer('tt_emp_ts') || '0');
+    var cajNombre = leer('tt_cajero_nombre');
+    var cajTs = parseInt(leer('tt_cajero_ts') || '0');
 
     var hayCliente = cliNombre && (Date.now() - cliTs < VEINTE_MIN);
     var esStaff = (empId && (Date.now() - empTs < VEINTE_MIN)) ||
@@ -83,8 +89,12 @@ main{max-width:640px;margin:0 auto;padding:1.2rem 1rem 3rem;}
 import { db } from '../js/firebase-config.js';
 import { collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-const uid = sessionStorage.getItem('tt_cliente_uid') || null;
-const telefono = (sessionStorage.getItem('tt_cliente_telefono') || '').replace(/\D/g,'');
+function _leer(clave) {
+    return sessionStorage.getItem(clave) || localStorage.getItem(clave);
+}
+const uid = _leer('tt_cliente_uid') || null;
+const telefono = (_leer('tt_cliente_telefono') || '').replace(/\D/g,'');
+const miNombre = (_leer('tt_cliente_nombre') || '').trim().toLowerCase();
 
 const ORDEN_ESTADO = ['Nuevo', 'En preparación', 'Listo', 'Entregado'];
 
@@ -111,6 +121,9 @@ function esMio(p) {
     // Login rapido por telefono — coincidencia por numero (solo de interfaz,
     // no blindada a nivel de servidor; ver nota de seguridad en firestore.rules).
     if (telefono && (p.telefono || '').replace(/\D/g,'') === telefono) return true;
+    // Invitado sin telefono — coincidencia por nombre (respaldo para que
+    // vea el pedido que acaba de hacer). Igual solo de interfaz.
+    if (miNombre && (p.cliente || p.nombre || '').trim().toLowerCase() === miNombre) return true;
     return false;
 }
 
