@@ -1531,28 +1531,49 @@ function cerrarOrdenModal() {
             </button>
         </div>
 
-        <!-- ENTREGA A DOMICILIO: zona + día + horario (solo cliente) -->
-        <div id="entrega-carrito" style="display:none;padding:.5rem .9rem;flex-shrink:0;
-                    border-bottom:1px solid rgba(255,255,255,.07);max-height:38vh;overflow-y:auto;">
-            <div style="font-size:.72rem;color:#FF5A00;font-weight:800;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em;">
-                📍 Zona de entrega
-            </div>
-            <div id="cart-zona-botones" style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.7rem;"></div>
+        <!-- ENTREGA A DOMICILIO: acordeón zona → día → horario (cliente) -->
+        <div id="entrega-carrito" style="display:none;padding:.4rem .9rem;flex-shrink:0;
+                    border-bottom:1px solid rgba(255,255,255,.07);">
 
-            <div id="cart-fecha-wrap" style="display:none;margin-bottom:.7rem;">
-                <div style="font-size:.72rem;color:#FF5A00;font-weight:800;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em;">
-                    🗓️ Día de entrega
+            <!-- Paso 1: ZONA -->
+            <div class="acc-paso" data-paso="zona" style="margin-bottom:.4rem;">
+                <button type="button" onclick="window.accToggle('zona')" style="width:100%;display:flex;align-items:center;justify-content:space-between;
+                    padding:.6rem .7rem;background:rgba(255,90,0,.08);border:1.5px solid rgba(255,90,0,.3);
+                    border-radius:10px;font-family:inherit;cursor:pointer;color:#FF5A00;font-size:.8rem;font-weight:800;">
+                    <span>📍 Zona de entrega</span>
+                    <span id="acc-zona-val" style="color:#888;font-weight:600;font-size:.75rem;">Elegir ▾</span>
+                </button>
+                <div id="acc-zona-body" style="display:none;padding:.5rem 0;">
+                    <div id="cart-zona-botones" style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;"></div>
                 </div>
-                <div id="cart-fecha-botones" style="display:flex;gap:.35rem;overflow-x:auto;padding-bottom:.3rem;"></div>
             </div>
 
-            <div id="cart-horario-wrap" style="display:none;">
-                <div style="font-size:.72rem;color:#FF5A00;font-weight:800;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em;">
-                    🕐 Horario de entrega <span id="cart-horario-lbl" style="color:#666;font-weight:400;text-transform:none;"></span>
+            <!-- Paso 2: DÍA -->
+            <div class="acc-paso" data-paso="fecha" style="margin-bottom:.4rem;">
+                <button type="button" onclick="window.accToggle('fecha')" id="acc-fecha-head" style="width:100%;display:flex;align-items:center;justify-content:space-between;
+                    padding:.6rem .7rem;background:rgba(59,130,246,.08);border:1.5px solid rgba(59,130,246,.3);
+                    border-radius:10px;font-family:inherit;cursor:pointer;color:#3B82F6;font-size:.8rem;font-weight:800;opacity:.5;">
+                    <span>🗓️ Día de entrega</span>
+                    <span id="acc-fecha-val" style="color:#888;font-weight:600;font-size:.75rem;">—</span>
+                </button>
+                <div id="acc-fecha-body" style="display:none;padding:.5rem 0;">
+                    <div id="cart-fecha-botones" style="display:flex;gap:.35rem;overflow-x:auto;padding-bottom:.3rem;"></div>
                 </div>
-                <div id="cart-horario-loading" style="font-size:.75rem;color:#888;padding:.3rem 0;">Cargando horarios…</div>
-                <div id="cart-horario-botones" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem;"></div>
-                <div id="cart-horario-vacio" style="display:none;font-size:.75rem;color:#FF4444;padding:.3rem 0;"></div>
+            </div>
+
+            <!-- Paso 3: HORARIO -->
+            <div class="acc-paso" data-paso="horario">
+                <button type="button" onclick="window.accToggle('horario')" id="acc-horario-head" style="width:100%;display:flex;align-items:center;justify-content:space-between;
+                    padding:.6rem .7rem;background:rgba(37,211,102,.08);border:1.5px solid rgba(37,211,102,.3);
+                    border-radius:10px;font-family:inherit;cursor:pointer;color:#25D366;font-size:.8rem;font-weight:800;opacity:.5;">
+                    <span>🕐 Horario de entrega</span>
+                    <span id="acc-horario-val" style="color:#888;font-weight:600;font-size:.75rem;">—</span>
+                </button>
+                <div id="acc-horario-body" style="display:none;padding:.5rem 0;max-height:32vh;overflow-y:auto;">
+                    <div id="cart-horario-loading" style="font-size:.75rem;color:#888;padding:.3rem 0;">Cargando horarios…</div>
+                    <div id="cart-horario-botones" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem;"></div>
+                    <div id="cart-horario-vacio" style="display:none;font-size:.75rem;color:#FF4444;padding:.3rem 0;"></div>
+                </div>
             </div>
         </div>
 
@@ -3273,27 +3294,39 @@ document.addEventListener('click', function(e) {
 
 <script src="js/perfil-barra.js?v=1784522139"></script>
 
-<!-- ═══ SISTEMA DE COLAS DE ENTREGA (selector integrado al carrito) ═══ -->
+<!-- ═══ SISTEMA DE COLAS DE ENTREGA (acordeón integrado al carrito) ═══ -->
 <script type="module">
 import { CONFIG_COLAS, consultarDisponibilidad, fechasDisponibles } from './js/colas-entrega.js';
 
-// Estado de la entrega elegida en el carrito
 window._entregaCarrito = window._entregaCarrito || { zona:null, zonaNombre:null, fecha:null, fechaEtiqueta:null, horario:null, horarioEtiqueta:null };
 
-// Mostrar/ocultar y poblar la sección de entrega del carrito.
-// Se llama al abrir el carrito. Solo se muestra para clientes.
+// Abrir/cerrar un paso del acordeón (cierra los demás)
+window.accToggle = function(paso) {
+    ['zona','fecha','horario'].forEach(p => {
+        const body = document.getElementById('acc-' + p + '-body');
+        if (!body) return;
+        if (p === paso) {
+            body.style.display = (body.style.display === 'none' || !body.style.display) ? 'block' : 'none';
+        } else {
+            body.style.display = 'none';
+        }
+    });
+};
+
+// Habilitar/deshabilitar visualmente un encabezado de paso
+function setPasoActivo(paso, activo) {
+    const head = document.getElementById('acc-' + paso + '-head');
+    if (head) head.style.opacity = activo ? '1' : '.5';
+}
+
 window.initEntregaCarrito = function() {
     const sec = document.getElementById('entrega-carrito');
     if (!sec) return;
-    // Detectar cliente: variable en memoria O sesión guardada (session/local).
-    // Si hay sesión de STAFF activa, NO mostrar esta sección (el staff usa
-    // el modal de mesa/nombre para multi-cuenta).
     function leerSes(k){ return sessionStorage.getItem(k) || localStorage.getItem(k); }
     var hayStaff = !!(leerSes('tt_emp_id') || leerSes('tt_cajero_nombre'));
     var cliNombre = leerSes('tt_cliente_nombre');
     var esCliente = !!window._clienteActivo || (!!cliNombre && !hayStaff);
     if (!esCliente || hayStaff) { sec.style.display = 'none'; return; }
-    // Asegurar que _clienteActivo exista para el resto del flujo
     if (!window._clienteActivo && cliNombre) {
         window._clienteActivo = { nombre: cliNombre, telefono: leerSes('tt_cliente_telefono') || '' };
     }
@@ -3310,26 +3343,30 @@ window.initEntregaCarrito = function() {
             </button>`).join('');
         cont.dataset.listo = '1';
     }
-    // Restaurar marca visual si ya había selección
-    if (window._entregaCarrito.zona) {
-        window.cartSeleccionarZona(window._entregaCarrito.zona, window._entregaCarrito.zonaNombre, true);
-    }
+    // Abrir el primer paso pendiente
+    if (!window._entregaCarrito.zona) window.accToggle('zona');
 };
 
-window.cartSeleccionarZona = function(zonaId, zonaNombre, soloVisual) {
+window.cartSeleccionarZona = function(zonaId, zonaNombre) {
     window._entregaCarrito.zona = zonaId;
     window._entregaCarrito.zonaNombre = zonaNombre;
-    if (!soloVisual) { window._entregaCarrito.fecha = null; window._entregaCarrito.horario = null; }
+    window._entregaCarrito.fecha = null;
+    window._entregaCarrito.horario = null;
 
     document.querySelectorAll('#cart-zona-botones .cart-zona-btn').forEach(b => {
         const on = b.getAttribute('data-zona') === zonaId;
         b.style.background = on ? 'rgba(255,90,0,.25)' : 'rgba(255,90,0,.08)';
         b.style.borderColor = on ? '#FF5A00' : 'rgba(255,90,0,.25)';
     });
+    // Colapsar zona, mostrar valor, habilitar y abrir día
+    const zVal = document.getElementById('acc-zona-val');
+    if (zVal) { zVal.textContent = zonaNombre + ' ✓'; zVal.style.color = '#25D366'; }
+    setPasoActivo('fecha', true);
+    document.getElementById('acc-fecha-val').textContent = 'Elegir ▾';
+    document.getElementById('acc-horario-val').textContent = '—';
+    setPasoActivo('horario', false);
 
-    const fechaWrap = document.getElementById('cart-fecha-wrap');
     const fechaCont = document.getElementById('cart-fecha-botones');
-    if (fechaWrap) fechaWrap.style.display = 'block';
     if (fechaCont) {
         const dias = fechasDisponibles(7);
         fechaCont.innerHTML = dias.map(d => `
@@ -3341,8 +3378,7 @@ window.cartSeleccionarZona = function(zonaId, zonaNombre, soloVisual) {
                 ${d.etiqueta}
             </button>`).join('');
     }
-    const horWrap = document.getElementById('cart-horario-wrap');
-    if (horWrap && !soloVisual) horWrap.style.display = 'none';
+    window.accToggle('fecha');
 };
 
 window.cartSeleccionarFecha = async function(fecha, etiqueta) {
@@ -3355,17 +3391,18 @@ window.cartSeleccionarFecha = async function(fecha, etiqueta) {
         b.style.background = on ? 'rgba(59,130,246,.3)' : 'rgba(59,130,246,.1)';
         b.style.borderColor = on ? '#3B82F6' : 'rgba(59,130,246,.3)';
     });
+    const fVal = document.getElementById('acc-fecha-val');
+    if (fVal) { fVal.textContent = etiqueta + ' ✓'; fVal.style.color = '#25D366'; }
+    setPasoActivo('horario', true);
+    document.getElementById('acc-horario-val').textContent = 'Elegir ▾';
 
-    const wrap = document.getElementById('cart-horario-wrap');
-    const lbl = document.getElementById('cart-horario-lbl');
     const loading = document.getElementById('cart-horario-loading');
     const cont = document.getElementById('cart-horario-botones');
     const vacio = document.getElementById('cart-horario-vacio');
-    if (lbl) lbl.textContent = '· ' + etiqueta;
-    if (wrap) wrap.style.display = 'block';
     if (loading) { loading.style.display = 'block'; loading.textContent = 'Cargando horarios…'; }
     if (cont) cont.innerHTML = '';
     if (vacio) vacio.style.display = 'none';
+    window.accToggle('horario');
 
     try {
         const slots = await consultarDisponibilidad(window._entregaCarrito.zona, fecha);
@@ -3396,12 +3433,13 @@ window.cartSeleccionarHorario = function(hora, etiqueta) {
         b.style.background = on ? 'rgba(37,211,102,.3)' : 'rgba(37,211,102,.1)';
         b.style.borderColor = on ? '#25D366' : 'rgba(37,211,102,.3)';
     });
+    const hVal = document.getElementById('acc-horario-val');
+    if (hVal) { hVal.textContent = etiqueta + ' ✓'; hVal.style.color = '#25D366'; }
+    // Colapsar el último paso — ya está todo elegido
+    window.accToggle('horario');
 };
 
-// Auto-inicializar la sección de entrega cada vez que el carrito se
-// vuelve visible — sin importar desde cuál de los múltiples botones se
-// abrió (hay varios puntos que abren el carrito y no todos llamaban a
-// initEntregaCarrito, por eso a veces no aparecía).
+// Auto-inicializar cuando el carrito se hace visible (desde cualquier botón)
 (function observarCarrito() {
     const modal = document.getElementById('cart-modal');
     if (!modal) { setTimeout(observarCarrito, 300); return; }
