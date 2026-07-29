@@ -1562,7 +1562,7 @@ function cerrarOrdenModal() {
             </div>
 
             <!-- Paso 3: HORARIO -->
-            <div class="acc-paso" data-paso="horario">
+            <div class="acc-paso" data-paso="horario" style="margin-bottom:.4rem;">
                 <button type="button" onclick="window.accToggle('horario')" id="acc-horario-head" style="width:100%;display:flex;align-items:center;justify-content:space-between;
                     padding:.6rem .7rem;background:rgba(37,211,102,.08);border:1.5px solid rgba(37,211,102,.3);
                     border-radius:10px;font-family:inherit;cursor:pointer;color:#25D366;font-size:.8rem;font-weight:800;opacity:.5;">
@@ -1573,6 +1573,25 @@ function cerrarOrdenModal() {
                     <div id="cart-horario-loading" style="font-size:.75rem;color:#888;padding:.3rem 0;">Cargando horarios…</div>
                     <div id="cart-horario-botones" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem;"></div>
                     <div id="cart-horario-vacio" style="display:none;font-size:.75rem;color:#FF4444;padding:.3rem 0;"></div>
+                </div>
+            </div>
+
+            <!-- Paso 4: UBICACIÓN -->
+            <div class="acc-paso" data-paso="ubicacion">
+                <button type="button" onclick="window.accToggle('ubicacion')" id="acc-ubicacion-head" style="width:100%;display:flex;align-items:center;justify-content:space-between;
+                    padding:.6rem .7rem;background:rgba(167,139,250,.08);border:1.5px solid rgba(167,139,250,.3);
+                    border-radius:10px;font-family:inherit;cursor:pointer;color:#A78BFA;font-size:.8rem;font-weight:800;opacity:.5;">
+                    <span>📌 Mi ubicación</span>
+                    <span id="acc-ubicacion-val" style="color:#888;font-weight:600;font-size:.75rem;">—</span>
+                </button>
+                <div id="acc-ubicacion-body" style="display:none;padding:.5rem 0;">
+                    <p style="font-size:.72rem;color:#888;margin:0 0 .5rem;">Comparte tu ubicación para que el repartidor te encuentre.</p>
+                    <button type="button" id="btn-compartir-ubic-cart" onclick="window.cartCompartirUbicacion()"
+                        style="width:100%;padding:.7rem;background:rgba(167,139,250,.15);border:1.5px solid rgba(167,139,250,.4);
+                               color:#A78BFA;border-radius:10px;font-family:inherit;font-size:.82rem;font-weight:700;cursor:pointer;">
+                        📍 Compartir mi ubicación
+                    </button>
+                    <div id="cart-ubic-status" style="font-size:.75rem;margin-top:.5rem;"></div>
                 </div>
             </div>
         </div>
@@ -3302,7 +3321,7 @@ window._entregaCarrito = window._entregaCarrito || { zona:null, zonaNombre:null,
 
 // Abrir/cerrar un paso del acordeón (cierra los demás)
 window.accToggle = function(paso) {
-    ['zona','fecha','horario'].forEach(p => {
+    ['zona','fecha','horario','ubicacion'].forEach(p => {
         const body = document.getElementById('acc-' + p + '-body');
         if (!body) return;
         if (p === paso) {
@@ -3345,6 +3364,12 @@ window.initEntregaCarrito = function() {
     }
     // Abrir el primer paso pendiente
     if (!window._entregaCarrito.zona) window.accToggle('zona');
+    // Restaurar marca de ubicación si ya se compartió
+    if (window._entregaCarrito.ubicacion) {
+        const uVal = document.getElementById('acc-ubicacion-val');
+        if (uVal) { uVal.textContent = 'Compartida ✓'; uVal.style.color = '#25D366'; }
+        setPasoActivo('ubicacion', true);
+    }
 };
 
 window.cartSeleccionarZona = function(zonaId, zonaNombre) {
@@ -3435,8 +3460,48 @@ window.cartSeleccionarHorario = function(hora, etiqueta) {
     });
     const hVal = document.getElementById('acc-horario-val');
     if (hVal) { hVal.textContent = etiqueta + ' ✓'; hVal.style.color = '#25D366'; }
-    // Colapsar el último paso — ya está todo elegido
-    window.accToggle('horario');
+    // Habilitar y abrir el paso de ubicación
+    setPasoActivo('ubicacion', true);
+    if (!window._entregaCarrito.ubicacion) {
+        const uVal = document.getElementById('acc-ubicacion-val');
+        if (uVal) uVal.textContent = 'Compartir ▾';
+    }
+    window.accToggle('ubicacion');
+};
+
+// Compartir ubicación desde el acordeón (se guarda en _entregaCarrito;
+// el pedido aún no existe, así que se adjunta al enviar la orden).
+window.cartCompartirUbicacion = function() {
+    const status = document.getElementById('cart-ubic-status');
+    const btn = document.getElementById('btn-compartir-ubic-cart');
+    if (!navigator.geolocation) {
+        if (status) { status.style.color = '#FF4444'; status.textContent = 'Tu navegador no soporta ubicación.'; }
+        return;
+    }
+    if (status) { status.style.color = '#888'; status.textContent = 'Obteniendo tu ubicación…'; }
+    if (btn) btn.disabled = true;
+    navigator.geolocation.getCurrentPosition(
+        function(pos) {
+            const lat = pos.coords.latitude, lng = pos.coords.longitude;
+            const precision = Math.round(pos.coords.accuracy);
+            window._entregaCarrito.ubicacion = { lat, lng, precision, compartidaEn: new Date().toISOString() };
+            if (status) { status.style.color = '#25D366'; status.innerHTML = '✅ Ubicación compartida correctamente.'; }
+            const uVal = document.getElementById('acc-ubicacion-val');
+            if (uVal) { uVal.textContent = 'Compartida ✓'; uVal.style.color = '#25D366'; }
+            if (btn) { btn.disabled = false; btn.innerHTML = '📍 Actualizar mi ubicación'; }
+            // Colapsar el paso — ya está todo completo
+            setTimeout(function(){ window.accToggle('ubicacion'); }, 600);
+        },
+        function(err) {
+            let msg = 'No pudimos obtener tu ubicación.';
+            if (err.code === 1) msg = 'Debes permitir el acceso a tu ubicación (toca el candado del navegador).';
+            else if (err.code === 2) msg = 'Ubicación no disponible. Activa el GPS.';
+            else if (err.code === 3) msg = 'Tardó demasiado. Intenta de nuevo.';
+            if (status) { status.style.color = '#FF4444'; status.textContent = msg; }
+            if (btn) btn.disabled = false;
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
 };
 
 // Auto-inicializar cuando el carrito se hace visible (desde cualquier botón)
