@@ -228,6 +228,7 @@ window.normalizarRutaImagen = function(src) {
             <button class="nav-btn" onclick="abrirProductos()" style="border-color:var(--primary); color:var(--primary);">📦 Productos</button>
             <button class="nav-btn btn-empleados" onclick="window.location.href='empleados.html'" style="border-color:#A78BFA; color:#A78BFA;">👥 Empleados</button>
             <button class="nav-btn" onclick="abrirReportes()" style="border-color:rgba(251,191,36,.4);color:#FBB724;">📈 Reportes</button>
+            <button class="nav-btn" onclick="abrirColasEntrega()" style="border-color:rgba(167,139,250,.4);color:#A78BFA;">🚚 Entregas</button>
             <button class="nav-btn" onclick="abrirGestionEmpleados()" style="border-color:rgba(59,130,246,.4);color:#3B82F6;">👤 Cajeros</button>
             <button class="nav-btn" onclick="window.location.href='../ordenar.html'" style="border-color:var(--border);">🏠 Tienda</button>
             <button class="nav-btn" onclick="window.open('cocina.html','_blank')" style="border-color:rgba(34,197,94,.4);color:#22C55E;font-weight:700;">🧑‍🍳 Cocina</button>
@@ -1473,6 +1474,35 @@ window.guardarProducto = async function(id) {
                color:#888;background:transparent;font-family:inherit;font-size:.78rem;font-weight:700;cursor:pointer;">Todo</button>
     </div>
     <div id="reportes-contenido"></div>
+  </div>
+</div>
+
+<!-- MODAL COLAS DE ENTREGA (gestión del gerente) -->
+<div id="colas-modal" onclick="if(event.target===this)this.style.display='none'"
+     style="position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9000;
+            display:none;align-items:flex-end;justify-content:center;">
+  <div style="background:#1C1C1C;border:1px solid rgba(255,255,255,.1);
+              border-radius:20px 20px 0 0;padding:1.5rem;width:100%;max-width:600px;
+              max-height:88vh;overflow-y:auto;">
+    <div style="width:32px;height:4px;background:rgba(255,255,255,.15);border-radius:4px;margin:0 auto .85rem;"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <div style="font-size:.95rem;font-weight:800;color:#A78BFA;">🚚 Colas de Entrega</div>
+      <button onclick="document.getElementById('colas-modal').style.display='none'"
+        style="background:none;border:1px solid rgba(255,255,255,.1);color:#888;border-radius:8px;padding:.25rem .6rem;cursor:pointer;">✕</button>
+    </div>
+    <p style="font-size:.75rem;color:#888;margin:0 0 .8rem;">Elige zona y día para ver la ocupación de cada horario. Puedes bloquear un horario (para que ningún cliente lo tome) o liberarlo.</p>
+
+    <!-- Selector de zona -->
+    <div style="font-size:.72rem;color:#A78BFA;font-weight:800;margin-bottom:.4rem;text-transform:uppercase;">Zona</div>
+    <div id="colas-zona-botones" style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.9rem;"></div>
+
+    <!-- Selector de día -->
+    <div style="font-size:.72rem;color:#A78BFA;font-weight:800;margin-bottom:.4rem;text-transform:uppercase;">Día</div>
+    <div id="colas-fecha-botones" style="display:flex;gap:.35rem;overflow-x:auto;padding-bottom:.3rem;margin-bottom:.9rem;"></div>
+
+    <!-- Grid de horarios -->
+    <div id="colas-slots-loading" style="display:none;font-size:.8rem;color:#888;padding:.5rem 0;">Cargando ocupación…</div>
+    <div id="colas-slots" style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;"></div>
   </div>
 </div>
 
@@ -2738,5 +2768,107 @@ window.enviarUbicacionConTelefono = async function(pedidoId, nombre, ticket) {
 </script>
 
 <script src="../js/perfil-barra.js?v=1784522139"></script>
+<!-- ═══ GESTIÓN DE COLAS DE ENTREGA (panel gerente) ═══ -->
+<script type="module">
+import { CONFIG_COLAS, consultarDisponibilidad, fechasDisponibles, fijarBloqueoSlot, horaBonita } from '../js/colas-entrega.js';
+
+let _colZona = null, _colFecha = null;
+
+window.abrirColasEntrega = function() {
+    document.getElementById('colas-modal').style.display = 'flex';
+    // Render zonas
+    const zc = document.getElementById('colas-zona-botones');
+    if (zc && !zc.dataset.listo) {
+        zc.innerHTML = CONFIG_COLAS.zonas.map(z => `
+            <button type="button" class="col-zona-btn" data-zona="${z.id}"
+                onclick="window.colSeleccionarZona('${z.id}')"
+                style="padding:.6rem;border-radius:10px;font-family:inherit;font-size:.8rem;font-weight:700;
+                       cursor:pointer;background:rgba(167,139,250,.08);border:1.5px solid rgba(167,139,250,.3);color:#A78BFA;">
+                ${z.nombre}
+            </button>`).join('');
+        zc.dataset.listo = '1';
+    }
+    // Render fechas
+    const fc = document.getElementById('colas-fecha-botones');
+    if (fc) {
+        const dias = fechasDisponibles(7);
+        fc.innerHTML = dias.map(d => `
+            <button type="button" class="col-fecha-btn" data-fecha="${d.fecha}"
+                onclick="window.colSeleccionarFecha('${d.fecha}')"
+                style="flex:0 0 auto;padding:.5rem .7rem;border-radius:9px;font-family:inherit;font-size:.75rem;
+                       font-weight:700;cursor:pointer;white-space:nowrap;
+                       background:rgba(59,130,246,.1);border:1.5px solid rgba(59,130,246,.3);color:#3B82F6;">
+                ${d.etiqueta}
+            </button>`).join('');
+    }
+    // Reset
+    _colZona = null; _colFecha = fechasDisponibles(1)[0]?.fecha || null;
+    document.getElementById('colas-slots').innerHTML = '<div style="grid-column:1/-1;color:#888;font-size:.8rem;padding:1rem 0;text-align:center;">Elige una zona y un día para ver la ocupación.</div>';
+};
+
+window.colSeleccionarZona = function(zonaId) {
+    _colZona = zonaId;
+    document.querySelectorAll('#colas-zona-botones .col-zona-btn').forEach(b => {
+        const on = b.getAttribute('data-zona') === zonaId;
+        b.style.background = on ? 'rgba(167,139,250,.28)' : 'rgba(167,139,250,.08)';
+        b.style.borderColor = on ? '#A78BFA' : 'rgba(167,139,250,.3)';
+    });
+    if (_colFecha) window.colCargarSlots();
+};
+
+window.colSeleccionarFecha = function(fecha) {
+    _colFecha = fecha;
+    document.querySelectorAll('#colas-fecha-botones .col-fecha-btn').forEach(b => {
+        const on = b.getAttribute('data-fecha') === fecha;
+        b.style.background = on ? 'rgba(59,130,246,.3)' : 'rgba(59,130,246,.1)';
+        b.style.borderColor = on ? '#3B82F6' : 'rgba(59,130,246,.3)';
+    });
+    if (_colZona) window.colCargarSlots();
+};
+
+window.colCargarSlots = async function() {
+    if (!_colZona || !_colFecha) return;
+    const loading = document.getElementById('colas-slots-loading');
+    const cont = document.getElementById('colas-slots');
+    if (loading) loading.style.display = 'block';
+    if (cont) cont.innerHTML = '';
+    try {
+        const slots = await consultarDisponibilidad(_colZona, _colFecha);
+        if (loading) loading.style.display = 'none';
+        if (cont) cont.innerHTML = slots.map(s => {
+            let color, estado, accion;
+            if (s.bloqueado) {
+                color = '#FF4444'; estado = '🔒 Bloqueado';
+                accion = `<button onclick="window.colBloquear('${s.hora}',false)" style="margin-top:.4rem;width:100%;padding:.35rem;background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.4);color:#25D366;border-radius:6px;font-family:inherit;font-size:.7rem;font-weight:700;cursor:pointer;">Liberar</button>`;
+            } else if (s.yaPaso) {
+                color = '#666'; estado = '⌛ Ya pasó'; accion = '';
+            } else if (s.ocupados >= s.capacidad) {
+                color = '#FBB724'; estado = `Lleno (${s.ocupados}/${s.capacidad})`;
+                accion = `<button onclick="window.colBloquear('${s.hora}',true)" style="margin-top:.4rem;width:100%;padding:.35rem;background:rgba(255,68,68,.12);border:1px solid rgba(255,68,68,.35);color:#FF4444;border-radius:6px;font-family:inherit;font-size:.7rem;font-weight:700;cursor:pointer;">Bloquear</button>`;
+            } else {
+                color = '#25D366'; estado = `${s.ocupados}/${s.capacidad} ocupados`;
+                accion = `<button onclick="window.colBloquear('${s.hora}',true)" style="margin-top:.4rem;width:100%;padding:.35rem;background:rgba(255,68,68,.12);border:1px solid rgba(255,68,68,.35);color:#FF4444;border-radius:6px;font-family:inherit;font-size:.7rem;font-weight:700;cursor:pointer;">Bloquear</button>`;
+            }
+            return `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.6rem;">
+                <div style="font-size:.85rem;font-weight:800;color:#fff;">${s.etiqueta}</div>
+                <div style="font-size:.72rem;color:${color};font-weight:700;margin-top:.15rem;">${estado}</div>
+                ${accion}
+            </div>`;
+        }).join('');
+    } catch(e) {
+        if (loading) { loading.style.display = 'block'; loading.textContent = 'Error al cargar: ' + e.message; }
+    }
+};
+
+window.colBloquear = async function(hora, bloquear) {
+    if (!_colZona || !_colFecha) return;
+    try {
+        await fijarBloqueoSlot(_colZona, hora, bloquear, _colFecha);
+        window.colCargarSlots(); // refrescar
+    } catch(e) {
+        alert('No se pudo actualizar el horario: ' + e.message);
+    }
+};
+</script>
 </body>
 </html>
