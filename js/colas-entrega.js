@@ -85,6 +85,31 @@ function horarioYaPaso(fecha, hora) {
     return slotDate <= ahora;
 }
 
+// Genera las fechas seleccionables para entrega: hoy + próximos días,
+// saltando domingos (cerrado). Devuelve [{fecha, etiqueta, esHoy}].
+export function fechasDisponibles(diasAdelante) {
+    diasAdelante = diasAdelante || 7;
+    const dias = [];
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const nombresDia = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    const nombresMes = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    for (let i = 0; i <= diasAdelante; i++) {
+        const d = new Date(hoy);
+        d.setDate(hoy.getDate() + i);
+        if (d.getDay() === 0) continue; // domingo cerrado
+        const fecha = d.getFullYear() + '-' +
+                      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                      String(d.getDate()).padStart(2, '0');
+        let etiqueta;
+        if (i === 0) etiqueta = 'Hoy';
+        else if (i === 1) etiqueta = 'Mañana';
+        else etiqueta = nombresDia[d.getDay()] + ' ' + d.getDate() + ' ' + nombresMes[d.getMonth()];
+        dias.push({ fecha, etiqueta, esHoy: i === 0 });
+    }
+    return dias;
+}
+
 // ── Consultar disponibilidad de una zona ─────────────────────────
 // Devuelve la lista de horarios con su estado (disponible, ocupados,
 // capacidad, bloqueado, yaPaso). Los slots que no existen todavía se
