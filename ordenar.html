@@ -2821,8 +2821,14 @@ document.addEventListener('click', function(e) {
 <script>
 /* ══════ LÓGICA MODAL NOMBRE/MESA DE CUENTA ══════ */
 (function() {
-    // Estado temporal mientras el modal está abierto
-    var _seleccion = { tipo: '', mesa: '', nombre: '' };
+    // Estado temporal mientras el modal está abierto.
+    // IMPORTANTE: usamos window._seleccion (el MISMO objeto que usa el
+    // selector de zona/día/horario del módulo de colas), para que la
+    // zona/fecha/horario que elige el cliente sí lleguen a la validación
+    // de guardado. Antes había un _seleccion local separado y por eso
+    // decía "Elige la zona" aunque ya estuviera elegida.
+    window._seleccion = window._seleccion || { tipo: '', mesa: '', nombre: '' };
+    var _seleccion = window._seleccion;
 
     // Generar botones de mesas 1-10
     function generarMesas() {
@@ -2862,7 +2868,12 @@ document.addEventListener('click', function(e) {
     }
 
     window.abrirModalNombreCuenta = function() {
-        _seleccion = { tipo: '', mesa: '', nombre: '' };
+        // Limpiar el objeto compartido EN SU LUGAR (no reasignar, para no
+        // romper el alias con window._seleccion que usa el selector de zona).
+        _seleccion.tipo = ''; _seleccion.mesa = ''; _seleccion.nombre = '';
+        _seleccion.zona = null; _seleccion.zonaNombre = null;
+        _seleccion.fecha = null; _seleccion.fechaEtiqueta = null;
+        _seleccion.horario = null; _seleccion.horarioEtiqueta = null;
         generarMesas();
 
         // Pre-cargar el nombre actual si no es el default. Si hay un
