@@ -134,11 +134,27 @@ window._pendingItem = window._pendingItem || null;
     // vuelva a escribir.
     if (hayCliente && !hayStaff) {
         window._clienteActivo = { nombre: cliNombre, telefono: sessionStorage.getItem('tt_cliente_telefono') || '' };
+        // Poner el nombre y teléfono del cliente en la Cuenta 1 por defecto,
+        // para que aparezca su nombre (no "Cuenta 1") y no tenga que
+        // reescribir sus datos al ordenar.
+        try {
+            var _cs = window._cuentasSys;
+            if (_cs && _cs.cuentas && _cs.cuentas[0]) {
+                var c0 = _cs.cuentas[0];
+                if (!c0.nombre || c0.nombre === 'Cuenta 1') c0.nombre = cliNombre;
+                if (!c0.telefono) c0.telefono = window._clienteActivo.telefono;
+            }
+        } catch(e) {}
         function precargarCliente() {
             var n = document.getElementById('customer-name');
             var t = document.getElementById('customer-phone');
             if (n && !n.value) n.value = cliNombre;
             if (t && !t.value) t.value = window._clienteActivo.telefono;
+            // Reflejar el nombre del cliente en el encabezado de la cuenta
+            var disp = document.getElementById('nombre-cuenta-display');
+            if (disp && (disp.textContent === 'Cuenta 1' || !disp.textContent.trim())) {
+                disp.textContent = cliNombre;
+            }
         }
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', precargarCliente);
@@ -2907,6 +2923,15 @@ document.addEventListener('click', function(e) {
         var modal = document.getElementById('nombre-cuenta-modal');
         if (modal) modal.classList.add('active');
         setTimeout(function(){ if (inp) inp.focus(); }, 200);
+
+        // Para clientes: preseleccionar "Domicilio" por defecto, de modo
+        // que aparezcan de una vez la zona y los horarios disponibles.
+        if (window._clienteActivo) {
+            setTimeout(function(){
+                var btnDom = document.querySelector('.tipo-serv-btn[data-tipo="Domicilio"]');
+                if (btnDom && !_seleccion.tipo) window.seleccionarTipoServicio(btnDom, 'Domicilio');
+            }, 100);
+        }
     };
 
     window.cerrarModalNombreCuenta = function() {
