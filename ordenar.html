@@ -3285,8 +3285,18 @@ window._entregaCarrito = window._entregaCarrito || { zona:null, zonaNombre:null,
 window.initEntregaCarrito = function() {
     const sec = document.getElementById('entrega-carrito');
     if (!sec) return;
-    // Solo para clientes (no staff). El staff usa el modal de mesa/nombre.
-    if (!window._clienteActivo) { sec.style.display = 'none'; return; }
+    // Detectar cliente: variable en memoria O sesión guardada (session/local).
+    // Si hay sesión de STAFF activa, NO mostrar esta sección (el staff usa
+    // el modal de mesa/nombre para multi-cuenta).
+    function leerSes(k){ return sessionStorage.getItem(k) || localStorage.getItem(k); }
+    var hayStaff = !!(leerSes('tt_emp_id') || leerSes('tt_cajero_nombre'));
+    var cliNombre = leerSes('tt_cliente_nombre');
+    var esCliente = !!window._clienteActivo || (!!cliNombre && !hayStaff);
+    if (!esCliente || hayStaff) { sec.style.display = 'none'; return; }
+    // Asegurar que _clienteActivo exista para el resto del flujo
+    if (!window._clienteActivo && cliNombre) {
+        window._clienteActivo = { nombre: cliNombre, telefono: leerSes('tt_cliente_telefono') || '' };
+    }
     sec.style.display = 'block';
 
     const cont = document.getElementById('cart-zona-botones');
@@ -3387,6 +3397,21 @@ window.cartSeleccionarHorario = function(hora, etiqueta) {
         b.style.borderColor = on ? '#25D366' : 'rgba(37,211,102,.3)';
     });
 };
+
+// Auto-inicializar la sección de entrega cada vez que el carrito se
+// vuelve visible — sin importar desde cuál de los múltiples botones se
+// abrió (hay varios puntos que abren el carrito y no todos llamaban a
+// initEntregaCarrito, por eso a veces no aparecía).
+(function observarCarrito() {
+    const modal = document.getElementById('cart-modal');
+    if (!modal) { setTimeout(observarCarrito, 300); return; }
+    const obs = new MutationObserver(() => {
+        if (modal.classList.contains('active')) {
+            if (window.initEntregaCarrito) window.initEntregaCarrito();
+        }
+    });
+    obs.observe(modal, { attributes: true, attributeFilter: ['class'] });
+})();
 </script>
 </body>
 </html>
