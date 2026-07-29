@@ -2769,6 +2769,23 @@ document.addEventListener('click', function(e) {
             <div style="font-size:.7rem;color:#666;margin-top:.35rem;">Con este número podrás pedirle su ubicación por WhatsApp desde el panel.</div>
         </div>
 
+        <!-- Zona y horario de entrega: solo para Domicilio -->
+        <div id="zona-horario-section" style="margin-bottom:1.2rem;display:none;">
+            <p style="font-size:.78rem;color:#FF5A00;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.05em;">
+                📍 Zona de entrega
+            </p>
+            <div id="zona-botones" style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1rem;"></div>
+
+            <div id="horario-wrap" style="display:none;">
+                <p style="font-size:.78rem;color:#FF5A00;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.05em;">
+                    🕐 Horario de entrega <span id="horario-zona-lbl" style="color:#666;font-weight:400;text-transform:none;"></span>
+                </p>
+                <div id="horario-loading" style="font-size:.8rem;color:#888;padding:.5rem 0;">Cargando horarios disponibles…</div>
+                <div id="horario-botones" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;"></div>
+                <div id="horario-vacio" style="display:none;font-size:.8rem;color:#FF4444;padding:.5rem 0;">No quedan horarios disponibles hoy en esta zona.</div>
+            </div>
+        </div>
+
         <!-- Vista previa -->
         <div style="background:rgba(255,90,0,.08);border-radius:12px;padding:.7rem .9rem;margin-bottom:1rem;
                     display:flex;align-items:center;gap:.5rem;">
@@ -2891,6 +2908,14 @@ document.addEventListener('click', function(e) {
         // Mostrar el campo de telefono solo para Domicilio
         var telSec = document.getElementById('telefono-section');
         if (telSec) telSec.style.display = (tipo === 'Domicilio') ? 'block' : 'none';
+        // Mostrar zona + horario solo para Domicilio
+        var zhSec = document.getElementById('zona-horario-section');
+        if (zhSec) {
+            zhSec.style.display = (tipo === 'Domicilio') ? 'block' : 'none';
+            if (tipo === 'Domicilio') window.renderZonasEntrega();
+        }
+        // Al cambiar de tipo, olvidar zona/horario previos
+        if (tipo !== 'Domicilio') { _seleccion.zona = null; _seleccion.horario = null; }
 
         actualizarPreview();
     };
@@ -2964,9 +2989,26 @@ document.addEventListener('click', function(e) {
             return;
         }
 
+        // Para Domicilio: exigir zona y horario de entrega
+        if (_seleccion.tipo === 'Domicilio') {
+            if (!_seleccion.zona) {
+                alert('⚠️ Elige la zona de entrega.');
+                return;
+            }
+            if (!_seleccion.horario) {
+                alert('⚠️ Elige un horario de entrega disponible.');
+                return;
+            }
+        }
+
         c.nombre = nombre;
         // Guardar el tipo de servicio en la cuenta para usarlo al enviar
         c.tipoServicio = _seleccion.tipo || 'Comer aquí';
+        // Guardar zona y horario de entrega (solo domicilio)
+        c.zonaEntrega = _seleccion.tipo === 'Domicilio' ? (_seleccion.zona || null) : null;
+        c.zonaEntregaNombre = _seleccion.tipo === 'Domicilio' ? (_seleccion.zonaNombre || null) : null;
+        c.horarioEntrega = _seleccion.tipo === 'Domicilio' ? (_seleccion.horario || null) : null;
+        c.horarioEntregaEtiqueta = _seleccion.tipo === 'Domicilio' ? (_seleccion.horarioEtiqueta || null) : null;
 
         // Guardar el telefono SIEMPRE (antes solo se guardaba para
         // Domicilio; ahora se pide y guarda para toda orden).
@@ -3149,5 +3191,81 @@ document.addEventListener('click', function(e) {
 </div>
 
 <script src="js/perfil-barra.js?v=1784522139"></script>
+
+<!-- ═══ SISTEMA DE COLAS DE ENTREGA (Fase 2: selector cliente) ═══ -->
+<script type="module">
+import { CONFIG_COLAS, consultarDisponibilidad, horaBonita } from './js/colas-entrega.js';
+
+// Render de los botones de zona
+window.renderZonasEntrega = function() {
+    const cont = document.getElementById('zona-botones');
+    if (!cont) return;
+    cont.innerHTML = CONFIG_COLAS.zonas.map(z => `
+        <button type="button" class="zona-btn" data-zona="${z.id}"
+            onclick="window.seleccionarZonaEntrega('${z.id}','${z.nombre}')"
+            style="padding:.7rem;border-radius:12px;font-family:inherit;font-size:.85rem;font-weight:700;
+                   cursor:pointer;background:rgba(255,90,0,.08);border:1.5px solid rgba(255,90,0,.25);color:#FF5A00;">
+            ${z.nombre}
+        </button>`).join('');
+};
+
+// Al elegir zona: marcar y cargar horarios disponibles
+window.seleccionarZonaEntrega = async function(zonaId, zonaNombre) {
+    window._seleccion = window._seleccion || {};
+    window._seleccion.zona = zonaId;
+    window._seleccion.zonaNombre = zonaNombre;
+    window._seleccion.horario = null;  // resetear horario al cambiar zona
+
+    // Resaltar la zona elegida
+    document.querySelectorAll('#zona-botones .zona-btn').forEach(b => {
+        const on = b.getAttribute('data-zona') === zonaId;
+        b.style.background = on ? 'rgba(255,90,0,.25)' : 'rgba(255,90,0,.08)';
+        b.style.borderColor = on ? '#FF5A00' : 'rgba(255,90,0,.25)';
+    });
+
+    const wrap = document.getElementById('horario-wrap');
+    const lbl = document.getElementById('horario-zona-lbl');
+    const loading = document.getElementById('horario-loading');
+    const cont = document.getElementById('horario-botones');
+    const vacio = document.getElementById('horario-vacio');
+    if (lbl) lbl.textContent = '· ' + zonaNombre;
+    if (wrap) wrap.style.display = 'block';
+    if (loading) loading.style.display = 'block';
+    if (cont) cont.innerHTML = '';
+    if (vacio) vacio.style.display = 'none';
+
+    try {
+        const slots = await consultarDisponibilidad(zonaId);
+        const disponibles = slots.filter(s => s.disponible);
+        if (loading) loading.style.display = 'none';
+        if (!disponibles.length) {
+            if (vacio) vacio.style.display = 'block';
+            return;
+        }
+        if (cont) cont.innerHTML = disponibles.map(s => `
+            <button type="button" class="horario-btn" data-hora="${s.hora}"
+                onclick="window.seleccionarHorarioEntrega('${s.hora}','${s.etiqueta}')"
+                title="${s.restantes} lugar(es) disponible(s)"
+                style="padding:.55rem .3rem;border-radius:10px;font-family:inherit;font-size:.78rem;font-weight:700;
+                       cursor:pointer;background:rgba(37,211,102,.1);border:1.5px solid rgba(37,211,102,.3);color:#25D366;">
+                ${s.etiqueta}
+            </button>`).join('');
+    } catch(e) {
+        if (loading) loading.textContent = 'Error al cargar horarios. Intenta de nuevo.';
+    }
+};
+
+// Al elegir horario: marcar
+window.seleccionarHorarioEntrega = function(hora, etiqueta) {
+    window._seleccion = window._seleccion || {};
+    window._seleccion.horario = hora;
+    window._seleccion.horarioEtiqueta = etiqueta;
+    document.querySelectorAll('#horario-botones .horario-btn').forEach(b => {
+        const on = b.getAttribute('data-hora') === hora;
+        b.style.background = on ? 'rgba(37,211,102,.3)' : 'rgba(37,211,102,.1)';
+        b.style.borderColor = on ? '#25D366' : 'rgba(37,211,102,.3)';
+    });
+};
+</script>
 </body>
 </html>
