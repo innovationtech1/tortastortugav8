@@ -305,6 +305,7 @@ window.confirmarMods = confirmarMods;
 function abrirCarrito() {
     if (window.renderCuentasTabs) window.renderCuentasTabs();
     if (window.renderCartItems)   window.renderCartItems();
+    if (window.initEntregaCarrito) window.initEntregaCarrito();
     var cm = document.getElementById('cart-modal');
     if (cm) cm.classList.add('active');
 }
@@ -1528,6 +1529,31 @@ function cerrarOrdenModal() {
                        display:none;">
                 ❌
             </button>
+        </div>
+
+        <!-- ENTREGA A DOMICILIO: zona + día + horario (solo cliente) -->
+        <div id="entrega-carrito" style="display:none;padding:.5rem .9rem;flex-shrink:0;
+                    border-bottom:1px solid rgba(255,255,255,.07);max-height:38vh;overflow-y:auto;">
+            <div style="font-size:.72rem;color:#FF5A00;font-weight:800;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em;">
+                📍 Zona de entrega
+            </div>
+            <div id="cart-zona-botones" style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.7rem;"></div>
+
+            <div id="cart-fecha-wrap" style="display:none;margin-bottom:.7rem;">
+                <div style="font-size:.72rem;color:#FF5A00;font-weight:800;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em;">
+                    🗓️ Día de entrega
+                </div>
+                <div id="cart-fecha-botones" style="display:flex;gap:.35rem;overflow-x:auto;padding-bottom:.3rem;"></div>
+            </div>
+
+            <div id="cart-horario-wrap" style="display:none;">
+                <div style="font-size:.72rem;color:#FF5A00;font-weight:800;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em;">
+                    🕐 Horario de entrega <span id="cart-horario-lbl" style="color:#666;font-weight:400;text-transform:none;"></span>
+                </div>
+                <div id="cart-horario-loading" style="font-size:.75rem;color:#888;padding:.3rem 0;">Cargando horarios…</div>
+                <div id="cart-horario-botones" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem;"></div>
+                <div id="cart-horario-vacio" style="display:none;font-size:.75rem;color:#FF4444;padding:.3rem 0;"></div>
+            </div>
         </div>
 
         <!-- LISTA DE PRODUCTOS -->
@@ -3247,108 +3273,115 @@ document.addEventListener('click', function(e) {
 
 <script src="js/perfil-barra.js?v=1784522139"></script>
 
-<!-- ═══ SISTEMA DE COLAS DE ENTREGA (Fase 2: selector cliente) ═══ -->
+<!-- ═══ SISTEMA DE COLAS DE ENTREGA (selector integrado al carrito) ═══ -->
 <script type="module">
-import { CONFIG_COLAS, consultarDisponibilidad, horaBonita, fechasDisponibles } from './js/colas-entrega.js';
+import { CONFIG_COLAS, consultarDisponibilidad, fechasDisponibles } from './js/colas-entrega.js';
 
-// Render de los botones de zona
-window.renderZonasEntrega = function() {
-    const cont = document.getElementById('zona-botones');
-    if (!cont) return;
-    cont.innerHTML = CONFIG_COLAS.zonas.map(z => `
-        <button type="button" class="zona-btn" data-zona="${z.id}"
-            onclick="window.seleccionarZonaEntrega('${z.id}','${z.nombre}')"
-            style="padding:.7rem;border-radius:12px;font-family:inherit;font-size:.85rem;font-weight:700;
-                   cursor:pointer;background:rgba(255,90,0,.08);border:1.5px solid rgba(255,90,0,.25);color:#FF5A00;">
-            ${z.nombre}
-        </button>`).join('');
+// Estado de la entrega elegida en el carrito
+window._entregaCarrito = window._entregaCarrito || { zona:null, zonaNombre:null, fecha:null, fechaEtiqueta:null, horario:null, horarioEtiqueta:null };
+
+// Mostrar/ocultar y poblar la sección de entrega del carrito.
+// Se llama al abrir el carrito. Solo se muestra para clientes.
+window.initEntregaCarrito = function() {
+    const sec = document.getElementById('entrega-carrito');
+    if (!sec) return;
+    // Solo para clientes (no staff). El staff usa el modal de mesa/nombre.
+    if (!window._clienteActivo) { sec.style.display = 'none'; return; }
+    sec.style.display = 'block';
+
+    const cont = document.getElementById('cart-zona-botones');
+    if (cont && !cont.dataset.listo) {
+        cont.innerHTML = CONFIG_COLAS.zonas.map(z => `
+            <button type="button" class="cart-zona-btn" data-zona="${z.id}"
+                onclick="window.cartSeleccionarZona('${z.id}','${z.nombre}')"
+                style="padding:.6rem;border-radius:10px;font-family:inherit;font-size:.8rem;font-weight:700;
+                       cursor:pointer;background:rgba(255,90,0,.08);border:1.5px solid rgba(255,90,0,.25);color:#FF5A00;">
+                ${z.nombre}
+            </button>`).join('');
+        cont.dataset.listo = '1';
+    }
+    // Restaurar marca visual si ya había selección
+    if (window._entregaCarrito.zona) {
+        window.cartSeleccionarZona(window._entregaCarrito.zona, window._entregaCarrito.zonaNombre, true);
+    }
 };
 
-// Al elegir zona: marcar y mostrar los días disponibles
-window.seleccionarZonaEntrega = function(zonaId, zonaNombre) {
-    window._seleccion = window._seleccion || {};
-    window._seleccion.zona = zonaId;
-    window._seleccion.zonaNombre = zonaNombre;
-    window._seleccion.fecha = null;
-    window._seleccion.horario = null;
+window.cartSeleccionarZona = function(zonaId, zonaNombre, soloVisual) {
+    window._entregaCarrito.zona = zonaId;
+    window._entregaCarrito.zonaNombre = zonaNombre;
+    if (!soloVisual) { window._entregaCarrito.fecha = null; window._entregaCarrito.horario = null; }
 
-    document.querySelectorAll('#zona-botones .zona-btn').forEach(b => {
+    document.querySelectorAll('#cart-zona-botones .cart-zona-btn').forEach(b => {
         const on = b.getAttribute('data-zona') === zonaId;
         b.style.background = on ? 'rgba(255,90,0,.25)' : 'rgba(255,90,0,.08)';
         b.style.borderColor = on ? '#FF5A00' : 'rgba(255,90,0,.25)';
     });
 
-    // Mostrar selector de día
-    const fechaWrap = document.getElementById('fecha-wrap');
-    const fechaCont = document.getElementById('fecha-botones');
+    const fechaWrap = document.getElementById('cart-fecha-wrap');
+    const fechaCont = document.getElementById('cart-fecha-botones');
     if (fechaWrap) fechaWrap.style.display = 'block';
     if (fechaCont) {
         const dias = fechasDisponibles(7);
         fechaCont.innerHTML = dias.map(d => `
-            <button type="button" class="fecha-btn" data-fecha="${d.fecha}"
-                onclick="window.seleccionarFechaEntrega('${d.fecha}','${d.etiqueta}')"
-                style="flex:0 0 auto;padding:.55rem .8rem;border-radius:10px;font-family:inherit;font-size:.78rem;
+            <button type="button" class="cart-fecha-btn" data-fecha="${d.fecha}"
+                onclick="window.cartSeleccionarFecha('${d.fecha}','${d.etiqueta}')"
+                style="flex:0 0 auto;padding:.5rem .7rem;border-radius:9px;font-family:inherit;font-size:.75rem;
                        font-weight:700;cursor:pointer;white-space:nowrap;
                        background:rgba(59,130,246,.1);border:1.5px solid rgba(59,130,246,.3);color:#3B82F6;">
                 ${d.etiqueta}
             </button>`).join('');
     }
-    // Ocultar horarios hasta que elija día
-    const horWrap = document.getElementById('horario-wrap');
-    if (horWrap) horWrap.style.display = 'none';
+    const horWrap = document.getElementById('cart-horario-wrap');
+    if (horWrap && !soloVisual) horWrap.style.display = 'none';
 };
 
-// Al elegir día: cargar horarios disponibles de esa zona/fecha
-window.seleccionarFechaEntrega = async function(fecha, etiqueta) {
-    window._seleccion = window._seleccion || {};
-    window._seleccion.fecha = fecha;
-    window._seleccion.fechaEtiqueta = etiqueta;
-    window._seleccion.horario = null;
+window.cartSeleccionarFecha = async function(fecha, etiqueta) {
+    window._entregaCarrito.fecha = fecha;
+    window._entregaCarrito.fechaEtiqueta = etiqueta;
+    window._entregaCarrito.horario = null;
 
-    document.querySelectorAll('#fecha-botones .fecha-btn').forEach(b => {
+    document.querySelectorAll('#cart-fecha-botones .cart-fecha-btn').forEach(b => {
         const on = b.getAttribute('data-fecha') === fecha;
         b.style.background = on ? 'rgba(59,130,246,.3)' : 'rgba(59,130,246,.1)';
         b.style.borderColor = on ? '#3B82F6' : 'rgba(59,130,246,.3)';
     });
 
-    const wrap = document.getElementById('horario-wrap');
-    const lbl = document.getElementById('horario-zona-lbl');
-    const loading = document.getElementById('horario-loading');
-    const cont = document.getElementById('horario-botones');
-    const vacio = document.getElementById('horario-vacio');
+    const wrap = document.getElementById('cart-horario-wrap');
+    const lbl = document.getElementById('cart-horario-lbl');
+    const loading = document.getElementById('cart-horario-loading');
+    const cont = document.getElementById('cart-horario-botones');
+    const vacio = document.getElementById('cart-horario-vacio');
     if (lbl) lbl.textContent = '· ' + etiqueta;
     if (wrap) wrap.style.display = 'block';
-    if (loading) { loading.style.display = 'block'; loading.textContent = 'Cargando horarios disponibles…'; }
+    if (loading) { loading.style.display = 'block'; loading.textContent = 'Cargando horarios…'; }
     if (cont) cont.innerHTML = '';
     if (vacio) vacio.style.display = 'none';
 
     try {
-        const slots = await consultarDisponibilidad(window._seleccion.zona, fecha);
-        const disponibles = slots.filter(s => s.disponible);
+        const slots = await consultarDisponibilidad(window._entregaCarrito.zona, fecha);
+        const disp = slots.filter(s => s.disponible);
         if (loading) loading.style.display = 'none';
-        if (!disponibles.length) {
-            if (vacio) { vacio.style.display = 'block'; vacio.textContent = 'No quedan horarios disponibles ese día en esta zona. Prueba otro día.'; }
+        if (!disp.length) {
+            if (vacio) { vacio.style.display = 'block'; vacio.textContent = 'No quedan horarios ese día en esta zona. Prueba otro día.'; }
             return;
         }
-        if (cont) cont.innerHTML = disponibles.map(s => `
-            <button type="button" class="horario-btn" data-hora="${s.hora}"
-                onclick="window.seleccionarHorarioEntrega('${s.hora}','${s.etiqueta}')"
-                title="${s.restantes} lugar(es) disponible(s)"
-                style="padding:.55rem .3rem;border-radius:10px;font-family:inherit;font-size:.78rem;font-weight:700;
+        if (cont) cont.innerHTML = disp.map(s => `
+            <button type="button" class="cart-horario-btn" data-hora="${s.hora}"
+                onclick="window.cartSeleccionarHorario('${s.hora}','${s.etiqueta}')"
+                title="${s.restantes} lugar(es)"
+                style="padding:.5rem .2rem;border-radius:9px;font-family:inherit;font-size:.74rem;font-weight:700;
                        cursor:pointer;background:rgba(37,211,102,.1);border:1.5px solid rgba(37,211,102,.3);color:#25D366;">
                 ${s.etiqueta}
             </button>`).join('');
     } catch(e) {
-        if (loading) { loading.style.display = 'block'; loading.textContent = 'Error al cargar horarios. Intenta de nuevo.'; }
+        if (loading) { loading.style.display = 'block'; loading.textContent = 'Error al cargar horarios.'; }
     }
 };
 
-// Al elegir horario: marcar
-window.seleccionarHorarioEntrega = function(hora, etiqueta) {
-    window._seleccion = window._seleccion || {};
-    window._seleccion.horario = hora;
-    window._seleccion.horarioEtiqueta = etiqueta;
-    document.querySelectorAll('#horario-botones .horario-btn').forEach(b => {
+window.cartSeleccionarHorario = function(hora, etiqueta) {
+    window._entregaCarrito.horario = hora;
+    window._entregaCarrito.horarioEtiqueta = etiqueta;
+    document.querySelectorAll('#cart-horario-botones .cart-horario-btn').forEach(b => {
         const on = b.getAttribute('data-hora') === hora;
         b.style.background = on ? 'rgba(37,211,102,.3)' : 'rgba(37,211,102,.1)';
         b.style.borderColor = on ? '#25D366' : 'rgba(37,211,102,.3)';
