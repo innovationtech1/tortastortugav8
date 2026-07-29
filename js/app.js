@@ -1455,6 +1455,8 @@ window.enviarTodasLasCuentas = async function() {
         // Zona y horario de entrega (sistema de colas — solo domicilio)
         zonaEntrega:          (cuentaPrincipal && cuentaPrincipal.zonaEntrega) || null,
         zonaEntregaNombre:    (cuentaPrincipal && cuentaPrincipal.zonaEntregaNombre) || null,
+        fechaEntrega:         (cuentaPrincipal && cuentaPrincipal.fechaEntrega) || null,
+        fechaEntregaEtiqueta: (cuentaPrincipal && cuentaPrincipal.fechaEntregaEtiqueta) || null,
         horarioEntrega:       (cuentaPrincipal && cuentaPrincipal.horarioEntrega) || null,
         horarioEntregaEtiqueta: (cuentaPrincipal && cuentaPrincipal.horarioEntregaEtiqueta) || null,
         tomadaEn:     new Date().toISOString(),
@@ -1475,7 +1477,7 @@ window.enviarTodasLasCuentas = async function() {
         if (data.zonaEntrega && data.horarioEntrega && result && result.id) {
             try {
                 const colas = await import('./colas-entrega.js');
-                const r = await colas.reservarSlot(data.zonaEntrega, data.horarioEntrega, result.id);
+                const r = await colas.reservarSlot(data.zonaEntrega, data.horarioEntrega, result.id, data.fechaEntrega);
                 if (!r.ok) {
                     alert('⚠️ ' + (r.motivo || 'El horario elegido ya no está disponible.') +
                           '\n\nTu orden #' + String(ticket).replace(/^#+/, '') + ' quedó registrada, pero por favor coordina otro horario de entrega.');
@@ -1522,6 +1524,7 @@ window.enviarTodasLasCuentas = async function() {
             '👤 *Cliente:* ' + nombre + (telefono ? ' · 📞 ' + telefono : ''),
             (tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Domicilio'),
             (data.zonaEntregaNombre ? '📍 *Zona:* ' + data.zonaEntregaNombre : ''),
+            (data.fechaEntregaEtiqueta ? '🗓️ *Día entrega:* ' + data.fechaEntregaEtiqueta : ''),
             (data.horarioEntregaEtiqueta ? '🕐 *Entrega:* ' + data.horarioEntregaEtiqueta : ''),
             '',
             '📋 *Orden:*',
