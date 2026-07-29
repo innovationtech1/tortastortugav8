@@ -1364,23 +1364,49 @@ window.enviarTodasLasCuentas = async function() {
     var tipoServ = (cuentaPrincipal && cuentaPrincipal.tipoServicio) || 'Comer aquí';
     var tipo     = (tipoServ === 'Domicilio') ? 'domicilio' : 'pickup';
 
+    // Para CLIENTES: la orden es siempre a domicilio y la zona/día/horario
+    // se toman de la sección integrada en el carrito (window._entregaCarrito).
+    var esClientePuro = !!(window._clienteActivo && !window._cajeroActivo);
+    var entregaCli = window._entregaCarrito || {};
+    if (esClientePuro) {
+        tipo = 'domicilio';
+        tipoServ = 'Domicilio';
+    }
+
     // Validar que haya productos
     const hayProductos = CS.cuentas.some(c => c.items.length > 0);
     if (!hayProductos) {
-        alert('⚠️ Agrega productos antes de enviar la orden');
+        alert('⚠️ Agrega productos antes de enviar la orden.');
         return;
     }
 
-    // Exigir nombre y teléfono antes de enviar. Si faltan (y no hay un
-    // cliente logueado que los aporte), avisar y abrir el modal para
-    // capturarlos. El nombre no puede ser el genérico "Cuenta N".
+    // Exigir nombre y teléfono antes de enviar.
     var telDigitos = (telefono || '').replace(/\D/g, '');
     var faltaNombre = !nombre || nombre === 'Cliente' || /^Cuenta \d+$/.test(nombre);
     var faltaTelefono = telDigitos.length < 10;
-    if (faltaNombre || faltaTelefono) {
-        alert('⚠️ Por favor ingresa el nombre y el teléfono del cliente (10 dígitos) antes de enviar la orden.');
-        if (window.abrirModalNombreCuenta) window.abrirModalNombreCuenta();
+    if (faltaNombre) {
+        alert('⚠️ Falta el nombre del cliente. Toca el campo de nombre arriba del carrito para escribirlo.');
         return;
+    }
+    if (faltaTelefono) {
+        alert('⚠️ Falta el teléfono del cliente (10 dígitos). Toca el campo de nombre para agregarlo.');
+        return;
+    }
+
+    // Para clientes: validar zona, día y horario de la sección del carrito
+    if (esClientePuro) {
+        if (!entregaCli.zona) {
+            alert('⚠️ Elige la ZONA de entrega en la sección "📍 Zona de entrega" del carrito.');
+            return;
+        }
+        if (!entregaCli.fecha) {
+            alert('⚠️ Elige el DÍA de entrega en la sección "🗓️ Día de entrega" del carrito.');
+            return;
+        }
+        if (!entregaCli.horario) {
+            alert('⚠️ Elige el HORARIO de entrega en la sección "🕐 Horario de entrega" del carrito.');
+            return;
+        }
     }
 
     // Ya NO se abre WhatsApp en automático. El mensaje se arma abajo y se
@@ -1453,12 +1479,12 @@ window.enviarTodasLasCuentas = async function() {
         cajeroRol:    (window._cajeroActivo ? window._cajeroActivo.rol : ''),
         clienteUid:   sessionStorage.getItem('tt_cliente_uid') || null,
         // Zona y horario de entrega (sistema de colas — solo domicilio)
-        zonaEntrega:          (cuentaPrincipal && cuentaPrincipal.zonaEntrega) || null,
-        zonaEntregaNombre:    (cuentaPrincipal && cuentaPrincipal.zonaEntregaNombre) || null,
-        fechaEntrega:         (cuentaPrincipal && cuentaPrincipal.fechaEntrega) || null,
-        fechaEntregaEtiqueta: (cuentaPrincipal && cuentaPrincipal.fechaEntregaEtiqueta) || null,
-        horarioEntrega:       (cuentaPrincipal && cuentaPrincipal.horarioEntrega) || null,
-        horarioEntregaEtiqueta: (cuentaPrincipal && cuentaPrincipal.horarioEntregaEtiqueta) || null,
+        zonaEntrega:          esClientePuro ? (entregaCli.zona || null) : ((cuentaPrincipal && cuentaPrincipal.zonaEntrega) || null),
+        zonaEntregaNombre:    esClientePuro ? (entregaCli.zonaNombre || null) : ((cuentaPrincipal && cuentaPrincipal.zonaEntregaNombre) || null),
+        fechaEntrega:         esClientePuro ? (entregaCli.fecha || null) : ((cuentaPrincipal && cuentaPrincipal.fechaEntrega) || null),
+        fechaEntregaEtiqueta: esClientePuro ? (entregaCli.fechaEtiqueta || null) : ((cuentaPrincipal && cuentaPrincipal.fechaEntregaEtiqueta) || null),
+        horarioEntrega:       esClientePuro ? (entregaCli.horario || null) : ((cuentaPrincipal && cuentaPrincipal.horarioEntrega) || null),
+        horarioEntregaEtiqueta: esClientePuro ? (entregaCli.horarioEtiqueta || null) : ((cuentaPrincipal && cuentaPrincipal.horarioEntregaEtiqueta) || null),
         tomadaEn:     new Date().toISOString(),
     };
 
@@ -1489,6 +1515,8 @@ window.enviarTodasLasCuentas = async function() {
         CS.cuentas = [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }];
         CS.activa = 1;
         CS.counter = 1;
+        // Limpiar la selección de entrega del carrito
+        window._entregaCarrito = { zona:null, zonaNombre:null, fecha:null, fechaEtiqueta:null, horario:null, horarioEtiqueta:null };
         if (window.renderCuentasTabs) window.renderCuentasTabs();
         if (window.renderCartItems)   window.renderCartItems();
 
