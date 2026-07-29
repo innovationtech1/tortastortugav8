@@ -367,15 +367,17 @@ async function guardarEnSheets(data) {
     } catch(e) {}
 }
 
-function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waUrl) {
+function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waUrl, ubicacionPrevia) {
     const ov = document.createElement('div');
     ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;' +
         'display:flex;align-items:center;justify-content:center;padding:1rem;';
     const linkUbicacion = pedidoId ? ('ubicacion.html?pedido=' + encodeURIComponent(pedidoId)) : null;
     const esDomicilio = (tipo === 'domicilio' || tipo === 'delivery');
-    // En domicilio, el botón de WhatsApp arranca bloqueado hasta que el
-    // cliente comparta su ubicación. En pickup, está activo de una vez.
-    const waArrancaBloqueado = esDomicilio;
+    // Si el cliente YA compartió su ubicación en el carrito, no bloquear.
+    const yaTieneUbicacion = !!(ubicacionPrevia && ubicacionPrevia.lat);
+    // En domicilio SIN ubicación aún, el botón arranca bloqueado hasta que
+    // la comparta. Con ubicación previa (o pickup), activo de una vez.
+    const waArrancaBloqueado = esDomicilio && !yaTieneUbicacion;
 
     ov.innerHTML = `
         <div style="background:#1A1A1A;border:1px solid rgba(37,211,102,.4);border-radius:20px;
@@ -387,8 +389,9 @@ function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waU
                 <div style="font-size:.75rem;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem;">Tu número de orden</div>
                 <div style="font-size:2.2rem;font-weight:900;color:#25D366;">#${String(ticketStr).replace(/^#+/, '')}</div>
             </div>
-            ${esDomicilio ? `<div id="aviso-ubic" style="font-size:.8rem;color:#FBB724;margin-bottom:1rem;background:rgba(251,183,36,.1);border:1px solid rgba(251,183,36,.3);border-radius:10px;padding:.6rem;">📍 Primero comparte tu ubicación; después se habilitará el envío por WhatsApp.</div>`
-                          : `<div style="font-size:.78rem;color:#888;margin-bottom:1.2rem;">Guarda tu número de orden. Ahora envía tu pedido por WhatsApp para confirmarlo.</div>`}
+            ${esDomicilio && !yaTieneUbicacion ? `<div id="aviso-ubic" style="font-size:.8rem;color:#FBB724;margin-bottom:1rem;background:rgba(251,183,36,.1);border:1px solid rgba(251,183,36,.3);border-radius:10px;padding:.6rem;">📍 Primero comparte tu ubicación; después se habilitará el envío por WhatsApp.</div>`
+                          : (esDomicilio && yaTieneUbicacion ? `<div style="font-size:.8rem;color:#25D366;margin-bottom:1rem;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:10px;padding:.6rem;">✅ Ubicación recibida. Envía tu pedido por WhatsApp.</div>`
+                          : `<div style="font-size:.78rem;color:#888;margin-bottom:1.2rem;">Guarda tu número de orden. Ahora envía tu pedido por WhatsApp para confirmarlo.</div>`)}
             <div style="display:flex;flex-direction:column;gap:.6rem;">
                 ${window._clienteActivo ? `<a href="pages/mi-pedido.html" target="_blank" style="background:rgba(59,130,246,.15);
                     border:1px solid rgba(59,130,246,.3);color:#3B82F6;padding:.7rem;border-radius:10px;
@@ -412,9 +415,8 @@ function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waU
     document.body.appendChild(ov);
 
     const btnWa = ov.querySelector('#btn-wa-pedido');
-    // Guardamos aquí la ubicación en cuanto el cliente la comparta, para
-    // integrarla en el mensaje al momento de tocar "Enviar por WhatsApp".
-    ov._ubicacion = null;
+    // Si el cliente ya compartió ubicación en el carrito, usarla de una vez.
+    ov._ubicacion = (ubicacionPrevia && ubicacionPrevia.lat) ? ubicacionPrevia : null;
     // Al tocar WhatsApp: armar el enlace final AHORA, agregando la
     // ubicación (link de Google Maps) si ya se compartió.
     btnWa?.addEventListener('click', () => {
@@ -430,9 +432,10 @@ function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waU
         window.open(urlFinal, '_blank');
     });
 
-    // En domicilio: escuchar el pedido en Firestore; cuando el cliente
-    // comparta su ubicación, habilitar el botón y guardar las coordenadas.
-    if (esDomicilio && pedidoId) {
+    // En domicilio SIN ubicación previa: escuchar el pedido; cuando el
+    // cliente comparta su ubicación, habilitar el botón. Si ya la compartió
+    // en el carrito, no hace falta.
+    if (esDomicilio && pedidoId && !yaTieneUbicacion) {
         habilitarWaTrasUbicacion(pedidoId, btnWa, ov);
     }
 
@@ -1485,6 +1488,8 @@ window.enviarTodasLasCuentas = async function() {
         fechaEntregaEtiqueta: esClientePuro ? (entregaCli.fechaEtiqueta || null) : ((cuentaPrincipal && cuentaPrincipal.fechaEntregaEtiqueta) || null),
         horarioEntrega:       esClientePuro ? (entregaCli.horario || null) : ((cuentaPrincipal && cuentaPrincipal.horarioEntrega) || null),
         horarioEntregaEtiqueta: esClientePuro ? (entregaCli.horarioEtiqueta || null) : ((cuentaPrincipal && cuentaPrincipal.horarioEntregaEtiqueta) || null),
+        // Ubicación compartida en el acordeón del carrito (si la hay)
+        ubicacionCliente:     (esClientePuro && entregaCli.ubicacion && entregaCli.ubicacion.lat) ? entregaCli.ubicacion : null,
         tomadaEn:     new Date().toISOString(),
     };
 
@@ -1516,7 +1521,7 @@ window.enviarTodasLasCuentas = async function() {
         CS.activa = 1;
         CS.counter = 1;
         // Limpiar la selección de entrega del carrito
-        window._entregaCarrito = { zona:null, zonaNombre:null, fecha:null, fechaEtiqueta:null, horario:null, horarioEtiqueta:null };
+        window._entregaCarrito = { zona:null, zonaNombre:null, fecha:null, fechaEtiqueta:null, horario:null, horarioEtiqueta:null, ubicacion:null };
         if (window.renderCuentasTabs) window.renderCuentasTabs();
         if (window.renderCartItems)   window.renderCartItems();
 
@@ -1567,7 +1572,7 @@ window.enviarTodasLasCuentas = async function() {
         // Confirmación en pantalla: pasa la URL de WhatsApp y el tipo para
         // que el modal decida si habilita el botón de una vez (pickup) o
         // solo tras compartir ubicación (domicilio).
-        mostrarConfirmacionTicket(ticket, nombre, result ? result.id : null, tipo, waUrl);
+        mostrarConfirmacionTicket(ticket, nombre, result ? result.id : null, tipo, waUrl, data.ubicacionCliente || null);
     } catch (e) {
         console.error('Error al enviar orden:', e);
         alert('❌ Error al enviar la orden:\n' + (e.message || e) + '\n\nRevisa que tengas conexión a internet.');
