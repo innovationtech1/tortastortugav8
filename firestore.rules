@@ -114,6 +114,16 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    // ── SLOTS DE ENTREGA (sistema de colas por zona/horario) ──
+    // Público como pedidos/turnos: el cliente reserva y el gerente
+    // gestiona en modo PIN (sin Firebase Auth). La consistencia (no
+    // superposiciones) la garantizan las transacciones atómicas, no
+    // las reglas.
+    match /slots_entrega/{slotId} {
+      allow read:  if true;
+      allow write: if true;
+    }
+
     // Todo lo demas: denegado
     match /{document=**} {
       allow read, write: if false;
