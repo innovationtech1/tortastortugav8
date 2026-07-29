@@ -1452,6 +1452,11 @@ window.enviarTodasLasCuentas = async function() {
         cajeroNombre: (window._cajeroActivo ? window._cajeroActivo.nombre : 'Sistema'),
         cajeroRol:    (window._cajeroActivo ? window._cajeroActivo.rol : ''),
         clienteUid:   sessionStorage.getItem('tt_cliente_uid') || null,
+        // Zona y horario de entrega (sistema de colas — solo domicilio)
+        zonaEntrega:          (cuentaPrincipal && cuentaPrincipal.zonaEntrega) || null,
+        zonaEntregaNombre:    (cuentaPrincipal && cuentaPrincipal.zonaEntregaNombre) || null,
+        horarioEntrega:       (cuentaPrincipal && cuentaPrincipal.horarioEntrega) || null,
+        horarioEntregaEtiqueta: (cuentaPrincipal && cuentaPrincipal.horarioEntregaEtiqueta) || null,
         tomadaEn:     new Date().toISOString(),
     };
 
@@ -1463,6 +1468,20 @@ window.enviarTodasLasCuentas = async function() {
     try {
         const result = await guardarPedidoFirebase(data, 'cocina');
         const ticket = result && result.ticket ? result.ticket : (result && result.id ? result.id.slice(-4).toUpperCase() : '----');
+
+        // Reservar el horario de entrega (atómico) si es domicilio con
+        // zona y horario elegidos. Si el slot se llenó justo antes, se
+        // avisa pero la orden ya quedó guardada.
+        if (data.zonaEntrega && data.horarioEntrega && result && result.id) {
+            try {
+                const colas = await import('./colas-entrega.js');
+                const r = await colas.reservarSlot(data.zonaEntrega, data.horarioEntrega, result.id);
+                if (!r.ok) {
+                    alert('⚠️ ' + (r.motivo || 'El horario elegido ya no está disponible.') +
+                          '\n\nTu orden #' + String(ticket).replace(/^#+/, '') + ' quedó registrada, pero por favor coordina otro horario de entrega.');
+                }
+            } catch(e) { console.error('Error reservando slot:', e); }
+        }
 
         // Limpiar el carrito
         CS.cuentas = [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }];
@@ -1502,6 +1521,8 @@ window.enviarTodasLasCuentas = async function() {
             '🗓️ *Fecha:* ' + fechaHora,
             '👤 *Cliente:* ' + nombre + (telefono ? ' · 📞 ' + telefono : ''),
             (tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Domicilio'),
+            (data.zonaEntregaNombre ? '📍 *Zona:* ' + data.zonaEntregaNombre : ''),
+            (data.horarioEntregaEtiqueta ? '🕐 *Entrega:* ' + data.horarioEntregaEtiqueta : ''),
             '',
             '📋 *Orden:*',
             itemsStr.split(' | ').join('\n'),
@@ -1510,7 +1531,7 @@ window.enviarTodasLasCuentas = async function() {
             '━━━━━━━━━━━━━━━━━━━━',
             '✅ Pedido enviado desde TortasTortuga.com'
         ];
-        const waUrl = 'https://api.whatsapp.com/send?phone=12108678210&text=' + encodeURIComponent(lineas.join('\n'));
+        const waUrl = 'https://api.whatsapp.com/send?phone=12108678210&text=' + encodeURIComponent(lineas.filter(Boolean).join('\n'));
 
         // Confirmación en pantalla: pasa la URL de WhatsApp y el tipo para
         // que el modal decida si habilita el botón de una vez (pickup) o
