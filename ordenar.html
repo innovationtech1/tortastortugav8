@@ -2879,28 +2879,10 @@ document.addEventListener('click', function(e) {
         </div>
 
         <!-- Zona y horario de entrega: solo para Domicilio -->
-        <div id="zona-horario-section" style="margin-bottom:1.2rem;display:none;">
-            <p style="font-size:.78rem;color:#FF5A00;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.05em;">
-                📍 Zona de entrega
-            </p>
-            <div id="zona-botones" style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1rem;"></div>
-
-            <div id="fecha-wrap" style="display:none;margin-bottom:1rem;">
-                <p style="font-size:.78rem;color:#FF5A00;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.05em;">
-                    🗓️ Día de entrega
-                </p>
-                <div id="fecha-botones" style="display:flex;gap:.4rem;overflow-x:auto;padding-bottom:.3rem;"></div>
-            </div>
-
-            <div id="horario-wrap" style="display:none;">
-                <p style="font-size:.78rem;color:#FF5A00;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.05em;">
-                    🕐 Horario de entrega <span id="horario-zona-lbl" style="color:#666;font-weight:400;text-transform:none;"></span>
-                </p>
-                <div id="horario-loading" style="font-size:.8rem;color:#888;padding:.5rem 0;">Cargando horarios disponibles…</div>
-                <div id="horario-botones" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;"></div>
-                <div id="horario-vacio" style="display:none;font-size:.8rem;color:#FF4444;padding:.5rem 0;">No quedan horarios disponibles hoy en esta zona.</div>
-            </div>
-        </div>
+        <!-- La selección de zona/día/horario ahora vive en el ACORDEÓN del
+             carrito (IDs cart-*). Esta sección vieja se retiró para no
+             mostrar una zona vacía que no guardaba. -->
+        <div id="zona-horario-section" style="display:none;"></div>
 
         <!-- Vista previa -->
         <div style="background:rgba(255,90,0,.08);border-radius:12px;padding:.7rem .9rem;margin-bottom:1rem;
@@ -3047,15 +3029,19 @@ document.addEventListener('click', function(e) {
         if (mesasSec) mesasSec.style.display = (tipo === 'Comer aquí') ? 'block' : 'none';
         if (tipo !== 'Comer aquí') _seleccion.mesa = '';
 
-        // Mostrar el campo de telefono solo para Domicilio
+        // Mostrar el campo de telefono solo para Domicilio, y precargar
+        // el teléfono del cliente logueado si lo hay.
         var telSec = document.getElementById('telefono-section');
-        if (telSec) telSec.style.display = (tipo === 'Domicilio') ? 'block' : 'none';
-        // Mostrar zona + horario solo para Domicilio
-        var zhSec = document.getElementById('zona-horario-section');
-        if (zhSec) {
-            zhSec.style.display = (tipo === 'Domicilio') ? 'block' : 'none';
-            if (tipo === 'Domicilio') window.renderZonasEntrega();
+        if (telSec) {
+            telSec.style.display = (tipo === 'Domicilio') ? 'block' : 'none';
+            if (tipo === 'Domicilio') {
+                var telInp2 = document.getElementById('input-telefono-cliente');
+                if (telInp2 && !telInp2.value && window._clienteActivo && window._clienteActivo.telefono) {
+                    telInp2.value = window._clienteActivo.telefono;
+                }
+            }
         }
+        // La zona/día/horario ya no van en este modal (viven en el carrito).
         // Al cambiar de tipo, olvidar zona/horario previos
         if (tipo !== 'Domicilio') { _seleccion.zona = null; _seleccion.horario = null; }
 
@@ -3131,21 +3117,10 @@ document.addEventListener('click', function(e) {
             return;
         }
 
-        // Para Domicilio: exigir zona, día y horario de entrega
-        if (_seleccion.tipo === 'Domicilio') {
-            if (!_seleccion.zona) {
-                alert('⚠️ Elige la zona de entrega.');
-                return;
-            }
-            if (!_seleccion.fecha) {
-                alert('⚠️ Elige el día de entrega.');
-                return;
-            }
-            if (!_seleccion.horario) {
-                alert('⚠️ Elige un horario de entrega disponible.');
-                return;
-            }
-        }
+        // La zona/día/horario de entrega ya NO se validan aquí: para el
+        // cliente ese flujo vive en el acordeón del carrito (y se valida
+        // al enviar la orden). Este modal solo define tipo de servicio,
+        // nombre y teléfono.
 
         c.nombre = nombre;
         // Guardar el tipo de servicio en la cuenta para usarlo al enviar
