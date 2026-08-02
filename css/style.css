@@ -847,6 +847,13 @@ body.cart-abierto {
         background: #0E0E0E;
         backdrop-filter: none;
     }
+    /* Altura fija a la pantalla: así el header/controles quedan fijos y
+       SOLO la lista de productos scrollea internamente. */
+    .modal-overlay { height: 100dvh; }
+    .cart-container {
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+    }
 }
 
 .modal-overlay.active {
