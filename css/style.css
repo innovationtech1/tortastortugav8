@@ -837,7 +837,7 @@ body.cart-abierto {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s;
-    z-index: 1000;
+    z-index: 100000;
 }
 
 /* En móvil el carrito ocupa toda la pantalla: fondo opaco para que el
