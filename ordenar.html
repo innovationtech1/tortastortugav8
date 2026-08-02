@@ -1358,6 +1358,89 @@ function cerrarOrdenModal() {
 
 </head>
 <body>
+<!-- ═══ OVERLAY DE CONFIGURACIÓN DE ENTREGA (pasos antes del menú) ═══ -->
+<div id="entrega-overlay" style="display:none;position:fixed;inset:0;z-index:99998;
+     background:#0E0E0E;overflow-y:auto;padding:1.2rem;">
+  <div style="max-width:440px;margin:0 auto;">
+    <div style="text-align:center;margin-bottom:1.2rem;padding-top:.5rem;">
+      <img src="/tortastortugav8/icons/icon-192.png" alt="Tortas Tortuga"
+        style="width:64px;height:64px;border-radius:50%;box-shadow:0 0 0 2px rgba(255,90,0,.4);">
+      <div style="font-size:1.2rem;font-weight:900;color:#FF5A00;margin-top:.5rem;">Tortas Tortuga</div>
+      <div id="eo-saludo" style="font-size:.85rem;color:#aaa;margin-top:.2rem;">Antes de ordenar, cuéntanos cómo quieres tu pedido.</div>
+    </div>
+
+    <!-- PASO 0: tipo de pedido -->
+    <div id="eo-tipo" style="margin-bottom:1rem;">
+      <div style="font-size:.78rem;color:#FF5A00;font-weight:800;text-transform:uppercase;margin-bottom:.6rem;letter-spacing:.05em;">¿Cómo quieres tu pedido?</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;">
+        <button onclick="window.eoElegirTipo('pickup')" style="padding:1.2rem .6rem;border-radius:14px;
+          background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.15);color:#fff;
+          font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;">
+          🥡<br>Recoger<br><span style="font-size:.7rem;color:#888;font-weight:400;">en la tienda</span>
+        </button>
+        <button onclick="window.eoElegirTipo('domicilio')" style="padding:1.2rem .6rem;border-radius:14px;
+          background:rgba(255,90,0,.1);border:1.5px solid rgba(255,90,0,.4);color:#FF5A00;
+          font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;">
+          🚗<br>Domicilio<br><span style="font-size:.7rem;color:#888;font-weight:400;">te lo llevamos</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- PASOS DE DOMICILIO (ocultos hasta elegir domicilio) -->
+    <div id="eo-pasos" style="display:none;">
+      <!-- Paso zona -->
+      <div class="eo-acc" style="margin-bottom:.5rem;">
+        <button type="button" onclick="window.eoToggle('zona')" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:.75rem;background:rgba(255,90,0,.08);border:1.5px solid rgba(255,90,0,.3);border-radius:12px;font-family:inherit;cursor:pointer;color:#FF5A00;font-size:.85rem;font-weight:800;">
+          <span>📍 1. Zona de entrega</span><span id="eo-zona-val" style="color:#888;font-weight:600;font-size:.78rem;">Elegir ▾</span>
+        </button>
+        <div id="eo-zona-body" style="display:none;padding:.6rem 0;">
+          <div id="eo-zona-botones" style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;"></div>
+        </div>
+      </div>
+      <!-- Paso día -->
+      <div class="eo-acc" style="margin-bottom:.5rem;">
+        <button type="button" onclick="window.eoToggle('fecha')" id="eo-fecha-head" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:.75rem;background:rgba(59,130,246,.08);border:1.5px solid rgba(59,130,246,.3);border-radius:12px;font-family:inherit;cursor:pointer;color:#3B82F6;font-size:.85rem;font-weight:800;opacity:.5;">
+          <span>🗓️ 2. Día de entrega</span><span id="eo-fecha-val" style="color:#888;font-weight:600;font-size:.78rem;">—</span>
+        </button>
+        <div id="eo-fecha-body" style="display:none;padding:.6rem 0;">
+          <div id="eo-fecha-botones" style="display:flex;gap:.4rem;overflow-x:auto;padding-bottom:.3rem;"></div>
+        </div>
+      </div>
+      <!-- Paso horario -->
+      <div class="eo-acc" style="margin-bottom:.5rem;">
+        <button type="button" onclick="window.eoToggle('horario')" id="eo-horario-head" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:.75rem;background:rgba(37,211,102,.08);border:1.5px solid rgba(37,211,102,.3);border-radius:12px;font-family:inherit;cursor:pointer;color:#25D366;font-size:.85rem;font-weight:800;opacity:.5;">
+          <span>🕐 3. Horario</span><span id="eo-horario-val" style="color:#888;font-weight:600;font-size:.78rem;">—</span>
+        </button>
+        <div id="eo-horario-body" style="display:none;padding:.6rem 0;max-height:34vh;overflow-y:auto;">
+          <div id="eo-horario-loading" style="font-size:.78rem;color:#888;padding:.3rem 0;">Cargando horarios…</div>
+          <div id="eo-horario-botones" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;"></div>
+          <div id="eo-horario-vacio" style="display:none;font-size:.78rem;color:#FF4444;padding:.3rem 0;"></div>
+        </div>
+      </div>
+      <!-- Paso ubicación -->
+      <div class="eo-acc" style="margin-bottom:1rem;">
+        <button type="button" onclick="window.eoToggle('ubicacion')" id="eo-ubicacion-head" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:.75rem;background:rgba(167,139,250,.08);border:1.5px solid rgba(167,139,250,.3);border-radius:12px;font-family:inherit;cursor:pointer;color:#A78BFA;font-size:.85rem;font-weight:800;opacity:.5;">
+          <span>📌 4. Tu ubicación</span><span id="eo-ubicacion-val" style="color:#888;font-weight:600;font-size:.78rem;">—</span>
+        </button>
+        <div id="eo-ubicacion-body" style="display:none;padding:.6rem 0;">
+          <p style="font-size:.76rem;color:#888;margin:0 0 .5rem;">Si no sabes tu dirección exacta, comparte tu ubicación y el repartidor te encuentra.</p>
+          <button type="button" id="eo-btn-ubic" onclick="window.eoCompartirUbicacion()" style="width:100%;padding:.8rem;background:rgba(167,139,250,.15);border:1.5px solid rgba(167,139,250,.4);color:#A78BFA;border-radius:10px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">📍 Compartir mi ubicación</button>
+          <div id="eo-ubic-status" style="font-size:.78rem;margin-top:.5rem;"></div>
+        </div>
+      </div>
+
+      <button id="eo-continuar" onclick="window.eoContinuarAlMenu()" disabled
+        style="width:100%;padding:.95rem;background:rgba(255,255,255,.06);border:none;color:#666;
+               border-radius:14px;font-family:inherit;font-size:.95rem;font-weight:800;cursor:not-allowed;">
+        Completa los pasos para continuar
+      </button>
+    </div>
+
+    <button onclick="window.eoCancelar()" style="width:100%;padding:.6rem;margin-top:.6rem;background:transparent;
+      border:none;color:#666;font-family:inherit;font-size:.78rem;cursor:pointer;">Cancelar y salir</button>
+  </div>
+</div>
+
 <header class="app-header">
         <a href="index.html" class="app-logo" style="text-decoration:none;display:flex;align-items:center;gap:.6rem;">
           <img loading="lazy" src="/tortastortugav8/icons/icon-192.png" alt="Tortas Tortuga"
@@ -3516,6 +3599,210 @@ window.cartCompartirUbicacion = function() {
         }
     });
     obs.observe(modal, { attributes: true, attributeFilter: ['class'] });
+})();
+
+// ═══════════════════════════════════════════════════════════
+//  OVERLAY DE CONFIGURACIÓN DE ENTREGA (pasos antes del menú)
+//  Reutiliza el motor de colas y guarda en window._entregaCarrito.
+// ═══════════════════════════════════════════════════════════
+(function() {
+    function leerSes(k){ return sessionStorage.getItem(k) || localStorage.getItem(k); }
+    function esClientePuro() {
+        var hayStaff = !!(leerSes('tt_emp_id') || leerSes('tt_cajero_nombre'));
+        var cli = leerSes('tt_cliente_nombre') || window._clienteActivo;
+        return !!cli && !hayStaff;
+    }
+
+    // Mostrar el overlay al entrar si es cliente y aún no configuró entrega
+    // en esta sesión. Se recuerda con sessionStorage para no repetir en cada
+    // navegación dentro de la misma visita.
+    window._mostrarOverlayEntrega = function() {
+        if (!esClientePuro()) return;
+        if (sessionStorage.getItem('tt_entrega_lista') === '1') return;
+        var ov = document.getElementById('entrega-overlay');
+        if (ov) ov.style.display = 'block';
+    };
+
+    window.eoElegirTipo = function(tipo) {
+        window._entregaCarrito = window._entregaCarrito || {};
+        window._entregaCarrito.tipoPedido = tipo;
+        if (tipo === 'pickup') {
+            // Recoger: no requiere pasos, entra directo al menú
+            window._entregaCarrito.zona = null;
+            window._entregaCarrito.fecha = null;
+            window._entregaCarrito.horario = null;
+            sessionStorage.setItem('tt_entrega_lista', '1');
+            sessionStorage.setItem('tt_tipo_pedido', 'pickup');
+            document.getElementById('entrega-overlay').style.display = 'none';
+        } else {
+            // Domicilio: mostrar los pasos
+            sessionStorage.setItem('tt_tipo_pedido', 'domicilio');
+            document.getElementById('eo-tipo').style.display = 'none';
+            document.getElementById('eo-pasos').style.display = 'block';
+            document.getElementById('eo-saludo').textContent = 'Completa estos pasos para tu entrega a domicilio.';
+            eoRenderZonas();
+            window.eoToggle('zona');
+        }
+    };
+
+    function eoRenderZonas() {
+        var cont = document.getElementById('eo-zona-botones');
+        if (cont && !cont.dataset.listo) {
+            cont.innerHTML = CONFIG_COLAS.zonas.map(function(z){
+                return '<button type="button" class="eo-zona-btn" data-zona="'+z.id+'" onclick="window.eoZona(\''+z.id+'\',\''+z.nombre+'\')" style="padding:.75rem;border-radius:12px;font-family:inherit;font-size:.82rem;font-weight:700;cursor:pointer;background:rgba(255,90,0,.08);border:1.5px solid rgba(255,90,0,.25);color:#FF5A00;">'+z.nombre+'</button>';
+            }).join('');
+            cont.dataset.listo = '1';
+        }
+    }
+
+    window.eoToggle = function(paso) {
+        ['zona','fecha','horario','ubicacion'].forEach(function(p){
+            var body = document.getElementById('eo-'+p+'-body');
+            if (!body) return;
+            if (p === paso) body.style.display = (body.style.display === 'none' || !body.style.display) ? 'block' : 'none';
+            else body.style.display = 'none';
+        });
+    };
+
+    function eoActivar(paso, activo) {
+        var head = document.getElementById('eo-'+paso+'-head');
+        if (head) head.style.opacity = activo ? '1' : '.5';
+    }
+
+    window.eoZona = function(zonaId, zonaNombre) {
+        window._entregaCarrito.zona = zonaId;
+        window._entregaCarrito.zonaNombre = zonaNombre;
+        window._entregaCarrito.fecha = null;
+        window._entregaCarrito.horario = null;
+        document.querySelectorAll('#eo-zona-botones .eo-zona-btn').forEach(function(b){
+            var on = b.getAttribute('data-zona') === zonaId;
+            b.style.background = on ? 'rgba(255,90,0,.25)' : 'rgba(255,90,0,.08)';
+            b.style.borderColor = on ? '#FF5A00' : 'rgba(255,90,0,.25)';
+        });
+        var v = document.getElementById('eo-zona-val'); if (v) { v.textContent = zonaNombre + ' ✓'; v.style.color = '#25D366'; }
+        eoActivar('fecha', true);
+        document.getElementById('eo-fecha-val').textContent = 'Elegir ▾';
+        // Render fechas
+        var fc = document.getElementById('eo-fecha-botones');
+        if (fc) {
+            var dias = fechasDisponibles(7);
+            fc.innerHTML = dias.map(function(d){
+                return '<button type="button" class="eo-fecha-btn" data-fecha="'+d.fecha+'" onclick="window.eoFecha(\''+d.fecha+'\',\''+d.etiqueta+'\')" style="flex:0 0 auto;padding:.6rem .8rem;border-radius:10px;font-family:inherit;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap;background:rgba(59,130,246,.1);border:1.5px solid rgba(59,130,246,.3);color:#3B82F6;">'+d.etiqueta+'</button>';
+            }).join('');
+        }
+        window.eoToggle('fecha');
+        eoActualizarBoton();
+    };
+
+    window.eoFecha = async function(fecha, etiqueta) {
+        window._entregaCarrito.fecha = fecha;
+        window._entregaCarrito.fechaEtiqueta = etiqueta;
+        window._entregaCarrito.horario = null;
+        document.querySelectorAll('#eo-fecha-botones .eo-fecha-btn').forEach(function(b){
+            var on = b.getAttribute('data-fecha') === fecha;
+            b.style.background = on ? 'rgba(59,130,246,.3)' : 'rgba(59,130,246,.1)';
+            b.style.borderColor = on ? '#3B82F6' : 'rgba(59,130,246,.3)';
+        });
+        var v = document.getElementById('eo-fecha-val'); if (v) { v.textContent = etiqueta + ' ✓'; v.style.color = '#25D366'; }
+        eoActivar('horario', true);
+        document.getElementById('eo-horario-val').textContent = 'Elegir ▾';
+        var loading = document.getElementById('eo-horario-loading');
+        var cont = document.getElementById('eo-horario-botones');
+        var vacio = document.getElementById('eo-horario-vacio');
+        if (loading) { loading.style.display = 'block'; loading.textContent = 'Cargando horarios…'; }
+        if (cont) cont.innerHTML = '';
+        if (vacio) vacio.style.display = 'none';
+        window.eoToggle('horario');
+        try {
+            var slots = await consultarDisponibilidad(window._entregaCarrito.zona, fecha);
+            var disp = slots.filter(function(s){ return s.disponible; });
+            if (loading) loading.style.display = 'none';
+            if (!disp.length) { if (vacio) { vacio.style.display = 'block'; vacio.textContent = 'No quedan horarios ese día. Prueba otro día.'; } return; }
+            if (cont) cont.innerHTML = disp.map(function(s){
+                return '<button type="button" class="eo-horario-btn" data-hora="'+s.hora+'" onclick="window.eoHorario(\''+s.hora+'\',\''+s.etiqueta+'\')" style="padding:.6rem .2rem;border-radius:10px;font-family:inherit;font-size:.76rem;font-weight:700;cursor:pointer;background:rgba(37,211,102,.1);border:1.5px solid rgba(37,211,102,.3);color:#25D366;">'+s.etiqueta+'</button>';
+            }).join('');
+        } catch(e) { if (loading) { loading.style.display = 'block'; loading.textContent = 'Error al cargar horarios.'; } }
+        eoActualizarBoton();
+    };
+
+    window.eoHorario = function(hora, etiqueta) {
+        window._entregaCarrito.horario = hora;
+        window._entregaCarrito.horarioEtiqueta = etiqueta;
+        document.querySelectorAll('#eo-horario-botones .eo-horario-btn').forEach(function(b){
+            var on = b.getAttribute('data-hora') === hora;
+            b.style.background = on ? 'rgba(37,211,102,.3)' : 'rgba(37,211,102,.1)';
+            b.style.borderColor = on ? '#25D366' : 'rgba(37,211,102,.3)';
+        });
+        var v = document.getElementById('eo-horario-val'); if (v) { v.textContent = etiqueta + ' ✓'; v.style.color = '#25D366'; }
+        eoActivar('ubicacion', true);
+        if (!window._entregaCarrito.ubicacion) document.getElementById('eo-ubicacion-val').textContent = 'Compartir ▾';
+        window.eoToggle('ubicacion');
+        eoActualizarBoton();
+    };
+
+    window.eoCompartirUbicacion = function() {
+        var status = document.getElementById('eo-ubic-status');
+        var btn = document.getElementById('eo-btn-ubic');
+        if (!navigator.geolocation) { if (status) { status.style.color = '#FF4444'; status.textContent = 'Tu navegador no soporta ubicación.'; } return; }
+        if (status) { status.style.color = '#888'; status.textContent = 'Obteniendo tu ubicación…'; }
+        if (btn) btn.disabled = true;
+        navigator.geolocation.getCurrentPosition(function(pos){
+            window._entregaCarrito.ubicacion = { lat: pos.coords.latitude, lng: pos.coords.longitude, precision: Math.round(pos.coords.accuracy), compartidaEn: new Date().toISOString() };
+            if (status) { status.style.color = '#25D366'; status.innerHTML = '✅ Ubicación compartida.'; }
+            var v = document.getElementById('eo-ubicacion-val'); if (v) { v.textContent = 'Compartida ✓'; v.style.color = '#25D366'; }
+            if (btn) { btn.disabled = false; btn.innerHTML = '📍 Actualizar ubicación'; }
+            eoActualizarBoton();
+            setTimeout(function(){ window.eoToggle('ubicacion'); }, 600);
+        }, function(err){
+            var msg = 'No pudimos obtener tu ubicación.';
+            if (err.code === 1) msg = 'Debes permitir el acceso a tu ubicación.';
+            else if (err.code === 2) msg = 'Ubicación no disponible. Activa el GPS.';
+            else if (err.code === 3) msg = 'Tardó demasiado. Intenta de nuevo.';
+            if (status) { status.style.color = '#FF4444'; status.textContent = msg; }
+            if (btn) btn.disabled = false;
+        }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    };
+
+    function eoCompleto() {
+        var e = window._entregaCarrito || {};
+        return !!(e.zona && e.fecha && e.horario && e.ubicacion && e.ubicacion.lat);
+    }
+
+    function eoActualizarBoton() {
+        var btn = document.getElementById('eo-continuar');
+        if (!btn) return;
+        if (eoCompleto()) {
+            btn.disabled = false;
+            btn.style.background = 'linear-gradient(135deg,#FF5A00,#FF8C00)';
+            btn.style.color = '#fff';
+            btn.style.cursor = 'pointer';
+            btn.textContent = '🍔 Ver el menú y ordenar';
+        } else {
+            btn.disabled = true;
+            btn.style.background = 'rgba(255,255,255,.06)';
+            btn.style.color = '#666';
+            btn.style.cursor = 'not-allowed';
+            btn.textContent = 'Completa los pasos para continuar';
+        }
+    }
+
+    window.eoContinuarAlMenu = function() {
+        if (!eoCompleto()) return;
+        sessionStorage.setItem('tt_entrega_lista', '1');
+        document.getElementById('entrega-overlay').style.display = 'none';
+    };
+
+    window.eoCancelar = function() {
+        // Volver al inicio
+        window.location.href = 'index.html';
+    };
+
+    // Disparar al cargar
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function(){ setTimeout(window._mostrarOverlayEntrega, 400); });
+    } else {
+        setTimeout(window._mostrarOverlayEntrega, 400);
+    }
 })();
 </script>
 <!-- ═══ GUÍA FLOTANTE PARA CLIENTES ═══ -->
