@@ -124,9 +124,10 @@ window._pendingItem = window._pendingItem || null;
        a pedido — ahora cualquiera puede ordenar como invitado. Si SÍ hay
        sesión (cliente o staff), el resto de la lógica de abajo sigue
        aplicando (precarga de datos, ocultar herramientas de staff, etc). */
+    function _leerSesOrd(k){ return sessionStorage.getItem(k) || localStorage.getItem(k); }
     var hayStaff = !!(cajeroId && cajeroNombre && (Date.now() - cajeroTs < VEINTE_MIN));
-    var cliNombre = sessionStorage.getItem('tt_cliente_nombre');
-    var cliTs = parseInt(sessionStorage.getItem('tt_cliente_ts') || '0');
+    var cliNombre = _leerSesOrd('tt_cliente_nombre');
+    var cliTs = parseInt(_leerSesOrd('tt_cliente_ts') || '0');
     var hayCliente = !!(cliNombre && (Date.now() - cliTs < VEINTE_MIN));
 
     // Si hay cliente logueado (sin sesion de staff), precargar su nombre/telefono
@@ -173,6 +174,7 @@ window._pendingItem = window._pendingItem || null;
                 'cuentas-tabs',        // barra de pestañas de cuentas múltiples
                 'btn-eliminar-cuenta', // eliminar cuenta activa
                 'btn-descuento-carrito', // aplicar descuento (solo staff / gerente en admin)
+                'btn-perfil',          // "Mis Puntos / Iniciar sesión" — el cliente ya tiene su barra de perfil arriba
             ];
             idsAOcultar.forEach(function(id) {
                 var elx = document.getElementById(id);
@@ -196,6 +198,31 @@ window._pendingItem = window._pendingItem || null;
             ocultarHerramientasStaff();
         }
     }
+})();
+
+// Re-verificar al regresar a esta pestaña (ej. el cliente vuelve del
+// detalle de su pedido). Si hay sesión de cliente y NO de staff, ocultar
+// de nuevo las herramientas de staff que pudieran haber quedado visibles.
+(function() {
+    function _leer(k){ return sessionStorage.getItem(k) || localStorage.getItem(k); }
+    function reocultarSiCliente() {
+        var VM = 20 * 60 * 1000;
+        var hayStaff = !!(_leer('tt_emp_id') || _leer('tt_cajero_nombre'));
+        var cli = _leer('tt_cliente_nombre');
+        var cliTs = parseInt(_leer('tt_cliente_ts') || '0');
+        var hayCliente = !!(cli && (Date.now() - cliTs < VM));
+        if (hayCliente && !hayStaff) {
+            ['btn-cajero-header','cuentas-tabs','btn-eliminar-cuenta','btn-descuento-carrito','btn-perfil']
+                .forEach(function(id){ var e = document.getElementById(id); if (e) e.style.display = 'none'; });
+            document.querySelectorAll('.signout-btn').forEach(function(btn){
+                var oc = btn.getAttribute('onclick') || '';
+                if (oc.indexOf('cocina.html') !== -1 || oc.indexOf('admin.html') !== -1) btn.style.display = 'none';
+            });
+        }
+    }
+    window.addEventListener('focus', reocultarSiCliente);
+    document.addEventListener('visibilitychange', function(){ if (!document.hidden) reocultarSiCliente(); });
+    window.addEventListener('pageshow', reocultarSiCliente);
 })();
 
 window._editingItem = window._editingItem || null;
