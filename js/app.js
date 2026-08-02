@@ -1367,13 +1367,14 @@ window.enviarTodasLasCuentas = async function() {
     var tipoServ = (cuentaPrincipal && cuentaPrincipal.tipoServicio) || 'Comer aquí';
     var tipo     = (tipoServ === 'Domicilio') ? 'domicilio' : 'pickup';
 
-    // Para CLIENTES: la orden es siempre a domicilio y la zona/día/horario
-    // se toman de la sección integrada en el carrito (window._entregaCarrito).
+    // Para CLIENTES: el tipo (pickup/domicilio) viene del overlay de pasos.
     var esClientePuro = !!(window._clienteActivo && !window._cajeroActivo);
     var entregaCli = window._entregaCarrito || {};
+    function _leerTipo(){ return sessionStorage.getItem('tt_tipo_pedido') || localStorage.getItem('tt_tipo_pedido') || entregaCli.tipoPedido; }
     if (esClientePuro) {
-        tipo = 'domicilio';
-        tipoServ = 'Domicilio';
+        var tp = _leerTipo();
+        tipo = (tp === 'pickup') ? 'pickup' : 'domicilio';
+        tipoServ = (tp === 'pickup') ? 'Para llevar' : 'Domicilio';
     }
 
     // Validar que haya productos
@@ -1396,18 +1397,11 @@ window.enviarTodasLasCuentas = async function() {
         return;
     }
 
-    // Para clientes: validar zona, día y horario de la sección del carrito
-    if (esClientePuro) {
-        if (!entregaCli.zona) {
-            alert('⚠️ Elige la ZONA de entrega en la sección "📍 Zona de entrega" del carrito.');
-            return;
-        }
-        if (!entregaCli.fecha) {
-            alert('⚠️ Elige el DÍA de entrega en la sección "🗓️ Día de entrega" del carrito.');
-            return;
-        }
-        if (!entregaCli.horario) {
-            alert('⚠️ Elige el HORARIO de entrega en la sección "🕐 Horario de entrega" del carrito.');
+    // Para clientes a DOMICILIO: validar zona, día, horario y ubicación
+    // (se configuran en el overlay de pasos). Pickup no requiere nada de esto.
+    if (esClientePuro && tipo === 'domicilio') {
+        if (!entregaCli.zona || !entregaCli.fecha || !entregaCli.horario) {
+            alert('⚠️ Falta configurar tu entrega. Toca "Cambiar" en el resumen de entrega del carrito para completar zona, día y horario.');
             return;
         }
     }
