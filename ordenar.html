@@ -3436,25 +3436,53 @@ window.initEntregaCarrito = function() {
     }
     sec.style.display = 'block';
 
-    const cont = document.getElementById('cart-zona-botones');
-    if (cont && !cont.dataset.listo) {
-        cont.innerHTML = CONFIG_COLAS.zonas.map(z => `
-            <button type="button" class="cart-zona-btn" data-zona="${z.id}"
-                onclick="window.cartSeleccionarZona('${z.id}','${z.nombre}')"
-                style="padding:.6rem;border-radius:10px;font-family:inherit;font-size:.8rem;font-weight:700;
-                       cursor:pointer;background:rgba(255,90,0,.08);border:1.5px solid rgba(255,90,0,.25);color:#FF5A00;">
-                ${z.nombre}
-            </button>`).join('');
-        cont.dataset.listo = '1';
+    // El carrito ahora solo MUESTRA un resumen de la entrega ya configurada
+    // en el overlay de pasos (no vuelve a pedir datos). Si el cliente quiere
+    // cambiar algo, puede tocar "Cambiar" para reabrir los pasos.
+    var e = window._entregaCarrito || {};
+    var tipo = leerSes('tt_tipo_pedido') || e.tipoPedido || 'domicilio';
+
+    if (tipo === 'pickup') {
+        sec.innerHTML = '<div style="padding:.6rem .2rem;">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.7rem .9rem;">' +
+            '<span style="font-size:.85rem;color:#fff;font-weight:700;">🥡 Recoger en tienda</span>' +
+            '<button onclick="window.eoReabrir()" style="background:rgba(255,90,0,.12);border:1px solid rgba(255,90,0,.3);color:#FF5A00;border-radius:8px;padding:.3rem .7rem;font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer;">Cambiar</button>' +
+            '</div></div>';
+        return;
     }
-    // Abrir el primer paso pendiente
-    if (!window._entregaCarrito.zona) window.accToggle('zona');
-    // Restaurar marca de ubicación si ya se compartió
-    if (window._entregaCarrito.ubicacion) {
-        const uVal = document.getElementById('acc-ubicacion-val');
-        if (uVal) { uVal.textContent = 'Compartida ✓'; uVal.style.color = '#25D366'; }
-        setPasoActivo('ubicacion', true);
-    }
+
+    // Domicilio: mostrar resumen de zona, día, horario y ubicación
+    var filas = [
+        ['📍 Zona', e.zonaNombre || '—'],
+        ['🗓️ Día', e.fechaEtiqueta || '—'],
+        ['🕐 Horario', e.horarioEtiqueta || '—'],
+        ['📌 Ubicación', (e.ubicacion && e.ubicacion.lat) ? 'Compartida ✓' : '—'],
+    ];
+    sec.innerHTML = '<div style="padding:.5rem .2rem;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">' +
+        '<span style="font-size:.75rem;color:#FF5A00;font-weight:800;text-transform:uppercase;letter-spacing:.05em;">🚗 Entrega a domicilio</span>' +
+        '<button onclick="window.eoReabrir()" style="background:rgba(255,90,0,.12);border:1px solid rgba(255,90,0,.3);color:#FF5A00;border-radius:8px;padding:.3rem .7rem;font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer;">Cambiar</button>' +
+        '</div>' +
+        '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.6rem .8rem;">' +
+        filas.map(function(f){
+            var ok = f[1] !== '—';
+            return '<div style="display:flex;justify-content:space-between;padding:.25rem 0;font-size:.82rem;">' +
+                '<span style="color:#aaa;">' + f[0] + '</span>' +
+                '<span style="color:' + (ok ? '#25D366' : '#FF4444') + ';font-weight:700;">' + f[1] + '</span></div>';
+        }).join('') +
+        '</div></div>';
+};
+
+// Reabrir el overlay de pasos para cambiar la entrega
+window.eoReabrir = function() {
+    sessionStorage.removeItem('tt_entrega_lista');
+    var cm = document.getElementById('cart-modal');
+    if (cm) cm.classList.remove('active');
+    var tipoDiv = document.getElementById('eo-tipo');
+    var pasosDiv = document.getElementById('eo-pasos');
+    if (tipoDiv) tipoDiv.style.display = 'block';
+    if (pasosDiv) pasosDiv.style.display = 'none';
+    if (window._mostrarOverlayEntrega) window._mostrarOverlayEntrega();
 };
 
 window.cartSeleccionarZona = function(zonaId, zonaNombre) {
