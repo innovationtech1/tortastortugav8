@@ -41,6 +41,21 @@ if ('serviceWorker' in navigator) {
     <link rel="apple-touch-icon" href="icons/icon-apple.png">
 <script>
 /* ── INICIALIZAR ESTADO GLOBAL INMEDIATAMENTE ───────────────── */
+/* Restaurar el carrito guardado (si el cliente recargó la página, no
+   debe perder sus productos). Se guarda en localStorage cada vez que
+   cambia (ver guardarCarritoLocal en app.js). */
+(function() {
+    if (window._cuentasSys) return;
+    try {
+        var guardado = localStorage.getItem('tt_carrito');
+        if (guardado) {
+            var cs = JSON.parse(guardado);
+            if (cs && cs.cuentas && Array.isArray(cs.cuentas)) {
+                window._cuentasSys = cs;
+            }
+        }
+    } catch(e) {}
+})();
 window._cuentasSys = window._cuentasSys || {
     cuentas: [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }],
     activa: 1,
