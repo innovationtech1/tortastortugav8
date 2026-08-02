@@ -817,11 +817,10 @@ h1 {
    CART MODAL
    ══════════════════════════════════════════════════════ */
 /* Congelar la página de atrás cuando el carrito está abierto, para que
-   el rebote del scroll (overscroll) no deje ver el menú detrás. */
+   el rebote del scroll no deje ver el menú. Sin position:fixed (eso
+   desplazaba el layout y escondía el botón de cerrar). */
 body.cart-abierto {
     overflow: hidden;
-    position: fixed;
-    width: 100%;
     overscroll-behavior: none;
 }
 
