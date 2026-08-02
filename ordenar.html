@@ -3431,7 +3431,21 @@ document.addEventListener('click', function(e) {
 <script type="module">
 import { CONFIG_COLAS, consultarDisponibilidad, fechasDisponibles } from './js/colas-entrega.js';
 
+// Restaurar la entrega guardada (para que una recarga no borre zona/día/
+// horario/ubicación). Se guarda con guardarEntregaLocal() en cada cambio.
+(function() {
+    if (window._entregaCarrito) return;
+    try {
+        var g = localStorage.getItem('tt_entrega');
+        if (g) { var e = JSON.parse(g); if (e && typeof e === 'object') window._entregaCarrito = e; }
+    } catch(err) {}
+})();
 window._entregaCarrito = window._entregaCarrito || { zona:null, zonaNombre:null, fecha:null, fechaEtiqueta:null, horario:null, horarioEtiqueta:null };
+
+// Guardar la entrega en localStorage (llamado tras cada selección)
+window.guardarEntregaLocal = function() {
+    try { localStorage.setItem('tt_entrega', JSON.stringify(window._entregaCarrito || {})); } catch(e) {}
+};
 
 // Abrir/cerrar un paso del acordeón (cierra los demás)
 window.accToggle = function(paso) {
@@ -3868,6 +3882,8 @@ window.cartCompartirUbicacion = function() {
     }
 
     function eoActualizarBoton() {
+        // Persistir la entrega en cada cambio (se llama tras cada selección)
+        if (window.guardarEntregaLocal) window.guardarEntregaLocal();
         var btn = document.getElementById('eo-continuar');
         if (!btn) return;
         if (eoCompleto()) {
