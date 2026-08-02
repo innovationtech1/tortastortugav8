@@ -424,9 +424,10 @@ function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waU
         let urlFinal = waUrl;
         if (ov._ubicacion && ov._ubicacion.lat && ov._ubicacion.lng) {
             const mapsLink = 'https://maps.google.com/?q=' + ov._ubicacion.lat + ',' + ov._ubicacion.lng;
-            // El texto del pedido va codificado en el parámetro ?text=.
-            // Le agregamos la ubicación al final, también codificada.
-            const extra = '\n📍 *Ubicación del cliente:*\n' + mapsLink;
+            // Si el cliente escribió una dirección, incluirla en texto además del link.
+            let extra = '\n📍 *Ubicación del cliente:*\n';
+            if (ov._ubicacion.direccion) extra += ov._ubicacion.direccion + '\n';
+            extra += mapsLink;
             urlFinal = waUrl + encodeURIComponent(extra);
         }
         window.open(urlFinal, '_blank');
