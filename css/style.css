@@ -816,6 +816,15 @@ h1 {
 /* ══════════════════════════════════════════════════════
    CART MODAL
    ══════════════════════════════════════════════════════ */
+/* Congelar la página de atrás cuando el carrito está abierto, para que
+   el rebote del scroll (overscroll) no deje ver el menú detrás. */
+body.cart-abierto {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    overscroll-behavior: none;
+}
+
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -859,6 +868,7 @@ h1 {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    overscroll-behavior: none;
     transform: translateX(100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: -10px 0 30px rgba(0,0,0,0.5);
@@ -878,6 +888,8 @@ h1 {
     flex: 1 1 auto !important;
     min-height: 0 !important;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* En pantallas anchas: 2 columnas, pero sin romper el flex del contenedor */
