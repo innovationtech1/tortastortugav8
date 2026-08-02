@@ -832,6 +832,15 @@ h1 {
     z-index: 1000;
 }
 
+/* En móvil el carrito ocupa toda la pantalla: fondo opaco para que el
+   menú de atrás NO se transparente al hacer scroll. */
+@media (max-width: 699px) {
+    .modal-overlay {
+        background: #0E0E0E;
+        backdrop-filter: none;
+    }
+}
+
 .modal-overlay.active {
     opacity: 1;
     pointer-events: all;
