@@ -1528,8 +1528,13 @@ window.enviarTodasLasCuentas = async function() {
         CS.counter = 1;
         // Limpiar la selección de entrega del carrito
         window._entregaCarrito = { zona:null, zonaNombre:null, fecha:null, fechaEtiqueta:null, horario:null, horarioEtiqueta:null, ubicacion:null };
-        // Borrar el carrito guardado (ya se envió esta orden)
-        try { localStorage.removeItem('tt_carrito'); } catch(e) {}
+        // Borrar el carrito y la entrega guardados (ya se envió esta orden)
+        try {
+            localStorage.removeItem('tt_carrito');
+            localStorage.removeItem('tt_entrega');
+            sessionStorage.removeItem('tt_entrega_lista');
+            sessionStorage.removeItem('tt_tipo_pedido');
+        } catch(e) {}
         if (window.renderCuentasTabs) window.renderCuentasTabs();
         if (window.renderCartItems)   window.renderCartItems();
 
