@@ -714,6 +714,14 @@ window.normalizarRutaImagen = function(src) {
                                cursor:pointer;width:100%;">
                         ✏️ Editar orden
                     </button>
+                    <button onclick="abrirDescuentoAdmin('${p.id}', '${folioVisible}', '${String(p.total||'').replace(/'/g,'')}')"
+                        style="margin-top:4px;background:rgba(255,90,0,.12);
+                               border:1px solid rgba(255,90,0,.35);color:#FF5A00;
+                               border-radius:7px;padding:.25rem .65rem;
+                               font-family:inherit;font-size:0.72rem;font-weight:700;
+                               cursor:pointer;width:100%;">
+                        % Descuento
+                    </button>
                 </td>
                 <td>${pagoHTML}</td>
                 <td><select class="status-select ${estadoCls}" data-id="${p.id}" style="width:100%"><option ${p.estado?.includes('Nuevo') ? 'selected' : ''}>Nuevo 🆕</option><option ${p.estado?.includes('preparación') ? 'selected' : ''}>En preparación 🧑‍🍳</option><option ${p.estado?.includes('Listo') ? 'selected' : ''}>Listo ✅</option><option ${p.estado?.includes('Entregado') ? 'selected' : ''}>Entregado 🎉</option><option ${p.estado?.includes('Cancelado') ? 'selected' : ''}>Cancelado ❌</option></select></td>
@@ -1225,6 +1233,110 @@ window.normalizarRutaImagen = function(src) {
         win.document.write('</bo'+'dy></ht'+'ml>');
         win.document.close();
     };
+
+    // ═══ DESCUENTO A ORDEN (gerente, desde admin) ═══
+    let _descPedidoId = null, _descTotalOrig = 0, _descTipo = 'pct';
+
+    function _num(v) {
+        if (typeof v === 'number') return v;
+        return parseFloat(String(v || '').replace(/[^0-9.]/g, '')) || 0;
+    }
+
+    window.abrirDescuentoAdmin = function(id, ticket, totalStr) {
+        _descPedidoId = id;
+        _descTotalOrig = _num(totalStr);
+        _descTipo = 'pct';
+        document.getElementById('desc-ticket').textContent = '#' + ticket;
+        document.getElementById('desc-total-actual').textContent = '$' + _descTotalOrig.toFixed(2);
+        document.getElementById('desc-valor').value = '';
+        window.descSetTipo('pct');
+        window.descRecalcular();
+        document.getElementById('descuento-modal').style.display = 'flex';
+    };
+
+    window.descSetTipo = function(tipo) {
+        _descTipo = tipo;
+        var bp = document.getElementById('desc-tipo-pct'), bf = document.getElementById('desc-tipo-fijo');
+        var preset = document.getElementById('desc-preset');
+        if (tipo === 'pct') {
+            bp.style.borderColor = '#FF5A00'; bp.style.background = 'rgba(255,90,0,.15)'; bp.style.color = '#FF5A00';
+            bf.style.borderColor = 'rgba(255,255,255,.15)'; bf.style.background = 'transparent'; bf.style.color = '#888';
+            document.getElementById('desc-valor').placeholder = 'Ej: 10 (porcentaje)';
+            if (preset) preset.style.display = 'flex';
+        } else {
+            bf.style.borderColor = '#FF5A00'; bf.style.background = 'rgba(255,90,0,.15)'; bf.style.color = '#FF5A00';
+            bp.style.borderColor = 'rgba(255,255,255,.15)'; bp.style.background = 'transparent'; bp.style.color = '#888';
+            document.getElementById('desc-valor').placeholder = 'Ej: 5.00 (dólares)';
+            if (preset) preset.style.display = 'none';
+        }
+        window.descRecalcular();
+    };
+
+    window.descPreset = function(pct) {
+        _descTipo = 'pct';
+        window.descSetTipo('pct');
+        document.getElementById('desc-valor').value = pct;
+        window.descRecalcular();
+    };
+
+    function _calcDescuento() {
+        var val = _num(document.getElementById('desc-valor').value);
+        if (_descTipo === 'pct') {
+            if (val < 0) val = 0; if (val > 100) val = 100;
+            return _descTotalOrig * (val / 100);
+        } else {
+            if (val < 0) val = 0; if (val > _descTotalOrig) val = _descTotalOrig;
+            return val;
+        }
+    }
+
+    window.descRecalcular = function() {
+        var desc = _calcDescuento();
+        var nuevo = Math.max(0, _descTotalOrig - desc);
+        document.getElementById('desc-monto').textContent = '-$' + desc.toFixed(2);
+        document.getElementById('desc-nuevo-total').textContent = '$' + nuevo.toFixed(2);
+    };
+
+    window.aplicarDescuentoAdmin = async function() {
+        if (!_descPedidoId) return;
+        var desc = _calcDescuento();
+        if (desc <= 0) { alert('Ingresa un descuento válido.'); return; }
+        var nuevo = Math.max(0, _descTotalOrig - desc);
+        try {
+            await updateDoc(doc(db, 'pedidos', _descPedidoId), {
+                total: '$' + nuevo.toFixed(2),
+                totalNum: nuevo,
+                descuentoAplicado: desc,
+                totalAntesDescuento: _descTotalOrig,
+                descuentoPor: (sessionStorage.getItem('tt_emp_nombre') || sessionStorage.getItem('tt_cajero_nombre') || 'Gerente'),
+                descuentoEn: new Date().toISOString(),
+            });
+            document.getElementById('descuento-modal').style.display = 'none';
+            alert('✅ Descuento aplicado.\n\nNuevo total: $' + nuevo.toFixed(2));
+        } catch(e) {
+            alert('No se pudo aplicar el descuento: ' + e.message);
+        }
+    };
+
+    window.quitarDescuentoAdmin = async function() {
+        if (!_descPedidoId) return;
+        // Restaurar al total antes del descuento si existe ese dato
+        try {
+            var pedido = (window._adminPedidosDB || []).find(function(p){ return p.id === _descPedidoId; });
+            var original = pedido && pedido.totalAntesDescuento ? _num(pedido.totalAntesDescuento) : _descTotalOrig;
+            await updateDoc(doc(db, 'pedidos', _descPedidoId), {
+                total: '$' + original.toFixed(2),
+                totalNum: original,
+                descuentoAplicado: 0,
+                descuentoPor: null,
+                descuentoEn: null,
+            });
+            document.getElementById('descuento-modal').style.display = 'none';
+            alert('Descuento quitado. Total restaurado a $' + original.toFixed(2));
+        } catch(e) {
+            alert('No se pudo quitar el descuento: ' + e.message);
+        }
+    };
 </script>
 
 <script>
@@ -1477,7 +1589,64 @@ window.guardarProducto = async function(id) {
   </div>
 </div>
 
-<!-- MODAL COLAS DE ENTREGA (gestión del gerente) -->
+<!-- MODAL DESCUENTO (gerente aplica descuento a orden enviada) -->
+<div id="descuento-modal" onclick="if(event.target===this)this.style.display='none'"
+     style="position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9100;
+            display:none;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#1C1C1C;border:1px solid rgba(255,90,0,.4);
+              border-radius:18px;padding:1.5rem;width:100%;max-width:380px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <div style="font-size:.95rem;font-weight:800;color:#FF5A00;">% Descuento a Orden <span id="desc-ticket" style="color:#fff;"></span></div>
+      <button onclick="document.getElementById('descuento-modal').style.display='none'"
+        style="background:none;border:1px solid rgba(255,255,255,.1);color:#888;border-radius:8px;padding:.25rem .6rem;cursor:pointer;">✕</button>
+    </div>
+
+    <div style="background:rgba(255,255,255,.03);border-radius:10px;padding:.8rem;margin-bottom:1rem;">
+      <div style="display:flex;justify-content:space-between;font-size:.82rem;color:#aaa;margin-bottom:.3rem;">
+        <span>Total actual:</span><strong id="desc-total-actual" style="color:#fff;">$0.00</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.82rem;color:#aaa;margin-bottom:.3rem;">
+        <span>Descuento:</span><strong id="desc-monto" style="color:#FF5A00;">-$0.00</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.95rem;border-top:1px solid rgba(255,255,255,.1);padding-top:.4rem;margin-top:.4rem;">
+        <span style="font-weight:800;color:#fff;">Nuevo total:</span><strong id="desc-nuevo-total" style="color:#25D366;">$0.00</strong>
+      </div>
+    </div>
+
+    <div style="font-size:.72rem;color:#888;font-weight:700;margin-bottom:.4rem;text-transform:uppercase;">Tipo de descuento</div>
+    <div style="display:flex;gap:.4rem;margin-bottom:.8rem;">
+      <button id="desc-tipo-pct" onclick="window.descSetTipo('pct')"
+        style="flex:1;padding:.5rem;border-radius:8px;border:1.5px solid #FF5A00;background:rgba(255,90,0,.15);
+               color:#FF5A00;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;">Porcentaje %</button>
+      <button id="desc-tipo-fijo" onclick="window.descSetTipo('fijo')"
+        style="flex:1;padding:.5rem;border-radius:8px;border:1.5px solid rgba(255,255,255,.15);background:transparent;
+               color:#888;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;">Monto fijo $</button>
+    </div>
+
+    <input id="desc-valor" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Ej: 10"
+        oninput="window.descRecalcular()"
+        style="width:100%;background:#111;border:1px solid rgba(255,255,255,.15);color:#fff;
+               border-radius:10px;padding:.7rem;font-family:inherit;font-size:1rem;margin-bottom:.4rem;box-sizing:border-box;">
+    <div id="desc-preset" style="display:flex;gap:.35rem;margin-bottom:1rem;">
+      <button onclick="window.descPreset(10)" style="flex:1;padding:.4rem;border-radius:7px;border:1px solid rgba(255,255,255,.12);background:transparent;color:#aaa;font-family:inherit;font-size:.75rem;cursor:pointer;">10%</button>
+      <button onclick="window.descPreset(15)" style="flex:1;padding:.4rem;border-radius:7px;border:1px solid rgba(255,255,255,.12);background:transparent;color:#aaa;font-family:inherit;font-size:.75rem;cursor:pointer;">15%</button>
+      <button onclick="window.descPreset(20)" style="flex:1;padding:.4rem;border-radius:7px;border:1px solid rgba(255,255,255,.12);background:transparent;color:#aaa;font-family:inherit;font-size:.75rem;cursor:pointer;">20%</button>
+      <button onclick="window.descPreset(50)" style="flex:1;padding:.4rem;border-radius:7px;border:1px solid rgba(255,255,255,.12);background:transparent;color:#aaa;font-family:inherit;font-size:.75rem;cursor:pointer;">50%</button>
+    </div>
+
+    <button onclick="window.aplicarDescuentoAdmin()"
+        style="width:100%;padding:.8rem;background:linear-gradient(135deg,#FF5A00,#FF8C00);border:none;
+               color:#fff;border-radius:12px;font-family:inherit;font-size:.9rem;font-weight:800;cursor:pointer;">
+        ✅ Aplicar descuento
+    </button>
+    <button onclick="window.quitarDescuentoAdmin()"
+        style="width:100%;padding:.6rem;margin-top:.5rem;background:transparent;border:1px solid rgba(255,255,255,.12);
+               color:#888;border-radius:10px;font-family:inherit;font-size:.78rem;font-weight:700;cursor:pointer;">
+        Quitar descuento (restaurar total original)
+    </button>
+  </div>
+</div>
+
 <div id="colas-modal" onclick="if(event.target===this)this.style.display='none'"
      style="position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9000;
             display:none;align-items:flex-end;justify-content:center;">
