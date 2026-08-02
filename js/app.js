@@ -1059,9 +1059,20 @@ function addItemToCuentaActiva(item) {
 // copia vieja que quedaba sobrescrita y nunca se ejecutaba de verdad.
 
 // ── Render items de cuenta activa ─────────────────────────────
+// Guardar el carrito en localStorage para que sobreviva a recargas.
+window.guardarCarritoLocal = function() {
+    try {
+        var CS = window._cuentasSys;
+        if (CS) localStorage.setItem('tt_carrito', JSON.stringify(CS));
+    } catch(e) {}
+};
+
 window.renderCartItems = function() {
     const CS = window._cuentasSys;
     if (!CS) return;
+    // Persistir el estado actual del carrito en cada render (cualquier
+    // cambio pasa por aquí), para que una recarga no borre los productos.
+    window.guardarCarritoLocal();
     const cActiva = CS.cuentas.find(c => c.id === CS.activa);
     const el = document.getElementById('cart-items');
     if (!el || !cActiva) return;
@@ -1517,6 +1528,8 @@ window.enviarTodasLasCuentas = async function() {
         CS.counter = 1;
         // Limpiar la selección de entrega del carrito
         window._entregaCarrito = { zona:null, zonaNombre:null, fecha:null, fechaEtiqueta:null, horario:null, horarioEtiqueta:null, ubicacion:null };
+        // Borrar el carrito guardado (ya se envió esta orden)
+        try { localStorage.removeItem('tt_carrito'); } catch(e) {}
         if (window.renderCuentasTabs) window.renderCuentasTabs();
         if (window.renderCartItems)   window.renderCartItems();
 
