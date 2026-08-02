@@ -1423,8 +1423,22 @@ function cerrarOrdenModal() {
           <span>📌 4. Tu ubicación</span><span id="eo-ubicacion-val" style="color:#888;font-weight:600;font-size:.78rem;">—</span>
         </button>
         <div id="eo-ubicacion-body" style="display:none;padding:.6rem 0;">
-          <p style="font-size:.76rem;color:#888;margin:0 0 .5rem;">Si no sabes tu dirección exacta, comparte tu ubicación y el repartidor te encuentra.</p>
-          <button type="button" id="eo-btn-ubic" onclick="window.eoCompartirUbicacion()" style="width:100%;padding:.8rem;background:rgba(167,139,250,.15);border:1.5px solid rgba(167,139,250,.4);color:#A78BFA;border-radius:10px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">📍 Compartir mi ubicación</button>
+          <p style="font-size:.76rem;color:#888;margin:0 0 .5rem;">Escribe tu dirección y elígela de la lista:</p>
+          <input id="eo-dir-input" type="text" autocomplete="off" placeholder="Ej: 123 Main St, San Antonio TX"
+            oninput="window.eoBuscarDireccion(this.value)"
+            style="width:100%;background:#111;border:1.5px solid rgba(167,139,250,.4);color:#fff;
+                   border-radius:10px;padding:.7rem;font-family:inherit;font-size:.85rem;box-sizing:border-box;">
+          <div id="eo-dir-sugerencias" style="margin-top:.35rem;"></div>
+          <div id="eo-dir-status" style="font-size:.78rem;margin-top:.35rem;"></div>
+
+          <div style="display:flex;align-items:center;gap:.6rem;margin:.8rem 0;">
+            <div style="flex:1;height:1px;background:rgba(255,255,255,.12);"></div>
+            <span style="font-size:.72rem;color:#666;">o</span>
+            <div style="flex:1;height:1px;background:rgba(255,255,255,.12);"></div>
+          </div>
+
+          <p style="font-size:.76rem;color:#888;margin:0 0 .5rem;">Si no sabes tu dirección exacta:</p>
+          <button type="button" id="eo-btn-ubic" onclick="window.eoCompartirUbicacion()" style="width:100%;padding:.8rem;background:rgba(167,139,250,.15);border:1.5px solid rgba(167,139,250,.4);color:#A78BFA;border-radius:10px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">📍 Compartir mi ubicación (GPS)</button>
           <div id="eo-ubic-status" style="font-size:.78rem;margin-top:.5rem;"></div>
         </div>
       </div>
@@ -3452,11 +3466,15 @@ window.initEntregaCarrito = function() {
     }
 
     // Domicilio: mostrar resumen de zona, día, horario y ubicación
+    var _ubicTxt = '—';
+    if (e.ubicacion && e.ubicacion.lat) {
+        _ubicTxt = e.ubicacion.direccion ? (e.ubicacion.direccion.length > 28 ? e.ubicacion.direccion.slice(0,28) + '…' : e.ubicacion.direccion) : 'Compartida ✓';
+    }
     var filas = [
         ['📍 Zona', e.zonaNombre || '—'],
         ['🗓️ Día', e.fechaEtiqueta || '—'],
         ['🕐 Horario', e.horarioEtiqueta || '—'],
-        ['📌 Ubicación', (e.ubicacion && e.ubicacion.lat) ? 'Compartida ✓' : '—'],
+        ['📌 Ubicación', _ubicTxt],
     ];
     sec.innerHTML = '<div style="padding:.5rem .2rem;">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">' +
@@ -3768,8 +3786,46 @@ window.cartCompartirUbicacion = function() {
         eoActualizarBoton();
     };
 
-    window.eoCompartirUbicacion = function() {
-        var status = document.getElementById('eo-ubic-status');
+    // Búsqueda de dirección con Nominatim (OpenStreetMap) — gratis, sin key.
+    var _eoDirTimer = null;
+    window.eoBuscarDireccion = function(texto) {
+        var sug = document.getElementById('eo-dir-sugerencias');
+        var status = document.getElementById('eo-dir-status');
+        texto = (texto || '').trim();
+        if (texto.length < 4) { if (sug) sug.innerHTML = ''; if (status) status.textContent = ''; return; }
+        clearTimeout(_eoDirTimer);
+        if (status) { status.style.color = '#888'; status.textContent = 'Buscando…'; }
+        // Debounce: esperar a que deje de escribir (Nominatim pide máx 1/seg)
+        _eoDirTimer = setTimeout(function() {
+            var url = 'https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=us&q=' + encodeURIComponent(texto);
+            fetch(url, { headers: { 'Accept-Language': 'es' } })
+                .then(function(r){ return r.json(); })
+                .then(function(res){
+                    if (status) status.textContent = '';
+                    if (!res || !res.length) { if (sug) sug.innerHTML = '<div style="font-size:.78rem;color:#888;padding:.4rem 0;">No se encontraron direcciones. Prueba con más detalle o usa GPS.</div>'; return; }
+                    if (sug) sug.innerHTML = res.map(function(x){
+                        var nombre = (x.display_name || '').replace(/'/g, '');
+                        return '<button type="button" onclick="window.eoElegirDireccion(' + x.lat + ',' + x.lon + ',\'' + nombre.replace(/"/g,'') + '\')" ' +
+                            'style="width:100%;text-align:left;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);color:#ddd;' +
+                            'border-radius:8px;padding:.5rem .6rem;font-family:inherit;font-size:.76rem;cursor:pointer;margin-bottom:.25rem;line-height:1.3;">📍 ' + nombre + '</button>';
+                    }).join('');
+                })
+                .catch(function(){ if (status) { status.style.color = '#FF4444'; status.textContent = 'Error al buscar. Revisa tu conexión o usa GPS.'; } });
+        }, 900);
+    };
+
+    window.eoElegirDireccion = function(lat, lng, nombre) {
+        window._entregaCarrito.ubicacion = { lat: lat, lng: lng, direccion: nombre, tipo: 'direccion', compartidaEn: new Date().toISOString() };
+        var inp = document.getElementById('eo-dir-input');
+        if (inp) inp.value = nombre;
+        var sug = document.getElementById('eo-dir-sugerencias'); if (sug) sug.innerHTML = '';
+        var status = document.getElementById('eo-dir-status'); if (status) { status.style.color = '#25D366'; status.innerHTML = '✅ Dirección seleccionada.'; }
+        var v = document.getElementById('eo-ubicacion-val'); if (v) { v.textContent = 'Lista ✓'; v.style.color = '#25D366'; }
+        eoActualizarBoton();
+        setTimeout(function(){ window.eoToggle('ubicacion'); }, 700);
+    };
+
+    window.eoCompartirUbicacion = function() {        var status = document.getElementById('eo-ubic-status');
         var btn = document.getElementById('eo-btn-ubic');
         if (!navigator.geolocation) { if (status) { status.style.color = '#FF4444'; status.textContent = 'Tu navegador no soporta ubicación.'; } return; }
         if (status) { status.style.color = '#888'; status.textContent = 'Obteniendo tu ubicación…'; }
