@@ -594,16 +594,20 @@ window.selectEstado = (val, btn) => {
 window.eliminarItem = (idx) => {
     if (!editPedido) return;
     let items = parseItems(editPedido);
-    if (!confirm(`¿Quitar "${items[idx]?.nombre}"?`)) return;
-    items.splice(idx, 1);
-    editPedido._tempItems = items;
-    renderEditor();
-    // Restaurar estado seleccionado
-    if (estadoSeleccionado) {
-        document.querySelectorAll('.status-opt').forEach(b => {
-            if (b.textContent.includes(estadoSeleccionado.split(' ')[0])) b.classList.add('selected');
-        });
+    function _hacer() {
+        items.splice(idx, 1);
+        editPedido._tempItems = items;
+        renderEditor();
+        // Restaurar estado seleccionado
+        if (estadoSeleccionado) {
+            document.querySelectorAll('.status-opt').forEach(b => {
+                if (b.textContent.includes(estadoSeleccionado.split(' ')[0])) b.classList.add('selected');
+            });
+        }
     }
+    var msg = `¿Quitar "${items[idx]?.nombre}"?`;
+    if (window.ttConfirm) window.ttConfirm(msg).then(function(ok){ if (ok) _hacer(); });
+    else if (confirm(msg)) _hacer();
 };
 
 window.agregarItem = () => {
@@ -662,7 +666,9 @@ window.guardarCambios = async () => {
 };
 
 window.confirmarEliminar = async (id) => {
-    if (!confirm('⚠️ ¿Eliminar esta orden permanentemente? Esta acción no se puede deshacer.')) return;
+    var msg = '⚠️ ¿Eliminar esta orden permanentemente? Esta acción no se puede deshacer.';
+    var ok = window.ttConfirm ? await window.ttConfirm(msg) : confirm(msg);
+    if (!ok) return;
     try {
         await KitchenAPI.deletePedido(id);
         cerrarEditor();
