@@ -291,16 +291,16 @@ window.addEventListener('appinstalled', function() {
             link.href = '#';
             link.onclick = function(e) {
                 e.preventDefault();
-                if (confirm('¿Cerrar sesión de ' + sesion.nombre + '?')) {
-                    if (window._perfilCerrarSesion) {
-                        // Reusa la limpieza centralizada de perfil-barra.js pero sin su propio confirm
-                        ['tt_cliente_nombre','tt_cliente_telefono','tt_cliente_ts','tt_cliente_uid',
-                         'tt_cajero_id','tt_cajero_nombre','tt_cajero_rol','tt_cajero_ts',
-                         'tt_emp_id','tt_emp_pin','tt_emp_ts','tt_emp_docid','tt_emp_nombre','tt_emp_rol'
-                        ].forEach(function(k){ sessionStorage.removeItem(k); });
-                    }
+                function _hacerLogout() {
+                    ['tt_cliente_nombre','tt_cliente_telefono','tt_cliente_ts','tt_cliente_uid',
+                     'tt_cajero_id','tt_cajero_nombre','tt_cajero_rol','tt_cajero_ts',
+                     'tt_emp_id','tt_emp_pin','tt_emp_ts','tt_emp_docid','tt_emp_nombre','tt_emp_rol'
+                    ].forEach(function(k){ sessionStorage.removeItem(k); localStorage.removeItem(k); });
                     location.reload();
                 }
+                var msg = '¿Cerrar sesión de ' + sesion.nombre + '?';
+                if (window.ttConfirm) window.ttConfirm(msg).then(function(ok){ if (ok) _hacerLogout(); });
+                else if (confirm(msg)) _hacerLogout();
             };
         }
     }
