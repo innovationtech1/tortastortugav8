@@ -751,7 +751,8 @@ window.normalizarRutaImagen = function(src) {
         document.querySelectorAll('.delete-btn:not(.restore-btn)').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const id = e.currentTarget.getAttribute('data-id');
-                if (confirm('¿Quitar este pedido de la pantalla? Sigue guardado y disponible en reportes/ventas, solo deja de mostrarse aquí.')) {
+                var _okQuitar = window.ttConfirm ? await window.ttConfirm('¿Quitar este pedido de la pantalla? Sigue guardado y disponible en reportes/ventas, solo deja de mostrarse aquí.') : confirm('¿Quitar este pedido de la pantalla? Sigue guardado y disponible en reportes/ventas, solo deja de mostrarse aquí.');
+                if (_okQuitar) {
                     try { await updateDoc(doc(db, 'pedidos', id), { archivado: true, archivadoEn: new Date().toISOString() }); }
                     catch(error) { alert('Error al archivar.'); }
                 }
@@ -779,7 +780,9 @@ window.normalizarRutaImagen = function(src) {
     window.cerrarSistemaVentas = async function() {
         const archivadas = pedidosDB.filter(p => p.archivado);
         if (!archivadas.length) { alert('No hay órdenes archivadas para guardar.'); return; }
-        if (!confirm(`Esto va a guardar ${archivadas.length} orden(es) archivada(s) en el registro de Ventas (con su estado de pago), y luego las va a quitar de la lista operativa. ¿Continuar?`)) return;
+        var _msgArch = `Esto va a guardar ${archivadas.length} orden(es) archivada(s) en el registro de Ventas (con su estado de pago), y luego las va a quitar de la lista operativa. ¿Continuar?`;
+        var _okArch = window.ttConfirm ? await window.ttConfirm(_msgArch) : confirm(_msgArch);
+        if (!_okArch) return;
 
         const btn = document.getElementById('btn-cerrar-sistema');
         if (btn) { btn.disabled = true; btn.textContent = '⏳ Guardando en Ventas...'; }
@@ -822,8 +825,11 @@ window.normalizarRutaImagen = function(src) {
         const idsSeleccionados = Array.from(document.querySelectorAll('.chk-archivado:checked'))
             .map(chk => chk.getAttribute('data-id'));
         if (!idsSeleccionados.length) { alert('No has seleccionado ninguna orden. Marca la casilla de las que quieras eliminar.'); return; }
-        if (!confirm(`⚠️ Esto va a BORRAR PARA SIEMPRE ${idsSeleccionados.length} orden(es) seleccionada(s). No se pueden recuperar después y NO se guardan en Ventas. ¿Seguro que quieres continuar?`)) return;
-        if (!confirm('Última confirmación: esta acción es irreversible. ¿Eliminar de verdad?')) return;
+        var _msgDel1 = `⚠️ Esto va a BORRAR PARA SIEMPRE ${idsSeleccionados.length} orden(es) seleccionada(s). No se pueden recuperar después y NO se guardan en Ventas. ¿Seguro que quieres continuar?`;
+        var _okDel1 = window.ttConfirm ? await window.ttConfirm(_msgDel1) : confirm(_msgDel1);
+        if (!_okDel1) return;
+        var _okDel2 = window.ttConfirm ? await window.ttConfirm('Última confirmación: esta acción es irreversible. ¿Eliminar de verdad?') : confirm('Última confirmación: esta acción es irreversible. ¿Eliminar de verdad?');
+        if (!_okDel2) return;
 
         const btn = document.getElementById('btn-eliminar-archivados');
         if (btn) { btn.disabled = true; btn.textContent = '⏳ Eliminando...'; }
@@ -1132,10 +1138,14 @@ window.normalizarRutaImagen = function(src) {
         const p = window._editAdminPedido;
         if (!p) return;
         let items = parseItemsAdmin(p);
-        if (!confirm('Quitar: ' + items[idx]?.nombre)) return;
-        items.splice(idx, 1);
-        p._tempItems = items;
-        renderAdminEditor();
+        function _hacer() {
+            items.splice(idx, 1);
+            p._tempItems = items;
+            renderAdminEditor();
+        }
+        var msg = 'Quitar: ' + items[idx]?.nombre;
+        if (window.ttConfirm) window.ttConfirm(msg).then(function(ok){ if (ok) _hacer(); });
+        else if (confirm(msg)) _hacer();
     };
 
     window.agregarItemAdmin = () => {
@@ -1210,7 +1220,11 @@ window.normalizarRutaImagen = function(src) {
 
     // guardarProducto se define en script global con soporte de variantes
 
-    window.confirmarEliminarProducto = (id) => { if (confirm('⚠️ ¿Eliminar este producto permanentemente?')) { deleteDoc(doc(db, 'productos', id)).then(() => cargarListaProductos()); } };
+    window.confirmarEliminarProducto = (id) => {
+        function _hacer(){ deleteDoc(doc(db, 'productos', id)).then(() => cargarListaProductos()); }
+        if (window.ttConfirm) window.ttConfirm('⚠️ ¿Eliminar este producto permanentemente?').then(function(ok){ if (ok) _hacer(); });
+        else if (confirm('⚠️ ¿Eliminar este producto permanentemente?')) _hacer();
+    };
     // eliminarProducto definida en script global
 
     window.imprimirTicket = (ticketId) => {
@@ -1995,7 +2009,8 @@ window.crearCajero = async function() {
 };
 
 window.eliminarCajero = async function(empId, docId) {
-    if (!confirm('¿Eliminar cajero ' + empId + '?')) return;
+    var _okCaj = window.ttConfirm ? await window.ttConfirm('¿Eliminar cajero ' + empId + '?') : confirm('¿Eliminar cajero ' + empId + '?');
+    if (!_okCaj) return;
     if (!window._adminDeleteDoc) { alert('Firebase cargando, intenta de nuevo'); return; }
     try {
         await window._adminDeleteDoc('empleados', docId);
@@ -2305,7 +2320,8 @@ window.crearProducto = async function() {
 };
 
 window.eliminarProducto = async function(id) {
-    if (!confirm('Eliminar este producto?')) return;
+    var _okProd = window.ttConfirm ? await window.ttConfirm('Eliminar este producto?') : confirm('Eliminar este producto?');
+    if (!_okProd) return;
     if (!window._adminDeleteDoc) { alert('Firebase cargando'); return; }
     try {
         await window._adminDeleteDoc('productos', id);
@@ -2407,10 +2423,14 @@ function _renderAE() {
 }
 window._qAE = function(idx) {
     var items = _getItems();
-    if (!confirm('Quitar: ' + (items[idx]?items[idx].nombre:'?'))) return;
-    items.splice(idx, 1);
-    window._aep._items = items;
-    _renderAE();
+    function _hacer() {
+        items.splice(idx, 1);
+        window._aep._items = items;
+        _renderAE();
+    }
+    var msg = 'Quitar: ' + (items[idx]?items[idx].nombre:'?');
+    if (window.ttConfirm) window.ttConfirm(msg).then(function(ok){ if (ok) _hacer(); });
+    else if (confirm(msg)) _hacer();
 };
 window._addAE = function() {
     var n = document.getElementById('ae-an').value.trim();
