@@ -1374,8 +1374,9 @@ function cerrarOrdenModal() {
 </head>
 <body>
 <!-- ═══ OVERLAY DE CONFIGURACIÓN DE ENTREGA (pasos antes del menú) ═══ -->
-<div id="entrega-overlay" style="display:none;position:fixed;inset:0;z-index:99998;
-     background:#0E0E0E;overflow-y:auto;padding:1.2rem;">
+<div id="entrega-overlay" style="display:none;position:fixed;inset:0;z-index:100001;
+     background:#0E0E0E;overflow-y:auto;overscroll-behavior:contain;height:100dvh;
+     -webkit-overflow-scrolling:touch;padding:1.2rem;">
   <div style="max-width:440px;margin:0 auto;">
     <div style="text-align:center;margin-bottom:1.2rem;padding-top:.5rem;">
       <img src="/tortastortugav8/icons/icon-192.png" alt="Tortas Tortuga"
@@ -3699,7 +3700,7 @@ window.cartCompartirUbicacion = function() {
         if (!esClientePuro()) return;
         if (sessionStorage.getItem('tt_entrega_lista') === '1') return;
         var ov = document.getElementById('entrega-overlay');
-        if (ov) ov.style.display = 'block';
+        if (ov) { ov.style.display = 'block'; document.body.classList.add('cart-abierto'); }
     };
 
     window.eoElegirTipo = function(tipo) {
@@ -3713,6 +3714,7 @@ window.cartCompartirUbicacion = function() {
             sessionStorage.setItem('tt_entrega_lista', '1');
             sessionStorage.setItem('tt_tipo_pedido', 'pickup');
             document.getElementById('entrega-overlay').style.display = 'none';
+            document.body.classList.remove('cart-abierto');
         } else {
             // Domicilio: mostrar los pasos
             sessionStorage.setItem('tt_tipo_pedido', 'domicilio');
@@ -3909,6 +3911,7 @@ window.cartCompartirUbicacion = function() {
         if (!eoCompleto()) return;
         sessionStorage.setItem('tt_entrega_lista', '1');
         document.getElementById('entrega-overlay').style.display = 'none';
+        document.body.classList.remove('cart-abierto');
     };
 
     window.eoCancelar = function() {
