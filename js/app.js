@@ -1243,7 +1243,7 @@ window.limpiarCuentaActual = function() {
 };
 
 window.limpiarCarrito = function() {
-    if (confirm('¿Limpiar todas las cuentas?')) {
+    function _hacer() {
         CS.cuentas = [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }];
         CS.activa = 1; CS.counter = 1;
         cart = [];
@@ -1251,6 +1251,8 @@ window.limpiarCarrito = function() {
         renderCartItems();
         updateCart();
     }
+    if (window.ttConfirm) window.ttConfirm('¿Limpiar todas las cuentas?').then(function(ok){ if (ok) _hacer(); });
+    else if (confirm('¿Limpiar todas las cuentas?')) _hacer();
 };
 
 // ── Modal nombre de cuenta ────────────────────────────────────
@@ -1936,12 +1938,14 @@ window.eliminarCuentaActiva = function() {
     var msg = c.items.length > 0
         ? '¿Eliminar "' + c.nombre + '" con ' + c.items.length + ' producto(s)?'
         : '¿Eliminar "' + c.nombre + '"?';
-    if (!confirm(msg)) return;
-
-    CS.cuentas = CS.cuentas.filter(function(x){ return x.id !== CS.activa; });
-    CS.activa = CS.cuentas[0].id;
-    window.renderCuentasTabs();
-    window.renderCartItems();
+    function _hacer() {
+        CS.cuentas = CS.cuentas.filter(function(x){ return x.id !== CS.activa; });
+        CS.activa = CS.cuentas[0].id;
+        window.renderCuentasTabs();
+        window.renderCartItems();
+    }
+    if (window.ttConfirm) window.ttConfirm(msg).then(function(ok){ if (ok) _hacer(); });
+    else if (confirm(msg)) _hacer();
 };
 window.eliminarCuenta = window.eliminarCuentaActiva;
 
@@ -1950,10 +1954,14 @@ window.limpiarCuentaActiva = function() {
     var CS = _CS();
     var c = CS.cuentas.find(function(x){ return x.id === CS.activa; });
     if (!c || !c.items.length) return;
-    if (!confirm('¿Vaciar todos los productos de "' + c.nombre + '"?')) return;
-    c.items = [];
-    window.renderCuentasTabs();
-    window.renderCartItems();
+    function _hacer() {
+        c.items = [];
+        window.renderCuentasTabs();
+        window.renderCartItems();
+    }
+    var msg = '¿Vaciar todos los productos de "' + c.nombre + '"?';
+    if (window.ttConfirm) window.ttConfirm(msg).then(function(ok){ if (ok) _hacer(); });
+    else if (confirm(msg)) _hacer();
 };
 
 // ── SPLIT: mover un item a otra cuenta ──
