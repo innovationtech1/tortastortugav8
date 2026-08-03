@@ -711,18 +711,21 @@ function cerrarPanelCajero() {
 }
 
 function cerrarSesionCajero() {
-    if (!confirm('¿Cerrar sesión de cajero?')) return;
-    sessionStorage.removeItem('tt_cajero_id');
-    sessionStorage.removeItem('tt_cajero_nombre');
-    sessionStorage.removeItem('tt_cajero_rol');
-    sessionStorage.removeItem('tt_cajero_ts');
-    sessionStorage.removeItem('tt_turno_caja_id');
-    window._cajeroActivo = null;
-    var banner = document.getElementById('cajero-banner');
-    var btn    = document.getElementById('btn-cajero-header');
-    if (banner) banner.style.display = 'none';
-    if (btn)    btn.style.display    = 'none';
-    window.location.href = 'pages/auth.html';
+    function _hacer() {
+        sessionStorage.removeItem('tt_cajero_id');
+        sessionStorage.removeItem('tt_cajero_nombre');
+        sessionStorage.removeItem('tt_cajero_rol');
+        sessionStorage.removeItem('tt_cajero_ts');
+        sessionStorage.removeItem('tt_turno_caja_id');
+        window._cajeroActivo = null;
+        var banner = document.getElementById('cajero-banner');
+        var btn    = document.getElementById('btn-cajero-header');
+        if (banner) banner.style.display = 'none';
+        if (btn)    btn.style.display    = 'none';
+        window.location.href = 'pages/auth.html';
+    }
+    if (window.ttConfirm) window.ttConfirm('¿Cerrar sesión de cajero?').then(function(ok){ if (ok) _hacer(); });
+    else if (confirm('¿Cerrar sesión de cajero?')) _hacer();
 }
 
 async function cargarPanelCajero() {
@@ -1152,11 +1155,14 @@ function cerrarNombreModal() {
 function limpiarCuentaActual() {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
-    if (c && confirm('¿Limpiar ' + c.nombre + '?')) {
+    if (!c) return;
+    function _hacer() {
         c.items = [];
         window.renderCuentasTabs();
         window.renderCartItems();
     }
+    if (window.ttConfirm) window.ttConfirm('¿Limpiar ' + c.nombre + '?').then(function(ok){ if (ok) _hacer(); });
+    else if (confirm('¿Limpiar ' + c.nombre + '?')) _hacer();
 }
 function ordenarCuentaActiva() {
     var cs = window._cuentasSys;
