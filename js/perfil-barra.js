@@ -141,16 +141,22 @@
     }
 
     window._perfilCerrarSesion = function() {
-        if (!confirm('¿Cerrar sesión?')) return;
-        ['tt_cliente_nombre','tt_cliente_telefono','tt_cliente_ts','tt_cliente_uid',
-         'tt_cajero_id','tt_cajero_nombre','tt_cajero_rol','tt_cajero_ts',
-         'tt_emp_id','tt_emp_pin','tt_emp_ts','tt_emp_docid','tt_emp_nombre','tt_emp_rol'
-        ].forEach(function(k){ sessionStorage.removeItem(k); localStorage.removeItem(k); });
-        var barra = document.getElementById('perfil-barra');
-        if (barra) barra.remove();
-        // Redirigir a inicio
-        var base = location.pathname.indexOf('/pages/') >= 0 ? '../index.html' : 'index.html';
-        location.href = base;
+        function _hacerLogout() {
+            ['tt_cliente_nombre','tt_cliente_telefono','tt_cliente_ts','tt_cliente_uid',
+             'tt_cajero_id','tt_cajero_nombre','tt_cajero_rol','tt_cajero_ts',
+             'tt_emp_id','tt_emp_pin','tt_emp_ts','tt_emp_docid','tt_emp_nombre','tt_emp_rol'
+            ].forEach(function(k){ sessionStorage.removeItem(k); localStorage.removeItem(k); });
+            var barra = document.getElementById('perfil-barra');
+            if (barra) barra.remove();
+            var base = location.pathname.indexOf('/pages/') >= 0 ? '../index.html' : 'index.html';
+            location.href = base;
+        }
+        // Usar el diálogo con marca si está disponible; si no, el nativo.
+        if (window.ttConfirm) {
+            window.ttConfirm('¿Cerrar sesión?').then(function(ok){ if (ok) _hacerLogout(); });
+        } else {
+            if (confirm('¿Cerrar sesión?')) _hacerLogout();
+        }
     };
 
     // Inicializar cuando el DOM este listo
