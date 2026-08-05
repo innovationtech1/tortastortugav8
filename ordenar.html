@@ -1247,7 +1247,7 @@ function cerrarOrdenModal() {
 }
 </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=1785903366">
+    <link rel="stylesheet" href="css/style.css?v=1785903710">
     <script type="module">
         import { auth, db } from './js/firebase-config.js';
         import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -1612,7 +1612,7 @@ function cerrarOrdenModal() {
     <div class="cart-container" style="display:flex;flex-direction:column;height:100dvh;max-height:100dvh;">
 
         <!-- HEADER -->
-        <div style="display:flex;align-items:center;justify-content:space-between;
+        <div id="cart-header-bar" style="display:flex;align-items:center;justify-content:space-between;
                     padding:.9rem 1rem;border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0;
                     position:sticky;top:0;z-index:20;background:#1E1E1E;">
             <div style="display:flex;align-items:center;gap:.5rem;">
@@ -1650,7 +1650,7 @@ function cerrarOrdenModal() {
              border-bottom:1px solid rgba(255,255,255,.06);"></div>
 
         <!-- BOTONES CUENTA -->
-        <div style="display:flex;gap:.4rem;padding:.4rem .9rem;flex-shrink:0;align-items:center;">
+        <div id="cart-nombre-row" style="display:flex;gap:.4rem;padding:.4rem .9rem;flex-shrink:0;align-items:center;">
             <button onclick="window.abrirModalNombreCuenta()"
                 style="flex:2;box-sizing:border-box;padding:.55rem .7rem;
                        background:rgba(255,90,0,.1);
