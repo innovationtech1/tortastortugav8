@@ -900,13 +900,18 @@ h1 {
     -webkit-overflow-scrolling: touch;
 }
 
-/* En pantallas anchas: 2 columnas, pero sin romper el flex del contenedor */
+/* En pantallas anchas: 2 columnas, pero SIN perder el crecimiento flex
+   ni el scroll. El display:grid por sí solo colapsaba la altura y la
+   lista de productos no se veía en escritorio. */
 @media (min-width: 950px) {
     #cart-items {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 0;
         align-content: start;
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
     }
 }
 
