@@ -816,12 +816,14 @@ h1 {
 /* ══════════════════════════════════════════════════════
    CART MODAL
    ══════════════════════════════════════════════════════ */
-/* Congelar la página de atrás cuando el carrito está abierto, para que
-   el rebote del scroll no deje ver el menú. Sin position:fixed (eso
-   desplazaba el layout y escondía el botón de cerrar). */
-body.cart-abierto {
-    overflow: hidden;
-    overscroll-behavior: none;
+/* Congelar la página de atrás cuando el carrito está abierto — SOLO en
+   móvil, donde el rebote deja ver el menú. En escritorio este bloqueo
+   interfería con el scroll interno de la lista de productos. */
+@media (max-width: 699px) {
+    body.cart-abierto {
+        overflow: hidden;
+        overscroll-behavior: none;
+    }
 }
 
 .modal-overlay {
@@ -853,6 +855,7 @@ body.cart-abierto {
     .cart-container {
         height: 100dvh !important;
         max-height: 100dvh !important;
+        overscroll-behavior: none;
     }
 }
 
@@ -874,7 +877,6 @@ body.cart-abierto {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    overscroll-behavior: none;
     transform: translateX(100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: -10px 0 30px rgba(0,0,0,0.5);
