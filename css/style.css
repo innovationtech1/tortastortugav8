@@ -865,8 +865,9 @@ h1 {
 }
 
 /* ══ CARRITO EN ESCRITORIO/TABLET (>=700px) ══
-   Layout de 2 columnas: izquierda = entrega + pago, derecha = productos.
-   Aprovecha el ancho en vez de apilar todo verticalmente. */
+   Layout de 2 columnas robusto: cada bloque se asigna a su área por ID
+   (no por posición), así no se descuadra aunque haya tabs o botones staff.
+   Izquierda: header, nombre, entrega, pago. Derecha: productos. */
 @media (min-width: 700px) {
     .modal-overlay {
         justify-content: center;
@@ -875,26 +876,29 @@ h1 {
     .cart-container {
         width: 94%;
         max-width: 1050px;
-        height: 88vh !important;
-        max-height: 88vh !important;
+        height: 86vh !important;
+        max-height: 86vh !important;
         border-radius: 20px;
         overflow: hidden;
         transform: scale(.97);
         transition: transform 0.25s ease, opacity 0.25s ease;
         box-shadow: 0 25px 70px rgba(0,0,0,0.6);
         display: grid !important;
-        grid-template-columns: 1fr 1.15fr;
-        grid-template-rows: auto auto 1fr;
+        grid-template-columns: 1fr 1.1fr;
+        grid-template-rows: auto auto auto 1fr auto;
         grid-template-areas:
-            "header   header"
-            "cuentas  cuentas"
-            "entrega  productos"
-            "footer   productos";
+            "header    header"
+            "cuentas   productos"
+            "nombre    productos"
+            "entrega   productos"
+            "footer    productos";
     }
     .modal-overlay.active .cart-container { transform: scale(1); }
-    .cart-container > div:nth-child(1) { grid-area: header; }
-    #cuentas-tabs { grid-area: cuentas; }
-    .cart-container > div:nth-child(3) { grid-area: cuentas; }
+
+    /* Asignación por ID (robusta) */
+    #cart-header-bar { grid-area: header; }
+    #cuentas-tabs    { grid-area: cuentas; }
+    #cart-nombre-row { grid-area: nombre; }
     #entrega-carrito {
         grid-area: entrega; align-self: start;
         max-height: none !important; overflow: visible !important;
@@ -910,11 +914,14 @@ h1 {
         display: block !important;
     }
     #cart-items > div { padding-left: 1rem; padding-right: 1rem; }
-    #cart-footer { grid-area: footer; align-self: end; padding: .6rem 1rem !important; }
+    #cart-footer { grid-area: footer; align-self: end; padding: .55rem 1rem !important; }
+
+    /* Footer compacto para que quepa el botón enviar */
     #cart-footer #btn-descuento-carrito,
     #cart-footer button[onclick*="abrirModalPropina"] { padding:.4rem !important; font-size:.7rem !important; }
     #cart-desglose { padding:.4rem .6rem !important; margin-bottom:.4rem !important; font-size:.74rem !important; }
-    #cart-footer button[onclick*="enviarTodasLasCuentas"] { padding:.65rem !important; font-size:.92rem !important; }
+    #cart-footer button[onclick*="enviarTodasLasCuentas"] { padding:.6rem !important; font-size:.9rem !important; }
+    #cart-footer > div:nth-of-type(3) { margin-bottom:.4rem !important; }
 }
 
 /* ══ PANTALLAS GRANDES (>=1200px) ══ */
