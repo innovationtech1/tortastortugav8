@@ -1247,7 +1247,7 @@ function cerrarOrdenModal() {
 }
 </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=1785901860">
+    <link rel="stylesheet" href="css/style.css?v=1785902349">
     <script type="module">
         import { auth, db } from './js/firebase-config.js';
         import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -3512,28 +3512,28 @@ window.initEntregaCarrito = function() {
         return;
     }
 
-    // Domicilio: mostrar resumen de zona, día, horario y ubicación
+    // Domicilio: resumen COMPACTO (2x2) para no tapar los productos
     var _ubicTxt = '—';
     if (e.ubicacion && e.ubicacion.lat) {
-        _ubicTxt = e.ubicacion.direccion ? (e.ubicacion.direccion.length > 28 ? e.ubicacion.direccion.slice(0,28) + '…' : e.ubicacion.direccion) : 'Compartida ✓';
+        _ubicTxt = e.ubicacion.direccion ? (e.ubicacion.direccion.length > 22 ? e.ubicacion.direccion.slice(0,22) + '…' : e.ubicacion.direccion) : 'Compartida ✓';
     }
-    var filas = [
+    var celdas = [
         ['📍 Zona', e.zonaNombre || '—'],
         ['🗓️ Día', e.fechaEtiqueta || '—'],
         ['🕐 Horario', e.horarioEtiqueta || '—'],
         ['📌 Ubicación', _ubicTxt],
     ];
-    sec.innerHTML = '<div style="padding:.5rem .2rem;">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">' +
-        '<span style="font-size:.75rem;color:#FF5A00;font-weight:800;text-transform:uppercase;letter-spacing:.05em;">🚗 Entrega a domicilio</span>' +
-        '<button onclick="window.eoReabrir()" style="background:rgba(255,90,0,.12);border:1px solid rgba(255,90,0,.3);color:#FF5A00;border-radius:8px;padding:.3rem .7rem;font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer;">Cambiar</button>' +
+    sec.innerHTML = '<div style="padding:.4rem .2rem;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;">' +
+        '<span style="font-size:.72rem;color:#FF5A00;font-weight:800;text-transform:uppercase;letter-spacing:.04em;">🚗 Entrega a domicilio</span>' +
+        '<button onclick="window.eoReabrir()" style="background:rgba(255,90,0,.12);border:1px solid rgba(255,90,0,.3);color:#FF5A00;border-radius:8px;padding:.25rem .6rem;font-family:inherit;font-size:.7rem;font-weight:700;cursor:pointer;">Cambiar</button>' +
         '</div>' +
-        '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.6rem .8rem;">' +
-        filas.map(function(f){
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;">' +
+        celdas.map(function(f){
             var ok = f[1] !== '—';
-            return '<div style="display:flex;justify-content:space-between;padding:.25rem 0;font-size:.82rem;">' +
-                '<span style="color:#aaa;">' + f[0] + '</span>' +
-                '<span style="color:' + (ok ? '#25D366' : '#FF4444') + ';font-weight:700;">' + f[1] + '</span></div>';
+            return '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:.4rem .6rem;">' +
+                '<div style="color:#888;font-size:.68rem;margin-bottom:.1rem;">' + f[0] + '</div>' +
+                '<div style="color:' + (ok ? '#25D366' : '#FF4444') + ';font-weight:700;font-size:.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + f[1] + '</div></div>';
         }).join('') +
         '</div></div>';
 };
