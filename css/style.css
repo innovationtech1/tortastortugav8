@@ -869,7 +869,7 @@ body.cart-abierto {
     background: var(--surface);
     width: 100%;
     max-width: 100%;
-    height: 100%;
+    height: 100dvh;
     max-height: 100dvh;
     display: flex;
     flex-direction: column;
