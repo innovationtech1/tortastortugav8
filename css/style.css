@@ -896,10 +896,30 @@ h1 {
         overflow: visible !important;
     }
     #cart-items {
-        min-height: 180px !important;
+        min-height: 260px !important;
     }
     .cart-container {
         max-height: 94vh !important;
+    }
+    /* Footer más compacto en escritorio: deja más espacio a los productos */
+    #cart-footer {
+        padding: .5rem 1rem !important;
+    }
+    #cart-footer > div:first-child { margin-bottom: .35rem !important; }
+    #cart-footer #btn-descuento-carrito,
+    #cart-footer button[onclick*="abrirModalPropina"] {
+        padding: .35rem !important;
+        font-size: .68rem !important;
+    }
+    #cart-desglose {
+        padding: .35rem .6rem !important;
+        margin-bottom: .35rem !important;
+        font-size: .72rem !important;
+    }
+    /* Botón enviar y total más compactos */
+    #cart-footer button[onclick*="enviarTodasLasCuentas"] {
+        padding: .6rem !important;
+        font-size: .92rem !important;
     }
 }
 
