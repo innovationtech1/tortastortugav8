@@ -865,67 +865,60 @@ h1 {
 }
 
 /* ══ CARRITO EN ESCRITORIO/TABLET (>=700px) ══
-   Centrado, ancho cómodo, con márgenes y bordes redondeados — no una
-   tira angosta pegada a la derecha como en móvil. */
+   Layout de 2 columnas: izquierda = entrega + pago, derecha = productos.
+   Aprovecha el ancho en vez de apilar todo verticalmente. */
 @media (min-width: 700px) {
     .modal-overlay {
         justify-content: center;
         align-items: center;
     }
     .cart-container {
-        width: 92%;
-        max-width: 820px;
+        width: 94%;
+        max-width: 1050px;
         height: auto !important;
         max-height: 90vh !important;
         border-radius: 20px;
         overflow: hidden;
-        transform: scale(.96);
+        transform: scale(.97);
         transition: transform 0.25s ease, opacity 0.25s ease;
         box-shadow: 0 25px 70px rgba(0,0,0,0.6);
+        display: grid !important;
+        grid-template-columns: 1fr 1.15fr;
+        grid-template-rows: auto auto 1fr auto;
+        grid-template-areas:
+            "header   header"
+            "cuentas  cuentas"
+            "entrega  productos"
+            "footer   productos";
     }
-    /* Un poco de aire interno para que el contenido no toque los bordes */
-    #cart-items > div { padding-left: 1rem; padding-right: 1rem; }
-    .modal-overlay.active .cart-container {
-        transform: scale(1);
-    }
-    /* En escritorio: resumen compacto SIN scroll propio (fluye normal), y
-       la lista de productos con altura mínima para verse siempre. El footer
-       (total+enviar) queda fijo abajo. */
+    .modal-overlay.active .cart-container { transform: scale(1); }
+    .cart-container > div:nth-child(1) { grid-area: header; }
+    #cuentas-tabs { grid-area: cuentas; }
+    .cart-container > div:nth-child(3) { grid-area: cuentas; }
     #entrega-carrito {
-        max-height: none !important;
-        overflow: visible !important;
+        grid-area: entrega; align-self: start;
+        max-height: none !important; overflow: visible !important;
+        border-bottom: none !important;
     }
     #cart-items {
-        min-height: 260px !important;
+        grid-area: productos;
+        border-left: 1px solid rgba(255,255,255,.08);
+        min-height: 0 !important;
+        max-height: 78vh;
+        overflow-y: auto !important;
+        display: block !important;
     }
-    .cart-container {
-        max-height: 94vh !important;
-    }
-    /* Footer más compacto en escritorio: deja más espacio a los productos */
-    #cart-footer {
-        padding: .5rem 1rem !important;
-    }
-    #cart-footer > div:first-child { margin-bottom: .35rem !important; }
+    #cart-items > div { padding-left: 1rem; padding-right: 1rem; }
+    #cart-footer { grid-area: footer; align-self: end; padding: .6rem 1rem !important; }
     #cart-footer #btn-descuento-carrito,
-    #cart-footer button[onclick*="abrirModalPropina"] {
-        padding: .35rem !important;
-        font-size: .68rem !important;
-    }
-    #cart-desglose {
-        padding: .35rem .6rem !important;
-        margin-bottom: .35rem !important;
-        font-size: .72rem !important;
-    }
-    /* Botón enviar y total más compactos */
-    #cart-footer button[onclick*="enviarTodasLasCuentas"] {
-        padding: .6rem !important;
-        font-size: .92rem !important;
-    }
+    #cart-footer button[onclick*="abrirModalPropina"] { padding:.4rem !important; font-size:.7rem !important; }
+    #cart-desglose { padding:.4rem .6rem !important; margin-bottom:.4rem !important; font-size:.74rem !important; }
+    #cart-footer button[onclick*="enviarTodasLasCuentas"] { padding:.65rem !important; font-size:.92rem !important; }
 }
 
-/* ══ PANTALLAS GRANDES (>=1200px): aún más ancho para 2 columnas cómodas ══ */
+/* ══ PANTALLAS GRANDES (>=1200px) ══ */
 @media (min-width: 1200px) {
-    .cart-container { max-width: 950px; }
+    .cart-container { max-width: 1150px; }
 }
 
 /* ══ CARRITO RESPONSIVE ══
