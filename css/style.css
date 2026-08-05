@@ -888,8 +888,19 @@ h1 {
     .modal-overlay.active .cart-container {
         transform: scale(1);
     }
-    /* En escritorio el resumen de entrega puede ser más alto sin apretar */
-    #entrega-carrito { max-height: 30vh !important; }
+    /* En escritorio: resumen compacto SIN scroll propio (fluye normal), y
+       la lista de productos con altura mínima para verse siempre. El footer
+       (total+enviar) queda fijo abajo. */
+    #entrega-carrito {
+        max-height: none !important;
+        overflow: visible !important;
+    }
+    #cart-items {
+        min-height: 180px !important;
+    }
+    .cart-container {
+        max-height: 94vh !important;
+    }
 }
 
 /* ══ PANTALLAS GRANDES (>=1200px): aún más ancho para 2 columnas cómodas ══ */
