@@ -865,26 +865,27 @@ h1 {
 }
 
 /* ══ CARRITO EN ESCRITORIO/TABLET (>=700px) ══
-   Layout de 2 columnas robusto: cada bloque se asigna a su área por ID
-   (no por posición), así no se descuadra aunque haya tabs o botones staff.
-   Izquierda: header, nombre, entrega, pago. Derecha: productos. */
+   Layout de 2 columnas robusto y compacto: cada bloque se asigna por ID.
+   Izquierda: entrega + pago. Derecha: productos. Dimensiones ajustadas
+   para lucir profesional sin estirarse en pantallas grandes. */
 @media (min-width: 700px) {
     .modal-overlay {
         justify-content: center;
         align-items: center;
+        padding: 1rem;
     }
     .cart-container {
-        width: 94%;
-        max-width: 1050px;
-        height: 86vh !important;
+        width: 100%;
+        max-width: 900px;
+        height: auto !important;
         max-height: 86vh !important;
-        border-radius: 20px;
+        border-radius: 16px;
         overflow: hidden;
         transform: scale(.97);
-        transition: transform 0.25s ease, opacity 0.25s ease;
-        box-shadow: 0 25px 70px rgba(0,0,0,0.6);
+        transition: transform 0.2s ease, opacity 0.2s ease;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.55);
         display: grid !important;
-        grid-template-columns: 1fr 1.1fr;
+        grid-template-columns: 1fr 1fr;
         grid-template-rows: auto auto auto 1fr auto;
         grid-template-areas:
             "header    header"
@@ -895,38 +896,39 @@ h1 {
     }
     .modal-overlay.active .cart-container { transform: scale(1); }
 
-    /* Asignación por ID (robusta) */
-    #cart-header-bar { grid-area: header; }
-    #cuentas-tabs    { grid-area: cuentas; }
-    #cart-nombre-row { grid-area: nombre; }
+    /* Asignación por ID (robusta, no depende de posición) */
+    #cart-header-bar { grid-area: header; padding: .7rem 1rem !important; }
+    #cuentas-tabs    { grid-area: cuentas; padding: .4rem .8rem !important; }
+    #cart-nombre-row { grid-area: nombre; padding: .35rem .8rem !important; }
     #entrega-carrito {
         grid-area: entrega; align-self: start;
         max-height: none !important; overflow: visible !important;
-        border-bottom: none !important;
+        border-bottom: none !important; padding: .35rem .8rem !important;
     }
     #cart-items {
         grid-area: productos;
-        border-left: 1px solid rgba(255,255,255,.08);
+        border-left: 1px solid rgba(255,255,255,.07);
         min-height: 0 !important;
         height: 100%;
         max-height: none !important;
         overflow-y: auto !important;
         display: block !important;
     }
-    #cart-items > div { padding-left: 1rem; padding-right: 1rem; }
-    #cart-footer { grid-area: footer; align-self: end; padding: .55rem 1rem !important; }
+    #cart-items > div { padding-left: .9rem !important; padding-right: .9rem !important; }
+    #cart-footer { grid-area: footer; align-self: end; padding: .5rem .8rem !important; }
 
-    /* Footer compacto para que quepa el botón enviar */
+    /* Footer compacto y proporcionado */
     #cart-footer #btn-descuento-carrito,
-    #cart-footer button[onclick*="abrirModalPropina"] { padding:.4rem !important; font-size:.7rem !important; }
-    #cart-desglose { padding:.4rem .6rem !important; margin-bottom:.4rem !important; font-size:.74rem !important; }
-    #cart-footer button[onclick*="enviarTodasLasCuentas"] { padding:.6rem !important; font-size:.9rem !important; }
-    #cart-footer > div:nth-of-type(3) { margin-bottom:.4rem !important; }
+    #cart-footer button[onclick*="abrirModalPropina"] { padding:.38rem !important; font-size:.7rem !important; }
+    #cart-desglose { padding:.35rem .55rem !important; margin-bottom:.35rem !important; font-size:.72rem !important; }
+    #cart-footer button[onclick*="enviarTodasLasCuentas"] { padding:.58rem !important; font-size:.88rem !important; }
+    /* El resumen de entrega en 2x2 más compacto */
+    #entrega-carrito > div { padding: .3rem 0 !important; }
 }
 
-/* ══ PANTALLAS GRANDES (>=1200px) ══ */
+/* ══ PANTALLAS GRANDES (>=1200px): mantener compacto, no estirar ══ */
 @media (min-width: 1200px) {
-    .cart-container { max-width: 1150px; }
+    .cart-container { max-width: 920px; }
 }
 
 /* ══ CARRITO RESPONSIVE ══
