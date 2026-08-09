@@ -805,12 +805,21 @@ window.normalizarRutaImagen = function(src) {
                     telefono: p.telefono || '',
                     items: p.items || '',
                     total: p.total || '',
+                    totalNum: p.totalNum || 0,
                     tipo: p.tipo || 'pickup',
+                    tipoEntrega: p.tipoEntrega || '',
                     estado: p.estado || '',
                     estadoPago: p.estadoPago || 'Pendiente',
                     metodoPagoReal: p.metodoPagoReal || p.metodoPago || '',
                     cajeroNombre: p.cajeroNombre || '',
                     cobradoPor: p.cobradoPor || '',
+                    // ── Repartidor que hizo la entrega (delivery) ──
+                    repartidorNombre: p.repartidorNombre || '',
+                    repartidorId: p.repartidorId || '',
+                    // ── Zona y fecha de entrega (si fue domicilio) ──
+                    zonaEntregaNombre: p.zonaEntregaNombre || '',
+                    fechaEntregaEtiqueta: p.fechaEntregaEtiqueta || '',
+                    horarioEntregaEtiqueta: p.horarioEntregaEtiqueta || '',
                     fechaOriginal: p.creado || null,
                     cerradoEn: new Date().toISOString(),
                 });
