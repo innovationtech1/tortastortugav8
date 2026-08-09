@@ -722,6 +722,14 @@ window.normalizarRutaImagen = function(src) {
                                cursor:pointer;width:100%;">
                         % Descuento
                     </button>
+                    <button onclick="abrirAsignarRepartidor('${p.id}', '${folioVisible}')"
+                        style="margin-top:4px;background:rgba(37,211,102,.12);
+                               border:1px solid rgba(37,211,102,.35);color:#25D366;
+                               border-radius:7px;padding:.25rem .65rem;
+                               font-family:inherit;font-size:0.72rem;font-weight:700;
+                               cursor:pointer;width:100%;">
+                        🛵 ${p.repartidorNombre ? ('Repartidor: ' + p.repartidorNombre) : 'Asignar repartidor'}
+                    </button>
                 </td>
                 <td>${pagoHTML}</td>
                 <td><select class="status-select ${estadoCls}" data-id="${p.id}" style="width:100%"><option ${p.estado?.includes('Nuevo') ? 'selected' : ''}>Nuevo 🆕</option><option ${p.estado?.includes('preparación') ? 'selected' : ''}>En preparación 🧑‍🍳</option><option ${p.estado?.includes('Listo') ? 'selected' : ''}>Listo ✅</option><option ${p.estado?.includes('Entregado') ? 'selected' : ''}>Entregado 🎉</option><option ${p.estado?.includes('Cancelado') ? 'selected' : ''}>Cancelado ❌</option></select></td>
@@ -1256,6 +1264,74 @@ window.normalizarRutaImagen = function(src) {
         return parseFloat(String(v || '').replace(/[^0-9.]/g, '')) || 0;
     }
 
+    // ── ASIGNAR REPARTIDOR ────────────────────────────────────────
+    var _repPedidoId = null;
+    window.abrirAsignarRepartidor = async function(id, ticket) {
+        _repPedidoId = id;
+        document.getElementById('rep-ticket').textContent = '#' + ticket;
+        document.getElementById('repartidor-modal').style.display = 'flex';
+        var lista = document.getElementById('rep-lista');
+        var quitarBtn = document.getElementById('rep-quitar-btn');
+        lista.innerHTML = '<div style="color:#888;font-size:.82rem;text-align:center;padding:1rem;">Cargando repartidores…</div>';
+        // Mostrar botón de quitar solo si el pedido ya tiene repartidor
+        var pedido = (pedidosDB || []).find(function(p){ return p.id === id; });
+        quitarBtn.style.display = (pedido && pedido.repartidorId) ? 'block' : 'none';
+        try {
+            var snap = await window._adminGetDocs('empleados');
+            var empleados = [];
+            snap.forEach(function(d){ var e = d.data(); e._docId = d.id; empleados.push(e); });
+            if (!empleados.length) {
+                lista.innerHTML = '<div style="color:#888;font-size:.82rem;text-align:center;padding:1rem;">No hay empleados registrados. Agrégalos en la sección de Cajeros.</div>';
+                return;
+            }
+            var asignadoId = pedido ? pedido.repartidorId : null;
+            lista.innerHTML = empleados.map(function(e){
+                var eid = e.empleadoId || e.id || e._docId;
+                var nombre = e.nombre || eid;
+                var rol = e.rol || 'empleado';
+                var activo = asignadoId === eid;
+                return '<button onclick="asignarRepartidor(\'' + eid + '\',\'' + String(nombre).replace(/'/g,"") + '\')" ' +
+                    'style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:.7rem .9rem;' +
+                    'background:' + (activo ? 'rgba(37,211,102,.2)' : 'rgba(255,255,255,.04)') + ';' +
+                    'border:1.5px solid ' + (activo ? 'rgba(37,211,102,.5)' : 'rgba(255,255,255,.1)') + ';' +
+                    'border-radius:10px;color:#fff;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">' +
+                    '<span>' + nombre + '</span>' +
+                    '<span style="font-size:.68rem;color:#888;text-transform:capitalize;">' + rol + (activo ? ' ✓' : '') + '</span>' +
+                    '</button>';
+            }).join('');
+        } catch(err) {
+            lista.innerHTML = '<div style="color:#F44336;font-size:.82rem;text-align:center;padding:1rem;">Error cargando repartidores.</div>';
+        }
+    };
+
+    window.asignarRepartidor = async function(repId, repNombre) {
+        if (!_repPedidoId) return;
+        try {
+            await window._adminUpdateDoc(_repPedidoId, {
+                repartidorId: repId,
+                repartidorNombre: repNombre,
+                repartidorAsignadoEn: new Date().toISOString()
+            });
+            document.getElementById('repartidor-modal').style.display = 'none';
+        } catch(err) {
+            alert('Error asignando repartidor.');
+        }
+    };
+
+    window.quitarRepartidor = async function() {
+        if (!_repPedidoId) return;
+        try {
+            await window._adminUpdateDoc(_repPedidoId, {
+                repartidorId: null,
+                repartidorNombre: null,
+                repartidorAsignadoEn: null
+            });
+            document.getElementById('repartidor-modal').style.display = 'none';
+        } catch(err) {
+            alert('Error quitando repartidor.');
+        }
+    };
+
     window.abrirDescuentoAdmin = function(id, ticket, totalStr) {
         _descPedidoId = id;
         _descTotalOrig = _num(totalStr);
@@ -1604,6 +1680,30 @@ window.guardarProducto = async function(id) {
 </div>
 
 <!-- MODAL DESCUENTO (gerente aplica descuento a orden enviada) -->
+<!-- MODAL: ASIGNAR REPARTIDOR -->
+<div id="repartidor-modal" onclick="if(event.target===this)this.style.display='none'"
+     style="position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9100;
+            display:none;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#1C1C1C;border:1px solid rgba(37,211,102,.4);
+              border-radius:18px;padding:1.5rem;width:100%;max-width:380px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <div style="font-size:.95rem;font-weight:800;color:#25D366;">🛵 Asignar repartidor <span id="rep-ticket" style="color:#fff;"></span></div>
+      <button onclick="document.getElementById('repartidor-modal').style.display='none'"
+        style="background:none;border:1px solid rgba(255,255,255,.1);color:#888;border-radius:8px;padding:.25rem .6rem;cursor:pointer;">✕</button>
+    </div>
+    <div style="font-size:.78rem;color:#aaa;margin-bottom:.8rem;">Elige quién hará esta entrega. El repartidor puede llevar varios pedidos a la vez.</div>
+    <div id="rep-lista" style="display:flex;flex-direction:column;gap:.4rem;max-height:50vh;overflow-y:auto;">
+      <div style="color:#888;font-size:.82rem;text-align:center;padding:1rem;">Cargando repartidores…</div>
+    </div>
+    <button onclick="quitarRepartidor()" id="rep-quitar-btn"
+      style="display:none;width:100%;margin-top:.8rem;padding:.6rem;background:rgba(244,67,54,.12);
+             border:1px solid rgba(244,67,54,.35);color:#F44336;border-radius:10px;
+             font-family:inherit;font-size:.82rem;font-weight:700;cursor:pointer;">
+      Quitar asignación
+    </button>
+  </div>
+</div>
+
 <div id="descuento-modal" onclick="if(event.target===this)this.style.display='none'"
      style="position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9100;
             display:none;align-items:center;justify-content:center;padding:1rem;">
