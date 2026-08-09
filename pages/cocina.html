@@ -469,9 +469,14 @@ function renderGrid() {
 
     if (tabActual === 'activas') {
         pedidos = pedidos.filter(p => !p.estado?.includes('Entregado') && !p.estado?.includes('Listo') && !p.estado?.includes('Cancelado'));
+        // Orden de entrada: la orden más antigua primero (la que lleva más
+        // tiempo esperando), para que la cocina respete el turno de llegada.
         pedidos.sort((a,b) => {
-            const o = {'Nuevo':0,'Nuevo 🆕':0,'En preparación 🧑‍🍳':1};
-            return (o[a.estado]??0) - (o[b.estado]??0);
+            const ta = a.creado?.seconds || 0;
+            const tb = b.creado?.seconds || 0;
+            if (ta !== tb) return ta - tb;               // más antigua primero
+            // Empate por hora: usar el número de folio como desempate
+            return (a.folio || 0) - (b.folio || 0);
         });
     } else if (tabActual === 'listas') {
         pedidos = pedidos.filter(p => p.estado?.includes('Listo'));
