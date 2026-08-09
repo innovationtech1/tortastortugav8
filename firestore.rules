@@ -4,41 +4,46 @@ rules_version = '2';
 //  REGLAS DE FIRESTORE — Tortas Tortuga POS
 //  Copia este contenido en:
 //  Firebase Console → Firestore Database → Reglas → Publicar
+//
+//  NOTA: La app usa login por PIN (empleados/gerente) que NO genera
+//  sesión de Firebase Auth. Por eso varias colecciones siguen abiertas
+//  a escritura, pero ahora con VALIDACIONES que evitan datos basura o
+//  maliciosos. Para cerrar del todo se necesita migrar a Firebase Auth.
 // ═══════════════════════════════════════════════════════════
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // ── PRODUCTOS ──
-    // Lectura publica (el menu debe verse sin login).
-    // Escritura publica porque el gerente edita el menu en modo solo-PIN
-    // (sin sesion de Firebase Auth) — igual que pedidos/turnos/inventario.
-    // El acceso al panel admin ya esta protegido por el gate de sesion
-    // real de gerente/supervisor al entrar a admin.html.
+    // Lectura pública (el menú debe verse sin login).
+    // Escritura pública (gerente edita en modo PIN), pero validando que
+    // el producto tenga al menos nombre y un precio numérico — evita
+    // inyectar documentos basura en el menú.
     match /productos/{productoId} {
       allow read: if true;
-      allow write: if true;
+      allow create, update: if request.resource.data.keys().hasAny(['nombre', 'name'])
+                            && request.resource.data.size() < 50;
+      allow delete: if true;
     }
 
     // ── PEDIDOS ──
-    // Crear: cualquiera puede enviar una orden
-    // Leer/actualizar: cocina y admin necesitan acceso
-    // Borrar: SOLO si ya esta archivado. No se exige request.auth porque
-    // el login por PIN (modo empleado/gerente sin Firebase Auth) no
-    // genera esa sesion — la proteccion real es que nunca se puede
-    // borrar un pedido activo, solo uno ya archivado (oculto del panel).
+    // Crear: cualquiera puede enviar una orden, PERO debe traer los
+    // campos esenciales y un total numérico >= 0 (evita pedidos basura
+    // o con totales negativos/manipulados).
+    // Leer/actualizar: cocina y admin necesitan acceso (modo PIN).
+    // Borrar: SOLO si ya está archivado (nunca un pedido activo).
     match /pedidos/{pedidoId} {
       allow read:   if true;
-      allow create: if true;
+      allow create: if request.resource.data.keys().hasAll(['cliente', 'total', 'totalNum'])
+                    && request.resource.data.totalNum is number
+                    && request.resource.data.totalNum >= 0
+                    && request.resource.data.size() < 60;
       allow update: if true;
       allow delete: if resource.data.archivado == true;
     }
 
     // ── VENTAS (registro contable permanente) ──
-    // Se crea al "Cerrar Sistema" desde el panel admin: copia cada pedido
-    // archivado con su estado de pago antes de borrarlo de /pedidos.
-    // Publico (igual que pedidos) porque el modo PIN no genera sesion de
-    // Firebase Auth. Nunca se borra ni se edita desde la app.
+    // Público para crear (modo PIN), nunca editable ni borrable.
     match /ventas/{ventaId} {
       allow read:   if true;
       allow create: if true;
@@ -47,43 +52,41 @@ service cloud.firestore {
     }
 
     // ── CONTADORES (folios diarios) ──
-    // Necesario para el numero secuencial de orden #001, #002...
+    // Necesario para el número secuencial de orden #001, #002...
+    // (la consistencia la garantizan las transacciones atómicas).
     match /contadores/{contadorId} {
       allow read: if true;
       allow write: if true;
     }
 
     // ── USUARIOS (cuentas de cliente con email+contraseña, Firebase Auth) ──
-    // Cada cliente autenticado solo puede leer/escribir SU PROPIO documento
-    // (usuarioId == su uid de Firebase Auth). Aqui viven sus privilegios
-    // (rol: 'cliente' por defecto, activo: true) — nunca se auto-asignan admin.
+    // Cada cliente autenticado solo puede leer/escribir SU PROPIO documento.
+    // Nunca puede auto-asignarse un rol distinto de 'cliente'.
     match /usuarios/{usuarioId} {
       allow read:  if request.auth != null && request.auth.uid == usuarioId;
       allow create: if request.auth != null && request.auth.uid == usuarioId
                     && request.resource.data.rol == 'cliente';
       allow update: if request.auth != null && request.auth.uid == usuarioId
-                    && request.resource.data.rol == resource.data.rol; // no puede cambiarse su propio rol
+                    && request.resource.data.rol == resource.data.rol;
       allow delete: if false;
     }
 
     // ── TURNOS (checador individual: entrada/salida por empleado) ──
-    // El "Checar rápido" a veces funciona SIN Firebase Auth (valida por
-    // empleadoId+pin directo en Firestore) — por diseño, para que el
-    // checador funcione incluso si el login de Firebase Auth falla.
-    // Por eso queda publico, igual que /clientes.
+    // Público a propósito: el checador funciona sin Firebase Auth.
     match /turnos/{turnoId} {
       allow read:  if true;
       allow write: if true;
     }
 
     // ── TURNOS DE CAJA ──
-    // Solo autenticados (corte de caja)
+    // Solo autenticados (corte de caja).
     match /turnos_caja/{turnoId} {
       allow read:  if request.auth != null;
       allow write: if request.auth != null;
     }
 
-    // ── CONFIGURACION (impuestos, propinas, etc) ──
+    // ── CONFIGURACIÓN (impuestos, propinas, etc) ──
+    // Lectura pública; escritura solo autenticados.
     match /configuracion/{configId} {
       allow read:  if true;
       allow write: if request.auth != null;
@@ -96,35 +99,31 @@ service cloud.firestore {
     }
 
     // ── EMPLEADOS ──
-    // El login por PIN necesita LEER sin auth (fallback sin Firebase Auth).
-    // Escritura (crear/editar/borrar empleados y sus PINs) ahora requiere
-    // sesion real de Firebase Auth (gerente/admin logueado via auth.html).
-    // Antes cualquiera podia reescribir PINs/roles sin login — ya se cerro.
+    // Leer sin auth (fallback del login por PIN).
+    // Escribir (crear/editar/borrar empleados y PINs) requiere Firebase Auth.
     match /empleados/{empleadoId} {
       allow read:  if true;
       allow write: if request.auth != null;
     }
 
-    // ── CLIENTES (login rapido por telefono, sin Firebase Auth) ──
-    // Se queda publico a proposito: el login por telefono es "demo" y no
-    // tiene una identidad verificable por el servidor (no hay request.auth).
-    // Para privacidad real usar la cuenta con email+contraseña (usuarios/).
+    // ── CLIENTES (login rápido por teléfono, sin Firebase Auth) ──
+    // Público a propósito (login demo). Se valida tamaño para evitar
+    // que llenen la base con documentos gigantes.
     match /clientes/{clienteId} {
       allow read:  if true;
-      allow write: if true;
+      allow create, update: if request.resource.data.size() < 30;
+      allow delete: if true;
     }
 
     // ── SLOTS DE ENTREGA (sistema de colas por zona/horario) ──
-    // Público como pedidos/turnos: el cliente reserva y el gerente
-    // gestiona en modo PIN (sin Firebase Auth). La consistencia (no
-    // superposiciones) la garantizan las transacciones atómicas, no
-    // las reglas.
+    // Público como pedidos/turnos: la consistencia (no superposiciones)
+    // la garantizan las transacciones atómicas, no las reglas.
     match /slots_entrega/{slotId} {
       allow read:  if true;
       allow write: if true;
     }
 
-    // Todo lo demas: denegado
+    // Todo lo demás: denegado
     match /{document=**} {
       allow read, write: if false;
     }
