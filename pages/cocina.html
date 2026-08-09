@@ -386,6 +386,33 @@ function parseItems(p) {
     });
 }
 
+/* ── Nombre COMPACTO para cocina ──────────────────────────────
+   Las tortas Original/Turkey/Pork se muestran con un código corto
+   según el precio, para que el cocinero lea más rápido. Solo afecta
+   la pantalla de cocina; el ticket, cliente y reportes no cambian.
+     Original → 1A ($17) / 1B ($16) / 1C ($14)
+     Turkey   → 2A / 2B / 2C
+     Pork     → 3A / 3B / 3C                                     */
+function nombreCorto(item) {
+    const n = (item.nombre || '').toLowerCase();
+    const precio = Number(item.precio) || 0;
+    // Sufijo por precio: 17→A, 16→B, 14→C
+    let suf = '';
+    if (precio === 17) suf = 'A';
+    else if (precio === 16) suf = 'B';
+    else if (precio === 14) suf = 'C';
+
+    let base = null, num = null;
+    if (n.includes('original'))      { base = 'Original';      num = '1'; }
+    else if (n.includes('turkey'))   { base = 'Turkey';        num = '2'; }
+    else if (n.includes('pork'))     { base = 'Pork Head Chz'; num = '3'; }
+
+    // Solo compactar si es una de esas tortas Y el precio coincide con A/B/C
+    if (base && suf) return base + ' ' + num + suf;
+    // Cualquier otro producto se muestra con su nombre normal
+    return item.nombre;
+}
+
 /* ── Render card ────────────────────────────────────────────── */
 function renderCard(p) {
     const ahora  = Date.now();
@@ -422,7 +449,7 @@ function renderCard(p) {
         <div class="kcard-items">
             ${items.map(i=>`
                 <div class="kitem">
-                    <div class="kitem-name">${i.nombre}</div>
+                    <div class="kitem-name">${nombreCorto(i)}</div>
                     ${i.modificaciones?.length ? `<div class="kitem-mods">⚠️ ${i.modificaciones.join(' · ')}</div>` : ''}
                 </div>`).join('')}
         </div>
