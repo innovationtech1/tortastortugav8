@@ -43,6 +43,8 @@ export const CONFIG_COLAS = {
         { id: 'san-antonio', nombre: 'San Antonio' },
         { id: 'converse',    nombre: 'Converse' },
         { id: 'seguin',      nombre: 'Seguin' },
+        { id: 'culebra',     nombre: 'Culebra' },
+        { id: 'castroville', nombre: 'Castroville' },
     ],
 };
 
