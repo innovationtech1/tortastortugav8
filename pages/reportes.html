@@ -213,6 +213,19 @@ function render() {
   const caj = {};
   p.forEach(x => { const c = x.cobradoPor||x.cajeroNombre||'Sin asignar'; if(!caj[c])caj[c]={v:0,o:0}; caj[c].v+=totalDe(x); caj[c].o++; });
 
+  // Repartidores (delivery): agrupa las ventas que tienen repartidor asignado
+  const rep = {};
+  p.forEach(x => {
+    if (!x.repartidorNombre) return; // solo pedidos con repartidor asignado
+    const r = x.repartidorNombre;
+    if (!rep[r]) rep[r] = { v:0, o:0, efectivo:0 };
+    rep[r].v += totalDe(x);
+    rep[r].o++;
+    // Cuánto cobró en efectivo (lo que el repartidor lleva en mano)
+    const met = normalizarMetodo(x.metodoPagoReal || x.metodoPago);
+    if (met === 'efectivo') rep[r].efectivo += totalDe(x);
+  });
+
   // Top productos
   const prods = {};
   p.forEach(x => {
@@ -271,6 +284,21 @@ function render() {
     cajE.forEach(kv => {
       const prom = kv[1].o>0 ? kv[1].v/kv[1].o : 0;
       h += '<div class="fila"><div><div style="font-weight:600;">'+kv[0]+'</div><div style="font-size:.7rem;color:#888;">'+kv[1].o+' órdenes · prom $'+prom.toFixed(2)+'</div></div><span class="morado">$'+kv[1].v.toFixed(2)+'</span></div>';
+    });
+    h += '</div>';
+  }
+
+  // Repartidores (delivery)
+  const repE = Object.entries(rep).sort((a,b)=>b[1].v-a[1].v);
+  if (repE.length) {
+    h += '<div class="seccion"><h3>🛵 Ventas por Repartidor</h3>';
+    repE.forEach(kv => {
+      const prom = kv[1].o>0 ? kv[1].v/kv[1].o : 0;
+      const efec = kv[1].efectivo;
+      h += '<div class="fila"><div><div style="font-weight:600;">'+kv[0]+'</div>'+
+           '<div style="font-size:.7rem;color:#888;">'+kv[1].o+' entregas · prom $'+prom.toFixed(2)+
+           (efec>0 ? ' · 💵 efectivo cobrado: $'+efec.toFixed(2) : '')+'</div></div>'+
+           '<span class="morado">$'+kv[1].v.toFixed(2)+'</span></div>';
     });
     h += '</div>';
   }
