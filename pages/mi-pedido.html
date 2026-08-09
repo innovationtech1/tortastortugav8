@@ -116,6 +116,9 @@ function pasoActual(estado) {
 }
 
 function esMio(p) {
+    // Si el pedido ya fue archivado por el admin (procesado/entregado),
+    // deja de mostrarse al cliente en "Mi Pedido".
+    if (p.archivado === true) return false;
     // Cuenta con email (uid verificable) — coincidencia confiable.
     if (uid && p.clienteUid && p.clienteUid === uid) return true;
     // Login rapido por telefono — coincidencia por numero (solo de interfaz,
