@@ -36,10 +36,13 @@ export const CONFIG_COLAS = {
     intervaloMin: 30,     // minutos por slot
     capacidadPorSlot: 3,  // entregas por horario/zona
     zonas: [
-        { id: 'west',  nombre: 'Zona West' },
-        { id: '211',   nombre: 'Zona 211' },
-        { id: 'norte', nombre: 'Zona Norte' },
-        { id: 'sur',   nombre: 'Zona Sur' },
+        { id: 'west',        nombre: 'Zona West' },
+        { id: '211',         nombre: 'Zona 211' },
+        { id: 'norte',       nombre: 'Zona Norte' },
+        { id: 'sur',         nombre: 'Zona Sur' },
+        { id: 'san-antonio', nombre: 'San Antonio' },
+        { id: 'converse',    nombre: 'Converse' },
+        { id: 'seguin',      nombre: 'Seguin' },
     ],
 };
 
