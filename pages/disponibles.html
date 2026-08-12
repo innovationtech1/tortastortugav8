@@ -199,8 +199,17 @@ if (!miId && !miNombre) {
 } else {
     document.getElementById('rep-nombre').textContent = miNombre || miId;
     aplicarPrefs();
-    initMapaDisp();
+    // Los pedidos y la alarma van PRIMERO y por separado: si el mapa falla,
+    // los pedidos deben seguir llegando igual.
     escuchar();
+    // El mapa se inicializa aparte, protegido, para que un fallo suyo
+    // no rompa el resto de la pantalla.
+    try {
+        initMapaDisp();
+    } catch (e) {
+        var est = document.getElementById('mapa-estado');
+        if (est) est.innerHTML = '⚠️ El mapa no se pudo cargar, pero los pedidos siguen activos.';
+    }
 }
 
 // ── Controles de alarma ──
@@ -302,8 +311,14 @@ let _mapa = null, _capaClientes = null, _marcadorYo = null;
 let _miPos = null; // {lat, lng} del repartidor
 
 function initMapaDisp() {
-    // Verificar que Leaflet cargó (viene de un CDN externo)
+    // Esperar a que Leaflet (L) termine de cargar desde el CDN.
     if (typeof L === 'undefined') {
+        // Reintentar hasta 20 veces (10 seg) antes de rendirse
+        initMapaDisp._intentos = (initMapaDisp._intentos || 0) + 1;
+        if (initMapaDisp._intentos <= 20) {
+            setTimeout(initMapaDisp, 500);
+            return;
+        }
         const est = document.getElementById('mapa-estado');
         est.innerHTML = '⚠️ No se pudo cargar el mapa. Revisa tu conexión y recarga.';
         document.getElementById('mapa-disp').style.display = 'none';
