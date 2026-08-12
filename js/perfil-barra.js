@@ -88,7 +88,8 @@
             ['🛵', 'Mi Ruta', _base() + 'mi-ruta.html', false],
             ['🔔', 'Pedidos Disponibles', _base() + 'disponibles.html', false],
             ['📊', 'Reportes', _base() + 'reportes.html', true],
-            ['⚙️', 'Panel Admin', _base() + 'empleados.html', true],
+            ['⚙️', 'Panel Admin', _base() + 'admin.html', true],
+            ['🧑‍💼', 'Panel Empleado', _base() + 'empleados.html', false],
             ['🏠', 'Inicio', _raiz() + 'index.html', false],
         ];
 
