@@ -116,10 +116,22 @@
 <body>
 
 <div class="ruta-header">
-  <h1>🛵 Mi Ruta</h1>
+  <button onclick="toggleNavMenu()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:10px;width:40px;height:40px;font-size:1.3rem;cursor:pointer;flex-shrink:0;margin-right:.6rem;">☰</button>
+  <h1 style="flex:1;">🛵 Mi Ruta</h1>
   <div style="text-align:right;">
     <div class="rep-nombre" id="rep-nombre">—</div>
     <a href="bienvenida.html" style="color:#fff;font-size:.7rem;text-decoration:underline;opacity:.9;">Salir</a>
+  </div>
+</div>
+
+<!-- Menú de navegación -->
+<div id="nav-menu-overlay" onclick="if(event.target===this)toggleNavMenu()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;">
+  <div style="position:absolute;top:0;left:0;bottom:0;width:80%;max-width:300px;background:#141414;box-shadow:4px 0 20px rgba(0,0,0,.5);overflow-y:auto;">
+    <div style="background:linear-gradient(135deg,#FF5A00,#FF8C00);padding:1.1rem 1rem;font-weight:900;font-size:1.1rem;display:flex;align-items:center;justify-content:space-between;">
+      <span>🐢 Menú</span>
+      <button onclick="toggleNavMenu()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:8px;width:34px;height:34px;font-size:1rem;cursor:pointer;">✕</button>
+    </div>
+    <div id="nav-menu-items"></div>
   </div>
 </div>
 
@@ -194,6 +206,34 @@ function _leer(clave) {
 // Identidad del repartidor (viene del login por PIN de empleado)
 const miId     = (_leer('tt_emp_id') || _leer('tt_cajero_id') || '').trim();
 const miNombre = (_leer('tt_emp_nombre') || _leer('tt_cajero_nombre') || '').trim();
+const miRol    = (_leer('tt_emp_rol') || _leer('tt_cajero_rol') || '').toLowerCase();
+
+// ── Menú de navegación ──
+window.toggleNavMenu = function() {
+    const ov = document.getElementById('nav-menu-overlay');
+    const abierto = ov.style.display === 'block';
+    if (!abierto) construirNavMenu();
+    ov.style.display = abierto ? 'none' : 'block';
+};
+function construirNavMenu() {
+    const esGerente = /gerente|supervisor|admin|dueñ/.test(miRol);
+    const items = [
+        ['🏪','Tienda (Ordenar)','../ordenar.html', false],
+        ['🍳','Cocina','cocina.html', false],
+        ['🛵','Mi Ruta','mi-ruta.html', false],
+        ['🔔','Pedidos Disponibles','disponibles.html', false],
+        ['📊','Reportes','reportes.html', true],
+        ['⚙️','Panel Admin','admin.html', true],
+        ['🧑‍💼','Panel Empleado','empleados.html', false],
+        ['🏠','Inicio','../index.html', false],
+    ];
+    document.getElementById('nav-menu-items').innerHTML = items.map(function(it){
+        if (it[3] && !esGerente) return '';
+        return '<a href="'+it[2]+'" style="display:flex;align-items:center;gap:.8rem;padding:.9rem 1.1rem;'+
+            'color:#eee;text-decoration:none;font-size:.92rem;font-weight:600;border-bottom:1px solid rgba(255,255,255,.05);">'+
+            '<span style="font-size:1.2rem;width:26px;text-align:center;">'+it[0]+'</span>'+it[1]+'</a>';
+    }).join('');
+}
 
 // Si no hay sesión de empleado, mandar a entrar
 if (!miId && !miNombre) {
