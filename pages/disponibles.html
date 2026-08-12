@@ -190,6 +190,10 @@ let vistos = new Set();
 let primeraCarga = true;
 let descartados = new Set(); // pedidos que este repartidor descartó (solo en su pantalla)
 
+// Variables del mapa (declaradas temprano para que initMapaDisp pueda usarlas)
+let _mapa = null, _capaClientes = null, _marcadorYo = null;
+let _miPos = null; // {lat, lng} del repartidor
+
 if (!miId && !miNombre) {
     document.getElementById('lista-disp').innerHTML =
         '<div class="vacio"><div class="emo">🔒</div>Necesitas entrar con tu PIN de empleado.<br><br>' +
@@ -307,8 +311,6 @@ function esDisponible(p) {
 }
 
 // ── MAPA EN VIVO (tortumóvil + clientes) ──────────────────────
-let _mapa = null, _capaClientes = null, _marcadorYo = null;
-let _miPos = null; // {lat, lng} del repartidor
 
 function initMapaDisp() {
     const est = document.getElementById('mapa-estado');
