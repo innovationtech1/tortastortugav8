@@ -1247,7 +1247,7 @@ function cerrarOrdenModal() {
 }
 </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=1786503675">
+    <link rel="stylesheet" href="css/style.css?v=1786503981">
     <script type="module">
         import { auth, db } from './js/firebase-config.js';
         import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -1358,8 +1358,9 @@ function cerrarOrdenModal() {
 
 /* ── MENÚ EN CARRUSEL HORIZONTAL ── */
 .menu-carrusel {
-    display: flex;
-    flex-wrap: nowrap;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
     gap: 1rem;
     overflow-x: auto;
     overflow-y: hidden;
@@ -1373,9 +1374,9 @@ function cerrarOrdenModal() {
 .menu-carrusel::-webkit-scrollbar-track { background: rgba(255,255,255,.04); border-radius: 10px; }
 .menu-carrusel::-webkit-scrollbar-thumb { background: rgba(255,90,0,.4); border-radius: 10px; }
 .menu-carrusel > * {
-    flex: 0 0 auto;
-    width: 300px;
-    max-width: 85vw;
+    flex: 0 0 auto !important;
+    width: 300px !important;
+    max-width: 85vw !important;
     scroll-snap-align: center;
 }
 .carrusel-hint {
