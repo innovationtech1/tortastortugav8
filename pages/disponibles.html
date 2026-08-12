@@ -311,46 +311,51 @@ let _mapa = null, _capaClientes = null, _marcadorYo = null;
 let _miPos = null; // {lat, lng} del repartidor
 
 function initMapaDisp() {
-    // Esperar a que Leaflet (L) termine de cargar desde el CDN.
+    const est = document.getElementById('mapa-estado');
+    // PASO 1: ¿Cargó la librería Leaflet?
     if (typeof L === 'undefined') {
-        // Reintentar hasta 20 veces (10 seg) antes de rendirse
         initMapaDisp._intentos = (initMapaDisp._intentos || 0) + 1;
         if (initMapaDisp._intentos <= 20) {
+            if (est) est.innerHTML = '⏳ Cargando librería del mapa… (intento ' + initMapaDisp._intentos + ')';
             setTimeout(initMapaDisp, 500);
             return;
         }
-        const est = document.getElementById('mapa-estado');
-        est.innerHTML = '⚠️ No se pudo cargar el mapa. Revisa tu conexión y recarga.';
+        if (est) est.innerHTML = '❌ PASO 1 falló: la librería Leaflet no cargó desde tu sitio.';
         document.getElementById('mapa-disp').style.display = 'none';
         return;
     }
-    // Centro inicial: San Antonio, TX (hasta que llegue el GPS)
-    _mapa = L.map('mapa-disp', { zoomControl:true }).setView([29.4241, -98.4936], 12);
+    if (est) est.innerHTML = '✅ Librería OK · creando mapa…';
 
-    // Proveedor de mapa principal: CARTO (gratis, suele ser más rápido/confiable).
-    // Si falla, se cambia automáticamente a OpenStreetMap como respaldo.
-    let tilesFallaron = false;
-    const capaCarto = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution:'© OpenStreetMap © CARTO', subdomains:'abcd', maxZoom:19
+    // PASO 2: Crear el mapa
+    try {
+        _mapa = L.map('mapa-disp', { zoomControl:true }).setView([29.4241, -98.4936], 12);
+    } catch(e) {
+        if (est) est.innerHTML = '❌ PASO 2 falló al crear el mapa: ' + (e.message||e);
+        return;
+    }
+
+    // PASO 3: Cargar las imágenes del mapa (tiles). Contar si cargan o fallan.
+    let tilesOk = 0, tilesFail = 0;
+    const capa = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution:'© OpenStreetMap', maxZoom:19
     });
-    capaCarto.on('tileerror', function(){
-        if (tilesFallaron) return;
-        tilesFallaron = true;
-        // Respaldo: OpenStreetMap estándar
-        _mapa.removeLayer(capaCarto);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution:'© OpenStreetMap', maxZoom:19
-        }).addTo(_mapa);
+    capa.on('tileload', function(){
+        tilesOk++;
+        if (tilesOk === 1 && est) est.innerHTML = '✅ Mapa cargando correctamente';
     });
-    capaCarto.addTo(_mapa);
+    capa.on('tileerror', function(){
+        tilesFail++;
+        if (tilesFail >= 3 && tilesOk === 0 && est) {
+            est.innerHTML = '❌ PASO 3: las imágenes del mapa están BLOQUEADAS por tu red (tiles no cargan)';
+        }
+    });
+    capa.addTo(_mapa);
     _capaClientes = L.layerGroup().addTo(_mapa);
 
-    // El mapa gris casi siempre es Leaflet calculando mal el tamaño al inicio.
-    // Forzar el redibujado varias veces asegura que se pinten los tiles.
+    // Forzar redibujado
     [100, 400, 900, 1600, 2500, 4000].forEach(function(ms){
         setTimeout(function(){ if(_mapa) _mapa.invalidateSize(); }, ms);
     });
-    // Redibujar también cuando la ventana termina de cargar y al rotar
     window.addEventListener('load', function(){ if(_mapa) _mapa.invalidateSize(); });
     window.addEventListener('resize', function(){ if(_mapa) _mapa.invalidateSize(); });
 
