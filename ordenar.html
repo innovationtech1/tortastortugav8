@@ -1247,7 +1247,7 @@ function cerrarOrdenModal() {
 }
 </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=1785904116539">
+    <link rel="stylesheet" href="css/style.css?v=1786503675">
     <script type="module">
         import { auth, db } from './js/firebase-config.js';
         import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -1354,6 +1354,40 @@ function cerrarOrdenModal() {
 #nombre-modal {
     background:#1A1A1A;border:1px solid rgba(255,255,255,.12);
     border-radius:16px;padding:1.25rem;width:100%;max-width:340px;
+}
+
+/* ── MENÚ EN CARRUSEL HORIZONTAL ── */
+.menu-carrusel {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 1rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: .5rem .2rem 1rem;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,90,0,.4) transparent;
+}
+.menu-carrusel::-webkit-scrollbar { height: 8px; }
+.menu-carrusel::-webkit-scrollbar-track { background: rgba(255,255,255,.04); border-radius: 10px; }
+.menu-carrusel::-webkit-scrollbar-thumb { background: rgba(255,90,0,.4); border-radius: 10px; }
+.menu-carrusel > * {
+    flex: 0 0 auto;
+    width: 300px;
+    max-width: 85vw;
+    scroll-snap-align: center;
+}
+.carrusel-hint {
+    text-align: center;
+    font-size: .72rem;
+    color: rgba(255,255,255,.35);
+    margin-top: -.3rem;
+    margin-bottom: .5rem;
+    letter-spacing: .03em;
+}
+@media (min-width: 900px) {
+    .menu-carrusel > * { width: 320px; max-width: 340px; }
 }
 </style>
 
@@ -1593,17 +1627,20 @@ function cerrarOrdenModal() {
 
     <!-- TORTAS -->
     <section class="app-menu-section menu-tab-content" id="tab-tortas">
-        <div class="app-menu-grid" id="menu-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;padding:.5rem 0;"></div>
+        <div class="app-menu-grid menu-carrusel" id="menu-container"></div>
+        <div class="carrusel-hint">← desliza para ver más →</div>
     </section>
 
     <!-- DRINKS -->
     <section class="app-menu-section menu-tab-content" id="tab-drinks" style="display:none;">
-        <div class="app-menu-grid drinks-grid" id="drinks-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;padding:.5rem 0;"></div>
+        <div class="app-menu-grid drinks-grid menu-carrusel" id="drinks-container"></div>
+        <div class="carrusel-hint">← desliza para ver más →</div>
     </section>
 
     <!-- BOTANAS -->
     <section class="app-menu-section menu-tab-content" id="tab-botanas" style="display:none;">
-        <div class="app-menu-grid drinks-grid" id="botanas-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;padding:.5rem 0;"></div>
+        <div class="app-menu-grid drinks-grid menu-carrusel" id="botanas-container"></div>
+        <div class="carrusel-hint">← desliza para ver más →</div>
     </section>
 </main>
 
