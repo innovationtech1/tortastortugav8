@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Pedidos Disponibles — Tortas Tortuga</title>
+<link rel="stylesheet" href="../css/style.css?v=1">
+<style>
+  :root { --primary:#FF5A00; --bg:#0E0E0E; --surface:#1C1C1C; --muted:#888; }
+  * { box-sizing:border-box; }
+  body { background:var(--bg); color:#fff; font-family:'Poppins',system-ui,sans-serif; margin:0; }
+  .disp-header {
+    background:linear-gradient(135deg,#FF5A00,#FF8C00); padding:1rem;
+    display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:10;
+  }
+  .disp-header h1 { font-size:1.1rem; font-weight:900; margin:0; display:flex; align-items:center; gap:.5rem; }
+  .disp-header .rep-nombre { font-size:.72rem; opacity:.92; font-weight:600; }
+  .estado-linea {
+    display:flex; align-items:center; justify-content:center; gap:.5rem;
+    padding:.5rem; font-size:.8rem; font-weight:700;
+    background:rgba(37,211,102,.12); color:#25D366; border-bottom:1px solid rgba(37,211,102,.2);
+  }
+  .estado-linea.offline { background:rgba(255,255,255,.05); color:#888; }
+  .pulso { width:9px; height:9px; border-radius:50%; background:#25D366; animation:pulso 1.4s infinite; }
+  @keyframes pulso { 0%{opacity:1;transform:scale(1);} 50%{opacity:.4;transform:scale(1.4);} 100%{opacity:1;transform:scale(1);} }
+  .disp-cont { max-width:640px; margin:0 auto; padding:1rem; }
+  .controles {
+    display:flex; gap:.5rem; margin-bottom:1rem;
+  }
+  .ctrl-btn {
+    flex:1; background:var(--surface); border:1px solid rgba(255,255,255,.1);
+    border-radius:12px; padding:.7rem .5rem; text-align:center; cursor:pointer;
+    font-family:inherit; color:#fff; font-size:.72rem; font-weight:700;
+    display:flex; flex-direction:column; align-items:center; gap:.25rem;
+  }
+  .ctrl-btn.activo { border-color:rgba(37,211,102,.5); background:rgba(37,211,102,.1); color:#25D366; }
+  .ctrl-btn .ico { font-size:1.3rem; }
+  .pedido-nuevo {
+    background:var(--surface); border:2px solid rgba(255,90,0,.5);
+    border-radius:16px; padding:1.1rem; margin-bottom:.9rem;
+    animation:entra .3s ease;
+  }
+  @keyframes entra { from{transform:translateY(-10px);opacity:0;} to{transform:translateY(0);opacity:1;} }
+  .pn-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:.5rem; }
+  .pn-zona {
+    display:inline-block; background:rgba(255,90,0,.15); color:#FF5A00;
+    border:1px solid rgba(255,90,0,.4); border-radius:8px; padding:.2rem .7rem;
+    font-size:.78rem; font-weight:800; margin-bottom:.4rem;
+  }
+  .pn-cliente { font-size:1.05rem; font-weight:800; }
+  .pn-total { font-size:1.2rem; font-weight:900; color:#25D366; }
+  .pn-linea { font-size:.84rem; color:#ccc; margin:.25rem 0; }
+  .pn-linea a { color:#5B9BFF; }
+  .btn-aceptar {
+    width:100%; margin-top:.7rem; padding:.85rem; border-radius:12px; border:none;
+    background:linear-gradient(135deg,#25D366,#1DA851); color:#fff;
+    font-family:inherit; font-size:1rem; font-weight:800; cursor:pointer;
+  }
+  .btn-aceptar:active { transform:scale(.98); }
+  .btn-descartar {
+    width:100%; margin-top:.4rem; padding:.55rem; border-radius:10px;
+    background:transparent; border:1px solid rgba(255,255,255,.12); color:#888;
+    font-family:inherit; font-size:.78rem; cursor:pointer;
+  }
+  .vacio { text-align:center; padding:3rem 1rem; color:var(--muted); }
+  .vacio .emo { font-size:3rem; margin-bottom:.5rem; }
+  .cargando { text-align:center; padding:2rem; color:var(--muted); }
+  .link-ruta {
+    display:block; text-align:center; margin-top:1rem; color:#FF5A00;
+    font-weight:700; font-size:.85rem; text-decoration:none;
+  }
+</style>
+</head>
+<body>
+
+<div class="disp-header">
+  <h1>🔔 Pedidos Disponibles</h1>
+  <div style="text-align:right;">
+    <div class="rep-nombre" id="rep-nombre">—</div>
+    <a href="empleados.html" style="color:#fff;font-size:.7rem;text-decoration:underline;opacity:.9;">Salir</a>
+  </div>
+</div>
+
+<div class="estado-linea" id="estado-linea">
+  <span class="pulso"></span> <span id="estado-txt">En línea · esperando pedidos</span>
+</div>
+
+<div class="disp-cont">
+  <div class="controles">
+    <button class="ctrl-btn activo" id="ctrl-sonido" onclick="toggleSonido()">
+      <span class="ico">🔊</span><span id="lbl-sonido">Sonido ON</span>
+    </button>
+    <button class="ctrl-btn activo" id="ctrl-vibrar" onclick="toggleVibrar()">
+      <span class="ico">📳</span><span id="lbl-vibrar">Vibrar ON</span>
+    </button>
+    <button class="ctrl-btn" id="ctrl-silenciar" onclick="silenciarAhora()">
+      <span class="ico">🔕</span><span>Silenciar ya</span>
+    </button>
+  </div>
+
+  <div id="lista-disp">
+    <div class="cargando">Cargando pedidos disponibles…</div>
+  </div>
+
+  <a href="mi-ruta.html" class="link-ruta">🛵 Ver mi ruta (pedidos aceptados) →</a>
+</div>
+
+<script src="../js/tt-alert.js"></script>
+<script type="module">
+import { db } from '../js/firebase-config.js';
+import { collection, onSnapshot, doc, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+function _leer(clave) { return sessionStorage.getItem(clave) || localStorage.getItem(clave); }
+
+const miId     = (_leer('tt_emp_id') || _leer('tt_cajero_id') || '').trim();
+const miNombre = (_leer('tt_emp_nombre') || _leer('tt_cajero_nombre') || '').trim();
+
+// Preferencias de alarma (guardadas en el dispositivo)
+let sonidoOn = _leer('tt_disp_sonido') !== '0';
+let vibrarOn = _leer('tt_disp_vibrar') !== '0';
+
+// IDs de pedidos ya vistos (para detectar los nuevos y sonar solo entonces)
+let vistos = new Set();
+let primeraCarga = true;
+let descartados = new Set(); // pedidos que este repartidor descartó (solo en su pantalla)
+
+if (!miId && !miNombre) {
+    document.getElementById('lista-disp').innerHTML =
+        '<div class="vacio"><div class="emo">🔒</div>Necesitas entrar con tu PIN de empleado.<br><br>' +
+        '<a href="bienvenida.html" style="color:#FF5A00;font-weight:700;">Ir a entrar</a></div>';
+    document.getElementById('estado-linea').classList.add('offline');
+    document.getElementById('estado-txt').textContent = 'Sin sesión';
+} else {
+    document.getElementById('rep-nombre').textContent = miNombre || miId;
+    aplicarPrefs();
+    escuchar();
+}
+
+// ── Controles de alarma ──
+window.toggleSonido = function() {
+    sonidoOn = !sonidoOn;
+    try { localStorage.setItem('tt_disp_sonido', sonidoOn ? '1' : '0'); } catch(e){}
+    aplicarPrefs();
+};
+window.toggleVibrar = function() {
+    vibrarOn = !vibrarOn;
+    try { localStorage.setItem('tt_disp_vibrar', vibrarOn ? '1' : '0'); } catch(e){}
+    aplicarPrefs();
+};
+window.silenciarAhora = function() { detenerAlarma(); };
+
+function aplicarPrefs() {
+    const bs = document.getElementById('ctrl-sonido'), bv = document.getElementById('ctrl-vibrar');
+    bs.classList.toggle('activo', sonidoOn);
+    document.getElementById('lbl-sonido').textContent = sonidoOn ? 'Sonido ON' : 'Sonido OFF';
+    bv.classList.toggle('activo', vibrarOn);
+    document.getElementById('lbl-vibrar').textContent = vibrarOn ? 'Vibrar ON' : 'Vibrar OFF';
+}
+
+// ── Alarma (sonido + vibración) ──
+let audioCtx = null, alarmaInterval = null;
+function beep() {
+    try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'sine'; o.frequency.value = 880;
+        o.connect(g); g.connect(audioCtx.destination);
+        g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.3, audioCtx.currentTime + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.4);
+        o.start(); o.stop(audioCtx.currentTime + 0.4);
+    } catch(e){}
+}
+function dispararAlarma() {
+    if (sonidoOn) beep();
+    if (vibrarOn && navigator.vibrate) navigator.vibrate([300, 150, 300]);
+    // Repetir el beep un par de veces para que se note
+    let n = 0;
+    detenerAlarma();
+    alarmaInterval = setInterval(function(){
+        n++;
+        if (n > 3 || !sonidoOn) { detenerAlarma(); return; }
+        beep();
+    }, 700);
+}
+function detenerAlarma() {
+    if (alarmaInterval) { clearInterval(alarmaInterval); alarmaInterval = null; }
+    if (navigator.vibrate) navigator.vibrate(0);
+}
+
+// ── Descartar (solo lo oculta en la pantalla de este repartidor) ──
+window.descartarPedido = function(id) {
+    descartados.add(id);
+    detenerAlarma();
+    render(_ultimaLista);
+};
+
+// ── Aceptar (atómico: solo uno se lo queda) ──
+window.aceptarPedido = async function(id) {
+    detenerAlarma();
+    try {
+        await runTransaction(db, async (tx) => {
+            const ref = doc(db, 'pedidos', id);
+            const snap = await tx.get(ref);
+            if (!snap.exists()) throw new Error('no-existe');
+            const p = snap.data();
+            if (p.repartidorId) throw new Error('ya-tomado');
+            tx.update(ref, {
+                repartidorId: miId,
+                repartidorNombre: miNombre,
+                repartidorAsignadoEn: new Date().toISOString(),
+                aceptadoPorRepartidor: true
+            });
+        });
+        if (window.ttAlert) window.ttAlert('✅ ¡Pedido aceptado! Ya está en tu ruta.');
+    } catch(err) {
+        if (err.message === 'ya-tomado') {
+            if (window.ttAlert) window.ttAlert('😕 Otro repartidor tomó este pedido primero.');
+        } else {
+            alert('No se pudo aceptar. Revisa tu conexión e intenta de nuevo.');
+        }
+    }
+};
+
+// ── Escuchar pedidos disponibles ──
+let _ultimaLista = [];
+function esDisponible(p) {
+    // Domicilio, sin repartidor, no archivado
+    const esDomicilio = (p.tipoEntrega === 'Domicilio') || (p.tipo === 'domicilio') || !!p.zonaEntregaNombre;
+    return esDomicilio && !p.repartidorId && p.archivado !== true;
+}
+
+function escuchar() {
+    onSnapshot(collection(db, 'pedidos'), snap => {
+        const todos = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+        const disp = todos.filter(esDisponible);
+
+        // Detectar pedidos NUEVOS (no vistos antes) para disparar alarma
+        let hayNuevo = false;
+        disp.forEach(p => { if (!vistos.has(p.id)) { vistos.add(p.id); if (!primeraCarga) hayNuevo = true; } });
+        primeraCarga = false;
+
+        if (hayNuevo) dispararAlarma();
+
+        _ultimaLista = disp;
+        render(disp);
+    }, err => {
+        document.getElementById('lista-disp').innerHTML =
+            '<div class="vacio"><div class="emo">⚠️</div>No se pudo conectar. Revisa tu internet.</div>';
+    });
+}
+
+function render(disp) {
+    const cont = document.getElementById('lista-disp');
+    // Quitar los que este repartidor descartó
+    const visibles = disp.filter(p => !descartados.has(p.id));
+
+    if (!visibles.length) {
+        cont.innerHTML = '<div class="vacio"><div class="emo">🕐</div>No hay pedidos disponibles ahora.<br>Cuando entre uno nuevo, sonará la alarma.</div>';
+        return;
+    }
+    // Más recientes primero
+    visibles.sort((a,b) => (b.folio||0) - (a.folio||0));
+
+    cont.innerHTML = visibles.map(p => {
+        const folio = p.folioStr || (p.id ? p.id.slice(-4).toUpperCase() : '');
+        const zona = p.zonaEntregaNombre || 'Sin zona';
+        return '<div class="pedido-nuevo">' +
+            '<div class="pn-zona">📍 ' + zona + '</div>' +
+            '<div class="pn-top">' +
+              '<div class="pn-cliente">' + (p.cliente || p.nombre || 'Cliente') + '</div>' +
+              '<div class="pn-total">' + (p.total || '') + '</div>' +
+            '</div>' +
+            (p.telefono ? '<div class="pn-linea">📞 <a href="tel:'+p.telefono+'">'+p.telefono+'</a></div>' : '') +
+            (p.horarioEntregaEtiqueta ? '<div class="pn-linea">🕐 ' + p.horarioEntregaEtiqueta + '</div>' : '') +
+            '<div class="pn-linea" style="color:#888;">Orden #' + folio + '</div>' +
+            '<button class="btn-aceptar" onclick="aceptarPedido(\'' + p.id + '\')">✅ Aceptar este pedido</button>' +
+            '<button class="btn-descartar" onclick="descartarPedido(\'' + p.id + '\')">Ahora no (descartar)</button>' +
+        '</div>';
+    }).join('');
+}
+</script>
+</body>
+</html>
