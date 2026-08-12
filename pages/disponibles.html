@@ -40,6 +40,12 @@
     border:1px solid rgba(91,155,255,.35); border-radius:8px; padding:.15rem .55rem;
     font-size:.72rem; font-weight:700; margin-left:.4rem;
   }
+  /* El menú de navegación debe quedar por encima de los controles del mapa
+     (Leaflet usa z-index ~1000 en sus botones de zoom). */
+  #nav-menu-overlay { z-index: 4000 !important; }
+  /* Cuando el menú está abierto, ocultar los controles del mapa para que
+     no se traspasen sobre el menú. */
+  body.menu-abierto .leaflet-control-container { visibility: hidden; }
   .controles {
     display:flex; gap:.5rem; margin-bottom:1rem;
   }
@@ -153,6 +159,7 @@ window.toggleNavMenu = function() {
     const abierto = ov.style.display === 'block';
     if (!abierto) construirNavMenu();
     ov.style.display = abierto ? 'none' : 'block';
+    document.body.classList.toggle('menu-abierto', !abierto);
 };
 function construirNavMenu() {
     const esGerente = /gerente|supervisor|admin|dueñ/.test(miRol);
