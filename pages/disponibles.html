@@ -255,33 +255,81 @@ let _mapa = null, _capaClientes = null, _marcadorYo = null;
 let _miPos = null; // {lat, lng} del repartidor
 
 function initMapaDisp() {
+    // Verificar que Leaflet cargó (viene de un CDN externo)
+    if (typeof L === 'undefined') {
+        const est = document.getElementById('mapa-estado');
+        est.innerHTML = '⚠️ No se pudo cargar el mapa. Revisa tu conexión y recarga.';
+        document.getElementById('mapa-disp').style.display = 'none';
+        return;
+    }
     // Centro inicial: San Antonio, TX (hasta que llegue el GPS)
     _mapa = L.map('mapa-disp', { zoomControl:true }).setView([29.4241, -98.4936], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution:'© OpenStreetMap', maxZoom:19
     }).addTo(_mapa);
     _capaClientes = L.layerGroup().addTo(_mapa);
-    setTimeout(function(){ if(_mapa) _mapa.invalidateSize(); }, 200);
 
-    // Rastrear la tortumóvil en tiempo real
-    if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(function(pos){
-            _miPos = { lat:pos.coords.latitude, lng:pos.coords.longitude };
-            pintarYo();
-            const est = document.getElementById('mapa-estado');
-            est.className = 'mapa-estado ok';
-            est.innerHTML = '🚚 Tu tortumóvil está en el mapa · ubicación activa';
-            // Recalcular distancias en las tarjetas
-            render(_ultimaLista);
-        }, function(err){
-            const est = document.getElementById('mapa-estado');
-            est.className = 'mapa-estado';
-            est.innerHTML = '⚠️ Activa el permiso de ubicación para verte en el mapa';
-        }, { enableHighAccuracy:true, maximumAge:5000, timeout:15000 });
-    } else {
-        document.getElementById('mapa-estado').innerHTML = '⚠️ Tu dispositivo no soporta ubicación';
-    }
+    // El mapa gris casi siempre es Leaflet calculando mal el tamaño al inicio.
+    // Forzar el redibujado varias veces asegura que se pinten los tiles.
+    [100, 400, 900, 1600].forEach(function(ms){
+        setTimeout(function(){ if(_mapa) _mapa.invalidateSize(); }, ms);
+    });
+
+    iniciarUbicacion();
 }
+
+function iniciarUbicacion() {
+    const est = document.getElementById('mapa-estado');
+    if (!navigator.geolocation) {
+        est.className = 'mapa-estado';
+        est.innerHTML = '⚠️ Tu dispositivo no soporta ubicación';
+        return;
+    }
+
+    est.className = 'mapa-estado';
+    est.innerHTML = '📍 Activando tu ubicación…';
+
+    navigator.geolocation.watchPosition(function(pos){
+        _miPos = { lat:pos.coords.latitude, lng:pos.coords.longitude };
+        pintarYo();
+        est.className = 'mapa-estado ok';
+        est.innerHTML = '🚚 Tu tortumóvil está en el mapa · ubicación activa';
+        render(_ultimaLista);
+        if (_mapa) _mapa.invalidateSize();
+    }, function(err){
+        // Mensaje claro según el tipo de error
+        est.className = 'mapa-estado';
+        if (err.code === err.PERMISSION_DENIED) {
+            est.innerHTML = '🔒 Ubicación bloqueada · <span style="text-decoration:underline;cursor:pointer;" onclick="mostrarAyudaPermiso()">Toca aquí para activarla</span>';
+            avisarPermisoDenegado();
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+            est.innerHTML = '⚠️ No se pudo obtener tu ubicación · <span style="text-decoration:underline;cursor:pointer;" onclick="iniciarUbicacion()">Reintentar</span>';
+        } else if (err.code === err.TIMEOUT) {
+            est.innerHTML = '⏱️ Tardó mucho · <span style="text-decoration:underline;cursor:pointer;" onclick="iniciarUbicacion()">Reintentar</span>';
+        } else {
+            est.innerHTML = '⚠️ Activa el permiso de ubicación · <span style="text-decoration:underline;cursor:pointer;" onclick="iniciarUbicacion()">Reintentar</span>';
+        }
+    }, { enableHighAccuracy:true, maximumAge:5000, timeout:20000 });
+}
+window.iniciarUbicacion = iniciarUbicacion;
+
+// Aviso una sola vez cuando el permiso está denegado
+let _avisoPermisoMostrado = false;
+function avisarPermisoDenegado() {
+    if (_avisoPermisoMostrado) return;
+    _avisoPermisoMostrado = true;
+    mostrarAyudaPermiso();
+}
+
+window.mostrarAyudaPermiso = function() {
+    var msg = '📍 Para ver tu tortumóvil en el mapa y calcular distancias, necesitas ACTIVAR el permiso de ubicación.\n\n' +
+        'Cómo activarlo:\n' +
+        '1. Toca el candado 🔒 o la (i) junto a la dirección web (arriba)\n' +
+        '2. Busca "Ubicación" y ponlo en "Permitir"\n' +
+        '3. Recarga la página\n\n' +
+        'Si usas Chrome en Android: Ajustes del sitio → Ubicación → Permitir.';
+    if (window.ttAlert) window.ttAlert(msg); else alert(msg);
+};
 
 function pintarYo() {
     if (!_mapa || !_miPos) return;
