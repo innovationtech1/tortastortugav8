@@ -28,7 +28,7 @@
   @keyframes pulso { 0%{opacity:1;transform:scale(1);} 50%{opacity:.4;transform:scale(1.4);} 100%{opacity:1;transform:scale(1);} }
   .disp-cont { max-width:640px; margin:0 auto; padding:1rem; }
   /* Mapa en vivo de la tortumóvil y los clientes */
-  #mapa-disp { width:100%; height:32vh; min-height:220px; background:#222; border-radius:0; }
+  #mapa-disp { width:100%; height:280px; background:#222; border-radius:0; }
   .mapa-estado {
     display:flex; align-items:center; justify-content:center; gap:.4rem;
     padding:.45rem; font-size:.74rem; font-weight:700;
@@ -304,16 +304,33 @@ function initMapaDisp() {
     }
     // Centro inicial: San Antonio, TX (hasta que llegue el GPS)
     _mapa = L.map('mapa-disp', { zoomControl:true }).setView([29.4241, -98.4936], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution:'© OpenStreetMap', maxZoom:19
-    }).addTo(_mapa);
+
+    // Proveedor de mapa principal: CARTO (gratis, suele ser más rápido/confiable).
+    // Si falla, se cambia automáticamente a OpenStreetMap como respaldo.
+    let tilesFallaron = false;
+    const capaCarto = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution:'© OpenStreetMap © CARTO', subdomains:'abcd', maxZoom:19
+    });
+    capaCarto.on('tileerror', function(){
+        if (tilesFallaron) return;
+        tilesFallaron = true;
+        // Respaldo: OpenStreetMap estándar
+        _mapa.removeLayer(capaCarto);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution:'© OpenStreetMap', maxZoom:19
+        }).addTo(_mapa);
+    });
+    capaCarto.addTo(_mapa);
     _capaClientes = L.layerGroup().addTo(_mapa);
 
     // El mapa gris casi siempre es Leaflet calculando mal el tamaño al inicio.
     // Forzar el redibujado varias veces asegura que se pinten los tiles.
-    [100, 400, 900, 1600].forEach(function(ms){
+    [100, 400, 900, 1600, 2500, 4000].forEach(function(ms){
         setTimeout(function(){ if(_mapa) _mapa.invalidateSize(); }, ms);
     });
+    // Redibujar también cuando la ventana termina de cargar y al rotar
+    window.addEventListener('load', function(){ if(_mapa) _mapa.invalidateSize(); });
+    window.addEventListener('resize', function(){ if(_mapa) _mapa.invalidateSize(); });
 
     iniciarUbicacion();
 }
