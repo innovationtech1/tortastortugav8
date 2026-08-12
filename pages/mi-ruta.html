@@ -6,6 +6,8 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>Mi Ruta — Tortas Tortuga</title>
 <link rel="stylesheet" href="../css/style.css?v=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root { --primary:#FF5A00; --bg:#0E0E0E; --surface:#1C1C1C; --muted:#888; }
   * { box-sizing:border-box; }
@@ -51,6 +53,64 @@
   .vacio { text-align:center; padding:3rem 1rem; color:var(--muted); }
   .vacio .emo { font-size:3rem; margin-bottom:.5rem; }
   .cargando { text-align:center; padding:2rem; color:var(--muted); }
+
+  /* ── Vista de ENTREGA (mapa + orden + cobro) ── */
+  #vista-entrega {
+    position:fixed; inset:0; background:var(--bg); z-index:200; display:none;
+    flex-direction:column;
+  }
+  #vista-entrega.abierta { display:flex; }
+  .ve-header {
+    background:linear-gradient(135deg,#FF5A00,#FF8C00); padding:.9rem 1rem;
+    display:flex; align-items:center; gap:.7rem; flex-shrink:0;
+  }
+  .ve-header button.volver {
+    background:rgba(255,255,255,.2); border:none; color:#fff; border-radius:10px;
+    width:38px; height:38px; font-size:1.2rem; cursor:pointer; flex-shrink:0;
+  }
+  .ve-header .ve-tit { font-weight:900; font-size:1.05rem; }
+  .ve-header .ve-sub { font-size:.72rem; opacity:.9; }
+  #mapa-entrega { width:100%; height:38vh; flex-shrink:0; background:#222; }
+  .ve-body { flex:1; overflow-y:auto; padding:1rem; }
+  .ve-orden {
+    background:var(--surface); border:1px solid rgba(255,255,255,.09);
+    border-radius:14px; padding:1rem; margin-bottom:.9rem;
+  }
+  .ve-dato { display:flex; gap:.5rem; font-size:.85rem; margin:.3rem 0; color:#ddd; }
+  .ve-dato b { color:#fff; }
+  .ve-total-row {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top:.7rem; padding-top:.7rem; border-top:1px solid rgba(255,255,255,.1);
+  }
+  .ve-total-row .lbl { font-size:.9rem; font-weight:700; }
+  .ve-total-row .val { font-size:1.4rem; font-weight:900; color:#25D366; }
+  .btn-navegar {
+    display:block; text-align:center; background:rgba(66,133,244,.15);
+    border:1px solid rgba(66,133,244,.4); color:#5B9BFF; border-radius:10px;
+    padding:.7rem; font-weight:700; font-size:.85rem; text-decoration:none; margin-bottom:.9rem;
+  }
+  .cobro-titulo { font-size:.8rem; color:var(--muted); font-weight:700; margin:.3rem 0 .6rem; text-transform:uppercase; letter-spacing:.04em; }
+  .cobro-grid { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; }
+  .cobro-btn {
+    padding:.85rem .5rem; border-radius:12px; border:1.5px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.04); color:#fff; font-family:inherit; font-size:.85rem;
+    font-weight:700; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:.25rem;
+  }
+  .cobro-btn:active { transform:scale(.97); }
+  .cobro-btn.efectivo { border-color:rgba(255,193,7,.4); }
+  .cobro-btn.zelle    { border-color:rgba(109,30,212,.5); }
+  .cobro-btn.cashapp  { border-color:rgba(0,214,79,.4); }
+  .cobro-btn.venmo    { border-color:rgba(0,140,255,.4); }
+  .cobro-btn.tarjeta  { border-color:rgba(91,155,255,.4); }
+  .ve-pagado {
+    background:rgba(37,211,102,.12); border:1px solid rgba(37,211,102,.4);
+    color:#25D366; border-radius:12px; padding:1rem; text-align:center; font-weight:800;
+  }
+  .btn-entregada {
+    width:100%; margin-top:.9rem; padding:.9rem; border-radius:12px; border:none;
+    background:linear-gradient(135deg,#25D366,#1DA851); color:#fff;
+    font-family:inherit; font-size:1rem; font-weight:800; cursor:pointer;
+  }
 </style>
 </head>
 <body>
@@ -75,10 +135,57 @@
   </div>
 </div>
 
+<!-- VISTA DE ENTREGA: mapa + orden + cobro -->
+<div id="vista-entrega">
+  <div class="ve-header">
+    <button class="volver" onclick="cerrarEntrega()">←</button>
+    <div>
+      <div class="ve-tit" id="ve-cliente">Cliente</div>
+      <div class="ve-sub" id="ve-folio">Orden</div>
+    </div>
+  </div>
+  <div id="mapa-entrega"></div>
+  <div class="ve-body">
+    <div class="ve-orden">
+      <div class="ve-dato" id="ve-dir-row">📍 <span id="ve-dir">—</span></div>
+      <div class="ve-dato" id="ve-tel-row">📞 <span id="ve-tel">—</span></div>
+      <div class="ve-dato" id="ve-hora-row">🕐 <span id="ve-hora">—</span></div>
+      <div class="ve-dato" style="flex-direction:column;gap:.15rem;margin-top:.4rem;" id="ve-items"></div>
+      <div class="ve-total-row">
+        <span class="lbl">Total a cobrar</span>
+        <span class="val" id="ve-total">$0.00</span>
+      </div>
+    </div>
+
+    <a class="btn-navegar" id="ve-navegar" href="#" target="_blank" rel="noopener">🧭 Navegar con Google Maps (voz)</a>
+
+    <!-- Zona de cobro (cambia según estado de pago) -->
+    <div id="ve-cobro-zona">
+      <div class="cobro-titulo">💵 Cobrar al cliente</div>
+      <div class="cobro-grid">
+        <button class="cobro-btn efectivo" onclick="cobrarEntrega('Efectivo')">💵<span>Efectivo</span></button>
+        <button class="cobro-btn tarjeta" onclick="cobrarEntrega('Tarjeta')">💳<span>Tarjeta</span></button>
+        <button class="cobro-btn zelle" onclick="cobrarEntrega('Zelle')">🟣<span>Zelle</span></button>
+        <button class="cobro-btn cashapp" onclick="cobrarEntrega('Cash App')">🟢<span>Cash App</span></button>
+        <button class="cobro-btn venmo" onclick="cobrarEntrega('Venmo')">🔵<span>Venmo</span></button>
+      </div>
+    </div>
+
+    <div id="ve-pagado-zona" style="display:none;">
+      <div class="ve-pagado" id="ve-pagado-txt">✅ Pagado</div>
+    </div>
+  </div>
+</div>
+
 <script src="../js/tt-alert.js"></script>
 <script type="module">
 import { db } from '../js/firebase-config.js';
-import { collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { collection, onSnapshot, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// Guarda los pedidos actuales para abrirlos en la vista de entrega
+let _pedidosActuales = [];
+let _mapaLeaflet = null;
+let _pedidoAbierto = null;
 
 function _leer(clave) {
     return sessionStorage.getItem(clave) || localStorage.getItem(clave);
@@ -171,7 +278,7 @@ function render(pedidos) {
             (itemsTxt.length ? '<div class="pc-linea" style="flex-direction:column;gap:.1rem;margin-top:.4rem;">'+
                 itemsTxt.map(function(it){ return '<div>• '+it+'</div>'; }).join('')+'</div>' : '') +
             '<div><span class="pc-pago '+pago.clase+'">'+pago.txt+'</span></div>' +
-            (mapsUrl ? '<a class="btn-maps" href="'+mapsUrl+'" target="_blank" rel="noopener">🗺️ Cómo llegar</a>' : '') +
+            '<button class="btn-maps" style="width:100%;border:1px solid rgba(66,133,244,.4);cursor:pointer;" onclick="abrirEntrega(\''+p.id+'\')">🗺️ Cómo llegar y cobrar</button>' +
         '</div>';
     }).join('');
 }
@@ -181,12 +288,137 @@ function escucharRuta() {
         const todos = snap.docs.map(d => ({ id:d.id, ...d.data() }));
         // Solo los míos, y que no estén archivados
         const mios = todos.filter(p => esMiPedido(p) && p.archivado !== true);
+        _pedidosActuales = mios;
         render(mios);
+        // Si hay una entrega abierta, refrescar su estado de pago en vivo
+        if (_pedidoAbierto) {
+            const actualizado = mios.find(x => x.id === _pedidoAbierto.id);
+            if (actualizado) { _pedidoAbierto = actualizado; refrescarZonaCobro(actualizado); }
+        }
     }, err => {
         document.getElementById('lista-ruta').innerHTML =
             '<div class="vacio"><div class="emo">⚠️</div>No se pudo cargar tu ruta. Revisa tu conexión.</div>';
     });
 }
+
+// ── VISTA DE ENTREGA (mapa + orden + cobro) ──────────────────
+window.abrirEntrega = function(pedidoId) {
+    const p = _pedidosActuales.find(x => x.id === pedidoId);
+    if (!p) return;
+    _pedidoAbierto = p;
+
+    const folio = p.folioStr || (p.id ? p.id.slice(-4).toUpperCase() : '');
+    const dir = p.ubicacionCliente && p.ubicacionCliente.direccion ? p.ubicacionCliente.direccion : '';
+    const lat = p.ubicacionCliente && p.ubicacionCliente.lat;
+    const lng = p.ubicacionCliente && p.ubicacionCliente.lng;
+
+    document.getElementById('ve-cliente').textContent = p.cliente || p.nombre || 'Cliente';
+    document.getElementById('ve-folio').textContent = 'Orden #' + folio + (p.zonaEntregaNombre ? (' · ' + p.zonaEntregaNombre) : '');
+    document.getElementById('ve-dir').textContent = dir || 'Sin dirección';
+    document.getElementById('ve-dir-row').style.display = dir ? 'flex' : 'none';
+    document.getElementById('ve-tel').innerHTML = p.telefono ? '<a href="tel:'+p.telefono+'" style="color:#5B9BFF;">'+p.telefono+'</a>' : '—';
+    document.getElementById('ve-tel-row').style.display = p.telefono ? 'flex' : 'none';
+    document.getElementById('ve-hora').textContent = p.horarioEntregaEtiqueta || '—';
+    document.getElementById('ve-hora-row').style.display = p.horarioEntregaEtiqueta ? 'flex' : 'none';
+    document.getElementById('ve-total').textContent = p.total || '$0.00';
+
+    const itemsTxt = (typeof p.items === 'string' ? p.items : '').split(' | ').filter(Boolean);
+    document.getElementById('ve-items').innerHTML = itemsTxt.length
+        ? itemsTxt.map(function(it){ return '<div>• '+it+'</div>'; }).join('')
+        : '';
+
+    // Botón de navegación externa (por si quiere voz)
+    const navBtn = document.getElementById('ve-navegar');
+    if (lat && lng) navBtn.href = 'https://www.google.com/maps/dir/?api=1&destination=' + lat + ',' + lng;
+    else if (dir) navBtn.href = 'https://www.google.com/maps/search/' + encodeURIComponent(dir);
+    else navBtn.style.display = 'none';
+
+    refrescarZonaCobro(p);
+
+    document.getElementById('vista-entrega').classList.add('abierta');
+
+    // Inicializar el mapa después de que la vista sea visible
+    setTimeout(function(){ initMapaEntrega(lat, lng, p.cliente || 'Cliente', dir); }, 100);
+};
+
+window.cerrarEntrega = function() {
+    document.getElementById('vista-entrega').classList.remove('abierta');
+    _pedidoAbierto = null;
+    if (_mapaLeaflet) { _mapaLeaflet.remove(); _mapaLeaflet = null; }
+};
+
+function initMapaEntrega(lat, lng, nombre, dir) {
+    const cont = document.getElementById('mapa-entrega');
+    if (_mapaLeaflet) { _mapaLeaflet.remove(); _mapaLeaflet = null; }
+
+    if (!lat || !lng) {
+        cont.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#888;font-size:.85rem;text-align:center;padding:1rem;">Este pedido no tiene ubicación GPS.<br>Usa la dirección y el botón de navegar.</div>';
+        return;
+    }
+    cont.innerHTML = '';
+
+    _mapaLeaflet = L.map('mapa-entrega').setView([lat, lng], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+        maxZoom: 19
+    }).addTo(_mapaLeaflet);
+
+    // Pin del cliente
+    L.marker([lat, lng]).addTo(_mapaLeaflet)
+        .bindPopup('<b>' + nombre + '</b>' + (dir ? '<br>' + dir : ''))
+        .openPopup();
+
+    // Intentar ubicar al repartidor y dibujar la ruta (línea recta)
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(pos){
+            const rlat = pos.coords.latitude, rlng = pos.coords.longitude;
+            const yo = L.circleMarker([rlat, rlng], { radius:8, color:'#FF5A00', fillColor:'#FF5A00', fillOpacity:1 }).addTo(_mapaLeaflet);
+            yo.bindPopup('Tú estás aquí');
+            // Línea entre repartidor y cliente
+            L.polyline([[rlat, rlng], [lat, lng]], { color:'#FF5A00', weight:3, dashArray:'6,8' }).addTo(_mapaLeaflet);
+            // Ajustar el mapa para ver ambos puntos
+            _mapaLeaflet.fitBounds([[rlat, rlng], [lat, lng]], { padding:[50,50] });
+        }, function(){ /* sin permiso GPS: solo mostramos al cliente */ }, { enableHighAccuracy:true, timeout:8000 });
+    }
+    // Forzar recálculo de tamaño (Leaflet a veces lo necesita)
+    setTimeout(function(){ if(_mapaLeaflet) _mapaLeaflet.invalidateSize(); }, 200);
+}
+
+// Muestra botones de cobro o el estado "pagado" según corresponda
+function refrescarZonaCobro(p) {
+    const cobroZona = document.getElementById('ve-cobro-zona');
+    const pagadoZona = document.getElementById('ve-pagado-zona');
+    if (p.estadoPago === 'Pagado') {
+        cobroZona.style.display = 'none';
+        pagadoZona.style.display = 'block';
+        document.getElementById('ve-pagado-txt').textContent =
+            '✅ Pagado' + (p.metodoPagoReal ? ' con ' + p.metodoPagoReal : '');
+    } else {
+        cobroZona.style.display = 'block';
+        pagadoZona.style.display = 'none';
+    }
+}
+
+// Procesa el cobro (mismo patrón que el admin)
+window.cobrarEntrega = async function(metodo) {
+    if (!_pedidoAbierto) return;
+    const confirmar = window.ttConfirm
+        ? await window.ttConfirm('¿Confirmar cobro de ' + (_pedidoAbierto.total||'') + ' con ' + metodo + '?')
+        : confirm('¿Confirmar cobro con ' + metodo + '?');
+    if (!confirmar) return;
+    try {
+        await updateDoc(doc(db, 'pedidos', _pedidoAbierto.id), {
+            estadoPago: 'Pagado',
+            metodoPagoReal: metodo,
+            cobradoPor: miNombre || miId,
+            cobradoEn: new Date().toISOString()
+        });
+        // El onSnapshot refrescará la zona de cobro automáticamente
+        if (window.ttAlert) window.ttAlert('✅ Cobro registrado: ' + metodo);
+    } catch(err) {
+        alert('Error al registrar el cobro. Revisa tu conexión.');
+    }
+};
 </script>
 </body>
 </html>
