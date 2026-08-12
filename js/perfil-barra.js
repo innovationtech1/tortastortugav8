@@ -68,6 +68,46 @@
         return { emoji: '🧑‍💼', color: '#25D366', label: rol || 'Empleado' };
     }
 
+    // Detecta la ruta base según si estamos en /pages/ o en la raíz
+    function _base() {
+        return (location.pathname.indexOf('/pages/') >= 0) ? '' : 'pages/';
+    }
+    function _raiz() {
+        return (location.pathname.indexOf('/pages/') >= 0) ? '../' : '';
+    }
+
+    // Construye el menú de navegación del empleado según su rol
+    function _menuNavegacion(sesion) {
+        var rol = (sesion.rol || '').toLowerCase();
+        var esGerente = rol.indexOf('gerente') >= 0 || rol.indexOf('supervisor') >= 0 || rol.indexOf('admin') >= 0 || rol.indexOf('dueñ') >= 0;
+
+        // Cada item: [icono, etiqueta, url, soloGerente]
+        var items = [
+            ['🏪', 'Tienda (Ordenar)', _raiz() + 'ordenar.html', false],
+            ['🍳', 'Cocina', _base() + 'cocina.html', false],
+            ['🛵', 'Mi Ruta', _base() + 'mi-ruta.html', false],
+            ['🔔', 'Pedidos Disponibles', _base() + 'disponibles.html', false],
+            ['📊', 'Reportes', _base() + 'reportes.html', true],
+            ['⚙️', 'Panel Admin', _base() + 'empleados.html', true],
+            ['🏠', 'Inicio', _raiz() + 'index.html', false],
+        ];
+
+        var html = '<div id="pb-menu" class="pb-menu">';
+        items.forEach(function(it) {
+            if (it[3] && !esGerente) return; // ocultar items de gerente a otros roles
+            html += '<a href="' + it[2] + '" class="pb-menu-item">' +
+                '<span class="pb-menu-ico">' + it[0] + '</span>' +
+                '<span>' + it[1] + '</span></a>';
+        });
+        html += '</div>';
+        return html;
+    }
+
+    window._perfilToggleMenu = function() {
+        var m = document.getElementById('pb-menu');
+        if (m) m.classList.toggle('abierto');
+    };
+
     function crearBarra(sesion) {
         // Quitar barra previa si existe
         var vieja = document.getElementById('perfil-barra');
@@ -108,9 +148,13 @@
 
         barra.innerHTML =
             '<div class="pb-wrap" style="border-bottom:2px solid ' + colorBorde + ';">' +
+                (sesion.tipo === 'empleado'
+                    ? '<button class="pb-menu-btn" onclick="window._perfilToggleMenu()" title="Menú" aria-label="Menú">☰</button>'
+                    : '') +
                 contenido +
                 '<button class="pb-salir" onclick="window._perfilCerrarSesion()" title="Cerrar sesión">Salir</button>' +
-            '</div>';
+            '</div>' +
+            (sesion.tipo === 'empleado' ? _menuNavegacion(sesion) : '');
 
         document.body.insertBefore(barra, document.body.firstChild);
 
@@ -135,6 +179,20 @@
                     'color:#F44336; border-radius:8px; padding:.4rem .7rem; font-size:.75rem; font-weight:700;' +
                     'cursor:pointer; flex-shrink:0; font-family:system-ui,sans-serif; }' +
                 '.pb-salir:active { transform:scale(.95); }' +
+                '.pb-menu-btn { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15);' +
+                    'color:#fff; border-radius:8px; width:38px; height:38px; font-size:1.2rem; cursor:pointer;' +
+                    'flex-shrink:0; font-family:system-ui,sans-serif; line-height:1; }' +
+                '.pb-menu-btn:active { transform:scale(.95); }' +
+                '.pb-menu { display:none; flex-direction:column; background:#141414;' +
+                    'border-bottom:2px solid rgba(255,255,255,.08); box-shadow:0 6px 18px rgba(0,0,0,.5); }' +
+                '.pb-menu.abierto { display:flex; animation:pbMenuBaja .18s ease; }' +
+                '@keyframes pbMenuBaja { from{opacity:0;transform:translateY(-6px);} to{opacity:1;transform:translateY(0);} }' +
+                '.pb-menu-item { display:flex; align-items:center; gap:.8rem; padding:.85rem 1.1rem;' +
+                    'color:#eee; text-decoration:none; font-size:.9rem; font-weight:600;' +
+                    'font-family:system-ui,sans-serif; border-bottom:1px solid rgba(255,255,255,.05); }' +
+                '.pb-menu-item:active { background:rgba(255,90,0,.15); }' +
+                '.pb-menu-item:hover { background:rgba(255,255,255,.05); }' +
+                '.pb-menu-ico { font-size:1.2rem; width:26px; text-align:center; }' +
                 '@media (max-width:480px){ .pb-badge{display:none;} .pb-nombre{font-size:.85rem;} }';
             document.head.appendChild(st);
         }
