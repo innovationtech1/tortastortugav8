@@ -202,6 +202,7 @@ body.compacto .kcard-items{padding:.5rem .7rem;}
     <div class="stat"><div class="stat-val" id="cnt-p" style="color:var(--blue)">0</div><div class="stat-lbl">Cocina</div></div>
     <div class="stat"><div class="stat-val" id="cnt-l" style="color:var(--green)">0</div><div class="stat-lbl">Listos</div></div>
     <div class="stat"><div class="stat-val" id="cnt-e" style="color:var(--muted)">0</div><div class="stat-lbl">Entregados</div></div>
+    <div class="stat"><div class="stat-val" id="cnt-prom" style="color:#25D366">—</div><div class="stat-lbl">Prom. cocina</div></div>
   </div>
   <div class="header-btns">
     <button class="hbtn" onclick="window.location.href='../ordenar.html'" style="background:rgba(255,90,0,.2);border-color:rgba(255,90,0,.5);color:#FF5A00;">🏪 Tienda</button>
@@ -417,8 +418,12 @@ function nombreCorto(item) {
 function renderCard(p) {
     const ahora  = Date.now();
     const ts     = p.creado?.seconds ? p.creado.seconds*1000 : ahora;
-    const secs   = (ahora-ts)/1000;
+    // Si el pedido ya fue entregado (o cancelado), el cronómetro se DETIENE
+    // en el momento de la entrega. Si sigue activo, cuenta hasta ahora.
     const est    = p.estado || '';
+    const entregado = est.includes('Entregado') || est.includes('Cancelado');
+    const finTiempo = (entregado && p.tiempos && p.tiempos.entregada) ? p.tiempos.entregada : ahora;
+    const secs   = Math.max(0, (finTiempo - ts) / 1000);
     const cls    = est.includes('preparación') ? 'prep'
                  : est.includes('Listo')       ? 'listo'
                  : est.includes('Entregado')   ? 'entregado'
@@ -494,6 +499,27 @@ function renderGrid() {
     document.getElementById('cnt-p').textContent = todosHoy.filter(p=>p.estado?.includes('preparación')).length;
     document.getElementById('cnt-l').textContent = todosHoy.filter(p=>p.estado?.includes('Listo')).length;
     document.getElementById('cnt-e').textContent = todosHoy.filter(p=>p.estado?.includes('Entregado')).length;
+
+    // ── Promedio de tiempo de cocina en tiempo real ──
+    // Se calcula con los pedidos ENTREGADOS hoy: desde que se creó hasta que
+    // se entregó (tiempos.entregada). Solo cuenta los que tienen ambos datos.
+    const entregadosConTiempo = todosHoy.filter(function(p){
+        return p.estado?.includes('Entregado') && p.tiempos && p.tiempos.entregada && p.creado?.seconds;
+    });
+    const promEl = document.getElementById('cnt-prom');
+    if (entregadosConTiempo.length && promEl) {
+        let totalSegs = 0;
+        entregadosConTiempo.forEach(function(p){
+            const inicio = p.creado.seconds * 1000;
+            const fin = p.tiempos.entregada;
+            totalSegs += Math.max(0, (fin - inicio) / 1000);
+        });
+        const promSegs = totalSegs / entregadosConTiempo.length;
+        const m = Math.floor(promSegs / 60);
+        promEl.textContent = m < 1 ? '<1m' : (m + 'm');
+    } else if (promEl) {
+        promEl.textContent = '—';
+    }
 
     const grid = document.getElementById('kds-grid');
     if (!pedidos.length) {
