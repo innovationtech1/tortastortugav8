@@ -1177,9 +1177,13 @@ function renderAccesosPrivilegiados(){
   // Botones extra solo para gerente/supervisor (nivel 3+)
   if(nivelActual >= 3){
     html += `
+        <button class="acceso-btn acceso-btn-priv" onclick="window.location.href='admin.html'">
+          <span class="acceso-ico" style="background:rgba(255,90,0,.18);color:var(--primary);">🟢</span>
+          <span class="acceso-txt">Panel Admin en Vivo</span>
+        </button>
         <button class="acceso-btn acceso-btn-priv" onclick="mostrarAdmin(${nivelActual})">
           <span class="acceso-ico" style="background:rgba(255,90,0,.18);color:var(--primary);">⚙️</span>
-          <span class="acceso-txt">Panel Admin</span>
+          <span class="acceso-txt">Panel Gestión</span>
         </button>
         <button class="acceso-btn acceso-btn-priv" onclick="mostrarMaster()">
           <span class="acceso-ico" style="background:rgba(167,139,250,.15);color:var(--sup);">📊</span>
