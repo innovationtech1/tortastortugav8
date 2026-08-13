@@ -54,7 +54,7 @@
 
         <div id="modo-telefono-wrap">
         <div style="text-align:center;">
-            <span class="demo-badge">⚙️ MODO DEMO — código simulado</span>
+            <span class="demo-badge">🐢 Entra con tu nombre y teléfono</span>
         </div>
 
         <!-- PASO 1: Telefono -->
@@ -72,7 +72,7 @@
             <div class="auth-message" id="status-1"></div>
 
             <button class="btn-primary" onclick="enviarCodigo()" id="btn-enviar">
-                <span class="btn-text">Enviar código</span>
+                <span class="btn-text">Entrar a ordenar</span>
             </button>
         </div>
 
@@ -164,7 +164,7 @@
 
 <script type="module">
 import { auth, db } from '../js/firebase-config.js';
-import { doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { doc, setDoc, getDoc, getDocs, collection, query, where } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import {
     createUserWithEmailAndPassword, signInWithEmailAndPassword,
     sendPasswordResetEmail, updateProfile
@@ -218,60 +218,90 @@ function guardarSesionCliente(nombre, telefono, uid) {
 }
 
 /* ── LOGIN POR TELEFONO (modo demo, sin Firebase Auth) ──────── */
-window.enviarCodigo = function() {
+// Teléfonos obviamente falsos que rechazamos
+const TELEFONOS_FALSOS = ['0000000000','1111111111','2222222222','3333333333',
+    '4444444444','5555555555','6666666666','7777777777','8888888888','9999999999',
+    '1234567890','0123456789'];
+const MAX_PEDIDOS_ACTIVOS = 5; // límite anti-spam por teléfono
+
+window.enviarCodigo = async function() {
     const nombre = (document.getElementById('nombre').value || '').trim();
     const tel = (document.getElementById('telefono').value || '').trim();
     const soloDigitos = tel.replace(/[^0-9]/g, '');
 
-    if (!nombre) { showStatus('status-1', 'Escribe tu nombre', 'error'); return; }
-    if (soloDigitos.length < 10) { showStatus('status-1', 'Escribe un teléfono válido de 10 dígitos', 'error'); return; }
-
-    // ── MODO DEMO: generar codigo de 4 digitos y mostrarlo ──
-    // Para SMS real: aqui iria signInWithPhoneNumber de Firebase Phone Auth
-    _codigoGenerado = String(Math.floor(1000 + Math.random() * 9000));
-    _datosCliente = { nombre: nombre, telefono: soloDigitos };
-
-    document.getElementById('codigo-mostrado').textContent = _codigoGenerado;
-    showStatus('status-1', 'Código generado (en SMS real llegaría a tu teléfono)', 'success');
-
-    setTimeout(function(){
-        document.getElementById('paso-telefono').classList.remove('activo');
-        document.getElementById('paso-codigo').classList.add('activo');
-        document.getElementById('codigo-input').focus();
-    }, 800);
-};
-
-window.verificarCodigo = async function() {
-    const ingresado = (document.getElementById('codigo-input').value || '').trim();
-
-    if (ingresado !== _codigoGenerado) {
-        showStatus('status-2', 'Código incorrecto. Revisa e intenta de nuevo.', 'error');
-        return;
+    // ── Validaciones anti-spam ──
+    // 1. Nombre: al menos 2 letras reales
+    const letras = (nombre.match(/[a-zA-ZáéíóúñÁÉÍÓÚÑ]/g) || []).length;
+    if (!nombre || letras < 2) {
+        showStatus('status-1', 'Escribe tu nombre real (mínimo 2 letras)', 'error'); return;
+    }
+    // 2. Teléfono: 10 dígitos
+    if (soloDigitos.length !== 10) {
+        showStatus('status-1', 'Escribe un teléfono válido de 10 dígitos', 'error'); return;
+    }
+    // 3. Rechazar teléfonos obviamente falsos
+    if (TELEFONOS_FALSOS.indexOf(soloDigitos) >= 0) {
+        showStatus('status-1', 'Ese teléfono no es válido. Usa tu número real.', 'error'); return;
+    }
+    // 4. No puede empezar en 0 o 1 (los códigos de área de EE.UU. no lo hacen)
+    if (soloDigitos[0] === '0' || soloDigitos[0] === '1') {
+        showStatus('status-1', 'Revisa tu teléfono, parece incompleto.', 'error'); return;
     }
 
-    showStatus('status-2', 'Verificando...', 'info');
+    showStatus('status-1', 'Entrando…', 'info');
 
+    // ── Anti-spam: límite de pedidos activos por teléfono ──
     try {
-        const clienteId = 'cliente_' + _datosCliente.telefono;
-        await setDoc(doc(db, 'clientes', clienteId), {
-            nombre: _datosCliente.nombre,
-            telefono: _datosCliente.telefono,
+        const q = query(collection(db, 'pedidos'), where('telefono', '==', soloDigitos));
+        const snap = await getDocs(q);
+        let activos = 0;
+        snap.forEach(function(d){
+            const p = d.data();
+            // Cuenta como activo si no está archivado ni entregado
+            if (p.archivado !== true && !(p.estado || '').includes('Entregado')) activos++;
+        });
+        if (activos >= MAX_PEDIDOS_ACTIVOS) {
+            showStatus('status-1', 'Tienes muchos pedidos en proceso. Espera a que se completen antes de pedir más.', 'error');
+            return;
+        }
+    } catch(e) {
+        // Si falla la verificación (ej. sin conexión), dejamos pasar — la revisión final la hace el admin
+        console.warn('No se pudo verificar límite de pedidos:', e);
+    }
+
+    // ── Guardar/actualizar cliente y reconocer si ya existía ──
+    let clienteConocido = false;
+    try {
+        const clienteId = 'cliente_' + soloDigitos;
+        const ref = doc(db, 'clientes', clienteId);
+        const existente = await getDoc(ref);
+        if (existente.exists()) clienteConocido = true;
+        await setDoc(ref, {
+            nombre: nombre,
+            telefono: soloDigitos,
             ultimoAcceso: new Date().toISOString(),
+            visitas: ((existente.exists() && existente.data().visitas) || 0) + 1,
         }, { merge: true });
     } catch(e) {
         console.warn('No se pudo guardar el cliente:', e);
     }
 
-    guardarSesionCliente(_datosCliente.nombre, _datosCliente.telefono, null);
+    guardarSesionCliente(nombre, soloDigitos, null);
 
-    showStatus('status-2', '¡Bienvenido ' + _datosCliente.nombre + '!', 'success');
+    const saludo = clienteConocido ? ('¡Hola de nuevo, ' + nombre + '! 🐢') : ('¡Bienvenido, ' + nombre + '!');
+    showStatus('status-1', saludo, 'success');
 
-    setTimeout(function(){ window.location.href = '../ordenar.html'; }, 900);
+    setTimeout(function(){ window.location.href = '../ordenar.html'; }, 700);
 };
 
+// (Ya no se usa código; se conserva por compatibilidad si algo la llama)
+window.verificarCodigo = window.enviarCodigo;
+
 window.volverPaso1 = function() {
-    document.getElementById('paso-codigo').classList.remove('activo');
-    document.getElementById('paso-telefono').classList.add('activo');
+    const pc = document.getElementById('paso-codigo');
+    const pt = document.getElementById('paso-telefono');
+    if (pc) pc.classList.remove('activo');
+    if (pt) pt.classList.add('activo');
     var s = document.getElementById('status-2');
     if (s) s.style.display = 'none';
 };
