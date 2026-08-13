@@ -706,30 +706,36 @@ window.normalizarRutaImagen = function(src) {
 </td>
                 <td>
                     <div class="order-items">${displayItems}</div>
-                    <button onclick="abrirEditorAdmin('${p.id}')"
-                        style="margin-top:5px;background:rgba(167,139,250,.15);
-                               border:1px solid rgba(167,139,250,.4);color:#A78BFA;
-                               border-radius:7px;padding:.25rem .65rem;
-                               font-family:inherit;font-size:0.72rem;font-weight:700;
-                               cursor:pointer;width:100%;">
-                        ✏️ Editar orden
-                    </button>
-                    <button onclick="abrirDescuentoAdmin('${p.id}', '${folioVisible}', '${String(p.total||'').replace(/'/g,'')}')"
-                        style="margin-top:4px;background:rgba(255,90,0,.12);
-                               border:1px solid rgba(255,90,0,.35);color:#FF5A00;
-                               border-radius:7px;padding:.25rem .65rem;
-                               font-family:inherit;font-size:0.72rem;font-weight:700;
-                               cursor:pointer;width:100%;">
-                        % Descuento
-                    </button>
-                    <button onclick="abrirAsignarRepartidor('${p.id}', '${folioVisible}')"
-                        style="margin-top:4px;background:rgba(37,211,102,.12);
-                               border:1px solid rgba(37,211,102,.35);color:#25D366;
-                               border-radius:7px;padding:.25rem .65rem;
-                               font-family:inherit;font-size:0.72rem;font-weight:700;
-                               cursor:pointer;width:100%;">
-                        🛵 ${p.repartidorNombre ? ('Repartidor: ' + p.repartidorNombre) : 'Asignar repartidor'}
-                    </button>
+                    <div style="display:flex;gap:5px;margin-top:6px;">
+                        <button onclick="abrirEditorAdmin('${p.id}')"
+                            style="flex:1;background:rgba(167,139,250,.15);
+                                   border:1px solid rgba(167,139,250,.4);color:#A78BFA;
+                                   border-radius:8px;padding:.4rem .5rem;
+                                   font-family:inherit;font-size:0.74rem;font-weight:700;cursor:pointer;">
+                            ✏️ Editar
+                        </button>
+                        <button onclick="window.toggleAccionesPedido('${p.id}')"
+                            style="flex:0 0 auto;background:rgba(255,255,255,.06);
+                                   border:1px solid rgba(255,255,255,.18);color:#fff;
+                                   border-radius:8px;padding:.4rem .8rem;
+                                   font-family:inherit;font-size:0.78rem;font-weight:800;cursor:pointer;">
+                            ⋯ Más
+                        </button>
+                    </div>
+                    <div id="acciones-${p.id}" style="display:none;margin-top:6px;background:#111;border:1px solid rgba(255,255,255,.12);border-radius:10px;overflow:hidden;">
+                        <button onclick="abrirDescuentoAdmin('${p.id}', '${folioVisible}', '${String(p.total||'').replace(/'/g,'')}')"
+                            style="display:flex;align-items:center;gap:8px;width:100%;text-align:left;
+                                   background:none;border:none;border-bottom:1px solid rgba(255,255,255,.06);
+                                   color:#FF5A00;padding:.6rem .8rem;font-family:inherit;font-size:0.8rem;font-weight:700;cursor:pointer;">
+                            <span>%</span> Aplicar descuento
+                        </button>
+                        <button onclick="abrirAsignarRepartidor('${p.id}', '${folioVisible}')"
+                            style="display:flex;align-items:center;gap:8px;width:100%;text-align:left;
+                                   background:none;border:none;
+                                   color:#25D366;padding:.6rem .8rem;font-family:inherit;font-size:0.8rem;font-weight:700;cursor:pointer;">
+                            <span>🛵</span> ${p.repartidorNombre ? ('Repartidor: ' + p.repartidorNombre) : 'Asignar repartidor'}
+                        </button>
+                    </div>
                 </td>
                 <td>${pagoHTML}</td>
                 <td><select class="status-select ${estadoCls}" data-id="${p.id}" style="width:100%"><option ${p.estado?.includes('Nuevo') ? 'selected' : ''}>Nuevo 🆕</option><option ${p.estado?.includes('preparación') ? 'selected' : ''}>En preparación 🧑‍🍳</option><option ${p.estado?.includes('Listo') ? 'selected' : ''}>Listo ✅</option><option ${p.estado?.includes('Entregado') ? 'selected' : ''}>Entregado 🎉</option><option ${p.estado?.includes('Cancelado') ? 'selected' : ''}>Cancelado ❌</option></select></td>
@@ -1275,6 +1281,16 @@ window.normalizarRutaImagen = function(src) {
 
     // ── ASIGNAR REPARTIDOR ────────────────────────────────────────
     var _repPedidoId = null;
+    // ── Menú "⋯ Más" de acciones por pedido ──
+    window.toggleAccionesPedido = function(id) {
+        var menu = document.getElementById('acciones-' + id);
+        if (!menu) return;
+        var abierto = menu.style.display === 'block';
+        // Cerrar todos los otros menús abiertos primero
+        document.querySelectorAll('[id^="acciones-"]').forEach(function(m){ m.style.display = 'none'; });
+        menu.style.display = abierto ? 'none' : 'block';
+    };
+
     window.abrirAsignarRepartidor = async function(id, ticket) {
         _repPedidoId = id;
         document.getElementById('rep-ticket').textContent = '#' + ticket;
