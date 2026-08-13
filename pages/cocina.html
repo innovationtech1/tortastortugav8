@@ -245,7 +245,7 @@ body.compacto .kcard-items{padding:.5rem .7rem;}
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import {
     getFirestore, collection, onSnapshot, updateDoc, deleteDoc,
-    doc, addDoc, serverTimestamp
+    doc, addDoc, serverTimestamp, query, orderBy, limit
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const FB_CONFIG = {
@@ -744,7 +744,11 @@ let _kdsUnsub = null;
 function iniciarKDS(){
   if(_kdsUnsub) try{_kdsUnsub();}catch(e){}
   _primeraCarga = true;  // cada (re)conexión: la 1a instantánea solo fija base
-  _kdsUnsub = onSnapshot(collection(db,'pedidos'), snap => {
+  // Optimización: en vez de traer TODA la colección (que crece sin límite),
+  // traemos solo los 150 pedidos más recientes por fecha. La cocina solo
+  // necesita los del día y recientes; esto mantiene la pantalla ágil.
+  // Si la consulta optimizada fallara (ej. falta de índice), se usa la normal.
+  function _procesarSnap(snap) {
     todos = snap.docs.map(d => ({ id:d.id, ...d.data() }));
 
     const hoy = new Date(); hoy.setHours(0,0,0,0);
@@ -787,7 +791,19 @@ function iniciarKDS(){
     }
 
     renderGrid();
-  });
+  }
+
+  // Intentar la consulta optimizada (limitada). Si falla (ej. falta de índice),
+  // usar la consulta completa como respaldo para no quedarnos sin pedidos.
+  try {
+    const qPedidos = query(collection(db,'pedidos'), orderBy('creado','desc'), limit(150));
+    _kdsUnsub = onSnapshot(qPedidos, _procesarSnap, err => {
+        console.warn('Consulta optimizada falló, usando la completa:', err.message);
+        _kdsUnsub = onSnapshot(collection(db,'pedidos'), _procesarSnap);
+    });
+  } catch(e) {
+    _kdsUnsub = onSnapshot(collection(db,'pedidos'), _procesarSnap);
+  }
 }
 
 // Iniciar el KDS (conectar a Firebase)
