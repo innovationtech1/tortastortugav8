@@ -99,6 +99,17 @@ window.normalizarRutaImagen = function(src) {
         .filters-bar { padding: 0 0.85rem 0.75rem; display: flex; gap: 0.45rem; flex-wrap: wrap; align-items: center; }
         .filter-btn { padding: 0.35rem 0.75rem; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.18s; white-space: nowrap; flex-shrink: 0; }
         .nav-btn { padding: 0.35rem 0.75rem; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.18s; white-space: nowrap; flex-shrink: 0; }
+        /* ── Accesos tipo tarjeta (icono circular + texto), responsive ── */
+        .accesos-admin { display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:.6rem; padding:.5rem 0; }
+        .acc-card { background:var(--surface,#1A1A1A); border:1px solid var(--border,rgba(255,255,255,.1)); border-radius:14px; padding:.8rem .5rem; display:flex; flex-direction:column; align-items:center; gap:.45rem; cursor:pointer; transition:all .18s; font-family:inherit; }
+        .acc-card:hover { transform:translateY(-2px); border-color:rgba(255,90,0,.4); background:rgba(255,90,0,.05); }
+        .acc-card:active { transform:scale(.97); }
+        .acc-card-ico { width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.35rem; }
+        .acc-card-txt { font-size:.76rem; font-weight:700; text-align:center; color:#fff; line-height:1.2; }
+        /* En horizontal (landscape) más columnas para aprovechar el ancho */
+        @media (orientation: landscape) and (min-width: 700px) {
+            .accesos-admin { grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); }
+        }
         .filter-btn.active, .filter-btn:hover { background: rgba(255,90,0,0.15); border-color: var(--primary); color: var(--primary); }
         .btn-empleados:hover { background: rgba(167,139,250,0.15) !important; border-color: #A78BFA !important; color: #A78BFA !important; }
 
@@ -223,16 +234,42 @@ window.normalizarRutaImagen = function(src) {
 <div id="dashboard">
     <div class="top-bar">
         <div class="top-bar-logo"><img src="../icons/icon-192.png" alt="" style="width:26px;height:26px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px;" loading="lazy"> <span>Tortas Tortuga</span></div>
-        <div class="top-bar-actions" style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; overflow-x:auto; -webkit-overflow-scrolling:touch;">
-            <button class="nav-btn" onclick="abrirCorteCaja()" style="border-color:var(--green); color:var(--green);">💰 Corte de Caja</button>
-            <button class="nav-btn" onclick="abrirProductos()" style="border-color:var(--primary); color:var(--primary);">📦 Productos</button>
-            <button class="nav-btn btn-empleados" onclick="window.location.href='empleados.html'" style="border-color:#A78BFA; color:#A78BFA;">👥 Empleados</button>
-            <button class="nav-btn" onclick="abrirReportes()" style="border-color:rgba(251,191,36,.4);color:#FBB724;">📈 Reportes</button>
-            <button class="nav-btn" onclick="abrirColasEntrega()" style="border-color:rgba(167,139,250,.4);color:#A78BFA;">🚚 Entregas</button>
-            <button class="nav-btn" onclick="abrirGestionEmpleados()" style="border-color:rgba(59,130,246,.4);color:#3B82F6;">👤 Cajeros</button>
-            <button class="nav-btn" onclick="window.location.href='../ordenar.html'" style="border-color:var(--border);">🏠 Tienda</button>
-            <button class="nav-btn" onclick="window.open('cocina.html','_blank')" style="border-color:rgba(34,197,94,.4);color:#22C55E;font-weight:700;">🧑‍🍳 Cocina</button>
-            <div class="live-badge"><div class="live-dot"></div> En vivo</div>
+        <div class="top-bar-actions" style="width:100%;">
+            <div class="accesos-admin">
+                <button class="acc-card" onclick="abrirCorteCaja()">
+                    <span class="acc-card-ico" style="background:rgba(37,211,102,.15);color:#25D366;">💰</span>
+                    <span class="acc-card-txt">Corte de Caja</span>
+                </button>
+                <button class="acc-card" onclick="abrirProductos()">
+                    <span class="acc-card-ico" style="background:rgba(255,90,0,.15);color:#FF5A00;">📦</span>
+                    <span class="acc-card-txt">Productos</span>
+                </button>
+                <button class="acc-card btn-empleados" onclick="window.location.href='empleados.html'">
+                    <span class="acc-card-ico" style="background:rgba(167,139,250,.15);color:#A78BFA;">👥</span>
+                    <span class="acc-card-txt">Empleados</span>
+                </button>
+                <button class="acc-card" onclick="abrirReportes()">
+                    <span class="acc-card-ico" style="background:rgba(251,191,36,.15);color:#FBB724;">📈</span>
+                    <span class="acc-card-txt">Reportes</span>
+                </button>
+                <button class="acc-card" onclick="abrirColasEntrega()">
+                    <span class="acc-card-ico" style="background:rgba(167,139,250,.15);color:#A78BFA;">🚚</span>
+                    <span class="acc-card-txt">Entregas</span>
+                </button>
+                <button class="acc-card" onclick="abrirGestionEmpleados()">
+                    <span class="acc-card-ico" style="background:rgba(59,130,246,.15);color:#3B82F6;">👤</span>
+                    <span class="acc-card-txt">Cajeros</span>
+                </button>
+                <button class="acc-card" onclick="window.location.href='../ordenar.html'">
+                    <span class="acc-card-ico" style="background:rgba(255,255,255,.08);color:#ccc;">🏠</span>
+                    <span class="acc-card-txt">Tienda</span>
+                </button>
+                <button class="acc-card" onclick="window.open('cocina.html','_blank')">
+                    <span class="acc-card-ico" style="background:rgba(34,197,94,.15);color:#22C55E;">🧑‍🍳</span>
+                    <span class="acc-card-txt">Cocina</span>
+                </button>
+            </div>
+            <div class="live-badge" style="margin-top:.5rem;"><div class="live-dot"></div> En vivo</div>
         </div>
     </div>
 
