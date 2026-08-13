@@ -2604,7 +2604,7 @@ window.renderBebidasSlider = function() {
             'cursor:pointer;font-family:inherit;text-align:center;transition:.15s;" ' +
             'onmouseover="this.style.borderColor=\'#25D366\'" ' +
             'onmouseout="this.style.borderColor=\'rgba(37,211,102,.25)\'">' +
-            '<img src="' + img + '" style="width:100%;height:60px;object-fit:contain;border-radius:8px;margin-bottom:.35rem;" ' +
+            '<img src="' + img + '" loading="lazy" style="width:100%;height:60px;object-fit:contain;border-radius:8px;margin-bottom:.35rem;" ' +
             'onerror="this.style.display=\'none\'">' +
             '<div style="font-size:.72rem;font-weight:700;color:#fff;line-height:1.2;' +
             'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (b.nombre || 'Bebida') + '</div>' +
