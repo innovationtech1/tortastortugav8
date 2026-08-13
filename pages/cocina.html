@@ -422,7 +422,13 @@ function renderCard(p) {
     // en el momento de la entrega. Si sigue activo, cuenta hasta ahora.
     const est    = p.estado || '';
     const entregado = est.includes('Entregado') || est.includes('Cancelado');
-    const finTiempo = (entregado && p.tiempos && p.tiempos.entregada) ? p.tiempos.entregada : ahora;
+    // Tiempo final: si está entregado y tiene la marca de entrega, se congela ahí.
+    // Si está entregado pero es un pedido viejo sin esa marca, usamos 'lista' o
+    // 'enCocina' como aproximación para no contar infinito.
+    let finTiempo = ahora;
+    if (entregado && p.tiempos) {
+        finTiempo = p.tiempos.entregada || p.tiempos.lista || p.tiempos.enCocina || ahora;
+    }
     const secs   = Math.max(0, (finTiempo - ts) / 1000);
     const cls    = est.includes('preparación') ? 'prep'
                  : est.includes('Listo')       ? 'listo'
@@ -449,7 +455,7 @@ function renderCard(p) {
                 <div class="kticket">#${String(ticket).replace(/^#+/, '')} <span style="font-size:.9rem;color:var(--muted);font-weight:400;">${hora}</span></div>
                 <div class="kcliente">${p.cliente||p.nombre||'Cliente'} ${p.notaCocina?'<span style="color:var(--yellow);font-size:.7rem;">📝 '+p.notaCocina+'</span>':''}</div>
             </div>
-            <div class="ktimer ${timerClass(secs)}" data-ts="${ts}" data-tid="ktimer-${p.id}">${timerTxt(secs)}</div>
+            <div class="ktimer ${timerClass(secs)}" data-ts="${ts}"${entregado ? ` data-fin="${finTiempo}"` : ''} data-tid="ktimer-${p.id}">${timerTxt(secs)}</div>
         </div>
         <div class="kcard-items">
             ${items.map(i=>`
@@ -805,7 +811,11 @@ function actualizarTimers() {
     const ahora = Date.now();
     document.querySelectorAll('.ktimer[data-ts]').forEach(el => {
         const ts = parseInt(el.getAttribute('data-ts')) || ahora;
-        const secs = (ahora - ts) / 1000;
+        // Si el timer está congelado (pedido entregado), usar el tiempo final
+        // guardado en vez de "ahora" → el reloj se queda detenido.
+        const fin = el.getAttribute('data-fin');
+        const hasta = fin ? parseInt(fin) : ahora;
+        const secs = Math.max(0, (hasta - ts) / 1000);
         el.textContent = timerTxt(secs);
         el.classList.remove('ok','warn','late');
         el.classList.add(timerClass(secs));
