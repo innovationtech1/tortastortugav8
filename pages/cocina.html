@@ -479,7 +479,7 @@ function renderGrid() {
     });
 
     if (tabActual === 'activas') {
-        pedidos = pedidos.filter(p => !p.estado?.includes('Entregado') && !p.estado?.includes('Listo') && !p.estado?.includes('Cancelado'));
+        pedidos = pedidos.filter(p => !p.estado?.includes('Entregado') && !p.estado?.includes('Listo') && !p.estado?.includes('Cancelado') && !p.estado?.includes('camino'));
         // Orden de entrada: la orden más antigua primero (la que lleva más
         // tiempo esperando), para que la cocina respete el turno de llegada.
         pedidos.sort((a,b) => {
@@ -492,7 +492,7 @@ function renderGrid() {
     } else if (tabActual === 'listas') {
         pedidos = pedidos.filter(p => p.estado?.includes('Listo'));
     } else {
-        pedidos = pedidos.filter(p => p.estado?.includes('Entregado') || p.estado?.includes('Cancelado'));
+        pedidos = pedidos.filter(p => p.estado?.includes('Entregado') || p.estado?.includes('Cancelado') || p.estado?.includes('camino'));
         pedidos.sort((a,b) => (b.creado?.seconds||0) - (a.creado?.seconds||0));
     }
 
