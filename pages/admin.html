@@ -685,7 +685,22 @@ window.normalizarRutaImagen = function(src) {
                     ✏️ Editar cobro
                 </button>`;
             }
-            else { pagoHTML = `<button class="btn-cobrar-grid" onclick="abrirCaja('${p.id}', '${ticketId}', '${p.total}')">🔴 Cobrar ${p.total}</button><br><span class="pay-badge" style="margin-top:4px;display:inline-block">Pide: ${p.metodoPago || '?'}</span>`; }
+            else {
+                // ¿Ya está en cocina o más adelante? (para no mostrar "Enviar a cocina" de nuevo)
+                const yaEnCocina = (p.estado||'').includes('preparación') || (p.estado||'').includes('Listo') || (p.estado||'').includes('Entregado');
+                const esDomicilio = p.tipo === 'delivery' || p.tipoServicio === 'Domicilio';
+                pagoHTML = `<button class="btn-cobrar-grid" onclick="abrirCaja('${p.id}', '${ticketId}', '${p.total}')">🔴 Cobrar ${p.total}</button><br><span class="pay-badge" style="margin-top:4px;display:inline-block">Pide: ${p.metodoPago || '?'}</span>`;
+                // Para domicilio (o cualquier pedido sin cobrar que no esté en cocina):
+                // permitir enviarlo a cocina SIN cobrar. El cobro se hace al final (repartidor en la puerta).
+                if (!yaEnCocina) {
+                    pagoHTML += `<button onclick="enviarACocinaSinCobrar('${p.id}')"
+                        style="margin-top:6px;width:100%;padding:6px 8px;background:rgba(251,183,36,.14);
+                               border:1px solid rgba(251,183,36,.45);color:#FBB724;border-radius:6px;
+                               font-family:inherit;font-size:0.75rem;font-weight:700;cursor:pointer;">
+                        🍳 Enviar a cocina (cobrar al final)
+                    </button>`;
+                }
+            }
             const searchText = (document.getElementById('admin-search')?.value || '').trim();
             let displayTicket = folioVisible, displayNombre = p.cliente || p.nombre || '—', displayTel = p.telefono || 'En tienda', displayItems = p.items || '—', displayTipo = tipo;
             if (searchText) { displayTicket = resaltar(displayTicket, searchText); displayNombre = resaltar(displayNombre, searchText); displayTel = resaltar(displayTel, searchText); displayItems = resaltar(displayItems, searchText); displayTipo = resaltar(displayTipo, searchText); }
@@ -915,6 +930,21 @@ window.normalizarRutaImagen = function(src) {
     window.procesarPago = async (metodoReal) => {
         if(!currentOrderId) return;
         try { var cobrador='admin';try{var cn=sessionStorage.getItem('tt_cajero_nombre');if(cn)cobrador=cn;}catch(e){} await updateDoc(doc(db, 'pedidos', currentOrderId), { estadoPago: 'Pagado', metodoPagoReal: metodoReal, estado: 'En preparación 🧑‍🍳', cobradoPor: cobrador, cobradoEn: new Date().toISOString() }); cerrarCaja(); } catch(e) { alert('Error procesando cobro.'); }
+    };
+
+    // Enviar a cocina SIN cobrar (para domicilio: se cobra al final, en la puerta)
+    window.enviarACocinaSinCobrar = async (id) => {
+        if (!id) return;
+        const confirmar = window.ttConfirm
+            ? await window.ttConfirm('¿Enviar este pedido a cocina sin cobrar? El cobro se hará al entregar.')
+            : confirm('¿Enviar a cocina sin cobrar? Se cobrará al entregar.');
+        if (!confirmar) return;
+        try {
+            await updateDoc(doc(db, 'pedidos', id), { estado: 'En preparación 🧑‍🍳' });
+            if (window.ttAlert) window.ttAlert('🍳 Pedido enviado a cocina. Se cobrará al entregar.');
+        } catch(e) {
+            alert('Error al enviar a cocina.');
+        }
     };
 
     window.abrirCorteCaja = () => {
