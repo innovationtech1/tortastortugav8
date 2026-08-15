@@ -169,6 +169,13 @@
       </div>
     </div>
 
+    <button class="btn-en-camino" id="ve-btn-camino" onclick="marcarEnCamino()"
+        style="width:100%;padding:.85rem;margin-bottom:.6rem;border:none;border-radius:12px;
+               background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;
+               font-family:inherit;font-size:.95rem;font-weight:800;cursor:pointer;">
+        🛵 Marcar "En camino" (avisar al cliente)
+    </button>
+
     <a class="btn-navegar" id="ve-navegar" href="#" target="_blank" rel="noopener">🧭 Navegar con Google Maps (voz)</a>
 
     <!-- Zona de cobro (cambia según estado de pago) -->
@@ -440,6 +447,22 @@ function refrescarZonaCobro(p) {
 }
 
 // Procesa el cobro (mismo patrón que el admin)
+window.marcarEnCamino = async function() {
+    if (!_pedidoAbierto) return;
+    try {
+        await updateDoc(doc(db, 'pedidos', _pedidoAbierto.id), {
+            estado: 'En camino 🛵',
+            'tiempos.enCamino': Date.now()
+        });
+        if (window.ttAlert) window.ttAlert('🛵 Marcado en camino. El cliente ya puede verlo.');
+        // Ocultar el botón para no marcarlo dos veces
+        var btn = document.getElementById('ve-btn-camino');
+        if (btn) { btn.textContent = '✅ Vas en camino'; btn.style.opacity = '.6'; btn.disabled = true; }
+    } catch(err) {
+        alert('Error al marcar en camino. Revisa tu conexión.');
+    }
+};
+
 window.cobrarEntrega = async function(metodo) {
     if (!_pedidoAbierto) return;
     const confirmar = window.ttConfirm
