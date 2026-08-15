@@ -60,6 +60,7 @@ main{max-width:640px;margin:0 auto;padding:1.2rem 1rem 3rem;}
 .est-nuevo{background:rgba(59,130,246,.15);color:var(--blue);}
 .est-cocina{background:rgba(251,183,36,.15);color:var(--yellow);}
 .est-listo{background:rgba(37,211,102,.15);color:var(--green);}
+.est-camino{background:rgba(59,130,246,.15);color:#3B82F6;}
 .est-entregado{background:rgba(255,255,255,.08);color:#999;}
 .est-cancelado{background:rgba(255,68,68,.15);color:var(--red);}
 .pedido-items{font-size:.85rem;color:#ccc;white-space:pre-line;line-height:1.6;margin-bottom:.6rem;}
@@ -96,12 +97,13 @@ const uid = _leer('tt_cliente_uid') || null;
 const telefono = (_leer('tt_cliente_telefono') || '').replace(/\D/g,'');
 const miNombre = (_leer('tt_cliente_nombre') || '').trim().toLowerCase();
 
-const ORDEN_ESTADO = ['Nuevo', 'En preparación', 'Listo', 'Entregado'];
+const ORDEN_ESTADO = ['Nuevo', 'En preparación', 'Listo', 'En camino', 'Entregado'];
 
 function claseEstado(estado) {
     if (!estado) return 'est-nuevo';
     if (estado.includes('Cancelado')) return 'est-cancelado';
     if (estado.includes('Entregado')) return 'est-entregado';
+    if (estado.includes('camino')) return 'est-camino';
     if (estado.includes('Listo')) return 'est-listo';
     if (estado.includes('preparaci')) return 'est-cocina';
     return 'est-nuevo';
@@ -109,9 +111,10 @@ function claseEstado(estado) {
 
 function pasoActual(estado) {
     if (!estado) return 0;
+    if (estado.includes('Entregado')) return 4;
+    if (estado.includes('camino')) return 3;
     if (estado.includes('Listo')) return 2;
     if (estado.includes('preparaci')) return 1;
-    if (estado.includes('Entregado')) return 3;
     return 0;
 }
 
@@ -139,7 +142,13 @@ function renderPedidos(pedidos) {
     pedidos.sort((a, b) => (b.creado?.seconds || 0) - (a.creado?.seconds || 0));
     cont.innerHTML = pedidos.map(p => {
         const paso = pasoActual(p.estado);
-        const pasos = [0,1,2].map(i => `<div class="paso ${i <= paso ? 'activo' : ''}"></div>`).join('');
+        // Para domicilio el flujo tiene 5 pasos (incluye "En camino").
+        // Para pickup son 4 (no hay repartidor en camino).
+        const esDomicilio = p.tipo === 'delivery' || p.tipoServicio === 'Domicilio' || p.tipoEntrega === 'Domicilio';
+        const totalPasos = esDomicilio ? 5 : 4;
+        const pasosArr = [];
+        for (let i = 0; i < totalPasos; i++) pasosArr.push(i);
+        const pasos = pasosArr.map(i => `<div class="paso ${i <= paso ? 'activo' : ''}"></div>`).join('');
         // Fecha y hora del pedido (desde el timestamp de creación)
         let fechaHora = '';
         const cd = p.creado?.toDate ? p.creado.toDate() : (p.creado?.seconds ? new Date(p.creado.seconds * 1000) : (p.tomadaEn ? new Date(p.tomadaEn) : null));
