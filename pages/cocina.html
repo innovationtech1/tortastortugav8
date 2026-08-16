@@ -386,25 +386,21 @@ window.setTab = (tab) => {
     renderGrid();
 };
 
-// Limpia (oculta) las órdenes del historial de ESTA pantalla, sin borrarlas
-// del sistema. Se guardan los IDs ocultos para que no reaparezcan.
-window.limpiarPantallaCocina = () => {
-    const hacer = () => {
-        // Marcar como ocultos todos los pedidos actualmente en el historial
-        (todos || []).forEach(p => {
-            const est = p.estado || '';
-            if (est.includes('Listo') || est.includes('Entregado') || est.includes('camino') || est.includes('Cancelado')) {
-                ocultosCocina.add(p.id);
-            }
-        });
-        localStorage.setItem('tt_cocina_ocultos', JSON.stringify([...ocultosCocina]));
-        renderGrid();
-    };
-    if (window.ttConfirm) {
-        window.ttConfirm('¿Limpiar la pantalla del historial? Las órdenes NO se borran del sistema, solo se ocultan de aquí.').then(ok => { if (ok) hacer(); });
-    } else {
-        if (confirm('¿Limpiar la pantalla del historial? Las órdenes NO se borran del sistema, solo se ocultan de aquí.')) hacer();
-    }
+// Quita UNA orden individual del historial visible (control orden por orden).
+// No la borra del sistema, solo la oculta de la vista normal.
+window.limpiarOrdenCocina = (id) => {
+    if (!id) return;
+    ocultosCocina.add(id);
+    localStorage.setItem('tt_cocina_ocultos', JSON.stringify([...ocultosCocina]));
+    renderGrid();
+};
+
+// Alterna ver el historial COMPLETO (todas las órdenes, incluidas las que se
+// quitaron individualmente) para revisar dudas o reclamos. No afecta el sistema.
+let verTodoHistorial = false;
+window.toggleVerTodo = () => {
+    verTodoHistorial = !verTodoHistorial;
+    renderGrid();
 };
 
 /* ── Timer helpers ─────────────────────────────────────────── */
@@ -480,9 +476,12 @@ function renderCard(p) {
     const hora   = new Date(ts).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
     const items  = parseItems(p);
 
+    const estaOculta = ocultosCocina.has(p.id);
     const acciones = (cls === 'nuevo' || cls === 'prep')
         ? `<button class="kbtn kbtn-ready" style="flex:1" onclick="setEstado('${p.id}','Listo ✅')">✅ Lista</button>`
-        : '';
+        : estaOculta
+        ? `<button class="kbtn" style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);color:#888;" disabled>🙈 Quitada de pantalla</button>`
+        : `<button class="kbtn" style="flex:1;background:rgba(255,90,0,.12);border:1px solid rgba(255,90,0,.4);color:#FF5A00;" onclick="limpiarOrdenCocina('${p.id}')">🧹 Quitar de pantalla</button>`;
 
     return `<div class="kcard ${cls}" id="kcard-${p.id}">
         <div class="kcard-head">
@@ -525,11 +524,12 @@ function renderGrid() {
             return (a.folio || 0) - (b.folio || 0);
         });
     } else {
-        // Historial: pedidos terminados (Listo/Entregado/En camino/Cancelado),
-        // EXCLUYENDO los que la cocina "limpió" de la pantalla (ocultosCocina).
+        // Historial: pedidos terminados (Listo/Entregado/En camino/Cancelado).
+        // Normalmente se ocultan los que se quitaron individualmente, PERO si
+        // "verTodoHistorial" está activo, se muestran TODOS (para revisar dudas).
         pedidos = pedidos.filter(p =>
             (p.estado?.includes('Listo') || p.estado?.includes('Entregado') || p.estado?.includes('camino') || p.estado?.includes('Cancelado'))
-            && !ocultosCocina.has(p.id)
+            && (verTodoHistorial || !ocultosCocina.has(p.id))
         );
         pedidos.sort((a,b) => (b.creado?.seconds||0) - (a.creado?.seconds||0));
     }
@@ -566,16 +566,33 @@ function renderGrid() {
     }
 
     const grid = document.getElementById('kds-grid');
+
+    // Botón general en el Historial: alternar entre ver todo o solo lo no quitado
+    let botonVerTodo = '';
+    if (tabActual === 'historial') {
+        const cuantosOcultos = ocultosCocina.size;
+        botonVerTodo = `<div style="width:100%;text-align:center;padding:0 0 .8rem;">
+            <button onclick="toggleVerTodo()"
+                style="background:${verTodoHistorial ? 'rgba(37,211,102,.12)' : 'rgba(91,155,255,.12)'};
+                       border:1px solid ${verTodoHistorial ? 'rgba(37,211,102,.4)' : 'rgba(91,155,255,.4)'};
+                       color:${verTodoHistorial ? '#25D366' : '#5B9BFF'};
+                       border-radius:10px;padding:.6rem 1.4rem;font-family:inherit;font-size:.85rem;
+                       font-weight:700;cursor:pointer;">
+                ${verTodoHistorial ? '✅ Viendo TODO — volver a normal' : '📜 Ver historial completo' + (cuantosOcultos ? ` (${cuantosOcultos} quitadas)` : '')}
+            </button>
+        </div>`;
+    }
+
     if (!pedidos.length) {
         const msgs = {
             activas: '¡Sin órdenes pendientes!',
             listas: 'Sin órdenes listas por entregar',
-            historial: 'Sin órdenes entregadas hoy'
+            historial: 'Sin órdenes en el historial'
         };
-        grid.innerHTML = `<div class="empty"><div class="empty-ico">🍳</div><div class="empty-lbl">${msgs[tabActual]}</div></div>`;
+        grid.innerHTML = botonVerTodo + `<div class="empty"><div class="empty-ico">🍳</div><div class="empty-lbl">${msgs[tabActual]}</div></div>`;
         return;
     }
-    grid.innerHTML = pedidos.map(renderCard).join('');
+    grid.innerHTML = botonVerTodo + pedidos.map(renderCard).join('');
 }
 
 /* ── setEstado ──────────────────────────────────────────────── */
