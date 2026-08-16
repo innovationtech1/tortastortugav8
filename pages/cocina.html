@@ -310,6 +310,7 @@ const KitchenAPI = {
         // Registrar cuándo pasó a cada estado
         if (estado.includes('preparación'))  updates['tiempos.enCocina']  = Date.now();
         else if (estado.includes('Listo'))    updates['tiempos.lista']     = Date.now();
+        else if (estado.includes('camino'))   updates['tiempos.enCamino']  = Date.now();
         else if (estado.includes('Entregado')) updates['tiempos.entregada'] = Date.now();
         // Al terminar (Listo/Entregado), quitar la prioridad 911 (ya se atendió)
         if (estado.includes('Listo') || estado.includes('Entregado')) {
@@ -498,11 +499,21 @@ function renderCard(p) {
     const items  = parseItems(p);
 
     const estaOculta = ocultosCocina.has(p.id);
+    // Selector de estados (igual que el panel admin) para mover la orden por
+    // todo el flujo: Nuevo → En preparación → Listo → En camino → Entregado.
+    const selectorEstados = `<select class="kbtn-estado" onchange="setEstado('${p.id}', this.value)" style="flex:1;padding:.5rem;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#111;color:#fff;font-family:inherit;font-size:.82rem;font-weight:700;cursor:pointer;">
+        <option ${est.includes('Nuevo') ? 'selected' : ''}>Nuevo 🆕</option>
+        <option ${est.includes('preparación') ? 'selected' : ''}>En preparación 🧑‍🍳</option>
+        <option ${est.includes('Listo') ? 'selected' : ''}>Listo ✅</option>
+        <option ${est.includes('camino') ? 'selected' : ''}>En camino 🛵</option>
+        <option ${est.includes('Entregado') ? 'selected' : ''}>Entregado 🎉</option>
+        <option ${est.includes('Cancelado') ? 'selected' : ''}>Cancelado ❌</option>
+    </select>`;
     const acciones = (cls === 'nuevo' || cls === 'prep')
-        ? `<button class="kbtn kbtn-ready" style="flex:1" onclick="setEstado('${p.id}','Listo ✅')">✅ Lista</button>`
+        ? selectorEstados
         : estaOculta
         ? `<button class="kbtn" style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);color:#888;" disabled>🙈 Quitada de pantalla</button>`
-        : `<button class="kbtn" style="flex:1;background:rgba(255,90,0,.12);border:1px solid rgba(255,90,0,.4);color:#FF5A00;" onclick="limpiarOrdenCocina('${p.id}')">🧹 Quitar de pantalla</button>`;
+        : `<div style="display:flex;gap:.4rem;flex:1;">${selectorEstados}<button class="kbtn" style="background:rgba(255,90,0,.12);border:1px solid rgba(255,90,0,.4);color:#FF5A00;padding:.5rem .7rem;" onclick="limpiarOrdenCocina('${p.id}')">🧹</button></div>`;
 
     return `<div class="kcard ${cls}" id="kcard-${p.id}">
         <div class="kcard-head">
