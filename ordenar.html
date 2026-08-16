@@ -3015,7 +3015,7 @@ document.addEventListener('click', function(e) {
         </div>
 
         <!-- Mesas (solo si es Comer aquí) -->
-        <div id="mesas-section" style="margin-bottom:1.1rem;">
+        <div id="mesas-section" style="margin-bottom:1.1rem;display:none;">
             <p style="font-size:.78rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.05em;">Número de mesa</p>
             <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.45rem;">
                 <!-- Mesas 1-10 generadas por JS -->
@@ -3184,6 +3184,11 @@ document.addEventListener('click', function(e) {
                     '<span style="font-size:1.3rem;">🚗</span>Domicilio</button>';
             }
         }
+
+        // Al abrir el modal aún no hay tipo seleccionado: ocultar las mesas
+        // (solo aparecen si un cliente elige "Comer aquí"; nunca para empleados).
+        var mesasSecAbrir = document.getElementById('mesas-section');
+        if (mesasSecAbrir) mesasSecAbrir.style.display = 'none';
 
         // Limpiar selecciones visuales
         document.querySelectorAll('.tipo-serv-btn, .mesa-btn').forEach(function(b){
