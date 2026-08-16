@@ -193,6 +193,13 @@
     <div id="ve-pagado-zona" style="display:none;">
       <div class="ve-pagado" id="ve-pagado-txt">✅ Pagado</div>
     </div>
+
+    <button id="ve-btn-entregado" onclick="marcarEntregado()"
+        style="width:100%;padding:.9rem;margin-top:.8rem;border:none;border-radius:12px;
+               background:linear-gradient(135deg,#25D366,#1DA851);color:#fff;
+               font-family:inherit;font-size:1rem;font-weight:800;cursor:pointer;">
+        🎉 Marcar Entregado
+    </button>
   </div>
 </div>
 
@@ -480,6 +487,26 @@ window.cobrarEntrega = async function(metodo) {
         if (window.ttAlert) window.ttAlert('✅ Cobro registrado: ' + metodo);
     } catch(err) {
         alert('Error al registrar el cobro. Revisa tu conexión.');
+    }
+};
+
+// El REPARTIDOR marca la orden como Entregada (cierra su parte del flujo)
+window.marcarEntregado = async function() {
+    if (!_pedidoAbierto) return;
+    const confirmar = window.ttConfirm
+        ? await window.ttConfirm('¿Marcar esta orden como ENTREGADA?')
+        : confirm('¿Marcar como entregada?');
+    if (!confirmar) return;
+    try {
+        await updateDoc(doc(db, 'pedidos', _pedidoAbierto.id), {
+            estado: 'Entregado 🎉',
+            'tiempos.entregada': Date.now()
+        });
+        if (window.ttAlert) window.ttAlert('🎉 Orden marcada como entregada.');
+        // Cerrar la vista de entrega
+        if (window.cerrarEntrega) window.cerrarEntrega();
+    } catch(err) {
+        alert('Error al marcar entregado. Revisa tu conexión.');
     }
 };
 </script>
