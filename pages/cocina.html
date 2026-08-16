@@ -12,15 +12,13 @@
 // Si quien entra es un cliente (no empleado/cajero), lo mandamos a la
 // vista de solo lectura de su propio pedido, no a este tablero completo.
 (function() {
-    var VEINTE_MIN = 20 * 60 * 1000;
-    function leer(k){ return sessionStorage.getItem(k) || localStorage.getItem(k); }
+    function leer(k){ return localStorage.getItem(k) || sessionStorage.getItem(k); }
     var empId = leer('tt_emp_id');
-    var empTs = parseInt(leer('tt_emp_ts') || '0');
     var cajNombre = leer('tt_cajero_nombre');
-    var cajTs = parseInt(leer('tt_cajero_ts') || '0');
 
-    var esStaff = (empId && (Date.now() - empTs < VEINTE_MIN)) ||
-                  (cajNombre && (Date.now() - cajTs < VEINTE_MIN));
+    // Basta con tener una sesión de staff activa (ya no expira por tiempo;
+    // se cierra al tocar "Salir" en el portal de empleados).
+    var esStaff = !!empId || !!cajNombre;
 
     if (!esStaff) {
         window.location.replace('mi-pedido.html');
