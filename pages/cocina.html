@@ -216,11 +216,19 @@ body.compacto .kcard-items{padding:.5rem .7rem;}
 <!-- Tabs -->
 <div class="tabs">
   <div class="tab active" data-tab="activas" onclick="setTab('activas')">🍳 En Proceso</div>
-  <div class="tab" data-tab="listas"  onclick="setTab('listas')">✅ Listas</div>
   <div class="tab" data-tab="historial" onclick="setTab('historial')">📋 Historial</div>
 </div>
 
 <!-- Grid -->
+<div id="limpiar-barra" style="display:none;padding:0 1rem .5rem;text-align:center;">
+  <button onclick="limpiarPantallaCocina()"
+     style="background:rgba(255,90,0,.12);border:1px solid rgba(255,90,0,.4);color:#FF5A00;
+            border-radius:10px;padding:.6rem 1.2rem;font-family:inherit;font-size:.85rem;
+            font-weight:700;cursor:pointer;">
+     🧹 Limpiar pantalla (ocultar del historial)
+  </button>
+  <div style="font-size:.68rem;color:#777;margin-top:.4rem;">No borra las órdenes del sistema, solo limpia esta pantalla</div>
+</div>
 <div class="grid" id="kds-grid"></div>
 
 <!-- ═══ MODAL EDITOR ═══ -->
@@ -284,6 +292,10 @@ function _playBell(doble) {
 
 let todos       = [];
 let tabActual   = 'activas';
+// Pedidos que la cocina "limpió" de la pantalla del historial.
+// NO se borran del sistema, solo se ocultan de esta vista. Se guarda en
+// localStorage para que persista aunque se recargue la pantalla.
+let ocultosCocina = new Set(JSON.parse(localStorage.getItem('tt_cocina_ocultos') || '[]'));
 let soundOn     = true;
 let prevNuevas  = 0;
 let _primeraCarga = true;
@@ -362,7 +374,31 @@ function playBell(doble=false) {
 window.setTab = (tab) => {
     tabActual = tab;
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab===tab));
+    // El botón "Limpiar pantalla" solo aparece en el Historial
+    const barra = document.getElementById('limpiar-barra');
+    if (barra) barra.style.display = (tab === 'historial') ? 'block' : 'none';
     renderGrid();
+};
+
+// Limpia (oculta) las órdenes del historial de ESTA pantalla, sin borrarlas
+// del sistema. Se guardan los IDs ocultos para que no reaparezcan.
+window.limpiarPantallaCocina = () => {
+    const hacer = () => {
+        // Marcar como ocultos todos los pedidos actualmente en el historial
+        (todos || []).forEach(p => {
+            const est = p.estado || '';
+            if (est.includes('Listo') || est.includes('Entregado') || est.includes('camino') || est.includes('Cancelado')) {
+                ocultosCocina.add(p.id);
+            }
+        });
+        localStorage.setItem('tt_cocina_ocultos', JSON.stringify([...ocultosCocina]));
+        renderGrid();
+    };
+    if (window.ttConfirm) {
+        window.ttConfirm('¿Limpiar la pantalla del historial? Las órdenes NO se borran del sistema, solo se ocultan de aquí.').then(ok => { if (ok) hacer(); });
+    } else {
+        if (confirm('¿Limpiar la pantalla del historial? Las órdenes NO se borran del sistema, solo se ocultan de aquí.')) hacer();
+    }
 };
 
 /* ── Timer helpers ─────────────────────────────────────────── */
@@ -438,16 +474,9 @@ function renderCard(p) {
     const hora   = new Date(ts).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
     const items  = parseItems(p);
 
-    const acciones = cls === 'nuevo'
-        ? `<button class="kbtn kbtn-cook" onclick="setEstado('${p.id}','En preparación 🧑‍🍳')">🍳 En Cocina</button>
-           <button class="kbtn kbtn-edit" onclick="abrirEditor('${p.id}')">✏️ Editar</button>`
-        : cls === 'prep'
-        ? `<button class="kbtn kbtn-ready" onclick="setEstado('${p.id}','Listo ✅')">✅ Listo</button>
-           <button class="kbtn kbtn-edit"  onclick="abrirEditor('${p.id}')">✏️ Editar</button>`
-        : cls === 'listo'
-        ? `<button class="kbtn kbtn-done"  onclick="setEstado('${p.id}','Entregado 🎉')">🎉 Entregar</button>
-           <button class="kbtn kbtn-edit"  onclick="abrirEditor('${p.id}')">✏️ Editar</button>`
-        : `<button class="kbtn kbtn-edit" style="flex:1" onclick="abrirEditor('${p.id}')">✏️ Ver / Editar</button>`;
+    const acciones = (cls === 'nuevo' || cls === 'prep')
+        ? `<button class="kbtn kbtn-ready" style="flex:1" onclick="setEstado('${p.id}','Listo ✅')">✅ Terminar</button>`
+        : '';
 
     return `<div class="kcard ${cls}" id="kcard-${p.id}">
         <div class="kcard-head">
@@ -489,10 +518,13 @@ function renderGrid() {
             // Empate por hora: usar el número de folio como desempate
             return (a.folio || 0) - (b.folio || 0);
         });
-    } else if (tabActual === 'listas') {
-        pedidos = pedidos.filter(p => p.estado?.includes('Listo'));
     } else {
-        pedidos = pedidos.filter(p => p.estado?.includes('Entregado') || p.estado?.includes('Cancelado') || p.estado?.includes('camino'));
+        // Historial: pedidos terminados (Listo/Entregado/En camino/Cancelado),
+        // EXCLUYENDO los que la cocina "limpió" de la pantalla (ocultosCocina).
+        pedidos = pedidos.filter(p =>
+            (p.estado?.includes('Listo') || p.estado?.includes('Entregado') || p.estado?.includes('camino') || p.estado?.includes('Cancelado'))
+            && !ocultosCocina.has(p.id)
+        );
         pedidos.sort((a,b) => (b.creado?.seconds||0) - (a.creado?.seconds||0));
     }
 
