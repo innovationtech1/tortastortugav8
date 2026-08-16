@@ -312,6 +312,12 @@ const KitchenAPI = {
         else if (estado.includes('Listo'))    updates['tiempos.lista']     = Date.now();
         else if (estado.includes('Entregado')) updates['tiempos.entregada'] = Date.now();
         await updateDoc(doc(db,'pedidos',id), updates);
+        // Si esta orden estaba "oculta" (limpiada antes), quitarla de ocultos
+        // para que reaparezca en el historial con su nuevo estado.
+        if (ocultosCocina.has(id)) {
+            ocultosCocina.delete(id);
+            localStorage.setItem('tt_cocina_ocultos', JSON.stringify([...ocultosCocina]));
+        }
     },
     // Actualizar items y modificaciones de un pedido
     updateItems: async (id, itemsData) => {
