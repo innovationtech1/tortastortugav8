@@ -456,16 +456,17 @@ function nombreCorto(item) {
 function renderCard(p) {
     const ahora  = Date.now();
     const ts     = p.creado?.seconds ? p.creado.seconds*1000 : ahora;
-    // Si el pedido ya fue entregado (o cancelado), el cronómetro se DETIENE
-    // en el momento de la entrega. Si sigue activo, cuenta hasta ahora.
+    // Si el pedido ya salió de proceso (Listo/En camino/Entregado/Cancelado),
+    // el cronómetro se DETIENE en el momento en que terminó. Si sigue activo,
+    // cuenta hasta ahora.
     const est    = p.estado || '';
-    const entregado = est.includes('Entregado') || est.includes('Cancelado');
-    // Tiempo final: si está entregado y tiene la marca de entrega, se congela ahí.
-    // Si está entregado pero es un pedido viejo sin esa marca, usamos 'lista' o
-    // 'enCocina' como aproximación para no contar infinito.
+    const terminado = est.includes('Listo') || est.includes('Entregado') || est.includes('camino') || est.includes('Cancelado');
+    // Tiempo final: se congela en el momento en que terminó, usando la marca
+    // más apropiada (entregada > enCamino > lista > enCocina), con aproximación
+    // para pedidos viejos sin marca, para no contar infinito.
     let finTiempo = ahora;
-    if (entregado && p.tiempos) {
-        finTiempo = p.tiempos.entregada || p.tiempos.lista || p.tiempos.enCocina || ahora;
+    if (terminado && p.tiempos) {
+        finTiempo = p.tiempos.entregada || p.tiempos.enCamino || p.tiempos.lista || p.tiempos.enCocina || ahora;
     }
     const secs   = Math.max(0, (finTiempo - ts) / 1000);
     const cls    = est.includes('preparación') ? 'prep'
@@ -489,7 +490,7 @@ function renderCard(p) {
                 <div class="kticket">#${String(ticket).replace(/^#+/, '')} <span style="font-size:.9rem;color:var(--muted);font-weight:400;">${hora}</span></div>
                 <div class="kcliente">${p.cliente||p.nombre||'Cliente'} ${p.notaCocina?'<span style="color:var(--yellow);font-size:.7rem;">📝 '+p.notaCocina+'</span>':''}</div>
             </div>
-            <div class="ktimer ${timerClass(secs)}" data-ts="${ts}"${entregado ? ` data-fin="${finTiempo}"` : ''} data-tid="ktimer-${p.id}">${timerTxt(secs)}</div>
+            <div class="ktimer ${timerClass(secs)}" data-ts="${ts}"${terminado ? ` data-fin="${finTiempo}"` : ''} data-tid="ktimer-${p.id}">${timerTxt(secs)}</div>
         </div>
         <div class="kcard-items">
             ${items.map(i=>`
