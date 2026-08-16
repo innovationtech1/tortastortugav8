@@ -857,7 +857,8 @@ window.addEventListener('unhandledrejection', function(e){ console.error('Promis
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-         onAuthStateChanged, signOut, updateProfile, updatePassword }
+         onAuthStateChanged, signOut, updateProfile, updatePassword,
+         setPersistence, browserLocalPersistence }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { getFirestore, doc, setDoc, getDoc, addDoc, updateDoc,
          collection, query, where, orderBy, getDocs, serverTimestamp, Timestamp }
@@ -875,6 +876,11 @@ const FB = {
 const fbApp = initializeApp(FB);
 const auth  = getAuth(fbApp);
 const db    = getFirestore(fbApp);
+// Persistencia LOCAL: la sesión de Firebase sobrevive al cerrar el navegador
+// (no solo la pestaña). Complementa la sesión guardada en localStorage.
+setPersistence(auth, browserLocalPersistence).catch(function(e){
+  console.warn('No se pudo fijar persistencia local:', e.message);
+});
 
 /* ─── ROLES ───────────────────────────────────── */
 /* ════════════════════════════════════════════════
@@ -1081,9 +1087,14 @@ onAuthStateChanged(auth, async u=>{
     nivelActual = ROLES[rolActual]?.nivel || 1;
     mostrarEmp();
   } else {
-    // Verificar si hay sesión guardada para auto-login
-    if(window._autoLoginEmp){
-      const {empId, pin} = window._autoLoginEmp;
+    // Verificar si hay sesión guardada para auto-login.
+    // Leemos DIRECTAMENTE de localStorage (no de una variable global) para
+    // evitar problemas de orden de ejecución: así siempre tomamos la sesión
+    // guardada aunque este callback corra antes que el bloque de restauración.
+    const _sesEmpId = localStorage.getItem('tt_emp_id');
+    const _sesPin   = localStorage.getItem('tt_emp_pin');
+    if(_sesEmpId && _sesPin){
+      const empId = _sesEmpId, pin = _sesPin;
       window._autoLoginEmp = null;
       console.log('🔄 Auto-login con sesión guardada:', empId);
       try{
