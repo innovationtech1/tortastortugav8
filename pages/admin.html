@@ -826,8 +826,7 @@ window.normalizarRutaImagen = function(src) {
         document.querySelectorAll('.restore-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const id = e.currentTarget.getAttribute('data-id');
-                try { await updateDoc(doc(db, 'pedidos', id), { archivado: false }); }
-                catch(error) { alert('Error al restaurar.'); }
+                abrirRestaurar(id);
             });
         });
         document.querySelectorAll('.delete-btn:not(.restore-btn)').forEach(btn => {
@@ -980,6 +979,78 @@ window.normalizarRutaImagen = function(src) {
             if (window.ttAlert) window.ttAlert('🚨 Orden enviada a cocina como PRIORIDAD 911.');
         } catch(e) {
             alert('Error al enviar como 911.');
+        }
+    };
+
+    // ═══ RESTAURAR ORDEN ARCHIVADA (solo gerente, motivo + PIN) ═══
+    let _restaurarId = null;
+    window.abrirRestaurar = (id) => {
+        _restaurarId = id;
+        // Mostrar el folio de la orden
+        var folioTxt = 'Orden';
+        try {
+            var p = (window._adminPedidosDB || []).find(function(x){ return x.id === id; });
+            if (p) folioTxt = 'Orden ' + (p.folioStr || ('#' + id.slice(-4).toUpperCase()));
+        } catch(e){}
+        document.getElementById('restaurar-folio').textContent = folioTxt;
+        document.getElementById('restaurar-motivo').value = '';
+        document.getElementById('restaurar-nota').value = '';
+        document.getElementById('restaurar-pin').value = '';
+        document.getElementById('restaurar-error').textContent = '';
+        document.getElementById('restaurar-modal').style.display = 'flex';
+    };
+    window.cerrarRestaurar = () => {
+        document.getElementById('restaurar-modal').style.display = 'none';
+        _restaurarId = null;
+    };
+    window.confirmarRestaurar = async () => {
+        const errEl = document.getElementById('restaurar-error');
+        const motivo = document.getElementById('restaurar-motivo').value;
+        const nota = (document.getElementById('restaurar-nota').value || '').trim();
+        const pin = (document.getElementById('restaurar-pin').value || '').trim();
+        errEl.textContent = '';
+
+        // Validar motivo
+        if (!motivo) { errEl.textContent = 'Selecciona un motivo.'; return; }
+        if (motivo === 'Otro' && !nota) { errEl.textContent = 'Escribe la nota del motivo "Otro".'; return; }
+        if (!pin) { errEl.textContent = 'Escribe el PIN del gerente.'; return; }
+
+        errEl.style.color = '#888';
+        errEl.textContent = 'Verificando PIN...';
+
+        // Verificar PIN contra la colección de empleados y que sea rol gerente
+        try {
+            const snap = await window._adminGetDocs('empleados');
+            let gerenteValido = false;
+            let nombreGerente = '';
+            snap.forEach(function(d){
+                const e = d.data();
+                const rol = (e.rol || '').toLowerCase();
+                const esGerente = rol.indexOf('gerente') >= 0 || rol.indexOf('supervisor') >= 0 || rol.indexOf('dueñ') >= 0;
+                if (esGerente && String(e.pin) === String(pin)) {
+                    gerenteValido = true;
+                    nombreGerente = e.nombre || e.empleadoId || 'Gerente';
+                }
+            });
+
+            if (!gerenteValido) {
+                errEl.style.color = '#F44336';
+                errEl.textContent = 'PIN incorrecto o no es de un gerente. Solo el gerente puede sacar órdenes.';
+                return;
+            }
+
+            // Restaurar con registro del motivo y quién lo hizo
+            await updateDoc(doc(db, 'pedidos', _restaurarId), {
+                archivado: false,
+                restauradoMotivo: motivo + (nota ? (' — ' + nota) : ''),
+                restauradoPor: nombreGerente,
+                restauradoEn: new Date().toISOString()
+            });
+            cerrarRestaurar();
+            if (window.ttAlert) window.ttAlert('↩️ Orden restaurada. Motivo: ' + motivo);
+        } catch(e) {
+            errEl.style.color = '#F44336';
+            errEl.textContent = 'Error al verificar. Revisa tu conexión.';
         }
     };
 
@@ -3288,5 +3359,35 @@ window.colBloquear = async function(hora, bloquear) {
     }
 };
 </script>
+<!-- Modal: restaurar orden archivada (solo gerente, con motivo y PIN) -->
+<div id="restaurar-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100000;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#1A1A1A;border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:1.4rem;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;">
+    <div style="font-size:1.15rem;font-weight:900;color:#FF5A00;margin-bottom:.3rem;">↩️ Sacar orden de archivadas</div>
+    <div id="restaurar-folio" style="font-size:.8rem;color:#888;margin-bottom:1rem;">Orden #—</div>
+
+    <div style="font-size:.82rem;font-weight:700;color:#ccc;margin-bottom:.5rem;">1. Motivo por el que se saca:</div>
+    <select id="restaurar-motivo" style="width:100%;padding:.7rem;background:#111;border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:10px;font-family:inherit;font-size:.9rem;margin-bottom:.4rem;">
+      <option value="">— Selecciona un motivo —</option>
+      <option value="Orden mal tomada">Orden mal tomada</option>
+      <option value="Entregada por error">Entregada por error</option>
+      <option value="Cliente reclamó / faltó algo">Cliente reclamó / faltó algo</option>
+      <option value="Cortesía / reposición">Cortesía / reposición</option>
+      <option value="Error de cobro">Error de cobro</option>
+      <option value="Pedido duplicado">Pedido duplicado</option>
+      <option value="Archivada por error">Archivada por error</option>
+      <option value="Otro">Otro (escribir nota)</option>
+    </select>
+    <input id="restaurar-nota" type="text" placeholder="Nota (opcional, obligatoria si es 'Otro')" style="width:100%;box-sizing:border-box;padding:.7rem;background:#111;border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:10px;font-family:inherit;font-size:.85rem;margin-bottom:1rem;">
+
+    <div style="font-size:.82rem;font-weight:700;color:#ccc;margin-bottom:.5rem;">2. PIN del gerente para confirmar:</div>
+    <input id="restaurar-pin" type="password" inputmode="numeric" maxlength="6" placeholder="• • • •" style="width:100%;box-sizing:border-box;padding:.7rem;background:#111;border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:10px;font-family:inherit;font-size:1.1rem;text-align:center;letter-spacing:.3em;margin-bottom:.4rem;">
+    <div id="restaurar-error" style="font-size:.78rem;color:#F44336;min-height:1rem;margin-bottom:.8rem;"></div>
+
+    <div style="display:flex;gap:.6rem;">
+      <button onclick="cerrarRestaurar()" style="flex:1;padding:.8rem;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:10px;font-family:inherit;font-weight:700;cursor:pointer;">Cancelar</button>
+      <button onclick="confirmarRestaurar()" style="flex:1;padding:.8rem;background:linear-gradient(135deg,#25D366,#1DA851);border:none;color:#fff;border-radius:10px;font-family:inherit;font-weight:800;cursor:pointer;">Confirmar</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
