@@ -84,6 +84,7 @@
         // Cada item: [icono, etiqueta, url, soloGerente]
         var items = [
             ['🏪', 'Tienda (Ordenar)', _raiz() + 'ordenar.html', false],
+            ['🧾', 'Mis Pedidos', _base() + 'mis-pedidos.html', false],
             ['🍳', 'Cocina', _base() + 'cocina.html', false],
             ['🛵', 'Mi Ruta', _base() + 'mi-ruta.html', false],
             ['🔔', 'Pedidos Disponibles', _base() + 'disponibles.html', false],
