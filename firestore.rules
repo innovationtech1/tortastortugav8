@@ -123,6 +123,18 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    // ── UBICACIONES DE TORTUMÓVILES (GPS en vivo de repartidores) ──
+    // El repartidor comparte su posición mientras usa Mi Ruta; el admin la
+    // lee para el mapa en vivo. Público (modo PIN), validando que traiga
+    // coordenadas numéricas y sea un documento pequeño.
+    match /ubicaciones/{repartidorId} {
+      allow read:  if true;
+      allow create, update: if request.resource.data.lat is number
+                            && request.resource.data.lng is number
+                            && request.resource.data.size() < 15;
+      allow delete: if true;
+    }
+
     // Todo lo demás: denegado
     match /{document=**} {
       allow read, write: if false;
