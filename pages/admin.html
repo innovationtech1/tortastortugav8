@@ -7,23 +7,29 @@
 // URL directa veia todo. Ahora exige una sesion real de nivel gerente
 // o supervisor (empleados.html con PIN, o auth.html con email+contraseña).
 (function() {
-    var VEINTE_MIN = 20 * 60 * 1000;
-    var ROLES_ADMIN = ['gerente', 'supervisor'];
+    var ROLES_ADMIN = ['gerente', 'supervisor', 'dueño', 'dueno', 'admin'];
 
-    var empRol = sessionStorage.getItem('tt_emp_rol');
-    var empTs  = parseInt(sessionStorage.getItem('tt_emp_ts') || '0');
-    var cajRol = sessionStorage.getItem('tt_cajero_rol');
-    var cajTs  = parseInt(sessionStorage.getItem('tt_cajero_ts') || '0');
+    // La sesión ahora se guarda en localStorage (persistente). Leemos de ahí,
+    // con respaldo a sessionStorage por compatibilidad. Ya NO expira por tiempo:
+    // basta con tener una sesión activa de gerente/supervisor (se cierra al
+    // tocar "Salir" en el portal de empleados).
+    function _leer(clave) {
+        return localStorage.getItem(clave) || sessionStorage.getItem(clave);
+    }
+    var empRol = (_leer('tt_emp_rol') || '').toLowerCase();
+    var cajRol = (_leer('tt_cajero_rol') || '').toLowerCase();
+    var empId  = _leer('tt_emp_id');
 
     var accesoValido =
-        (empRol && ROLES_ADMIN.indexOf(empRol) !== -1 && (Date.now() - empTs < VEINTE_MIN)) ||
-        (cajRol && ROLES_ADMIN.indexOf(cajRol) !== -1 && (Date.now() - cajTs < VEINTE_MIN));
+        (empRol && ROLES_ADMIN.indexOf(empRol) !== -1) ||
+        (cajRol && ROLES_ADMIN.indexOf(cajRol) !== -1);
 
     if (!accesoValido) {
         window.location.replace('empleados.html');
     } else {
-        // Ya se validó con una sesión real de gerente/supervisor —
-        // no hace falta pedir ninguna contraseña adicional.
+        // Ya hay una sesión válida de gerente/supervisor — acceso directo,
+        // sin pedir PIN ni contraseña adicional.
+        localStorage.setItem('tt_admin_logged', 'true');
         sessionStorage.setItem('tt_admin_logged', 'true');
     }
 })();
