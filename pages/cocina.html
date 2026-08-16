@@ -455,12 +455,15 @@ function nombreCorto(item) {
 /* ── Render card ────────────────────────────────────────────── */
 function renderCard(p) {
     const ahora  = Date.now();
-    const ts     = p.creado?.seconds ? p.creado.seconds*1000 : ahora;
-    // Si el pedido ya salió de proceso (Listo/En camino/Entregado/Cancelado),
-    // el cronómetro se DETIENE en el momento en que terminó. Si sigue activo,
-    // cuenta hasta ahora.
     const est    = p.estado || '';
     const terminado = est.includes('Listo') || est.includes('Entregado') || est.includes('camino') || est.includes('Cancelado');
+    // Inicio del cronómetro: normalmente cuándo se creó la orden. PERO si la
+    // orden fue reactivada desde el admin (tiempos.reiniciado) y está de nuevo
+    // en proceso, el reloj cuenta desde ese reinicio (empieza de 0).
+    let ts = p.creado?.seconds ? p.creado.seconds*1000 : ahora;
+    if (!terminado && p.tiempos && p.tiempos.reiniciado && p.tiempos.reiniciado > ts) {
+        ts = p.tiempos.reiniciado;
+    }
     // Tiempo final: se congela en el momento en que terminó, usando la marca
     // más apropiada (entregada > enCamino > lista > enCocina), con aproximación
     // para pedidos viejos sin marca, para no contar infinito.
