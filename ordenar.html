@@ -2992,7 +2992,7 @@ document.addEventListener('click', function(e) {
         <!-- Tipo de servicio -->
         <div style="margin-bottom:1.1rem;">
             <p style="font-size:.78rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.05em;">Tipo de servicio</p>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;">
+            <div id="tipo-serv-container" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;">
                 <button class="tipo-serv-btn" data-tipo="Comer aquí" onclick="window.seleccionarTipoServicio(this,'Comer aquí')"
                     style="padding:.7rem .4rem;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);
                            color:#fff;border-radius:12px;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;
@@ -3168,6 +3168,22 @@ document.addEventListener('click', function(e) {
         // (sin el "O", porque no hay mesas que sean la alternativa).
         var lblNombre = document.getElementById('lbl-nombre-cliente');
         if (lblNombre) lblNombre.textContent = _esEmpModal ? 'Nombre del cliente' : 'O nombre del cliente';
+
+        // Para EMPLEADOS: el tipo de servicio es solo Tortumóvil o Domicilio
+        // (no manejan Comer aquí / Para llevar). Para clientes, opciones normales.
+        var tipoCont = document.getElementById('tipo-serv-container');
+        if (tipoCont) {
+            if (_esEmpModal) {
+                tipoCont.style.gridTemplateColumns = 'repeat(2,1fr)';
+                tipoCont.innerHTML =
+                    '<button class="tipo-serv-btn" data-tipo="Comer aquí" onclick="window.seleccionarTipoServicio(this,\'Comer aquí\')" ' +
+                    'style="padding:.7rem .4rem;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);color:#fff;border-radius:12px;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.25rem;">' +
+                    '<span style="font-size:1.3rem;">🚐</span>Tortumóvil</button>' +
+                    '<button class="tipo-serv-btn" data-tipo="Domicilio" onclick="window.seleccionarTipoServicio(this,\'Domicilio\')" ' +
+                    'style="padding:.7rem .4rem;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);color:#fff;border-radius:12px;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.25rem;">' +
+                    '<span style="font-size:1.3rem;">🚗</span>Domicilio</button>';
+            }
+        }
 
         // Limpiar selecciones visuales
         document.querySelectorAll('.tipo-serv-btn, .mesa-btn').forEach(function(b){
