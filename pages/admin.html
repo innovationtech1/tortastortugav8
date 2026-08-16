@@ -804,7 +804,17 @@ window.normalizarRutaImagen = function(src) {
         document.querySelectorAll('.status-select').forEach(select => {
             select.addEventListener('change', async (e) => {
                 const id = e.target.getAttribute('data-id');
-                try { await updateDoc(doc(db, 'pedidos', id), { estado: e.target.value }); } catch(error) { alert('Error al actualizar estado.'); }
+                const nuevoEstado = e.target.value;
+                try {
+                    const updates = { estado: nuevoEstado };
+                    // Si se reactiva la orden a un estado activo (Nuevo/En preparación),
+                    // guardar marca de reinicio para que el cronómetro de cocina
+                    // empiece de 0 (la cocina la va a rehacer).
+                    if (nuevoEstado.includes('Nuevo') || nuevoEstado.includes('preparación')) {
+                        updates['tiempos.reiniciado'] = Date.now();
+                    }
+                    await updateDoc(doc(db, 'pedidos', id), updates);
+                } catch(error) { alert('Error al actualizar estado.'); }
             });
         });
         document.querySelectorAll('.restore-btn').forEach(btn => {
