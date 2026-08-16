@@ -475,7 +475,7 @@ function renderCard(p) {
     const items  = parseItems(p);
 
     const acciones = (cls === 'nuevo' || cls === 'prep')
-        ? `<button class="kbtn kbtn-ready" style="flex:1" onclick="setEstado('${p.id}','Listo ✅')">✅ Terminar</button>`
+        ? `<button class="kbtn kbtn-ready" style="flex:1" onclick="setEstado('${p.id}','Listo ✅')">✅ Lista</button>`
         : '';
 
     return `<div class="kcard ${cls}" id="kcard-${p.id}">
