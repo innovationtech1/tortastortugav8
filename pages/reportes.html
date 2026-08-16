@@ -53,6 +53,12 @@
   <button class="filtro-tab" data-per="todo" onclick="setPeriodo('todo')">Todo</button>
 </div>
 
+<!-- Selector: mis ventas o todas -->
+<div class="filtros" id="filtro-empleado" style="margin-top:-.5rem;">
+  <button class="filtro-tab activo" data-scope="mias" onclick="setScope('mias')" style="border-color:rgba(37,211,102,.4);">🧾 Mis ventas</button>
+  <button class="filtro-tab" data-scope="todas" onclick="setScope('todas')">🏢 Todas (general)</button>
+</div>
+
 <div class="fecha-row">
   <span style="font-size:.82rem;color:#888;">O rango:</span>
   <input type="date" id="fecha-desde">
@@ -80,6 +86,31 @@ const db = getFirestore(app);
 
 let _todosPedidos = [];
 let _filtrados = [];
+// Identidad del empleado logueado, para "Mis ventas". El gerente igual puede
+// ver las suyas o todas con el selector.
+function _leerRep(k){ return localStorage.getItem(k) || sessionStorage.getItem(k); }
+const _miIdRep     = (_leerRep('tt_emp_id') || _leerRep('tt_cajero_id') || '').trim();
+const _miNombreRep = (_leerRep('tt_emp_nombre') || _leerRep('tt_cajero_nombre') || _miIdRep).trim();
+let _scopeVentas = 'mias';  // 'mias' o 'todas'
+let _periodoActual = 'hoy';
+
+// ¿Esta venta es mía? (la tomé o la cobré yo)
+function _esMiVenta(p) {
+    return (p.cajeroId && p.cajeroId === _miIdRep) ||
+           (p.cajeroNombre && p.cajeroNombre === _miNombreRep) ||
+           (p.cobradoPor && p.cobradoPor === _miNombreRep) ||
+           (p.tortumovilId && p.tortumovilId === _miIdRep) ||
+           (p.repartidorId && p.repartidorId === _miIdRep);
+}
+
+window.setScope = function(scope) {
+    _scopeVentas = scope;
+    document.querySelectorAll('#filtro-empleado .filtro-tab').forEach(t => {
+        t.classList.toggle('activo', t.dataset.scope === scope);
+    });
+    // Reaplicar el período actual con el nuevo scope
+    setPeriodo(_periodoActual);
+};
 
 function tsDe(p) {
   if (p.creado?.seconds) return new Date(p.creado.seconds*1000);
@@ -129,7 +160,8 @@ async function cargar() {
 }
 
 window.setPeriodo = function(per) {
-  document.querySelectorAll('.filtro-tab').forEach(t => {
+  _periodoActual = per;
+  document.querySelectorAll('.filtro-tab[data-per]').forEach(t => {
     t.classList.toggle('activo', t.dataset.per === per);
   });
   const ahora = new Date();
@@ -144,6 +176,8 @@ window.setPeriodo = function(per) {
   else if (per === 'mes') { desde = new Date(); desde.setDate(desde.getDate()-30); desde.setHours(0,0,0,0); }
 
   _filtrados = _todosPedidos.filter(p => {
+    // Filtro por scope: mis ventas o todas
+    if (_scopeVentas === 'mias' && !_esMiVenta(p)) return false;
     const ts = tsDe(p);
     if (!ts) return per === 'todo';
     if (desde && ts < desde) return false;
