@@ -783,9 +783,15 @@ window.normalizarRutaImagen = function(src) {
                         </button>
                         <button onclick="abrirAsignarRepartidor('${p.id}', '${folioVisible}')"
                             style="display:flex;align-items:center;gap:8px;width:100%;text-align:left;
-                                   background:none;border:none;
+                                   background:none;border:none;border-bottom:1px solid rgba(255,255,255,.06);
                                    color:#25D366;padding:.6rem .8rem;font-family:inherit;font-size:0.8rem;font-weight:700;cursor:pointer;">
                             <span>🛵</span> ${p.repartidorNombre ? ('Repartidor: ' + p.repartidorNombre) : 'Asignar repartidor'}
+                        </button>
+                        <button onclick="enviarComo911('${p.id}', '${folioVisible}')"
+                            style="display:flex;align-items:center;gap:8px;width:100%;text-align:left;
+                                   background:rgba(244,67,54,.08);border:none;
+                                   color:#F44336;padding:.6rem .8rem;font-family:inherit;font-size:0.8rem;font-weight:800;cursor:pointer;">
+                            <span>🚨</span> Regresar a cocina como 911 (urgente)
                         </button>
                     </div>
                 </td>
@@ -954,6 +960,26 @@ window.normalizarRutaImagen = function(src) {
             if (window.ttAlert) window.ttAlert('🍳 Pedido enviado a cocina. Se cobrará al entregar.');
         } catch(e) {
             alert('Error al enviar a cocina.');
+        }
+    };
+
+    // Regresa una orden a la cocina marcada como PRIORIDAD 911 (urgente).
+    // Reinicia el cronómetro (empieza de 0) y la marca para que aparezca
+    // primero en la cocina con etiqueta roja.
+    window.enviarComo911 = async (id, ticket) => {
+        if (!id) return;
+        const msg = '🚨 ¿Regresar la orden ' + (ticket||'') + ' a la cocina como PRIORIDAD 911?\n\nAparecerá primero en la cocina, marcada como urgente, y su cronómetro empezará de cero.';
+        const confirmar = window.ttConfirm ? await window.ttConfirm(msg) : confirm(msg);
+        if (!confirmar) return;
+        try {
+            await updateDoc(doc(db, 'pedidos', id), {
+                estado: 'En preparación 🧑‍🍳',
+                prioridad911: true,
+                'tiempos.reiniciado': Date.now()
+            });
+            if (window.ttAlert) window.ttAlert('🚨 Orden enviada a cocina como PRIORIDAD 911.');
+        } catch(e) {
+            alert('Error al enviar como 911.');
         }
     };
 
