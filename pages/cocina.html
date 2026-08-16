@@ -194,7 +194,7 @@ body.compacto .kcard-items{padding:.5rem .7rem;}
 
 <!-- Header -->
 <div class="header">
-  <div class="logo">🐢 Cocina</div>
+  <div class="logo">🐢 Cocina <span id="mi-tortumovil" style="font-size:.7rem;color:#25D366;font-weight:700;"></span></div>
   <div class="stats">
     <div class="stat"><div class="stat-val" id="cnt-n" style="color:var(--orange)">0</div><div class="stat-lbl">Nuevas</div></div>
     <div class="stat"><div class="stat-val" id="cnt-p" style="color:var(--blue)">0</div><div class="stat-lbl">Cocina</div></div>
@@ -289,6 +289,31 @@ function _playBell(doble) {
 }
 
 let todos       = [];
+// Identidad del empleado/tortumóvil logueado, para que cada cocina muestre
+// SOLO sus órdenes: las que él tomó (cajeroId) + las que aceptó en Pedidos
+// Disponibles (repartidorId). El gerente/supervisor puede ver todas.
+function _leerCoc(k){ return localStorage.getItem(k) || sessionStorage.getItem(k); }
+const _miIdCocina     = (_leerCoc('tt_emp_id') || _leerCoc('tt_cajero_id') || '').trim();
+const _miNombreCocina = (_leerCoc('tt_emp_nombre') || _leerCoc('tt_cajero_nombre') || _miIdCocina).trim();
+const _miRolCocina    = (_leerCoc('tt_emp_rol') || _leerCoc('tt_cajero_rol') || '').toLowerCase();
+const _esGerenteCocina = _miRolCocina.indexOf('gerente') >= 0 || _miRolCocina.indexOf('supervisor') >= 0 || _miRolCocina.indexOf('dueñ') >= 0 || _miRolCocina.indexOf('admin') >= 0;
+
+// ¿Esta orden pertenece a MI tortumóvil? (la tomé yo, o la acepté en ruta)
+function _esMiOrden(p) {
+    if (_esGerenteCocina) return true; // el gerente ve todas las cocinas
+    if (!_miIdCocina && !_miNombreCocina) return true; // sin identidad, ver todas
+    return (p.cajeroId && p.cajeroId === _miIdCocina) ||
+           (p.cajeroNombre && p.cajeroNombre === _miNombreCocina) ||
+           (p.tortumovilId && p.tortumovilId === _miIdCocina) ||
+           (p.repartidorId && p.repartidorId === _miIdCocina);
+}
+// Mostrar de quién es esta cocina en el encabezado
+setTimeout(function(){
+    var el = document.getElementById('mi-tortumovil');
+    if (el) {
+        el.textContent = _esGerenteCocina ? '· Todas (gerente)' : ('· ' + (_miNombreCocina || 'Mi tortumóvil'));
+    }
+}, 100);
 let tabActual   = 'activas';
 // Pedidos que la cocina "limpió" de la pantalla del historial.
 // NO se borran del sistema, solo se ocultan de esta vista. Se guarda en
@@ -857,7 +882,9 @@ function iniciarKDS(){
   // necesita los del día y recientes; esto mantiene la pantalla ágil.
   // Si la consulta optimizada fallara (ej. falta de índice), se usa la normal.
   function _procesarSnap(snap) {
-    todos = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    // Cada cocina muestra SOLO las órdenes de su tortumóvil (las que tomó el
+    // empleado + las que aceptó en Pedidos Disponibles). El gerente ve todas.
+    todos = snap.docs.map(d => ({ id:d.id, ...d.data() })).filter(_esMiOrden);
 
     const hoy = new Date(); hoy.setHours(0,0,0,0);
     const nuevas = todos.filter(p => {
