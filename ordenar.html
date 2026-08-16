@@ -3024,7 +3024,7 @@ document.addEventListener('click', function(e) {
 
         <!-- Nombre del cliente -->
         <div style="margin-bottom:1.2rem;">
-            <p style="font-size:.78rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.05em;">O nombre del cliente</p>
+            <p id="lbl-nombre-cliente" style="font-size:.78rem;color:#888;font-weight:700;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.05em;">O nombre del cliente</p>
             <input id="input-nombre-cliente" type="text" placeholder="Ej: Juan, Familia López..."
                 autocomplete="off"
                 style="width:100%;box-sizing:border-box;padding:.7rem .8rem;background:#0d0d0d;
@@ -3159,9 +3159,15 @@ document.addEventListener('click', function(e) {
         // Pre-cargar telefono: de la cuenta o de la sesion del cliente
         var telInp = document.getElementById('input-telefono-cliente');
         if (telInp) telInp.value = (c && c.telefono) ? c.telefono : (cliTelSes || '');
-        // Mostrar seccion telefono SIEMPRE (ahora se pide para toda orden)
+        // El teléfono se muestra según el tipo. Para empleados (tortumóvil) NO
+        // se muestra por defecto (solo si eligen Domicilio). Para clientes, sí.
+        var _esEmpModal = !!(localStorage.getItem('tt_emp_id') || sessionStorage.getItem('tt_emp_id') || localStorage.getItem('tt_cajero_nombre') || sessionStorage.getItem('tt_cajero_nombre'));
         var telSec = document.getElementById('telefono-section');
-        if (telSec) telSec.style.display = 'block';
+        if (telSec) telSec.style.display = _esEmpModal ? 'none' : 'block';
+        // Ajustar el título del nombre: para empleados es "Nombre del cliente"
+        // (sin el "O", porque no hay mesas que sean la alternativa).
+        var lblNombre = document.getElementById('lbl-nombre-cliente');
+        if (lblNombre) lblNombre.textContent = _esEmpModal ? 'Nombre del cliente' : 'O nombre del cliente';
 
         // Limpiar selecciones visuales
         document.querySelectorAll('.tipo-serv-btn, .mesa-btn').forEach(function(b){
@@ -3199,10 +3205,13 @@ document.addEventListener('click', function(e) {
         btn.style.background = 'rgba(255,90,0,.15)';
         btn.style.borderColor = '#FF5A00';
 
-        // Mostrar/ocultar mesas según tipo
+        // Mostrar/ocultar mesas según tipo.
+        // Si quien toma la orden es EMPLEADO (tortumóvil), NO se muestran mesas
+        // — en un tortumóvil no hay mesas, solo el nombre del cliente.
+        var _esEmpleadoModal = !!(localStorage.getItem('tt_emp_id') || sessionStorage.getItem('tt_emp_id') || localStorage.getItem('tt_cajero_nombre') || sessionStorage.getItem('tt_cajero_nombre'));
         var mesasSec = document.getElementById('mesas-section');
-        if (mesasSec) mesasSec.style.display = (tipo === 'Comer aquí') ? 'block' : 'none';
-        if (tipo !== 'Comer aquí') _seleccion.mesa = '';
+        if (mesasSec) mesasSec.style.display = (tipo === 'Comer aquí' && !_esEmpleadoModal) ? 'block' : 'none';
+        if (tipo !== 'Comer aquí' || _esEmpleadoModal) _seleccion.mesa = '';
 
         // Mostrar el campo de telefono solo para Domicilio, y precargar
         // el teléfono del cliente logueado si lo hay.
