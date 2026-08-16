@@ -311,6 +311,10 @@ const KitchenAPI = {
         if (estado.includes('preparación'))  updates['tiempos.enCocina']  = Date.now();
         else if (estado.includes('Listo'))    updates['tiempos.lista']     = Date.now();
         else if (estado.includes('Entregado')) updates['tiempos.entregada'] = Date.now();
+        // Al terminar (Listo/Entregado), quitar la prioridad 911 (ya se atendió)
+        if (estado.includes('Listo') || estado.includes('Entregado')) {
+            updates.prioridad911 = false;
+        }
         await updateDoc(doc(db,'pedidos',id), updates);
         // Si esta orden estaba "oculta" (limpiada antes), quitarla de ocultos
         // para que reaparezca en el historial con su nuevo estado.
@@ -465,7 +469,8 @@ function renderCard(p) {
         ts = p.tiempos.reiniciado;
     }
     // DIAGNÓSTICO TEMPORAL: mostrar si hay marca de reinicio
-    const _diag = `reinic:${p.tiempos && p.tiempos.reiniciado ? 'SÍ' : 'no'} term:${terminado?'sí':'no'}`;
+    const es911 = p.prioridad911 === true && !terminado;
+    const _diag = es911 ? '<div style="font-size:.85rem;color:#fff;font-weight:900;background:#F44336;border-radius:6px;padding:2px 8px;display:inline-block;margin-top:2px;">🚨 PRIORIDAD 911 — URGENTE</div>' : '';
     // Tiempo final: se congela en el momento en que terminó, usando la marca
     // más apropiada (entregada > enCamino > lista > enCocina), con aproximación
     // para pedidos viejos sin marca, para no contar infinito.
@@ -493,7 +498,7 @@ function renderCard(p) {
         <div class="kcard-head">
             <div>
                 <div class="kticket">#${String(ticket).replace(/^#+/, '')} <span style="font-size:.9rem;color:var(--muted);font-weight:400;">${hora}</span></div>
-                <div style="font-size:.6rem;color:#5B9BFF;">${_diag}</div>
+                ${_diag}
                 <div class="kcliente">${p.cliente||p.nombre||'Cliente'} ${p.notaCocina?'<span style="color:var(--yellow);font-size:.7rem;">📝 '+p.notaCocina+'</span>':''}</div>
             </div>
             <div class="ktimer ${timerClass(secs)}" data-ts="${ts}"${terminado ? ` data-fin="${finTiempo}"` : ''} data-tid="ktimer-${p.id}">${timerTxt(secs)}</div>
@@ -521,13 +526,15 @@ function renderGrid() {
 
     if (tabActual === 'activas') {
         pedidos = pedidos.filter(p => !p.estado?.includes('Entregado') && !p.estado?.includes('Listo') && !p.estado?.includes('Cancelado') && !p.estado?.includes('camino'));
-        // Orden de entrada: la orden más antigua primero (la que lleva más
-        // tiempo esperando), para que la cocina respete el turno de llegada.
+        // Orden: primero las de PRIORIDAD 911 (urgentes), luego por turno de
+        // llegada (la más antigua primero, para respetar el orden de entrada).
         pedidos.sort((a,b) => {
+            const p911a = a.prioridad911 === true ? 1 : 0;
+            const p911b = b.prioridad911 === true ? 1 : 0;
+            if (p911a !== p911b) return p911b - p911a;   // las 911 primero
             const ta = a.creado?.seconds || 0;
             const tb = b.creado?.seconds || 0;
             if (ta !== tb) return ta - tb;               // más antigua primero
-            // Empate por hora: usar el número de folio como desempate
             return (a.folio || 0) - (b.folio || 0);
         });
     } else {
