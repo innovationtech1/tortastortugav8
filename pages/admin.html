@@ -54,6 +54,8 @@ window.normalizarRutaImagen = function(src) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin — Tortas Tortuga</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/leaflet/leaflet.css">
+    <script src="../js/leaflet/leaflet.js"></script>
     <style>
         :root {
             --bg: #0D0D0D; --surface: #1A1A1A; --surface2: #222222;
@@ -497,7 +499,7 @@ window.normalizarRutaImagen = function(src) {
             if (doble) { beep(880, 0.9, 0.3); beep(660, 1.05, 0.3); beep(880, 1.2, 0.4); }
         } catch(e) {}
     }
-    import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, addDoc, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+    import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, addDoc, getDocs, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
     // NOTA: ya no hay contraseña de admin — el acceso lo controla el gate
     // de sesión real (gerente/supervisor) al inicio del <head>.
@@ -787,6 +789,12 @@ window.normalizarRutaImagen = function(src) {
                                    color:#25D366;padding:.6rem .8rem;font-family:inherit;font-size:0.8rem;font-weight:700;cursor:pointer;">
                             <span>🛵</span> ${p.repartidorNombre ? ('Repartidor: ' + p.repartidorNombre) : 'Asignar repartidor'}
                         </button>
+                        ${p.repartidorId ? `<button onclick="abrirMapaVivo('${p.id}')"
+                            style="display:flex;align-items:center;gap:8px;width:100%;text-align:left;
+                                   background:rgba(91,155,255,.08);border:none;border-bottom:1px solid rgba(255,255,255,.06);
+                                   color:#5B9BFF;padding:.6rem .8rem;font-family:inherit;font-size:0.8rem;font-weight:700;cursor:pointer;">
+                            <span>🗺️</span> Ver mapa en vivo
+                        </button>` : ''}
                         <button onclick="enviarComo911('${p.id}', '${folioVisible}')"
                             style="display:flex;align-items:center;gap:8px;width:100%;text-align:left;
                                    background:rgba(244,67,54,.08);border:none;
@@ -980,6 +988,78 @@ window.normalizarRutaImagen = function(src) {
         } catch(e) {
             alert('Error al enviar como 911.');
         }
+    };
+
+    // ═══ MAPA EN VIVO (tortumóvil + cliente + distancia) ═══
+    let _mapaVivo = null, _mapaVivoUnsub = null, _mapaMarcadorRep = null, _mapaMarcadorCli = null, _mapaLinea = null;
+
+    function _distanciaMillas(lat1, lng1, lat2, lng2) {
+        const R = 3958.8;
+        const dLat = (lat2-lat1) * Math.PI/180;
+        const dLng = (lng2-lng1) * Math.PI/180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    window.abrirMapaVivo = async (pedidoId) => {
+        const p = (window._adminPedidosDB || []).find(x => x.id === pedidoId);
+        if (!p) { alert('No se encontró la orden.'); return; }
+        if (!p.repartidorId) { alert('Esta orden no tiene repartidor asignado.'); return; }
+
+        const cliLat = p.ubicacionCliente && p.ubicacionCliente.lat;
+        const cliLng = p.ubicacionCliente && p.ubicacionCliente.lng;
+
+        document.getElementById('mapa-vivo-titulo').textContent = '🗺️ ' + (p.folioStr || ('#'+pedidoId.slice(-4)));
+        document.getElementById('mapa-vivo-info').textContent = '🛵 ' + (p.repartidorNombre||'Repartidor') + '  ·  👤 ' + (p.cliente||'Cliente');
+        document.getElementById('mapa-vivo-distancia').textContent = 'Buscando ubicación del tortumóvil...';
+        document.getElementById('mapa-vivo-modal').style.display = 'flex';
+
+        setTimeout(() => {
+            if (typeof L === 'undefined') { document.getElementById('mapa-vivo-distancia').textContent = 'Error: mapa no disponible.'; return; }
+            if (_mapaVivo) { _mapaVivo.remove(); _mapaVivo = null; }
+            const centro = (cliLat && cliLng) ? [cliLat, cliLng] : [29.4241, -98.4936];
+            _mapaVivo = L.map('mapa-vivo-cont').setView(centro, 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(_mapaVivo);
+
+            if (cliLat && cliLng) {
+                _mapaMarcadorCli = L.marker([cliLat, cliLng]).addTo(_mapaVivo).bindPopup('👤 Cliente: ' + (p.cliente||''));
+            }
+            setTimeout(() => { if (_mapaVivo) _mapaVivo.invalidateSize(); }, 200);
+
+            if (_mapaVivoUnsub) { _mapaVivoUnsub(); _mapaVivoUnsub = null; }
+            _mapaVivoUnsub = onSnapshot(doc(db, 'ubicaciones', p.repartidorId), (snap) => {
+                if (!snap.exists()) {
+                    document.getElementById('mapa-vivo-distancia').textContent = '🛵 El tortumóvil aún no comparte ubicación.';
+                    return;
+                }
+                const u = snap.data();
+                if (!u.lat || !u.lng) return;
+                if (_mapaMarcadorRep) {
+                    _mapaMarcadorRep.setLatLng([u.lat, u.lng]);
+                } else {
+                    _mapaMarcadorRep = L.circleMarker([u.lat, u.lng], { radius:9, color:'#FF5A00', fillColor:'#FF5A00', fillOpacity:1 }).addTo(_mapaVivo).bindPopup('🛵 ' + (u.nombre||'Tortumóvil'));
+                }
+                if (cliLat && cliLng) {
+                    if (_mapaLinea) { _mapaVivo.removeLayer(_mapaLinea); }
+                    _mapaLinea = L.polyline([[u.lat, u.lng],[cliLat, cliLng]], { color:'#FF5A00', weight:3, dashArray:'6,8' }).addTo(_mapaVivo);
+                    const millas = _distanciaMillas(u.lat, u.lng, cliLat, cliLng);
+                    document.getElementById('mapa-vivo-distancia').textContent = '📍 Distancia al cliente: ' + millas.toFixed(2) + ' millas';
+                    _mapaVivo.fitBounds([[u.lat, u.lng],[cliLat, cliLng]], { padding:[60,60], maxZoom:15 });
+                } else {
+                    document.getElementById('mapa-vivo-distancia').textContent = '🛵 Tortumóvil ubicado (el cliente no tiene ubicación registrada).';
+                    _mapaVivo.setView([u.lat, u.lng], 14);
+                }
+            }, (err) => {
+                document.getElementById('mapa-vivo-distancia').textContent = 'Error al leer la ubicación.';
+            });
+        }, 100);
+    };
+
+    window.cerrarMapaVivo = () => {
+        document.getElementById('mapa-vivo-modal').style.display = 'none';
+        if (_mapaVivoUnsub) { _mapaVivoUnsub(); _mapaVivoUnsub = null; }
+        if (_mapaVivo) { _mapaVivo.remove(); _mapaVivo = null; }
+        _mapaMarcadorRep = null; _mapaMarcadorCli = null; _mapaLinea = null;
     };
 
     // ═══ RESTAURAR ORDEN ARCHIVADA (solo gerente, motivo + PIN) ═══
@@ -3387,6 +3467,20 @@ window.colBloquear = async function(hora, bloquear) {
       <button onclick="cerrarRestaurar()" style="flex:1;padding:.8rem;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:10px;font-family:inherit;font-weight:700;cursor:pointer;">Cancelar</button>
       <button onclick="confirmarRestaurar()" style="flex:1;padding:.8rem;background:linear-gradient(135deg,#25D366,#1DA851);border:none;color:#fff;border-radius:10px;font-family:inherit;font-weight:800;cursor:pointer;">Confirmar</button>
     </div>
+  </div>
+</div>
+<!-- Modal: mapa en vivo (tortumóvil + cliente + distancia) -->
+<div id="mapa-vivo-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:100001;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#1A1A1A;border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:1rem;width:100%;max-width:520px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;">
+      <div>
+        <div id="mapa-vivo-titulo" style="font-size:1.05rem;font-weight:900;color:#FF5A00;">🗺️ Mapa en vivo</div>
+        <div id="mapa-vivo-info" style="font-size:.78rem;color:#888;">—</div>
+      </div>
+      <button onclick="cerrarMapaVivo()" style="background:rgba(255,255,255,.1);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:1.1rem;cursor:pointer;">✕</button>
+    </div>
+    <div id="mapa-vivo-cont" style="width:100%;height:360px;border-radius:12px;overflow:hidden;background:#111;"></div>
+    <div id="mapa-vivo-distancia" style="text-align:center;margin-top:.7rem;font-size:1rem;font-weight:800;color:#25D366;">Calculando distancia...</div>
   </div>
 </div>
 </body>
