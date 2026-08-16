@@ -206,7 +206,7 @@
 <script src="../js/tt-alert.js"></script>
 <script type="module">
 import { db } from '../js/firebase-config.js';
-import { collection, onSnapshot, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { collection, onSnapshot, doc, updateDoc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // Guarda los pedidos actuales para abrirlos en la vista de entrega
 let _pedidosActuales = [];
@@ -221,6 +221,38 @@ function _leer(clave) {
 const miId     = (_leer('tt_emp_id') || _leer('tt_cajero_id') || '').trim();
 const miNombre = (_leer('tt_emp_nombre') || _leer('tt_cajero_nombre') || '').trim();
 const miRol    = (_leer('tt_emp_rol') || _leer('tt_cajero_rol') || '').toLowerCase();
+
+// ── Compartir ubicación del tortumóvil en vivo ──────────────────
+// El repartidor comparte su posición GPS mientras usa Mi Ruta, para que
+// el panel admin pueda ver dónde está cada tortumóvil en tiempo real.
+// Se guarda en la colección "ubicaciones" con el id del repartidor.
+let _watchId = null;
+let _ultimoGuardado = 0;
+function iniciarCompartirUbicacion() {
+    if (!navigator.geolocation || !miId) return;
+    if (_watchId !== null) return; // ya está activo
+    _watchId = navigator.geolocation.watchPosition(async function(pos){
+        const ahora = Date.now();
+        // Guardar como máximo cada 5 segundos para no saturar la base de datos
+        if (ahora - _ultimoGuardado < 5000) return;
+        _ultimoGuardado = ahora;
+        try {
+            await setDoc(doc(db, 'ubicaciones', miId), {
+                repartidorId: miId,
+                nombre: miNombre || miId,
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude,
+                precision: pos.coords.accuracy || null,
+                actualizado: Date.now()
+            });
+        } catch(e) { /* si falla, se reintenta en el próximo movimiento */ }
+    }, function(err){
+        // Sin permiso GPS: no se puede compartir ubicación
+        console.warn('GPS no disponible para compartir ubicación:', err.message);
+    }, { enableHighAccuracy:true, maximumAge:3000, timeout:10000 });
+}
+// Arrancar el seguimiento si es un repartidor (tiene id)
+if (miId) { iniciarCompartirUbicacion(); }
 
 // ── Menú de navegación ──
 window.toggleNavMenu = function() {
