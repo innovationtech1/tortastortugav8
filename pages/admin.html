@@ -755,6 +755,9 @@ window.normalizarRutaImagen = function(src) {
            <span>🗺️</span> Ver ubicación en mapa</a>
         <div style="font-size:0.72rem;color:#25D366;margin-top:5px;font-weight:600;">✅ Recibida (±${p.ubicacionCliente.precision||'?'}m)</div>
         ${p.referenciaCliente ? `<div style="font-size:0.75rem;color:#FBB724;margin-top:4px;">📌 ${p.referenciaCliente}</div>` : ''}
+        ${p.repartidorId ? `<button onclick="abrirMapaVivo('${p.id}')"
+           style="width:100%;margin-top:8px;padding:7px 10px;background:rgba(255,90,0,.12);border:1px solid rgba(255,90,0,.4);color:#FF5A00;border-radius:8px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;">
+           <span>🛰️</span> Ver mapa en vivo (tortumóvil)</button>` : ''}
     </div>` : ''}
     ${p.cajeroNombre ? `<br><span style="color:rgba(255,90,0,.7);font-size:0.72rem;margin-top:3px;display:block;">🏪 ${p.cajeroNombre}</span>` : ''}
 </td>
@@ -789,12 +792,6 @@ window.normalizarRutaImagen = function(src) {
                                    color:#25D366;padding:.6rem .8rem;font-family:inherit;font-size:0.8rem;font-weight:700;cursor:pointer;">
                             <span>🛵</span> ${p.repartidorNombre ? ('Repartidor: ' + p.repartidorNombre) : 'Asignar repartidor'}
                         </button>
-                        ${p.repartidorId ? `<button onclick="abrirMapaVivo('${p.id}')"
-                            style="display:flex;align-items:center;gap:8px;width:100%;text-align:left;
-                                   background:rgba(91,155,255,.08);border:none;border-bottom:1px solid rgba(255,255,255,.06);
-                                   color:#5B9BFF;padding:.6rem .8rem;font-family:inherit;font-size:0.8rem;font-weight:700;cursor:pointer;">
-                            <span>🗺️</span> Ver mapa en vivo
-                        </button>` : ''}
                         <button onclick="enviarComo911('${p.id}', '${folioVisible}')"
                             style="display:flex;align-items:center;gap:8px;width:100%;text-align:left;
                                    background:rgba(244,67,54,.08);border:none;
