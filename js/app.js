@@ -1399,9 +1399,12 @@ window.enviarTodasLasCuentas = async function() {
     }
 
     // Exigir nombre y teléfono antes de enviar.
+    // EXCEPCIÓN: si la orden se tomó en el tortumóvil (empleado, no domicilio),
+    // no se pide teléfono (el cliente está físicamente en el tortumóvil).
+    var ordenoEnTortumovil = !!(cuentaPrincipal && cuentaPrincipal.ordenoEnTortumovil);
     var telDigitos = (telefono || '').replace(/\D/g, '');
     var faltaNombre = !nombre || nombre === 'Cliente' || /^Cuenta \d+$/.test(nombre);
-    var faltaTelefono = telDigitos.length < 10;
+    var faltaTelefono = !ordenoEnTortumovil && telDigitos.length < 10;
     if (faltaNombre) {
         alert('⚠️ Falta el nombre del cliente. Toca el campo de nombre arriba del carrito para escribirlo.');
         return;
@@ -1472,6 +1475,11 @@ window.enviarTodasLasCuentas = async function() {
         telefono:    telefono,
         tipoServicio: tipoServ,
         tipoEntrega: tipo === 'pickup' ? 'Recoger' : 'Domicilio',
+        // Si se ordenó en el tortumóvil, marcarlo y guardar la referencia
+        // del tortumóvil (empleado que la tomó) para el mapa/ubicación.
+        ordenoEnTortumovil: ordenoEnTortumovil,
+        tortumovilId: ordenoEnTortumovil ? (cuentaPrincipal.tortumovilId || '') : null,
+        tortumovilNombre: ordenoEnTortumovil ? (cuentaPrincipal.tortumovilNombre || '') : null,
         itemsData:   itemsData,
         items:       itemsStr,
         total:       '$' + totalGen.toFixed(2),
