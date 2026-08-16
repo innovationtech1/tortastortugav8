@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Mis Pedidos — Tortas Tortuga</title>
+<link rel="stylesheet" href="../css/style.css?v=1">
+<script>
+// ── ACCESO SOLO STAFF ──────────────────────────────────────────
+(function() {
+    function leer(k){ return localStorage.getItem(k) || sessionStorage.getItem(k); }
+    var empId = leer('tt_emp_id');
+    var cajNombre = leer('tt_cajero_nombre');
+    if (!empId && !cajNombre) {
+        window.location.replace('empleados.html');
+    }
+})();
+</script>
+<style>
+  :root { --primary:#FF5A00; --bg:#0E0E0E; --surface:#1C1C1C; --muted:#888; --green:#25D366; --blue:#3B82F6; }
+  * { box-sizing:border-box; }
+  body { background:var(--bg); color:#fff; font-family:'Poppins',system-ui,sans-serif; margin:0; padding-bottom:2rem; }
+  .mp-header {
+    background:linear-gradient(135deg,#FF5A00,#FF8C00); padding:1.1rem 1rem;
+    display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:10;
+  }
+  .mp-header h1 { font-size:1.15rem; font-weight:900; margin:0; display:flex; align-items:center; gap:.5rem; }
+  .mp-header .mp-sub { font-size:.78rem; opacity:.92; font-weight:600; }
+  .mp-stats { display:flex; gap:.6rem; padding:1rem; }
+  .mp-stat { flex:1; background:var(--surface); border-radius:12px; padding:.8rem; text-align:center; }
+  .mp-stat .n { font-size:1.5rem; font-weight:900; }
+  .mp-stat .l { font-size:.7rem; color:var(--muted); margin-top:.2rem; }
+  .mp-lista { padding:0 1rem; }
+  .mp-card { background:var(--surface); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:1rem; margin-bottom:.9rem; }
+  .mp-card-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:.6rem; }
+  .mp-folio { font-size:1.2rem; font-weight:900; color:#FBB724; }
+  .mp-hora { font-size:.72rem; color:var(--muted); }
+  .mp-cliente { font-size:1rem; font-weight:700; margin-top:.2rem; }
+  .mp-badge { font-size:.68rem; font-weight:700; padding:2px 10px; border-radius:20px; display:inline-block; margin-top:.3rem; }
+  .mp-items { font-size:.82rem; color:#ccc; margin:.5rem 0; line-height:1.5; }
+  .mp-total { font-size:1.1rem; font-weight:800; color:var(--green); }
+  .mp-estado { font-size:.75rem; font-weight:700; padding:3px 10px; border-radius:20px; }
+  .est-nuevo { background:rgba(255,90,0,.15); color:#FF5A00; }
+  .est-prep { background:rgba(251,191,36,.15); color:#FBB724; }
+  .est-listo { background:rgba(37,211,102,.15); color:var(--green); }
+  .est-entregado { background:rgba(136,136,136,.15); color:var(--muted); }
+  .mp-acciones { display:flex; gap:.5rem; margin-top:.8rem; flex-wrap:wrap; }
+  .mp-btn { flex:1; min-width:120px; padding:.7rem; border:none; border-radius:10px; font-family:inherit; font-size:.85rem; font-weight:700; cursor:pointer; }
+  .mp-btn-prep { background:rgba(251,191,36,.2); border:1px solid rgba(251,191,36,.5); color:#FBB724; }
+  .mp-btn-listo { background:rgba(37,211,102,.2); border:1px solid rgba(37,211,102,.5); color:var(--green); }
+  .mp-btn-cobrar { background:linear-gradient(135deg,#25D366,#1DA851); color:#fff; }
+  .mp-btn-pagado { background:rgba(136,136,136,.15); color:var(--muted); border:1px solid rgba(255,255,255,.1); }
+  .mp-vacio { text-align:center; padding:3rem 1rem; color:var(--muted); }
+  .mp-vacio .ico { font-size:3rem; margin-bottom:.5rem; }
+  /* Modal de cobro */
+  .cobro-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.8); z-index:1000; align-items:center; justify-content:center; padding:1rem; }
+  .cobro-box { background:var(--surface); border-radius:16px; padding:1.4rem; width:100%; max-width:380px; }
+  .cobro-box h3 { margin:0 0 .3rem; font-size:1.1rem; }
+  .cobro-metodos { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin:1rem 0; }
+  .cobro-metodo { padding:.9rem; border-radius:12px; border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.04); color:#fff; font-family:inherit; font-size:.9rem; font-weight:700; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:.3rem; }
+  .cobro-metodo:active { transform:scale(.96); }
+</style>
+</head>
+<body>
+
+<div class="mp-header">
+  <div>
+    <h1>🧾 Mis Pedidos</h1>
+    <div class="mp-sub" id="mp-nombre">—</div>
+  </div>
+  <button onclick="location.href='../ordenar.html'" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:.6rem .9rem;border-radius:10px;font-family:inherit;font-weight:700;cursor:pointer;">+ Nueva</button>
+</div>
+
+<div class="mp-stats">
+  <div class="mp-stat"><div class="n" id="mp-total-count" style="color:#FF5A00">0</div><div class="l">Hoy</div></div>
+  <div class="mp-stat"><div class="n" id="mp-pend-count" style="color:#FBB724">0</div><div class="l">Por cobrar</div></div>
+  <div class="mp-stat"><div class="n" id="mp-cobrado" style="color:#25D366">$0</div><div class="l">Cobrado</div></div>
+</div>
+
+<div class="mp-lista" id="mp-lista">
+  <div class="mp-vacio"><div class="ico">🧾</div><div>Cargando tus pedidos...</div></div>
+</div>
+
+<!-- Modal de cobro -->
+<div class="cobro-overlay" id="cobro-overlay">
+  <div class="cobro-box">
+    <h3>💵 Cobrar pedido</h3>
+    <div id="cobro-info" style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem;">—</div>
+    <div style="font-size:1.6rem;font-weight:900;color:var(--green);text-align:center;">
+      <span id="cobro-total">$0</span>
+    </div>
+    <div class="cobro-metodos">
+      <button class="cobro-metodo" onclick="confirmarCobro('Efectivo')">💵<span>Efectivo</span></button>
+      <button class="cobro-metodo" onclick="confirmarCobro('Tarjeta')">💳<span>Tarjeta</span></button>
+      <button class="cobro-metodo" onclick="confirmarCobro('Zelle')">🟣<span>Zelle</span></button>
+      <button class="cobro-metodo" onclick="confirmarCobro('Cash App')">🟢<span>Cash App</span></button>
+    </div>
+    <button onclick="cerrarCobro()" style="width:100%;padding:.8rem;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:10px;font-family:inherit;font-weight:700;cursor:pointer;">Cancelar</button>
+  </div>
+</div>
+
+<script src="../js/tt-alert.js"></script>
+<script src="../js/perfil-barra.js"></script>
+<script type="module">
+import { db } from '../js/firebase-config.js';
+import { collection, onSnapshot, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+function leer(k){ return localStorage.getItem(k) || sessionStorage.getItem(k); }
+const miId     = (leer('tt_emp_id') || leer('tt_cajero_id') || '').trim();
+const miNombre = (leer('tt_emp_nombre') || leer('tt_cajero_nombre') || miId).trim();
+
+document.getElementById('mp-nombre').textContent = miNombre + (miId ? (' · ' + miId) : '');
+
+let _pedidos = [];
+let _cobroId = null;
+
+function esMio(p) {
+    // Pedidos tomados por este empleado (por id o por nombre de cajero)
+    return (p.cajeroId && p.cajeroId === miId) ||
+           (p.cajeroNombre && p.cajeroNombre === miNombre) ||
+           (p.tortumovilId && p.tortumovilId === miId);
+}
+
+function hoyInicio() {
+    const h = new Date(); h.setHours(0,0,0,0); return h.getTime();
+}
+
+function parseItems(p) {
+    if (typeof p.items === 'string') return p.items.split(' | ').filter(Boolean);
+    if (Array.isArray(p.itemsData)) return p.itemsData.map(i => (i.cantidad||1)+'x '+(i.nombre||i.producto||''));
+    return [];
+}
+
+function claseEstado(est) {
+    est = est || '';
+    if (est.includes('Entregado')) return 'est-entregado';
+    if (est.includes('Listo')) return 'est-listo';
+    if (est.includes('preparación')) return 'est-prep';
+    return 'est-nuevo';
+}
+
+function render() {
+    const cont = document.getElementById('mp-lista');
+    const inicio = hoyInicio();
+    // Solo mis pedidos de hoy
+    const mios = _pedidos.filter(p => {
+        if (!esMio(p)) return false;
+        const ts = p.creado?.seconds ? p.creado.seconds*1000 : 0;
+        return ts >= inicio && !p.archivado;
+    });
+
+    // Estadísticas
+    document.getElementById('mp-total-count').textContent = mios.length;
+    const porCobrar = mios.filter(p => p.estadoPago !== 'Pagado');
+    document.getElementById('mp-pend-count').textContent = porCobrar.length;
+    let cobrado = 0;
+    mios.forEach(p => { if (p.estadoPago === 'Pagado') cobrado += (p.totalNum || 0); });
+    document.getElementById('mp-cobrado').textContent = '$' + cobrado.toFixed(0);
+
+    if (!mios.length) {
+        cont.innerHTML = '<div class="mp-vacio"><div class="ico">🧾</div><div>Aún no has tomado pedidos hoy.</div><div style="font-size:.8rem;margin-top:.5rem;">Toca "+ Nueva" para crear uno.</div></div>';
+        return;
+    }
+
+    cont.innerHTML = mios.map(p => {
+        const folio = p.folioStr || ('#' + (p.id||'').slice(-4).toUpperCase());
+        const hora = p.creado?.seconds ? new Date(p.creado.seconds*1000).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) : '';
+        const items = parseItems(p);
+        const estado = p.estado || 'Nuevo';
+        const pagado = p.estadoPago === 'Pagado';
+        const esTortu = p.ordenoEnTortumovil;
+
+        // Botones de preparación según estado
+        let btnPrep = '';
+        if (estado.includes('Nuevo')) {
+            btnPrep = `<button class="mp-btn mp-btn-prep" onclick="cambiarEstado('${p.id}','En preparación 🧑‍🍳')">🍳 Preparar</button>`;
+        } else if (estado.includes('preparación')) {
+            btnPrep = `<button class="mp-btn mp-btn-listo" onclick="cambiarEstado('${p.id}','Listo ✅')">✅ Lista</button>`;
+        }
+
+        // Botón de cobro
+        let btnCobro = pagado
+            ? `<button class="mp-btn mp-btn-pagado" disabled>✅ Pagado (${p.metodoPagoReal||''})</button>`
+            : `<button class="mp-btn mp-btn-cobrar" onclick="abrirCobro('${p.id}')">💵 Cobrar ${p.total||''}</button>`;
+
+        return `<div class="mp-card">
+            <div class="mp-card-top">
+                <div>
+                    <div class="mp-folio">${folio} <span class="mp-hora">${hora}</span></div>
+                    <div class="mp-cliente">${p.cliente || 'Cliente'}</div>
+                    ${esTortu ? '<span class="mp-badge" style="background:rgba(37,211,102,.15);color:#25D366;">🚐 Tortumóvil</span>' : ''}
+                </div>
+                <span class="mp-estado ${claseEstado(estado)}">${estado}</span>
+            </div>
+            <div class="mp-items">${items.join('<br>')}</div>
+            <div class="mp-total">${p.total || ''}</div>
+            <div class="mp-acciones">
+                ${btnPrep}
+                ${btnCobro}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+window.cambiarEstado = async function(id, estado) {
+    try {
+        const updates = { estado };
+        if (estado.includes('preparación')) updates['tiempos.enCocina'] = Date.now();
+        else if (estado.includes('Listo')) updates['tiempos.lista'] = Date.now();
+        await updateDoc(doc(db, 'pedidos', id), updates);
+        if (window.ttAlert) window.ttAlert('Estado actualizado.');
+    } catch(e) { alert('Error al cambiar estado.'); }
+};
+
+window.abrirCobro = function(id) {
+    _cobroId = id;
+    const p = _pedidos.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('cobro-info').textContent = (p.cliente||'Cliente') + ' · ' + (p.folioStr||'');
+    document.getElementById('cobro-total').textContent = p.total || '$0';
+    document.getElementById('cobro-overlay').style.display = 'flex';
+};
+
+window.cerrarCobro = function() {
+    document.getElementById('cobro-overlay').style.display = 'none';
+    _cobroId = null;
+};
+
+window.confirmarCobro = async function(metodo) {
+    if (!_cobroId) return;
+    try {
+        await updateDoc(doc(db, 'pedidos', _cobroId), {
+            estadoPago: 'Pagado',
+            metodoPagoReal: metodo,
+            cobradoPor: miNombre || miId,
+            cobradoEn: new Date().toISOString()
+        });
+        if (window.ttAlert) window.ttAlert('✅ Cobrado con ' + metodo);
+        cerrarCobro();
+    } catch(e) { alert('Error al cobrar.'); }
+};
+
+// Escuchar pedidos en vivo
+onSnapshot(collection(db, 'pedidos'), snap => {
+    _pedidos = [];
+    snap.forEach(d => _pedidos.push({ id: d.id, ...d.data() }));
+    render();
+}, err => {
+    document.getElementById('mp-lista').innerHTML = '<div class="mp-vacio"><div class="ico">⚠️</div><div>Error al cargar. Revisa tu conexión.</div></div>';
+});
+</script>
+</body>
+</html>
