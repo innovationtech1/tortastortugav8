@@ -464,6 +464,8 @@ function renderCard(p) {
     if (!terminado && p.tiempos && p.tiempos.reiniciado && p.tiempos.reiniciado > ts) {
         ts = p.tiempos.reiniciado;
     }
+    // DIAGNÓSTICO TEMPORAL: mostrar si hay marca de reinicio
+    const _diag = `reinic:${p.tiempos && p.tiempos.reiniciado ? 'SÍ' : 'no'} term:${terminado?'sí':'no'}`;
     // Tiempo final: se congela en el momento en que terminó, usando la marca
     // más apropiada (entregada > enCamino > lista > enCocina), con aproximación
     // para pedidos viejos sin marca, para no contar infinito.
@@ -491,6 +493,7 @@ function renderCard(p) {
         <div class="kcard-head">
             <div>
                 <div class="kticket">#${String(ticket).replace(/^#+/, '')} <span style="font-size:.9rem;color:var(--muted);font-weight:400;">${hora}</span></div>
+                <div style="font-size:.6rem;color:#5B9BFF;">${_diag}</div>
                 <div class="kcliente">${p.cliente||p.nombre||'Cliente'} ${p.notaCocina?'<span style="color:var(--yellow);font-size:.7rem;">📝 '+p.notaCocina+'</span>':''}</div>
             </div>
             <div class="ktimer ${timerClass(secs)}" data-ts="${ts}"${terminado ? ` data-fin="${finTiempo}"` : ''} data-tid="ktimer-${p.id}">${timerTxt(secs)}</div>
