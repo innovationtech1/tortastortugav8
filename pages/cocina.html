@@ -462,13 +462,14 @@ function renderCard(p) {
     const est    = p.estado || '';
     const terminado = est.includes('Listo') || est.includes('Entregado') || est.includes('camino') || est.includes('Cancelado');
     // Inicio del cronómetro: normalmente cuándo se creó la orden. PERO si la
-    // orden fue reactivada desde el admin (tiempos.reiniciado) y está de nuevo
-    // en proceso, el reloj cuenta desde ese reinicio (empieza de 0).
+    // orden fue reactivada/reenviada (tiempos.reiniciado, ej. como 911), el
+    // reloj cuenta SIEMPRE desde ese reinicio — así el tiempo (tanto en vivo
+    // como el congelado en el historial) refleja solo ESTA preparación, no la
+    // acumulada desde el pedido original.
     let ts = p.creado?.seconds ? p.creado.seconds*1000 : ahora;
-    if (!terminado && p.tiempos && p.tiempos.reiniciado && p.tiempos.reiniciado > ts) {
+    if (p.tiempos && p.tiempos.reiniciado && p.tiempos.reiniciado > ts) {
         ts = p.tiempos.reiniciado;
     }
-    // DIAGNÓSTICO TEMPORAL: mostrar si hay marca de reinicio
     const es911 = p.prioridad911 === true && !terminado;
     const _diag = es911 ? '<div style="font-size:.85rem;color:#fff;font-weight:900;background:#F44336;border-radius:6px;padding:2px 8px;display:inline-block;margin-top:2px;">🚨 PRIORIDAD 911 — URGENTE</div>' : '';
     // Tiempo final: se congela en el momento en que terminó, usando la marca
