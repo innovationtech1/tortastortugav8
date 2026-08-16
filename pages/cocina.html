@@ -472,12 +472,21 @@ function renderCard(p) {
     }
     const es911 = p.prioridad911 === true && !terminado;
     const _diag = es911 ? '<div style="font-size:.85rem;color:#fff;font-weight:900;background:#F44336;border-radius:6px;padding:2px 8px;display:inline-block;margin-top:2px;">🚨 PRIORIDAD 911 — URGENTE</div>' : '';
-    // Tiempo final: se congela en el momento en que terminó, usando la marca
-    // más apropiada (entregada > enCamino > lista > enCocina), con aproximación
-    // para pedidos viejos sin marca, para no contar infinito.
+    // Tiempo final: se congela en el momento en que terminó ESTA preparación.
+    // Importante: solo usamos marcas POSTERIORES al inicio (ts), porque una
+    // orden reenviada como 911 conserva marcas viejas (enCocina/lista) de su
+    // preparación anterior — usarlas daría un tiempo negativo (que se vería
+    // como 0). Por eso filtramos: cada marca debe ser >= ts.
     let finTiempo = ahora;
     if (terminado && p.tiempos) {
-        finTiempo = p.tiempos.entregada || p.tiempos.enCamino || p.tiempos.lista || p.tiempos.enCocina || ahora;
+        const marcas = [p.tiempos.entregada, p.tiempos.enCamino, p.tiempos.lista, p.tiempos.enCocina]
+            .filter(function(t){ return t && t >= ts; });
+        // Tomamos la marca más apropiada (la primera válida en orden de prioridad)
+        finTiempo = (p.tiempos.entregada && p.tiempos.entregada >= ts) ? p.tiempos.entregada
+                  : (p.tiempos.enCamino && p.tiempos.enCamino >= ts) ? p.tiempos.enCamino
+                  : (p.tiempos.lista && p.tiempos.lista >= ts) ? p.tiempos.lista
+                  : (p.tiempos.enCocina && p.tiempos.enCocina >= ts) ? p.tiempos.enCocina
+                  : ahora;
     }
     const secs   = Math.max(0, (finTiempo - ts) / 1000);
     const cls    = est.includes('preparación') ? 'prep'
@@ -578,8 +587,11 @@ function renderGrid() {
             if (p.tiempos.reiniciado && (!inicio || p.tiempos.reiniciado > inicio)) {
                 inicio = p.tiempos.reiniciado;
             }
-            // Fin: cuando la cocina la marcó lista (o entregada como respaldo)
-            const fin = p.tiempos.lista || p.tiempos.entregada;
+            // Fin: la marca de terminado que sea POSTERIOR al inicio (para no
+            // usar marcas viejas de una preparación anterior si fue 911).
+            let fin = null;
+            if (p.tiempos.lista && (!inicio || p.tiempos.lista >= inicio)) fin = p.tiempos.lista;
+            else if (p.tiempos.entregada && (!inicio || p.tiempos.entregada >= inicio)) fin = p.tiempos.entregada;
             if (inicio && fin && fin > inicio) {
                 totalSegs += (fin - inicio) / 1000;
                 cuenta++;
