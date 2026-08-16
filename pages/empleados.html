@@ -702,19 +702,13 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'Out
 /* ── Funciones globales básicas — disponibles inmediatamente ── */
 function el(id){ return document.getElementById(id); }
 
-/* ── RESTAURAR SESIÓN (20 minutos) ─────────────────────── */
+/* ── RESTAURAR SESIÓN (persistente hasta cerrar sesión manual) ── */
 (function(){
-  var empId = sessionStorage.getItem('tt_emp_id');
-  var pin   = sessionStorage.getItem('tt_emp_pin');
-  var ts    = parseInt(sessionStorage.getItem('tt_emp_ts') || '0');
+  var empId = localStorage.getItem('tt_emp_id');
+  var pin   = localStorage.getItem('tt_emp_pin');
+  var ts    = parseInt(localStorage.getItem('tt_emp_ts') || '0');
   if(!empId || !pin || !ts) return;
-  if(Date.now() - ts > 20 * 60 * 1000){
-    // Sesión expirada — limpiar
-    sessionStorage.removeItem('tt_emp_id');
-    sessionStorage.removeItem('tt_emp_pin');
-    sessionStorage.removeItem('tt_emp_ts');
-    return;
-  }
+  // La sesión NO expira por tiempo — solo se cierra al tocar "Salir".
   // Sesión válida — Firebase la restaurará automáticamente
   window._autoLoginEmp = { empId: empId, pin: pin };
   console.log('🔄 Sesión activa para', empId, '— restaurando...');
@@ -1099,15 +1093,15 @@ onAuthStateChanged(auth, async u=>{
         await signInWithEmailAndPassword(auth, emailInterno, pwAuto);
         skipAuthChange = false;
         // Actualizar timestamp de sesión
-        sessionStorage.setItem('tt_emp_ts', Date.now().toString());
+        localStorage.setItem('tt_emp_ts', Date.now().toString());
         return; // onAuthStateChanged volverá a correr con el usuario
       } catch(e){
         skipAuthChange = false;
         console.warn('Auto-login falló:', e.message);
         // Limpiar sesión inválida
-        sessionStorage.removeItem('tt_emp_id');
-        sessionStorage.removeItem('tt_emp_pin');
-        sessionStorage.removeItem('tt_emp_ts');
+        localStorage.removeItem('tt_emp_id');
+        localStorage.removeItem('tt_emp_pin');
+        localStorage.removeItem('tt_emp_ts');
       }
     }
     user=null; empData=null; rolActual='empleado'; nivelActual=1; turnoId=null; turnoData=null;
@@ -1562,7 +1556,7 @@ function renderEstadoTurno(){
       // Para PIN-only users: empData.id (Firestore doc ID guardado en session)
       if (user) return user.uid;
       if (empData?.id) return empData.id;
-      return sessionStorage.getItem('tt_emp_docid') || null;
+      return localStorage.getItem('tt_emp_docid') || null;
     }
 
     window.accionTurno = async function(accion){
@@ -1572,8 +1566,8 @@ function renderEstadoTurno(){
   // Restaurar datos de sesión PIN-only si no hay Firebase Auth (en segundo
   // plano, sin volver a renderizar la pantalla ni cortar la acción actual —
   // antes esto tenía un "return" que impedía que el turno se registrara).
-  const _savedDocId = sessionStorage.getItem('tt_emp_docid');
-  const _savedTs    = parseInt(sessionStorage.getItem('tt_emp_ts')||'0');
+  const _savedDocId = localStorage.getItem('tt_emp_docid');
+  const _savedTs    = parseInt(localStorage.getItem('tt_emp_ts')||'0');
   if(_savedDocId && !user && (Date.now()-_savedTs < 20*60*1000)){
     try {
       const _snap = await getDoc(doc(db,'empleados', _savedDocId));
@@ -1585,8 +1579,8 @@ function renderEstadoTurno(){
     } catch(e) {}
   }
 
-  if(sessionStorage.getItem('tt_emp_id')){
-    sessionStorage.setItem('tt_emp_ts', Date.now().toString());
+  if(localStorage.getItem('tt_emp_id')){
+    localStorage.setItem('tt_emp_ts', Date.now().toString());
   }
   const ahora = new Date();
   const ahoraTs = Timestamp.fromDate(ahora);
@@ -1864,11 +1858,11 @@ window.loginEmp = async function(){
       /* seguimos en modo PIN-only, sin problema */
     }
 
-    sessionStorage.setItem('tt_emp_id',   empId);
-    sessionStorage.setItem('tt_emp_pin',  pin);
-    sessionStorage.setItem('tt_emp_ts',   Date.now().toString());
-    sessionStorage.setItem('tt_emp_nombre', ((empData.nombre||'') + ' ' + (empData.apellido||'')).trim() || empId);
-    sessionStorage.setItem('tt_emp_rol', empData.rol || empData.puesto || 'empleado');
+    localStorage.setItem('tt_emp_id',   empId);
+    localStorage.setItem('tt_emp_pin',  pin);
+    localStorage.setItem('tt_emp_ts',   Date.now().toString());
+    localStorage.setItem('tt_emp_nombre', ((empData.nombre||'') + ' ' + (empData.apellido||'')).trim() || empId);
+    localStorage.setItem('tt_emp_rol', empData.rol || empData.puesto || 'empleado');
     // Duplicar en localStorage: se comparte entre pestañas (Ver Cocina /
     // Ir a Tienda pueden abrir en pestaña nueva donde sessionStorage no
     // está disponible), igual que hicimos con la sesión de cliente.
@@ -1877,7 +1871,7 @@ window.loginEmp = async function(){
     localStorage.setItem('tt_emp_nombre', ((empData.nombre||'') + ' ' + (empData.apellido||'')).trim() || empId);
     localStorage.setItem('tt_emp_rol', empData.rol || empData.puesto || 'empleado');
     if (!firebaseAuthOk) {
-      sessionStorage.setItem('tt_emp_docid', empDoc.id);
+      localStorage.setItem('tt_emp_docid', empDoc.id);
       user = null;
     }
     mostrarEmp();
