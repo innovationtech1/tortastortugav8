@@ -560,22 +560,38 @@ function renderGrid() {
     document.getElementById('cnt-e').textContent = todosHoy.filter(p=>p.estado?.includes('Entregado')).length;
 
     // ── Promedio de tiempo de cocina en tiempo real ──
-    // Se calcula con los pedidos ENTREGADOS hoy: desde que se creó hasta que
-    // se entregó (tiempos.entregada). Solo cuenta los que tienen ambos datos.
-    const entregadosConTiempo = todosHoy.filter(function(p){
-        return p.estado?.includes('Entregado') && p.tiempos && p.tiempos.entregada && p.creado?.seconds;
+    // Mide el tiempo de PREPARACIÓN de cada orden terminada hoy: desde que
+    // empezó (o desde el reinicio, si fue reenviada como 911) hasta que la
+    // cocina la marcó lista. Cada orden cuenta individualmente su propio
+    // tiempo — las 911 NO acumulan el tiempo del pedido original.
+    const terminadasConTiempo = todosHoy.filter(function(p){
+        const fin = p.tiempos && (p.tiempos.lista || p.tiempos.entregada);
+        return fin && (p.estado?.includes('Listo') || p.estado?.includes('Entregado') || p.estado?.includes('camino'));
     });
     const promEl = document.getElementById('cnt-prom');
-    if (entregadosConTiempo.length && promEl) {
+    if (terminadasConTiempo.length && promEl) {
         let totalSegs = 0;
-        entregadosConTiempo.forEach(function(p){
-            const inicio = p.creado.seconds * 1000;
-            const fin = p.tiempos.entregada;
-            totalSegs += Math.max(0, (fin - inicio) / 1000);
+        let cuenta = 0;
+        terminadasConTiempo.forEach(function(p){
+            // Inicio: el reinicio si existe (911), si no la creación de la orden
+            let inicio = p.creado?.seconds ? p.creado.seconds * 1000 : null;
+            if (p.tiempos.reiniciado && (!inicio || p.tiempos.reiniciado > inicio)) {
+                inicio = p.tiempos.reiniciado;
+            }
+            // Fin: cuando la cocina la marcó lista (o entregada como respaldo)
+            const fin = p.tiempos.lista || p.tiempos.entregada;
+            if (inicio && fin && fin > inicio) {
+                totalSegs += (fin - inicio) / 1000;
+                cuenta++;
+            }
         });
-        const promSegs = totalSegs / entregadosConTiempo.length;
-        const m = Math.floor(promSegs / 60);
-        promEl.textContent = m < 1 ? '<1m' : (m + 'm');
+        if (cuenta > 0) {
+            const promSegs = totalSegs / cuenta;
+            const m = Math.floor(promSegs / 60);
+            promEl.textContent = m < 1 ? '<1m' : (m + 'm');
+        } else {
+            promEl.textContent = '—';
+        }
     } else if (promEl) {
         promEl.textContent = '—';
     }
