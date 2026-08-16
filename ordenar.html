@@ -3058,6 +3058,14 @@ document.addEventListener('click', function(e) {
             <span id="preview-nombre-cuenta" style="font-size:.9rem;color:#FF5A00;font-weight:800;">Cuenta 1</span>
         </div>
 
+        <!-- Etiqueta: ordenó en tortumóvil (empleado, no domicilio) -->
+        <div id="tortumovil-label" style="display:none;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.35);border-radius:12px;padding:.7rem .9rem;margin-bottom:1rem;">
+            <div style="font-size:.85rem;color:#25D366;font-weight:800;display:flex;align-items:center;gap:.4rem;">
+                <span>🚐</span> Ordenó en tortumóvil
+            </div>
+            <div style="font-size:.72rem;color:#888;margin-top:.25rem;">Se usará la ubicación del tortumóvil. No se pide teléfono ni zona.</div>
+        </div>
+
         <!-- Acciones -->
         <div style="display:flex;gap:.6rem;">
             <button onclick="window.cerrarModalNombreCuenta()"
@@ -3212,6 +3220,21 @@ document.addEventListener('click', function(e) {
         // Al cambiar de tipo, olvidar zona/horario previos
         if (tipo !== 'Domicilio') { _seleccion.zona = null; _seleccion.horario = null; }
 
+        // Si quien ordena es un EMPLEADO y NO es domicilio, la orden se toma
+        // en el tortumóvil: mostrar etiqueta, no pedir teléfono/zona/ubicación,
+        // y marcar que se usará la ubicación del tortumóvil.
+        var _esEmpleado = !!(localStorage.getItem('tt_emp_id') || sessionStorage.getItem('tt_emp_id') || localStorage.getItem('tt_cajero_nombre') || sessionStorage.getItem('tt_cajero_nombre'));
+        var tortuLabel = document.getElementById('tortumovil-label');
+        if (_esEmpleado && tipo !== 'Domicilio') {
+            if (tortuLabel) tortuLabel.style.display = 'block';
+            _seleccion.ordenoEnTortumovil = true;
+            // Asegurar que el teléfono quede oculto (no se pide en tortumóvil)
+            if (telSec) telSec.style.display = 'none';
+        } else {
+            if (tortuLabel) tortuLabel.style.display = 'none';
+            _seleccion.ordenoEnTortumovil = false;
+        }
+
         actualizarPreview();
     };
 
@@ -3274,11 +3297,11 @@ document.addEventListener('click', function(e) {
             return;
         }
 
-        // Exigir teléfono de 10 dígitos (se pide para toda orden). El
-        // nombre puede venir de texto escrito o de una mesa asignada.
+        // Exigir teléfono de 10 dígitos, EXCEPTO cuando la orden se toma en el
+        // tortumóvil (empleado, no domicilio): ahí no se pide teléfono.
         var telInpVal = document.getElementById('input-telefono-cliente');
         var telDig = telInpVal ? (telInpVal.value || '').replace(/\D/g, '') : '';
-        if (telDig.length < 10) {
+        if (!_seleccion.ordenoEnTortumovil && telDig.length < 10) {
             alert('⚠️ Escribe el teléfono del cliente (10 dígitos) antes de continuar.');
             if (telInpVal) telInpVal.focus();
             return;
@@ -3304,6 +3327,18 @@ document.addEventListener('click', function(e) {
         // Domicilio; ahora se pide y guarda para toda orden).
         var telInp = document.getElementById('input-telefono-cliente');
         c.telefono = telInp ? (telInp.value || '').trim() : '';
+
+        // Si la orden se tomó en el tortumóvil (empleado, no domicilio),
+        // marcarla y usar la ubicación del tortumóvil (del empleado logueado).
+        if (_seleccion.ordenoEnTortumovil) {
+            c.ordenoEnTortumovil = true;
+            c.tortumovilId = localStorage.getItem('tt_emp_id') || sessionStorage.getItem('tt_emp_id') || '';
+            c.tortumovilNombre = localStorage.getItem('tt_emp_nombre') || sessionStorage.getItem('tt_emp_nombre') || c.tortumovilId;
+            // La ubicación real del tortumóvil se lee en vivo de la colección
+            // "ubicaciones" por su id; aquí solo dejamos la referencia.
+        } else {
+            c.ordenoEnTortumovil = false;
+        }
 
         // Actualizar UI
         var display = document.getElementById('nombre-cuenta-display');
