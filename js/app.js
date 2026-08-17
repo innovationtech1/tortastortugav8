@@ -375,10 +375,6 @@ function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waU
     const esDomicilio = (tipo === 'domicilio' || tipo === 'delivery');
     // Si el cliente YA compartió su ubicación en el carrito, no bloquear.
     const yaTieneUbicacion = !!(ubicacionPrevia && ubicacionPrevia.lat);
-    // En domicilio SIN ubicación aún, el botón arranca bloqueado hasta que
-    // la comparta. Con ubicación previa (o pickup), activo de una vez.
-    const waArrancaBloqueado = esDomicilio && !yaTieneUbicacion;
-
     ov.innerHTML = `
         <div style="background:#1A1A1A;border:1px solid rgba(37,211,102,.4);border-radius:20px;
                     padding:2rem 1.5rem;text-align:center;max-width:360px;width:100%;
@@ -389,9 +385,9 @@ function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waU
                 <div style="font-size:.75rem;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem;">Tu número de orden</div>
                 <div style="font-size:2.2rem;font-weight:900;color:#25D366;">#${String(ticketStr).replace(/^#+/, '')}</div>
             </div>
-            ${esDomicilio && !yaTieneUbicacion ? `<div id="aviso-ubic" style="font-size:.8rem;color:#FBB724;margin-bottom:1rem;background:rgba(251,183,36,.1);border:1px solid rgba(251,183,36,.3);border-radius:10px;padding:.6rem;">📍 Primero comparte tu ubicación; después se habilitará el envío por WhatsApp.</div>`
-                          : (esDomicilio && yaTieneUbicacion ? `<div style="font-size:.8rem;color:#25D366;margin-bottom:1rem;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:10px;padding:.6rem;">✅ Ubicación recibida. Envía tu pedido por WhatsApp.</div>`
-                          : `<div style="font-size:.78rem;color:#888;margin-bottom:1.2rem;">Guarda tu número de orden. Ahora envía tu pedido por WhatsApp para confirmarlo.</div>`)}
+            ${esDomicilio && !yaTieneUbicacion ? `<div id="aviso-ubic" style="font-size:.8rem;color:#FBB724;margin-bottom:1rem;background:rgba(251,183,36,.1);border:1px solid rgba(251,183,36,.3);border-radius:10px;padding:.6rem;">📍 Para tu entrega a domicilio, comparte tu ubicación con el botón de abajo.</div>`
+                          : (esDomicilio && yaTieneUbicacion ? `<div style="font-size:.8rem;color:#25D366;margin-bottom:1rem;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:10px;padding:.6rem;">✅ Ubicación recibida. Tu pedido ya está en camino a la cocina.</div>`
+                          : `<div style="font-size:.78rem;color:#888;margin-bottom:1.2rem;">Guarda tu número de orden para seguir el estado de tu pedido.</div>`)}
             <div style="display:flex;flex-direction:column;gap:.6rem;">
                 ${window._clienteActivo ? `<a href="pages/mi-pedido.html" target="_blank" style="background:rgba(59,130,246,.15);
                     border:1px solid rgba(59,130,246,.3);color:#3B82F6;padding:.7rem;border-radius:10px;
@@ -399,14 +395,6 @@ function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waU
                 ${linkUbicacion ? `<a href="${linkUbicacion}" style="background:rgba(37,211,102,.15);
                     border:1px solid rgba(37,211,102,.3);color:#25D366;padding:.7rem;border-radius:10px;
                     font-size:.85rem;font-weight:700;text-decoration:none;">📍 ${esDomicilio ? 'Enviar mi ubicación (requerido)' : 'Enviar mi ubicación'}</a>` : ''}
-                <button id="btn-wa-pedido" ${waArrancaBloqueado ? 'disabled' : ''} style="
-                    background:${waArrancaBloqueado ? 'rgba(255,255,255,.06)' : 'rgba(37,211,102,.15)'};
-                    border:1px solid ${waArrancaBloqueado ? 'rgba(255,255,255,.12)' : 'rgba(37,211,102,.4)'};
-                    color:${waArrancaBloqueado ? '#666' : '#25D366'};padding:.7rem;border-radius:10px;
-                    font-size:.85rem;font-weight:700;cursor:${waArrancaBloqueado ? 'not-allowed' : 'pointer'};
-                    font-family:inherit;">
-                    💬 Enviar pedido por WhatsApp${waArrancaBloqueado ? ' 🔒' : ''}
-                </button>
                 <button id="btn-cerrar-confirmacion" style="background:rgba(255,255,255,.06);
                     border:1px solid rgba(255,255,255,.12);color:#ccc;padding:.7rem;border-radius:10px;
                     font-size:.85rem;font-weight:700;cursor:pointer;">Cerrar</button>
@@ -414,60 +402,33 @@ function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waU
         </div>`;
     document.body.appendChild(ov);
 
-    const btnWa = ov.querySelector('#btn-wa-pedido');
-    // Si el cliente ya compartió ubicación en el carrito, usarla de una vez.
-    ov._ubicacion = (ubicacionPrevia && ubicacionPrevia.lat) ? ubicacionPrevia : null;
-    // Al tocar WhatsApp: armar el enlace final AHORA, agregando la
-    // ubicación (link de Google Maps) si ya se compartió.
-    btnWa?.addEventListener('click', () => {
-        if (btnWa.disabled) return;
-        let urlFinal = waUrl;
-        if (ov._ubicacion && ov._ubicacion.lat && ov._ubicacion.lng) {
-            const mapsLink = 'https://maps.google.com/?q=' + ov._ubicacion.lat + ',' + ov._ubicacion.lng;
-            // Si el cliente escribió una dirección, incluirla en texto además del link.
-            let extra = '\n📍 *Ubicación del cliente:*\n';
-            if (ov._ubicacion.direccion) extra += ov._ubicacion.direccion + '\n';
-            extra += mapsLink;
-            urlFinal = waUrl + encodeURIComponent(extra);
-        }
-        window.open(urlFinal, '_blank');
-    });
-
-    // En domicilio SIN ubicación previa: escuchar el pedido; cuando el
-    // cliente comparta su ubicación, habilitar el botón. Si ya la compartió
-    // en el carrito, no hace falta.
+    // En domicilio SIN ubicación previa: escuchar el pedido para actualizar el
+    // aviso cuando el cliente comparta su ubicación.
     if (esDomicilio && pedidoId && !yaTieneUbicacion) {
-        habilitarWaTrasUbicacion(pedidoId, btnWa, ov);
+        actualizarAvisoTrasUbicacion(pedidoId, ov);
     }
 
     ov.querySelector('#btn-cerrar-confirmacion')?.addEventListener('click', () => { if (ov._unsub) ov._unsub(); ov.remove(); });
     ov.addEventListener('click', (e) => { if (e.target === ov) { if (ov._unsub) ov._unsub(); ov.remove(); } });
 }
 
-async function habilitarWaTrasUbicacion(pedidoId, btnWa, ov) {
+async function actualizarAvisoTrasUbicacion(pedidoId, ov) {
     try {
         const { doc, onSnapshot } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
         const ref = doc(db, 'pedidos', pedidoId);
         ov._unsub = onSnapshot(ref, (snap) => {
             const d = snap.data();
-            if (d && d.ubicacionCliente && btnWa) {
-                ov._ubicacion = d.ubicacionCliente;  // guardar para el mensaje
-                btnWa.disabled = false;
-                btnWa.style.background = 'rgba(37,211,102,.15)';
-                btnWa.style.borderColor = 'rgba(37,211,102,.4)';
-                btnWa.style.color = '#25D366';
-                btnWa.style.cursor = 'pointer';
-                btnWa.innerHTML = '💬 Enviar pedido por WhatsApp';
+            if (d && d.ubicacionCliente) {
                 const aviso = ov.querySelector('#aviso-ubic');
                 if (aviso) {
                     aviso.style.color = '#25D366';
                     aviso.style.background = 'rgba(37,211,102,.1)';
                     aviso.style.borderColor = 'rgba(37,211,102,.3)';
-                    aviso.innerHTML = '✅ Ubicación recibida. Ya puedes enviar tu pedido por WhatsApp.';
+                    aviso.innerHTML = '✅ Ubicación recibida. Tu pedido ya está en camino a la cocina.';
                 }
             }
         });
-    } catch(e) { /* si falla el listener, dejar el botón como está */ }
+    } catch(e) { /* si falla el listener, dejar el aviso como está */ }
 }
 
 // ─── BOTONES PRINCIPALES ─────────────────────────────────────────
