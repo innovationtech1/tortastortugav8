@@ -1364,7 +1364,10 @@ function cerrarOrdenModal() {
     gap: 1rem;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: .5rem .2rem 1rem;
+    /* Padding lateral generoso: da espacio para que la PRIMERA y la ÚLTIMA
+       tarjeta puedan centrarse por completo. Sin esto, la última no alcanza
+       el centro y el efecto de zoom oscila (parpadea). */
+    padding: .5rem 12vw 1rem;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
@@ -1393,7 +1396,7 @@ function cerrarOrdenModal() {
    amplía para ocupar más pantalla y ser más visible. La transición hace
    que el zoom entre de forma suave al soltar el scroll. */
 .menu-carrusel > *.baraja-zoom {
-    transform: scale(1.06) rotate(0deg) translateY(-4px);
+    transform: scale(1.06);
     opacity: 1;
     z-index: 4;
     box-shadow: 0 18px 50px rgba(0,0,0,.5);
@@ -4184,20 +4187,32 @@ window.cartCompartirUbicacion = function() {
     function aplicarBaraja(carrusel, conZoom) {
         var centroCarrusel = carrusel.scrollLeft + carrusel.clientWidth / 2;
         var tarjetas = carrusel.children;
+        // Encontrar la tarjeta MÁS cercana al centro (una sola central)
+        var idxCentral = -1, minDist = Infinity;
         for (var i = 0; i < tarjetas.length; i++) {
             var t = tarjetas[i];
             if (t.classList.contains('carrusel-hint')) continue;
             var centroTarjeta = t.offsetLeft + t.offsetWidth / 2;
-            var distancia = centroTarjeta - centroCarrusel;
-            var umbral = t.offsetWidth * 0.5;
-            t.classList.remove('baraja-centro','baraja-izq','baraja-der','baraja-zoom');
-            if (Math.abs(distancia) < umbral) {
-                // Tarjeta central: si el scroll está detenido, aplicar ZOOM;
-                // si está en movimiento, tamaño normal (centro).
-                t.classList.add(conZoom ? 'baraja-zoom' : 'baraja-centro');
+            var d = Math.abs(centroTarjeta - centroCarrusel);
+            if (d < minDist) { minDist = d; idxCentral = i; }
+        }
+        // Si el estado ya es el mismo (misma central + mismo zoom), no tocar
+        // nada: esto evita el bucle que hacía parpadear la última tarjeta.
+        if (carrusel._idxCentral === idxCentral && carrusel._conZoom === conZoom) return;
+        carrusel._idxCentral = idxCentral;
+        carrusel._conZoom = conZoom;
+
+        for (var j = 0; j < tarjetas.length; j++) {
+            var tj = tarjetas[j];
+            if (tj.classList.contains('carrusel-hint')) continue;
+            tj.classList.remove('baraja-centro','baraja-izq','baraja-der','baraja-zoom');
+            if (j === idxCentral) {
+                tj.classList.add(conZoom ? 'baraja-zoom' : 'baraja-centro');
+            } else if (j < idxCentral) {
+                tj.classList.add('baraja-izq');
+            } else {
+                tj.classList.add('baraja-der');
             }
-            else if (distancia < 0) t.classList.add('baraja-izq');
-            else t.classList.add('baraja-der');
         }
     }
     function activarBarajaEn(carrusel) {
@@ -4233,7 +4248,9 @@ window.cartCompartirUbicacion = function() {
     window.addEventListener('load', activarTodos);
     // Reaplicar al rotar/cambiar tamaño de pantalla
     window.addEventListener('resize', function(){
-        document.querySelectorAll('.menu-carrusel').forEach(function(c){ if (c._barajaActiva) aplicarBaraja(c, true); });
+        document.querySelectorAll('.menu-carrusel').forEach(function(c){
+            if (c._barajaActiva) { c._idxCentral = -2; aplicarBaraja(c, true); }
+        });
     });
 })();
 </script>
