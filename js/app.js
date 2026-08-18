@@ -1322,9 +1322,122 @@ window.enviarOrdenModal = function() {
     window.open('https://api.whatsapp.com/send?phone=12108678210&text=' + encodeURIComponent(msg), '_blank');
 };
 
+// Envía cada cuenta como un pedido separado (Cliente N, total y ticket propios)
+window.enviarCuentasSeparadas = async function(cuentas) {
+    const CS = window._cuentasSys;
+    var btn = document.querySelector('[onclick*="enviarTodasLasCuentas"]');
+    var btnTxtOrig = btn ? btn.innerHTML : '';
+    if (btn) { btn.innerHTML = '⏳ Enviando ' + cuentas.length + ' cuentas...'; btn.disabled = true; }
+
+    var ticketsEnviados = [];
+    try {
+        for (var idx = 0; idx < cuentas.length; idx++) {
+            var c = cuentas[idx];
+            if (!c.items.length) continue;
+
+            // Nombre: el de la cuenta si tiene uno real, si no "Cliente N" automático
+            var nombreCuenta = c.nombre;
+            var generico = !nombreCuenta || /^Cuenta \d+$/.test(nombreCuenta);
+            if (generico) {
+                var hoyKey = 'tt_cliente_contador_' + new Date().toISOString().slice(0,10);
+                var n = parseInt(localStorage.getItem(hoyKey) || '0', 10) + 1;
+                localStorage.setItem(hoyKey, String(n));
+                nombreCuenta = 'Cliente ' + n;
+            }
+
+            // Totales de ESTA cuenta
+            var aj = (window._ajustesDinero && window._ajustesDinero[c.id]) || {};
+            var sub = 0, desc = 0, imp = 0, prop = 0, tot = 0;
+            if (window.calcularTotales) {
+                var t = window.calcularTotales(c.items, {
+                    descuento: aj.descuento, descuentoTipo: aj.descuentoTipo,
+                    propina: aj.propina, propinaTipo: aj.propinaTipo,
+                });
+                sub = t.subtotal; desc = t.descuento; imp = t.impuesto; prop = t.propina; tot = t.total;
+            } else {
+                sub = c.items.reduce(function(s,i){ return s + (parseFloat(i.precio)||0); }, 0);
+                tot = sub;
+            }
+
+            // Items de ESTA cuenta
+            var itemsData = c.items.map(function(item){
+                return {
+                    nombre: item.nombre + (item.variante ? ' (' + item.variante + ')' : ''),
+                    precio: item.precio,
+                    modificaciones: item.modificaciones || [],
+                    cuenta: nombreCuenta,
+                };
+            });
+            var itemsStr = itemsData.map(function(i){
+                return i.nombre + (i.modificaciones && i.modificaciones.length ? ' (' + i.modificaciones.join(', ') + ')' : '') + ' - $' + (i.precio||0).toFixed(2);
+            }).join(' | ');
+
+            var data = {
+                cliente: nombreCuenta,
+                telefono: c.telefono || '',
+                tipoServicio: 'Tortumóvil',
+                tipoEntrega: 'Recoger',
+                ordenoEnTortumovil: true,
+                tortumovilId: (window._cajeroActivo ? window._cajeroActivo.id : ''),
+                tortumovilNombre: (window._cajeroActivo ? window._cajeroActivo.nombre : ''),
+                itemsData: itemsData,
+                items: itemsStr,
+                total: '$' + tot.toFixed(2),
+                totalNum: tot,
+                desglose: {
+                    subtotal: Math.round(sub*100)/100,
+                    descuento: Math.round(desc*100)/100,
+                    impuesto: Math.round(imp*100)/100,
+                    impuestoTasa: (window._POS_CONFIG ? window._POS_CONFIG.impuestoTasa : 0),
+                    propina: Math.round(prop*100)/100,
+                    total: Math.round(tot*100)/100,
+                },
+                cajeroId: (window._cajeroActivo ? window._cajeroActivo.id : 'directo'),
+                cajeroNombre: (window._cajeroActivo ? window._cajeroActivo.nombre : 'Sistema'),
+                cajeroRol: (window._cajeroActivo ? window._cajeroActivo.rol : ''),
+                tomadaEn: new Date().toISOString(),
+            };
+
+            var result = await guardarPedidoFirebase(data, 'cocina');
+            var ticket = result && result.ticket ? result.ticket : (result && result.id ? result.id.slice(-4).toUpperCase() : '----');
+            ticketsEnviados.push('#' + String(ticket).replace(/^#+/, '') + ' (' + nombreCuenta + ')');
+        }
+
+        // Limpiar el carrito (todas las cuentas se enviaron)
+        CS.cuentas = [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }];
+        CS.activa = 1; CS.counter = 1;
+        try { localStorage.removeItem('tt_carrito'); } catch(e) {}
+        if (window.renderCuentasTabs) window.renderCuentasTabs();
+        if (window.renderCartItems)   window.renderCartItems();
+        var cm = document.getElementById('cart-modal');
+        if (cm) cm.classList.remove('active');
+
+        // Confirmación con la lista de tickets enviados
+        if (window.ttAlert) window.ttAlert('✅ ' + ticketsEnviados.length + ' pedidos enviados a cocina:\n' + ticketsEnviados.join('\n'));
+        else alert('✅ ' + ticketsEnviados.length + ' pedidos enviados:\n' + ticketsEnviados.join('\n'));
+    } catch (e) {
+        console.error('Error al enviar cuentas separadas:', e);
+        alert('❌ Error al enviar las cuentas:\n' + (e.message || e));
+    } finally {
+        if (btn) { btn.innerHTML = btnTxtOrig; btn.disabled = false; }
+    }
+};
+
 window.enviarTodasLasCuentas = async function() {
     const CS = window._cuentasSys;
     if (!CS) return;
+
+    // ── ENVÍO POR CUENTA SEPARADA (empleado con varias cuentas) ──
+    // Si quien toma la orden es un empleado y hay 2+ cuentas con productos,
+    // cada cuenta se envía como un PEDIDO INDEPENDIENTE con su propio "Cliente N",
+    // su total y su ticket. Así cada persona tiene su cuenta y se cobra aparte.
+    var _esEmpleadoEnvio = !!(window._cajeroActivo);
+    var _cuentasConItems = CS.cuentas.filter(function(c){ return c.items.length > 0; });
+    if (_esEmpleadoEnvio && _cuentasConItems.length > 1) {
+        await window.enviarCuentasSeparadas(_cuentasConItems);
+        return;
+    }
+    // Si no, sigue el flujo normal (una sola cuenta o cliente): todo junto.
 
     // Tomar nombre, telefono y tipo de la PRIMERA cuenta con productos.
     // Cada cuenta guarda su propia info (nombre, telefono, tipoServicio).
@@ -1360,9 +1473,12 @@ window.enviarTodasLasCuentas = async function() {
     }
 
     // Exigir nombre y teléfono antes de enviar.
-    // EXCEPCIÓN: si la orden se tomó en el tortumóvil (empleado, no domicilio),
-    // no se pide teléfono, y si no hay nombre se asigna "Cliente N" automático.
-    var ordenoEnTortumovil = !!(cuentaPrincipal && cuentaPrincipal.ordenoEnTortumovil);
+    // REGLA: si quien toma la orden es un EMPLEADO (no cliente puro), la orden
+    // SIEMPRE es de tortumóvil — el empleado está físicamente en la unidad y se
+    // prepara al instante. No se pide teléfono, y si no hay nombre se asigna
+    // "Cliente N" automático. Solo el cliente desde su teléfono sigue el flujo
+    // normal (pickup/domicilio con sus datos).
+    var ordenoEnTortumovil = !esClientePuro;
     var telDigitos = (telefono || '').replace(/\D/g, '');
     var faltaNombre = !nombre || nombre === 'Cliente' || /^Cuenta \d+$/.test(nombre);
 
