@@ -44,9 +44,9 @@
                     <span class="nav-panel-logo"><span class="emoji">🐢</span> Tortas Tortuga</span>
                     <button class="nav-cerrar" onclick="cerrarMenu()" aria-label="Cerrar menú">✕</button>
                 </li>
-                <li><a href="#home" onclick="cerrarMenu()">🏠 Inicio</a></li>
-                <li><a href="#menu" onclick="cerrarMenu()">📋 Menú</a></li>
-                <li><a href="#sides" onclick="cerrarMenu()">🍟 Extras</a></li>
+                <li><a href="#home" onclick="cerrarMenu()" data-i18n="nav.inicio">🏠 Inicio</a></li>
+                <li><a href="#menu" onclick="cerrarMenu()" data-i18n="nav.menu">📋 Menú</a></li>
+                <li><a href="#sides" onclick="cerrarMenu()" data-i18n="nav.extras">🍟 Extras</a></li>
                 <li class="nav-sep"></li>
                 <li><a href="pages/bienvenida.html" id="nav-login-link" class="cta-button" style="padding: 8px 20px; font-size: 0.9rem;">🔑 <span id="nav-login-text">Login</span></a></li>
             </ul>
@@ -59,24 +59,24 @@
     <main>
         <section id="home" class="hero">
             <div class="hero-content glass-panel">
-                <h1>Sabor a paso <span class="highlight">firme</span></h1>
+                <h1 data-i18n="hero.titulo">Sabor a paso firme</h1>
                 <p class="hero-slogan" style="font-size:1.15rem;font-weight:700;color:#FF5A00;
                    margin-bottom:.25rem;letter-spacing:.01em;">
-                   ¡Para de sufrir, no se castigue! 🌶️
+                   <span data-i18n="hero.eslogan">¡Para de sufrir, no se castigue! 🌶️</span>
                 </p>
-                <p>Las mejores tortas, hechas con ingredientes frescos y porciones gigantes. We cater!</p>
+                <p data-i18n="hero.desc">Las mejores tortas, hechas con ingredientes frescos y porciones gigantes. We cater!</p>
                 <div class="contact-info">
                     <p> 210-TORTA-10 | 210-86782-10</p>
-                    <p> Lun - Sab: 10:00 AM - 6:00 PM</p>
+                    <p data-i18n="hero.horario"> Lun - Sab: 10:00 AM - 6:00 PM</p>
                 </div>
-                <a href="pages/bienvenida.html" class="cta-button">Ordenar</a>
+                <a href="pages/bienvenida.html" class="cta-button" data-i18n="hero.ordenar">Ordenar</a>
             </div>
         </section>
 
         <section id="menu" class="menu-section">
             <div class="container">
                 <div class="section-title">
-                    <h2>Las Tortugas</h2>
+                    <h2 data-i18n="sec.tortugas">Las Tortugas</h2>
                     <p>Todos los combos incluyen soda en lata y papas (chips). $1 off Torta by self.</p>
                 </div>
 
@@ -222,7 +222,7 @@
             <p style="color: var(--primary); font-weight: bold; margin-bottom: 10px;">San Antonio Area - We Cater! Schedule your order at least 60 minutes in advance.</p>
             <p style="color: var(--text-muted); font-size: 0.9rem;">$30 Minimum purchase for schedule an order w/ $5 delivery fee OR $60 free delivery.</p>
             <div style="margin-top: 20px;">
-                <a href="pages/bienvenida.html" class="cta-button">Ordenar</a>
+                <a href="pages/bienvenida.html" class="cta-button" data-i18n="hero.ordenar">Ordenar</a>
             </div>
         </footer>
     </main>
@@ -353,5 +353,6 @@ window.cerrarMenu = function() {
 // Cerrar con tecla Escape
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape') cerrarMenu(); });
 </script>
+<script src="js/idioma.js?v=1787059388"></script>
 </body>
 </html>
