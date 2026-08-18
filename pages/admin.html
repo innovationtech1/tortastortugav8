@@ -810,7 +810,11 @@ window.normalizarRutaImagen = function(src) {
                 <td><select class="status-select ${estadoCls}" data-id="${p.id}" style="width:100%"><option ${p.estado?.includes('Nuevo') ? 'selected' : ''}>Nuevo 🆕</option><option ${p.estado?.includes('preparación') ? 'selected' : ''}>En preparación 🧑‍🍳</option><option ${p.estado?.includes('Listo') ? 'selected' : ''}>Listo ✅</option><option ${p.estado?.includes('camino') ? 'selected' : ''}>En camino 🛵</option><option ${p.estado?.includes('Entregado') ? 'selected' : ''}>Entregado 🎉</option><option ${p.estado?.includes('Cancelado') ? 'selected' : ''}>Cancelado ❌</option></select></td>
                 <td style="text-align:center;padding-right:.75rem;">${p.archivado
                     ? `<button class="delete-btn restore-btn" data-id="${p.id}" title="Volver a mostrar en el panel" style="background:rgba(37,211,102,.15);color:#25D366;">↩️</button>`
-                    : `<button class="delete-btn" data-id="${p.id}" title="Quitar de la pantalla (se guarda para reportes)">🗑️</button>`}</td>
+                    : `${(p.estado?.includes('Entregado') || p.estadoPago==='Pagado')
+                        ? `<label style="display:flex;align-items:center;justify-content:center;margin-bottom:.4rem;cursor:pointer;" title="Seleccionar para archivar">
+                             <input type="checkbox" class="chk-archivar" data-id="${p.id}" style="width:20px;height:20px;accent-color:#A78BFA;cursor:pointer;">
+                           </label>` : ''}
+                       <button class="delete-btn" data-id="${p.id}" title="Quitar de la pantalla (se guarda para reportes)">🗑️</button>`}</td>
             </tr>`;
         }).join('');
         document.querySelectorAll('.chk-archivado').forEach(chk => {
