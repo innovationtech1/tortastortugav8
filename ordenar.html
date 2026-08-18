@@ -1389,6 +1389,15 @@ function cerrarOrdenModal() {
 .menu-carrusel > *.baraja-centro { transform: scale(1) rotate(0deg) translateY(0); opacity: 1; z-index: 3; }
 .menu-carrusel > *.baraja-izq    { transform: scale(.9) rotate(-4deg) translateY(12px); opacity: .78; z-index: 1; }
 .menu-carrusel > *.baraja-der    { transform: scale(.9) rotate(4deg) translateY(12px); opacity: .78; z-index: 1; }
+/* Zoom automático: cuando el carrusel se DETIENE, la tarjeta central se
+   amplía para ocupar más pantalla y ser más visible. La transición hace
+   que el zoom entre de forma suave al soltar el scroll. */
+.menu-carrusel > *.baraja-zoom {
+    transform: scale(1.06) rotate(0deg) translateY(-4px);
+    opacity: 1;
+    z-index: 4;
+    box-shadow: 0 18px 50px rgba(0,0,0,.5);
+}
 .carrusel-hint {
     text-align: center;
     font-size: .72rem;
@@ -4172,7 +4181,7 @@ window.cartCompartirUbicacion = function() {
    Al hacer scroll, cada tarjeta se escala/rota según qué tan centrada está,
    dando el efecto de cartas de baraja. */
 (function() {
-    function aplicarBaraja(carrusel) {
+    function aplicarBaraja(carrusel, conZoom) {
         var centroCarrusel = carrusel.scrollLeft + carrusel.clientWidth / 2;
         var tarjetas = carrusel.children;
         for (var i = 0; i < tarjetas.length; i++) {
@@ -4181,8 +4190,12 @@ window.cartCompartirUbicacion = function() {
             var centroTarjeta = t.offsetLeft + t.offsetWidth / 2;
             var distancia = centroTarjeta - centroCarrusel;
             var umbral = t.offsetWidth * 0.5;
-            t.classList.remove('baraja-centro','baraja-izq','baraja-der');
-            if (Math.abs(distancia) < umbral) t.classList.add('baraja-centro');
+            t.classList.remove('baraja-centro','baraja-izq','baraja-der','baraja-zoom');
+            if (Math.abs(distancia) < umbral) {
+                // Tarjeta central: si el scroll está detenido, aplicar ZOOM;
+                // si está en movimiento, tamaño normal (centro).
+                t.classList.add(conZoom ? 'baraja-zoom' : 'baraja-centro');
+            }
             else if (distancia < 0) t.classList.add('baraja-izq');
             else t.classList.add('baraja-der');
         }
@@ -4191,19 +4204,28 @@ window.cartCompartirUbicacion = function() {
         if (!carrusel || carrusel._barajaActiva) return;
         carrusel._barajaActiva = true;
         var pendiente = false;
+        carrusel._zoomTimer = null;
         carrusel.addEventListener('scroll', function() {
+            // En movimiento: sin zoom (tamaño normal)
             if (!pendiente) {
                 pendiente = true;
-                requestAnimationFrame(function() { aplicarBaraja(carrusel); pendiente = false; });
+                requestAnimationFrame(function() { aplicarBaraja(carrusel, false); pendiente = false; });
             }
+            // Reiniciar el temporizador: cuando pasen 140ms sin scroll,
+            // consideramos que se detuvo y aplicamos el zoom a la central.
+            if (carrusel._zoomTimer) clearTimeout(carrusel._zoomTimer);
+            carrusel._zoomTimer = setTimeout(function() {
+                aplicarBaraja(carrusel, true);
+            }, 140);
         }, { passive: true });
-        setTimeout(function(){ aplicarBaraja(carrusel); }, 300);
+        // Al inicio, aplicar con zoom (está quieto)
+        setTimeout(function(){ aplicarBaraja(carrusel, true); }, 300);
     }
     function activarTodos() {
         document.querySelectorAll('.menu-carrusel').forEach(activarBarajaEn);
         document.querySelectorAll('.menu-carrusel').forEach(function(c){
-            setTimeout(function(){ if (c._barajaActiva) aplicarBaraja(c); }, 800);
-            setTimeout(function(){ if (c._barajaActiva) aplicarBaraja(c); }, 1600);
+            setTimeout(function(){ if (c._barajaActiva) aplicarBaraja(c, true); }, 800);
+            setTimeout(function(){ if (c._barajaActiva) aplicarBaraja(c, true); }, 1600);
         });
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', activarTodos);
@@ -4211,7 +4233,7 @@ window.cartCompartirUbicacion = function() {
     window.addEventListener('load', activarTodos);
     // Reaplicar al rotar/cambiar tamaño de pantalla
     window.addEventListener('resize', function(){
-        document.querySelectorAll('.menu-carrusel').forEach(function(c){ if (c._barajaActiva) aplicarBaraja(c); });
+        document.querySelectorAll('.menu-carrusel').forEach(function(c){ if (c._barajaActiva) aplicarBaraja(c, true); });
     });
 })();
 </script>
