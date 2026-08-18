@@ -3537,8 +3537,15 @@ document.addEventListener('click', function(e) {
     </div>
 
     <div id="mover-modo-hint" style="font-size:.72rem;color:#888;margin-bottom:1rem;line-height:1.5;">
-      <strong style="color:#3B82F6;">Mover:</strong> el producto se quita de esta cuenta y pasa a la otra.
+      <strong style="color:#3B82F6;">Mover:</strong> los productos se quitan de esta cuenta y pasan a la otra.
     </div>
+
+    <!-- Selección de productos -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;">
+      <p style="font-size:.75rem;color:#888;font-weight:700;margin:0;text-transform:uppercase;letter-spacing:.05em;">¿Qué productos?</p>
+      <button onclick="window.toggleTodosMover()" id="btn-toggle-todos" style="background:rgba(255,90,0,.12);border:1px solid rgba(255,90,0,.3);color:#FF5A00;border-radius:8px;padding:.35rem .7rem;font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer;">Seleccionar todos</button>
+    </div>
+    <div id="mover-items-lista" style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:1.1rem;max-height:35vh;overflow-y:auto;"></div>
 
     <p style="font-size:.75rem;color:#888;font-weight:700;margin:0 0 .6rem;text-transform:uppercase;letter-spacing:.05em;">Elige la cuenta destino</p>
     <div id="mover-cuentas-lista" style="display:flex;flex-direction:column;gap:.5rem;"></div>
