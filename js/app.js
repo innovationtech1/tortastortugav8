@@ -2105,7 +2105,9 @@ window.ejecutarMoverItem = function(destinoCuentaId) {
     }
 
     var origen = CS.cuentas.find(function(x){ return x.id === CS.activa; });
-    var destino = CS.cuentas.find(function(x){ return x.id === destinoCuentaId; });
+    // Comparar como texto: el id llega como string desde el onclick, pero
+    // en el estado puede ser número. Esto evita que 1 === "1" falle.
+    var destino = CS.cuentas.find(function(x){ return String(x.id) === String(destinoCuentaId); });
     if (!origen || !destino) return;
 
     // Ordenar índices de mayor a menor para poder hacer splice sin desajustar
