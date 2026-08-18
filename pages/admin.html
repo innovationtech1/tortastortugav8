@@ -3537,14 +3537,11 @@ window.archivarSeleccionadas = async function() {
 
     // Necesitamos las funciones de Firestore que ya usa el admin
     try {
-        var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
         var ids = Array.from(checks).map(function(c){ return c.getAttribute('data-id'); });
-        var db = window._adminDB || (window.db);
-
         var archivadas = 0;
         for (var i = 0; i < ids.length; i++) {
             try {
-                await mod.updateDoc(mod.doc(db, 'pedidos', ids[i]), {
+                await window._adminUpdateDoc('pedidos', ids[i], {
                     archivado: true,
                     archivadoEn: new Date().toISOString()
                 });
