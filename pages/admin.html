@@ -3541,10 +3541,10 @@ window.archivarSeleccionadas = async function() {
         var archivadas = 0;
         for (var i = 0; i < ids.length; i++) {
             try {
-                await window._adminUpdateDoc('pedidos', ids[i], {
+                await window._adminUpdateDoc(ids[i], {
                     archivado: true,
                     archivadoEn: new Date().toISOString()
-                });
+                }, 'pedidos');
                 archivadas++;
             } catch(e) { console.warn('No se archivo', ids[i], e); }
         }
