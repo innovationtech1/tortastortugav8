@@ -554,6 +554,17 @@ function renderCard(p) {
                     <div class="kitem-name">${nombreCorto(i)}</div>
                     ${i.modificaciones?.length ? `<div class="kitem-mods">⚠️ ${i.modificaciones.join(' · ')}</div>` : ''}
                 </div>`).join('')}
+            ${(() => {
+                // Mostrar subtotal y total (si el pedido trae el desglose o el total)
+                var sub = p.desglose && typeof p.desglose.subtotal === 'number' ? p.desglose.subtotal : null;
+                var tot = (p.desglose && typeof p.desglose.total === 'number') ? p.desglose.total
+                        : (typeof p.totalNum === 'number' ? p.totalNum : null);
+                if (tot === null && !sub) return '';
+                return '<div style="margin-top:.5rem;padding-top:.5rem;border-top:1px dashed var(--border);font-size:.8rem;">' +
+                    (sub !== null ? '<div style="display:flex;justify-content:space-between;color:var(--muted);"><span>Subtotal</span><span>$' + sub.toFixed(2) + '</span></div>' : '') +
+                    (tot !== null ? '<div style="display:flex;justify-content:space-between;font-weight:800;color:var(--green);margin-top:.2rem;"><span>Total</span><span>$' + tot.toFixed(2) + '</span></div>' : '') +
+                    '</div>';
+            })()}
         </div>
         <div class="kcard-actions">${acciones}<button class="kbtn-max" onclick="maximizarOrden('${p.id}')" title="Ver en grande">🔍</button></div>
     </div>`;
