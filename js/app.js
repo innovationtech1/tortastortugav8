@@ -1946,9 +1946,9 @@ window.moverItemACuenta = function(itemIdx, destinoCuentaId) {
     window.renderCartItems();
 };
 
-// ── Mostrar selector de cuenta destino para un item ──
-// Estado del modal mover/duplicar
-window._moverEstado = { itemIdx: null, modo: 'mover' };
+// ── Mostrar selector de cuenta destino para uno o varios items ──
+// Estado del modal mover/duplicar: conjunto de índices seleccionados + modo
+window._moverEstado = { seleccionados: [], modo: 'mover' };
 
 window.abrirSplitItem = function(itemIdx) {
     var CS = _CS();
@@ -1957,18 +1957,17 @@ window.abrirSplitItem = function(itemIdx) {
         return;
     }
     var origen = CS.cuentas.find(function(x){ return x.id === CS.activa; });
-    if (!origen || !origen.items[itemIdx]) return;
+    if (!origen || !origen.items.length) return;
 
-    var item = origen.items[itemIdx];
-    window._moverEstado = { itemIdx: itemIdx, modo: 'mover' };
-
-    // Mostrar info del producto
-    var info = document.getElementById('mover-item-info');
-    if (info) info.textContent = item.nombre + (item.variante ? ' \u00b7 ' + item.variante : '') + ' \u2014 $' + (parseFloat(item.precio)||0).toFixed(2);
+    // Al abrir desde un producto concreto, ese arranca seleccionado.
+    // Si se abre sin índice (null), no preselecciona ninguno.
+    var pre = (itemIdx !== null && itemIdx !== undefined) ? [itemIdx] : [];
+    window._moverEstado = { seleccionados: pre, modo: 'mover' };
 
     // Resetear a modo mover
     window.setModoMover('mover');
-
+    // Pintar la lista de productos con casillas
+    window.renderItemsMover();
     // Llenar las cuentas destino
     window.renderCuentasDestino();
 
@@ -1990,12 +1989,79 @@ window.setModoMover = function(modo) {
     if (modo === 'mover') {
         if (btnM) { btnM.style.background='rgba(59,130,246,.15)'; btnM.style.borderColor='#3B82F6'; btnM.style.color='#3B82F6'; }
         if (btnD) { btnD.style.background='rgba(255,255,255,.04)'; btnD.style.borderColor='rgba(255,255,255,.12)'; btnD.style.color='#aaa'; }
-        if (hint) hint.innerHTML = '<strong style="color:#3B82F6;">Mover:</strong> el producto se quita de esta cuenta y pasa a la otra.';
+        if (hint) hint.innerHTML = '<strong style="color:#3B82F6;">Mover:</strong> los productos se quitan de esta cuenta y pasan a la otra.';
     } else {
         if (btnD) { btnD.style.background='rgba(167,139,250,.15)'; btnD.style.borderColor='#A78BFA'; btnD.style.color='#A78BFA'; }
         if (btnM) { btnM.style.background='rgba(255,255,255,.04)'; btnM.style.borderColor='rgba(255,255,255,.12)'; btnM.style.color='#aaa'; }
-        if (hint) hint.innerHTML = '<strong style="color:#A78BFA;">Duplicar:</strong> se crea una copia en la otra cuenta y el original se queda aquí.';
+        if (hint) hint.innerHTML = '<strong style="color:#A78BFA;">Duplicar:</strong> se crea una copia en la otra cuenta y los originales se quedan aquí.';
     }
+};
+
+// Pinta la lista de productos de la cuenta activa con casillas de selección
+window.renderItemsMover = function() {
+    var CS = _CS();
+    var cont = document.getElementById('mover-items-lista');
+    if (!cont) return;
+    var origen = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+    if (!origen) return;
+    var sel = window._moverEstado.seleccionados;
+
+    cont.innerHTML = origen.items.map(function(item, idx) {
+        var marcado = sel.indexOf(idx) >= 0;
+        var precio = (parseFloat(item.precio)||0).toFixed(2);
+        return '<label style="display:flex;align-items:center;gap:.6rem;padding:.65rem .8rem;' +
+            'background:' + (marcado ? 'rgba(255,90,0,.1)' : 'rgba(255,255,255,.03)') + ';' +
+            'border:1.5px solid ' + (marcado ? 'rgba(255,90,0,.4)' : 'rgba(255,255,255,.1)') + ';' +
+            'border-radius:10px;cursor:pointer;">' +
+            '<input type="checkbox" ' + (marcado ? 'checked' : '') + ' onchange="window.toggleItemMover(' + idx + ')" ' +
+            'style="width:18px;height:18px;accent-color:#FF5A00;cursor:pointer;">' +
+            '<div style="flex:1;min-width:0;">' +
+            '<div style="font-size:.85rem;font-weight:700;color:#fff;">' + (item.nombre||'') + '</div>' +
+            (item.variante ? '<div style="font-size:.72rem;color:#888;">' + item.variante + '</div>' : '') +
+            '</div>' +
+            '<span style="font-size:.82rem;color:#25D366;font-weight:700;">$' + precio + '</span>' +
+            '</label>';
+    }).join('');
+
+    // Actualizar texto del botón "seleccionar/quitar todos"
+    var btnTodos = document.getElementById('btn-toggle-todos');
+    if (btnTodos) {
+        var todosSel = origen.items.length > 0 && sel.length === origen.items.length;
+        btnTodos.textContent = todosSel ? 'Quitar todos' : 'Seleccionar todos';
+    }
+
+    // Actualizar info de cuántos seleccionados
+    var info = document.getElementById('mover-item-info');
+    if (info) {
+        if (sel.length === 0) info.textContent = 'Selecciona uno o más productos para mover o duplicar.';
+        else {
+            var totalSel = sel.reduce(function(s, i){ return s + (parseFloat(origen.items[i].precio)||0); }, 0);
+            info.textContent = sel.length + ' producto(s) seleccionado(s) \u2014 $' + totalSel.toFixed(2);
+        }
+    }
+};
+
+window.toggleItemMover = function(idx) {
+    var sel = window._moverEstado.seleccionados;
+    var pos = sel.indexOf(idx);
+    if (pos >= 0) sel.splice(pos, 1);
+    else sel.push(idx);
+    window.renderItemsMover();
+};
+
+window.toggleTodosMover = function() {
+    var CS = _CS();
+    var origen = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+    if (!origen) return;
+    var sel = window._moverEstado.seleccionados;
+    if (sel.length === origen.items.length) {
+        // Ya están todos: quitar todos
+        window._moverEstado.seleccionados = [];
+    } else {
+        // Seleccionar todos
+        window._moverEstado.seleccionados = origen.items.map(function(_, i){ return i; });
+    }
+    window.renderItemsMover();
 };
 
 window.renderCuentasDestino = function() {
@@ -2021,22 +2087,35 @@ window.renderCuentasDestino = function() {
 window.ejecutarMoverItem = function(destinoCuentaId) {
     var CS = _CS();
     var estado = window._moverEstado;
-    if (estado.itemIdx === null) return;
+    if (!estado.seleccionados || estado.seleccionados.length === 0) {
+        alert('Selecciona al menos un producto para mover o duplicar.');
+        return;
+    }
 
     var origen = CS.cuentas.find(function(x){ return x.id === CS.activa; });
     var destino = CS.cuentas.find(function(x){ return x.id === destinoCuentaId; });
-    if (!origen || !destino || !origen.items[estado.itemIdx]) return;
+    if (!origen || !destino) return;
 
-    var item = origen.items[estado.itemIdx];
+    // Ordenar índices de mayor a menor para poder hacer splice sin desajustar
+    var indices = estado.seleccionados.slice().sort(function(a,b){ return b - a; });
 
     if (estado.modo === 'duplicar') {
-        // DUPLICAR: copia profunda a destino, original se queda
-        var copia = JSON.parse(JSON.stringify(item));
-        destino.items.push(copia);
+        // DUPLICAR: copiar cada seleccionado al destino; originales se quedan
+        indices.slice().sort(function(a,b){ return a - b; }).forEach(function(idx) {
+            if (origen.items[idx]) {
+                var copia = JSON.parse(JSON.stringify(origen.items[idx]));
+                destino.items.push(copia);
+            }
+        });
     } else {
-        // MOVER: quitar del origen, agregar a destino (sin duplicar)
-        var movido = origen.items.splice(estado.itemIdx, 1)[0];
-        destino.items.push(movido);
+        // MOVER: quitar del origen (de mayor a menor índice) y agregar al destino
+        var movidos = [];
+        indices.forEach(function(idx) {
+            if (origen.items[idx]) {
+                movidos.unshift(origen.items.splice(idx, 1)[0]);
+            }
+        });
+        movidos.forEach(function(m){ destino.items.push(m); });
     }
 
     window.cerrarMoverItem();
