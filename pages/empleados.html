@@ -1835,8 +1835,14 @@ function _revisarHuellaGuardada() {
     try {
         const cred = localStorage.getItem('tt_huella_cred');
         const btn = document.getElementById('btn-huella');
-        if (cred && _huellaDisponible() && btn) {
+        if (!btn) return;
+        if (cred && _huellaDisponible()) {
+            // Hay huella registrada en este dispositivo → botón para entrar con ella
             btn.style.display = 'flex';
+            btn.innerHTML = '<span style="font-size:1.2rem;">👆</span> Entrar con huella';
+            btn.onclick = window.entrarConHuella;
+        } else {
+            btn.style.display = 'none';
         }
     } catch(e) {}
 }
@@ -3163,6 +3169,14 @@ if(window._adminNivel && window._mostrarAdminReal){
     window._mostrarAdminReal(window._adminNivel);
     window._adminNivel = null;
 }
+// Revisar si este dispositivo tiene huella registrada, para mostrar el botón
+// "Entrar con huella" en la pantalla de login. Se revisa varias veces por si
+// el DOM o el estado tardan en estar listos.
+(function revisarHuellaInicio(){
+    try { _revisarHuellaGuardada(); } catch(e) {}
+    setTimeout(function(){ try { _revisarHuellaGuardada(); } catch(e){} }, 500);
+    setTimeout(function(){ try { _revisarHuellaGuardada(); } catch(e){} }, 1500);
+})();
 </script>
 
 <script>
