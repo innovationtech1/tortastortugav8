@@ -88,7 +88,7 @@ main{max-width:640px;margin:0 auto;padding:1.2rem 1rem 3rem;}
 
 <script type="module">
 import { db } from '../js/firebase-config.js';
-import { collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { collection, onSnapshot, doc, deleteDoc, addDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 function _leer(clave) {
     return sessionStorage.getItem(clave) || localStorage.getItem(clave);
@@ -164,33 +164,12 @@ function renderPedidos(pedidos) {
             border:1px solid rgba(37,211,102,.35);color:#25D366;">
             ${yaCompartio ? '✅ Ubicación enviada — tocar para actualizar' : '📍 Enviar mi ubicación'}</a>`;
 
-        // Armar mensaje de WhatsApp con los datos de este pedido
-        const folioLimpio = String(p.folioStr || '').replace(/^#+/, '') || p.id.slice(-4).toUpperCase();
-        const lineasWa = [
-            '🐢 *TORTAS TORTUGA — PEDIDO*',
-            '━━━━━━━━━━━━━━━━━━━━',
-            '🔖 *TICKET: #' + folioLimpio + '*',
-            fechaHora ? ('🗓️ *Fecha:* ' + fechaHora) : '',
-            '👤 *Cliente:* ' + (p.cliente || p.nombre || '') + ((p.telefono) ? ' · 📞 ' + p.telefono : ''),
-            '',
-            '📋 *Orden:*',
-            (p.items || '').split(' | ').join('\n'),
-            '',
-            '💰 *Total: ' + (p.total || '') + '*',
-            '━━━━━━━━━━━━━━━━━━━━'
-        ];
-        // Si el pedido ya tiene ubicación compartida, integrarla al mensaje
-        if (p.ubicacionCliente && p.ubicacionCliente.lat && p.ubicacionCliente.lng) {
-            lineasWa.push('📍 *Ubicación del cliente:*');
-            lineasWa.push('https://maps.google.com/?q=' + p.ubicacionCliente.lat + ',' + p.ubicacionCliente.lng);
-        }
-        const lineasWaFinal = lineasWa.filter(Boolean);
-        const waUrl = 'https://api.whatsapp.com/send?phone=12108678210&text=' + encodeURIComponent(lineasWaFinal.join('\n'));
-        const btnWa = `<a href="${waUrl}" target="_blank"
-            style="display:block;margin-top:.5rem;padding:.6rem;text-align:center;text-decoration:none;
-            border-radius:10px;font-size:.82rem;font-weight:700;
-            background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.4);color:#25D366;">
-            💬 Enviar pedido por WhatsApp</a>`;
+        // Botón para cancelar el pedido (con motivo obligatorio)
+        const btnCancelar = `<button onclick="abrirCancelar('${p.id}','${(p.folioStr||'').replace(/'/g,'')}')"
+            style="display:block;width:100%;margin-top:.5rem;padding:.6rem;text-align:center;
+            border-radius:10px;font-size:.82rem;font-weight:700;font-family:inherit;cursor:pointer;
+            background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#EF4444;">
+            ❌ Cancelar pedido</button>`;
 
         return `
         <div class="pedido-card">
@@ -203,7 +182,7 @@ function renderPedidos(pedidos) {
             <div class="pedido-items">${(p.items || '').replace(/</g,'&lt;')}</div>
             <div class="pedido-total">${p.total || ''}</div>
             ${btnUbic}
-            ${btnWa}
+            ${btnCancelar}
         </div>`;
     }).join('');
 }
@@ -211,15 +190,109 @@ function renderPedidos(pedidos) {
 onSnapshot(collection(db, 'pedidos'), snap => {
     const todos = [];
     snap.forEach(d => todos.push({ id: d.id, ...d.data() }));
-    renderPedidos(todos.filter(esMio));
+    const mios = todos.filter(esMio);
+    window._ultimosPedidos = mios;  // para la cancelación
+    renderPedidos(mios);
 }, err => {
     document.getElementById('lista-pedidos').innerHTML =
         '<div class="vacio">No se pudieron cargar tus pedidos. Intenta de nuevo más tarde.</div>';
     console.error(err);
 });
+
+// ── CANCELACIÓN DE PEDIDO (motivo obligatorio + registro + borrado) ──
+let _cancelarPedidoId = null;
+let _cancelarPedidoFolio = null;
+let _cancelarPedidoData = null;
+
+window.abrirCancelar = function(pedidoId, folio) {
+    _cancelarPedidoId = pedidoId;
+    _cancelarPedidoFolio = folio || '';
+    // Guardar los datos del pedido para el registro (buscar en la última lista)
+    _cancelarPedidoData = (window._ultimosPedidos || []).find(function(p){ return p.id === pedidoId; }) || null;
+    document.getElementById('cancelar-info').textContent = 'Pedido ' + (folio || '') + ' — esta acción no se puede deshacer.';
+    document.getElementById('cancelar-motivo').value = '';
+    document.getElementById('cancelar-nota').value = '';
+    document.getElementById('cancelar-overlay').style.display = 'flex';
+};
+
+window.cerrarCancelar = function() {
+    document.getElementById('cancelar-overlay').style.display = 'none';
+    _cancelarPedidoId = null;
+};
+
+window.confirmarCancelar = async function() {
+    if (!_cancelarPedidoId) return;
+    const motivo = document.getElementById('cancelar-motivo').value;
+    const nota = document.getElementById('cancelar-nota').value.trim();
+    if (!motivo) {
+        alert('⚠️ Selecciona un motivo de cancelación (es obligatorio).');
+        return;
+    }
+    const p = _cancelarPedidoData || {};
+    try {
+        // 1. Guardar un registro de cancelación (para auditoría/control)
+        await addDoc(collection(db, 'cancelaciones'), {
+            pedidoId: _cancelarPedidoId,
+            folio: _cancelarPedidoFolio || (p.folioStr || ''),
+            cliente: p.cliente || p.nombre || '',
+            telefono: p.telefono || '',
+            total: p.total || '',
+            totalNum: p.totalNum || 0,
+            items: p.items || '',
+            estadoAlCancelar: p.estado || '',
+            motivo: motivo,
+            nota: nota || '',
+            canceladoPor: 'cliente',
+            canceladoEn: new Date().toISOString(),
+            creadoServidor: serverTimestamp()
+        });
+
+        // 2. Borrar el pedido del sistema (desaparece de cocina, admin y del
+        //    perfil del cliente). El registro queda en "cancelaciones".
+        //    Nota: la regla de Firestore solo permite borrar si archivado==true,
+        //    así que primero lo marcamos archivado+cancelado y luego lo borramos.
+        try {
+            await updateDoc(doc(db, 'pedidos', _cancelarPedidoId), {
+                estado: 'Cancelado ❌', archivado: true,
+                canceladoMotivo: motivo, canceladoEn: new Date().toISOString()
+            });
+        } catch(e) { /* si no se puede actualizar, intentamos borrar directo */ }
+        await deleteDoc(doc(db, 'pedidos', _cancelarPedidoId));
+
+        window.cerrarCancelar();
+        if (window.ttAlert) window.ttAlert('✅ Pedido cancelado. Motivo: ' + motivo);
+        else alert('✅ Pedido cancelado.');
+    } catch(e) {
+        console.error('Error al cancelar:', e);
+        alert('❌ No se pudo cancelar el pedido. Revisa tu conexión.');
+    }
+};
 </script>
 
 <script src="../js/tt-alert.js"></script>
 <script src="../js/perfil-barra.js?v=1786502194"></script>
+<!-- Modal de cancelación de pedido -->
+<div id="cancelar-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#1A1A1A;border:1px solid rgba(239,68,68,.3);border-radius:16px;padding:1.4rem;width:100%;max-width:400px;">
+    <h3 style="margin:0 0 .3rem;font-size:1.1rem;color:#EF4444;">❌ Cancelar pedido</h3>
+    <div id="cancelar-info" style="font-size:.85rem;color:#888;margin-bottom:1rem;">—</div>
+    <p style="font-size:.8rem;color:#ccc;font-weight:700;margin:0 0 .5rem;">Motivo de cancelación (obligatorio):</p>
+    <select id="cancelar-motivo" style="width:100%;padding:.7rem;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:#111;color:#fff;font-family:inherit;font-size:.9rem;margin-bottom:.6rem;">
+      <option value="">— Selecciona un motivo —</option>
+      <option>Ya no lo quiero</option>
+      <option>Me equivoqué en el pedido</option>
+      <option>Tardó demasiado</option>
+      <option>Pedí por error</option>
+      <option>Cambié de opinión</option>
+      <option>Problema con el pago</option>
+      <option>Otro</option>
+    </select>
+    <input id="cancelar-nota" type="text" placeholder="Detalle (opcional)" style="width:100%;padding:.7rem;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:#111;color:#fff;font-family:inherit;font-size:.85rem;margin-bottom:1rem;box-sizing:border-box;">
+    <div style="display:flex;gap:.5rem;">
+      <button onclick="cerrarCancelar()" style="flex:1;padding:.8rem;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:10px;font-family:inherit;font-weight:700;cursor:pointer;">Volver</button>
+      <button onclick="confirmarCancelar()" style="flex:1;padding:.8rem;background:linear-gradient(135deg,#EF4444,#DC2626);border:none;color:#fff;border-radius:10px;font-family:inherit;font-weight:800;cursor:pointer;">Cancelar pedido</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
