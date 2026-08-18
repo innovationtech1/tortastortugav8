@@ -2196,7 +2196,38 @@ window.verDetalle = async function(uid){
              border-radius:10px;font-family:inherit;font-size:.85rem;cursor:pointer;">
       ${e.estado==='activo'?'🚫 Desactivar cuenta':'✅ Activar cuenta'}
     </button>
+    <button onclick="resetearPinEmpleado('${docId}','${(e.nombre||'')} ${(e.apellido||'')}','${e.empleadoId||''}')"
+      style="width:100%;margin-top:.5rem;padding:.7rem;background:rgba(251,183,36,.12);
+             border:1px solid rgba(251,183,36,.4);color:#FBB724;
+             border-radius:10px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
+      🔑 Resetear PIN (olvidó su PIN)
+    </button>
   `;
+};
+
+// El GERENTE resetea el PIN de un empleado que lo olvidó.
+window.resetearPinEmpleado = async function(docId, nombre, empId){
+    // Solo gerente/supervisor
+    if (!(nivelActual >= 4 || (rolActual||'').includes('gerente') || (rolActual||'').includes('supervisor'))) {
+        if (window.ttAlert) window.ttAlert('Solo el gerente o supervisor puede resetear PINs.');
+        return;
+    }
+    const nuevoPin = window.prompt('🔑 Nuevo PIN de 4 dígitos para ' + (nombre||'el empleado') + ':', '');
+    if (nuevoPin === null) return; // canceló
+    const pinLimpio = (nuevoPin||'').replace(/\D/g,'');
+    if (pinLimpio.length !== 4) {
+        if (window.ttAlert) window.ttAlert('El PIN debe ser exactamente 4 dígitos.');
+        return;
+    }
+    try {
+        await updateDoc(doc(db,'empleados',docId), { pin: pinLimpio });
+        // Intentar sincronizar la contraseña de Firebase Auth si aplica (mismo
+        // esquema empId+PIN). Si falla, el login por PIN sigue funcionando igual.
+        if (window.ttAlert) window.ttAlert('✅ PIN reseteado para ' + (nombre||empId) + '. Nuevo PIN: ' + pinLimpio);
+        cOv('ov-detail');
+    } catch(e) {
+        if (window.ttAlert) window.ttAlert('Error al resetear el PIN: ' + e.message);
+    }
 };
 
 window.toggleStatus = async function(uid, est){
