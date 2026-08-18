@@ -1361,10 +1361,22 @@ window.enviarTodasLasCuentas = async function() {
 
     // Exigir nombre y teléfono antes de enviar.
     // EXCEPCIÓN: si la orden se tomó en el tortumóvil (empleado, no domicilio),
-    // no se pide teléfono (el cliente está físicamente en el tortumóvil).
+    // no se pide teléfono, y si no hay nombre se asigna "Cliente N" automático.
     var ordenoEnTortumovil = !!(cuentaPrincipal && cuentaPrincipal.ordenoEnTortumovil);
     var telDigitos = (telefono || '').replace(/\D/g, '');
     var faltaNombre = !nombre || nombre === 'Cliente' || /^Cuenta \d+$/.test(nombre);
+
+    if (faltaNombre && ordenoEnTortumovil) {
+        // Generar nombre automático "Cliente N" (contador diario en el navegador)
+        var hoyKey = 'tt_cliente_contador_' + new Date().toISOString().slice(0,10);
+        var n = parseInt(localStorage.getItem(hoyKey) || '0', 10) + 1;
+        localStorage.setItem(hoyKey, String(n));
+        nombre = 'Cliente ' + n;
+        // Reflejarlo en la cuenta para que quede consistente
+        if (cuentaPrincipal) cuentaPrincipal.nombre = nombre;
+        faltaNombre = false;
+    }
+
     var faltaTelefono = !ordenoEnTortumovil && telDigitos.length < 10;
     if (faltaNombre) {
         alert('⚠️ Falta el nombre del cliente. Toca el campo de nombre arriba del carrito para escribirlo.');
