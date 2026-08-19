@@ -83,6 +83,19 @@
         // ── Badges ──
         'badge.nuevo':       { es: 'NUEVO!', en: 'NEW!' },
         'badge.bestseller':  { es: 'MÁS VENDIDO', en: 'BEST SELLER' },
+
+        // ── Bienvenida ──
+        'biz.saludo':      { es: '¿Cómo quieres entrar?', en: 'How would you like to enter?' },
+        'biz.sub':         { es: 'San Antonio, Texas', en: 'San Antonio, Texas' },
+        'biz.cliente':     { es: 'Soy cliente', en: "I'm a customer" },
+        'biz.cliente_desc':{ es: 'Entra con tu teléfono para hacer tu pedido rápido y fácil.',
+                             en: 'Sign in with your phone to place your order quick and easy.' },
+        'biz.empleado':    { es: 'Soy empleado', en: "I'm an employee" },
+        'biz.empleado_desc':{ es: 'Cajeros y gerentes: entra con tu número de empleado y PIN para tomar y cobrar órdenes.',
+                              en: 'Cashiers and managers: sign in with your employee number and PIN to take and charge orders.' },
+        'biz.sin_registro':{ es: 'Ordenar sin registrarme →', en: 'Order without signing in →' },
+        'biz.continuar':   { es: 'Continuar a ordenar →', en: 'Continue to order →' },
+        'biz.cerrar_sesion':{ es: 'Cerrar sesión', en: 'Log out' },
     };
 
     // Idioma actual (guardado en localStorage, default español)
