@@ -61,14 +61,14 @@
         <div class="auth-logo">
             <span class="logo-emoji">🐢</span>
             <h1 class="logo-text">Tortas Tortuga</h1>
-            <p class="logo-sub">San Antonio, Texas</p>
+            <p class="logo-sub" data-i18n="biz.sub">San Antonio, Texas</p>
         </div>
 
         <!-- Sesion activa (si la hay) -->
         <div class="welcome-back" id="welcome-back">
             <div class="wb-nombre" id="wb-nombre">Hola de nuevo!</div>
             <div class="wb-sub" id="wb-sub"></div>
-            <a href="../ordenar.html" class="btn-primary" style="margin-top:.8rem;text-decoration:none;display:block;text-align:center;">
+            <a href="../ordenar.html" class="btn-primary" style="margin-top:.8rem;text-decoration:none;display:block;text-align:center;" data-i18n="biz.continuar">
                 Continuar a ordenar →
             </a>
             <button onclick="cerrarSesion()" style="width:100%;margin-top:.5rem;background:none;border:none;color:#888;font-family:inherit;font-size:.82rem;cursor:pointer;padding:.4rem;">
@@ -76,7 +76,7 @@
             </button>
         </div>
 
-        <p style="text-align:center;color:#aaa;font-size:.92rem;margin-bottom:1.3rem;" id="intro-text">
+        <p style="text-align:center;color:#aaa;font-size:.92rem;margin-bottom:1.3rem;" id="intro-text" data-i18n="biz.saludo">
             ¿Cómo quieres entrar?
         </p>
 
@@ -102,7 +102,7 @@
                     </div>
                     <div class="opcion-flecha">→</div>
                 </div>
-                <div class="opcion-desc">Cajeros y gerentes: entra con tu número de empleado y PIN para tomar y cobrar órdenes.</div>
+                <div class="opcion-desc" data-i18n="biz.empleado_desc">Cajeros y gerentes: entra con tu número de empleado y PIN para tomar y cobrar órdenes.</div>
             </a>
         </div>
 
@@ -144,6 +144,6 @@ window.cerrarSesion = function() {
     location.reload();
 };
 </script>
-<script src="../js/idioma.js?v=1787110460"></script>
+<script src="../js/idioma.js?v=1787110633"></script>
 </body>
 </html>
