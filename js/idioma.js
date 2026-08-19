@@ -47,6 +47,42 @@
         'estado.listo':        { es: 'Listo', en: 'Ready' },
         'estado.entregado':    { es: 'Entregado', en: 'Delivered' },
         'estado.pagado':       { es: 'Pagado', en: 'Paid' },
+
+        // ── Secciones del menu ──
+        'menu.combos_incluyen': { es: 'Todos los combos incluyen soda en lata y papas (chips). $1 off Torta by self.',
+                                  en: 'All combos include canned soda and chips. $1 off Torta by self.' },
+        'menu.extras_sides':    { es: 'Extras & Sides', en: 'Extras & Sides' },
+        'menu.bebidas_botanas': { es: 'Bebidas & Botanas', en: 'Drinks & Snacks' },
+
+        // ── Descripciones de productos ──
+        'prod.double_t.desc': {
+            es: '1 aguacate GRANDE entero con 15 rebanadas de carnes mixtas (jamón, queso de puerco y pavo) con tomate, cebolla, mayonesa y queso fresco.',
+            en: '1 whole BIG avocado with 15 slices of mix meats (ham, pork head cheese & turkey) with tomato, onions, mayo and queso fresco.' },
+        'prod.original.desc': {
+            es: '1 aguacate GRANDE entero, 3 rebanadas de carne mixta (jamón, queso de puerco y pavo) con tomate, cebolla, mayonesa y queso fresco.',
+            en: '1 whole BIG avocado, 3 mix meat slices (ham, pork head cheese & turkey) with tomato, onions, mayo and queso fresco.' },
+        'prod.turkey_ham.desc': {
+            es: '1 aguacate GRANDE entero, pavo, jamón o rebanadas de carne mixta con tomate, cebolla, mayonesa y queso fresco.',
+            en: '1 whole BIG avocado, turkey, ham or mix meat slices with tomato, onions, mayo and queso fresco.' },
+        'prod.pork.desc': {
+            es: '1 aguacate GRANDE entero, rebanadas de queso de puerco, con tomate, cebolla, mayonesa y queso fresco.',
+            en: '1 whole BIG avocado, pork head cheese meat slices, with tomato, onions, mayo and queso fresco.' },
+        'prod.shrimp.desc': {
+            es: '1 aguacate GRANDE entero, camarón con 3 rebanadas de carne mixta (jamón, pavo y queso de puerco).',
+            en: '1 whole BIG avocado, shrimp with 3 mix meat slices (ham, turkey & pork head cheese).' },
+        'prod.only_meat.desc': {
+            es: '3 rebanadas de carne mixta (pavo, jamón y queso de puerco) con mayonesa y queso fresco.',
+            en: '3 mix meat slices (turkey, ham and pork head cheese) with mayo and queso fresco.' },
+        'prod.vegan.desc': {
+            es: '2 aguacates GRANDES enteros, doble tomate, doble cebolla y doble cebolla morada.',
+            en: '2 whole BIG avocados, double tomatoes, double onions and double red onions.' },
+        'prod.kids.desc': {
+            es: '8 rebanadas de jamón, queso y mayonesa.',
+            en: '8 ham slices, cheese and mayo.' },
+
+        // ── Badges ──
+        'badge.nuevo':       { es: 'NUEVO!', en: 'NEW!' },
+        'badge.bestseller':  { es: 'MÁS VENDIDO', en: 'BEST SELLER' },
     };
 
     // Idioma actual (guardado en localStorage, default español)
