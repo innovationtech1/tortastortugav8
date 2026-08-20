@@ -29,8 +29,25 @@
   .resumen-item .n { font-size:1.4rem; font-weight:900; color:var(--primary); }
   .resumen-item .l { font-size:.68rem; color:var(--muted); }
   .pedido-card {
-    background:var(--surface); border:1px solid rgba(255,255,255,.09);
-    border-radius:16px; padding:1rem; margin-bottom:.9rem;
+    background:linear-gradient(160deg,#1c1c1c,#161616);
+    border:1px solid rgba(255,255,255,.09);
+    border-left:4px solid #FF5A00;
+    border-radius:16px; padding:1.1rem; margin-bottom:1rem;
+    box-shadow:0 4px 16px rgba(0,0,0,.3);
+    transition:transform .25s ease, box-shadow .25s ease;
+  }
+  .pedido-card:hover {
+    transform:translateY(-2px);
+    box-shadow:0 8px 24px rgba(0,0,0,.4);
+  }
+  .pedido-card.entregado {
+    border-left-color:#25D366;
+    opacity:.75;
+  }
+  .pc-top { margin-bottom:.6rem; }
+  .pc-linea {
+    display:flex; align-items:center; gap:.4rem;
+    font-size:.86rem; color:#bbb; margin:.35rem 0;
   }
   .pedido-card.entregado { opacity:.55; border-color:rgba(37,211,102,.3); }
   .pc-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:.5rem; }
@@ -39,8 +56,8 @@
   .pc-total { font-size:1.1rem; font-weight:900; color:#25D366; }
   .pc-linea { font-size:.82rem; color:#ccc; margin:.2rem 0; display:flex; gap:.4rem; }
   .pc-pago {
-    display:inline-block; font-size:.72rem; font-weight:700; padding:.2rem .6rem;
-    border-radius:8px; margin-top:.4rem;
+    display:inline-block; font-size:.78rem; font-weight:800; padding:.35rem .7rem;
+    border-radius:8px; margin-top:.5rem;
   }
   .pago-efectivo { background:rgba(255,193,7,.15); color:#FFC107; border:1px solid rgba(255,193,7,.35); }
   .pago-digital { background:rgba(37,211,102,.15); color:#25D366; border:1px solid rgba(37,211,102,.35); }
