@@ -2847,3 +2847,55 @@ window.agregarBebidaRapida = function(pid) {
         if (window.renderBebidasSlider) window.renderBebidasSlider();
     };
 })();
+
+// ═══════════════════════════════════════════════════════════
+//  OPEN FOOD — producto manual (nombre + precio) para empleados
+// ═══════════════════════════════════════════════════════════
+window.agregarOpenFood = function() {
+    var nombreInp = document.getElementById('open-food-nombre');
+    var precioInp = document.getElementById('open-food-precio');
+    if (!nombreInp || !precioInp) return;
+
+    var nombre = (nombreInp.value || '').trim();
+    var precio = parseFloat(precioInp.value) || 0;
+
+    if (!nombre) { alert('Escribe el nombre del producto'); nombreInp.focus(); return; }
+    if (precio <= 0) { alert('Escribe un precio válido'); precioInp.focus(); return; }
+
+    var CS = window._cuentasSys;
+    if (!CS) { alert('Sistema de cuentas no disponible'); return; }
+    var c = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+    if (!c) { c = CS.cuentas[0]; CS.activa = c.id; }
+
+    // Agregar al carrito con el mismo formato que los demas productos
+    c.items.push({
+        id:             'openfood-' + Date.now(),
+        nombre:         nombre,
+        precio:         precio,
+        precioBase:     precio,
+        variante:       'Precio manual',
+        varianteIdx:    0,
+        variantesDisp:  [{ label: 'Precio manual', precio: precio }],
+        categoria:      'open-food',
+        tipo:           'open-food',
+        modificaciones: [],
+        esOpenFood:     true,
+    });
+
+    // Limpiar campos
+    nombreInp.value = '';
+    precioInp.value = '';
+
+    // Re-renderizar carrito
+    if (window.renderCarrito) window.renderCarrito();
+    if (window._renderCuentas) window._renderCuentas();
+
+    // Feedback visual
+    var toast = document.createElement('div');
+    toast.textContent = '\u2705 ' + nombre + ' agregado ($' + precio.toFixed(2) + ')';
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);' +
+        'background:#25D366;color:#fff;padding:.7rem 1.3rem;border-radius:20px;font-weight:700;' +
+        'z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,.4);font-family:system-ui,sans-serif;';
+    document.body.appendChild(toast);
+    setTimeout(function(){ toast.remove(); }, 2000);
+};
