@@ -271,7 +271,6 @@ function construirNavMenu() {
         ['📊','Reportes','reportes.html', true],
         ['⚙️','Panel Admin','admin.html', true],
         ['🧑‍💼','Panel Empleado','empleados.html', false],
-        ['🏠','Inicio','../index.html', false],
     ];
     document.getElementById('nav-menu-items').innerHTML = items.map(function(it){
         if (it[3] && !esGerente) return '';
@@ -367,6 +366,51 @@ function render(pedidos) {
             '<button class="btn-maps" style="width:100%;border:1px solid rgba(66,133,244,.4);cursor:pointer;" onclick="abrirEntrega(\''+p.id+'\')">🗺️ Cómo llegar y cobrar</button>' +
         '</div>';
     }).join('');
+}
+
+
+// ── PEDIR UBICACIÓN AL CLIENTE (compartir GPS) ──
+window.pedirUbicacionRuta = function(pedidoId, telefono, nombre) {
+    // Link que el cliente abre para compartir su GPS
+    var base = window.location.origin + window.location.pathname.replace(/pages\/mi-ruta\.html$/, '');
+    var link = base + 'ubicacion.html?pedido=' + pedidoId;
+
+    var saludo = nombre ? ('Hola ' + nombre + '!') : 'Hola!';
+    var mensaje =
+        saludo + ' Soy tu repartidor de Tortas Tortuga \uD83D\uDEF5\n\n' +
+        'Para llevarte tu pedido necesito tu ubicacion exacta.\n\n' +
+        'Solo abre este link y toca "Compartir mi ubicacion":\n' + link;
+
+    // Si hay telefono, intentar abrir WhatsApp/SMS; si no, copiar el link
+    var num = String(telefono || '').replace(/[^0-9]/g, '');
+
+    if (num) {
+        if (num.length === 10) num = '1' + num;
+        // Preferir SMS (mas universal para clientes)
+        var smsUrl = 'sms:+' + num + '?body=' + encodeURIComponent(mensaje);
+        window.open(smsUrl, '_blank');
+    } else {
+        // Sin telefono: copiar el link al portapapeles
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(link).then(function(){
+                mostrarToastRuta('📋 Link copiado. Compártelo con el cliente.');
+            }).catch(function(){
+                prompt('Copia este link y mándalo al cliente:', link);
+            });
+        } else {
+            prompt('Copia este link y mándalo al cliente:', link);
+        }
+    }
+};
+
+function mostrarToastRuta(txt) {
+    var toast = document.createElement('div');
+    toast.textContent = txt;
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);' +
+        'background:#25D366;color:#fff;padding:.7rem 1.3rem;border-radius:20px;font-weight:700;' +
+        'z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,.4);font-family:system-ui,sans-serif;max-width:90%;text-align:center;';
+    document.body.appendChild(toast);
+    setTimeout(function(){ toast.remove(); }, 2500);
 }
 
 function escucharRuta() {
