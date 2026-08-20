@@ -86,12 +86,11 @@
             ['🏪', 'Tienda (Ordenar)', _raiz() + 'ordenar.html', false],
             ['🧾', 'Mis Pedidos', _base() + 'mis-pedidos.html', false],
             ['🍳', 'Cocina', _base() + 'cocina.html', false],
-            ['🛵', 'Mi Ruta', _base() + 'mi-ruta.html', false],
+            ['🛵', 'Mis Rutas', _base() + 'mi-ruta.html', false],
             ['🔔', 'Pedidos Disponibles', _base() + 'disponibles.html', false],
             ['📊', 'Reportes', _base() + 'reportes.html', true],
             ['⚙️', 'Panel Admin', _base() + 'admin.html', true],
             ['🧑‍💼', 'Panel Empleado', _base() + 'empleados.html', false],
-            ['🏠', 'Inicio', _raiz() + 'index.html', false],
         ];
 
         var html = '<div id="pb-menu" class="pb-menu">';
