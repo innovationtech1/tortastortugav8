@@ -1657,6 +1657,61 @@ function cerrarOrdenModal() {
     <section class="app-menu-section menu-tab-content" id="tab-tortas">
         <div class="app-menu-grid menu-carrusel" id="menu-container"></div>
         <div class="carrusel-hint">← desliza para ver más →</div>
+
+        <!-- OPEN FOOD: producto manual, solo empleados -->
+        <div id="open-food-panel" style="display:none;max-width:520px;margin:1.2rem auto 0;
+             background:linear-gradient(160deg,#1e1e1e,#151515);border:1px solid rgba(255,90,0,.25);
+             border-radius:16px;padding:1.1rem 1.2rem;box-shadow:0 6px 20px rgba(0,0,0,.35);">
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem;">
+                <span style="font-size:1.3rem;">🍽️</span>
+                <div>
+                    <div style="font-size:1rem;font-weight:800;color:#FF5A00;">Open Food</div>
+                    <div style="font-size:.72rem;color:#888;">Agregar un producto que no está en el menú</div>
+                </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:.6rem;">
+                <input type="text" id="open-food-nombre" placeholder="Nombre del producto (ej: Torta especial)"
+                    style="width:100%;box-sizing:border-box;padding:.7rem .85rem;background:#0f0f0f;
+                           border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;
+                           font-family:inherit;font-size:.9rem;">
+                <div style="display:flex;gap:.6rem;">
+                    <div style="position:relative;flex:1;">
+                        <span style="position:absolute;left:.75rem;top:50%;transform:translateY(-50%);
+                                     color:#25D366;font-weight:700;">$</span>
+                        <input type="number" id="open-food-precio" placeholder="0.00" step="0.01" min="0"
+                            style="width:100%;box-sizing:border-box;padding:.7rem .85rem .7rem 1.6rem;background:#0f0f0f;
+                                   border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;
+                                   font-family:inherit;font-size:.9rem;">
+                    </div>
+                    <button onclick="window.agregarOpenFood()"
+                        style="padding:.7rem 1.4rem;background:linear-gradient(135deg,#FF6B1A,#FF5A00);
+                               border:none;color:#fff;border-radius:10px;font-family:inherit;
+                               font-size:.9rem;font-weight:800;cursor:pointer;white-space:nowrap;
+                               box-shadow:0 4px 14px rgba(255,90,0,.3);">🛒 Agregar</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        /* Mostrar Open Food solo si hay sesion de empleado/cajero */
+        (function() {
+            function checarEmpleado() {
+                var esEmpleado = window._cajeroActivo ||
+                    sessionStorage.getItem('tt_cajero_nombre') ||
+                    sessionStorage.getItem('tt_emp_id');
+                var panel = document.getElementById('open-food-panel');
+                if (panel) panel.style.display = esEmpleado ? 'block' : 'none';
+            }
+            // Revisar al cargar y despues de un momento (por si la sesion carga async)
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', checarEmpleado);
+            } else {
+                checarEmpleado();
+            }
+            setTimeout(checarEmpleado, 800);
+            setTimeout(checarEmpleado, 2000);
+        })();
+        </script>
     </section>
 
     <!-- DRINKS -->
@@ -2085,7 +2140,7 @@ function cerrarOrdenModal() {
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1784605504"></script>
+<script type="module" src="js/app.js?v=1787195883"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
