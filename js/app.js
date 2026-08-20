@@ -2886,9 +2886,9 @@ window.agregarOpenFood = function() {
     nombreInp.value = '';
     precioInp.value = '';
 
-    // Re-renderizar carrito
-    if (window.renderCarrito) window.renderCarrito();
-    if (window._renderCuentas) window._renderCuentas();
+    // Re-renderizar carrito (usa las funciones reales de render)
+    if (window.renderCartItems) window.renderCartItems();
+    if (window.renderCuentasTabs) window.renderCuentasTabs();
 
     // Feedback visual
     var toast = document.createElement('div');
