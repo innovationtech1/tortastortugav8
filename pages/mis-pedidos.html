@@ -267,6 +267,49 @@ onSnapshot(collection(db, 'pedidos'), snap => {
 });
 </script>
 
+
+<script>
+// ── PEDIR UBICACIÓN AL CLIENTE (SMS) — igual que en Mis Rutas ──
+window.pedirUbicacionCliente = function(pedidoId, telefono, nombre) {
+    var base = window.location.origin + window.location.pathname.replace(/pages\/mis-pedidos\.html$/, '');
+    var link = base + 'ubicacion.html?pedido=' + pedidoId;
+
+    var saludo = nombre ? ('Hola ' + nombre + '!') : 'Hola!';
+    var mensaje =
+        saludo + ' Somos Tortas Tortuga \uD83D\uDC22\n\n' +
+        'Para entregarte tu pedido necesitamos tu ubicacion exacta.\n\n' +
+        'Solo abre este link y toca "Compartir mi ubicacion":\n' + link;
+
+    var num = String(telefono || '').replace(/[^0-9]/g, '');
+
+    if (num) {
+        if (num.length === 10) num = '1' + num;
+        var smsUrl = 'sms:+' + num + '?body=' + encodeURIComponent(mensaje);
+        window.open(smsUrl, '_blank');
+    } else {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(link).then(function(){
+                mostrarToastMP('📋 Link copiado. Compártelo con el cliente.');
+            }).catch(function(){
+                prompt('Copia este link y mándalo al cliente:', link);
+            });
+        } else {
+            prompt('Copia este link y mándalo al cliente:', link);
+        }
+    }
+};
+
+function mostrarToastMP(txt) {
+    var toast = document.createElement('div');
+    toast.textContent = txt;
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);' +
+        'background:#25D366;color:#fff;padding:.7rem 1.3rem;border-radius:20px;font-weight:700;' +
+        'z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,.4);font-family:system-ui,sans-serif;max-width:90%;text-align:center;';
+    document.body.appendChild(toast);
+    setTimeout(function(){ toast.remove(); }, 2500);
+}
+</script>
+
 <!-- Modal asignar repartidor -->
 <div id="rep-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
   <div style="background:#1a1a1a;border-radius:16px;max-width:400px;width:100%;padding:1.3rem;box-shadow:0 10px 40px rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.1);">
