@@ -160,9 +160,6 @@
 
         barra.innerHTML =
             '<div class="pb-wrap" style="border-bottom:2px solid ' + colorBorde + ';">' +
-                (sesion.tipo === 'empleado'
-                    ? '<button class="pb-menu-btn" onclick="window._perfilToggleMenu()" title="Menú" aria-label="Menú">☰</button>'
-                    : '') +
                 contenido +
                 '<button class="pb-salir" onclick="window._perfilCerrarSesion()" title="Cerrar sesión">Salir</button>' +
             '</div>' +
