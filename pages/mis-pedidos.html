@@ -179,6 +179,14 @@ function render() {
             btnPrep = `<button class="mp-btn mp-btn-listo" onclick="cambiarEstado('${p.id}','Listo ✅')">✅ Lista</button>`;
         }
 
+        // Botón pedir ubicación al cliente por SMS
+        const _tel = (p.telefono || p.cliente_telefono || p.telefonoCliente || '').toString().replace(/'/g,'');
+        const _nomCli = (p.cliente || p.nombre || '').toString().replace(/'/g,'');
+        const _tieneUbi = (p.ubicacionCliente && p.ubicacionCliente.lat) || (p.ubicacion && p.ubicacion.lat);
+        let btnUbicacion = _tieneUbi
+            ? `<button class="mp-btn" style="background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.4);color:#25D366;" disabled>✅ Ubicación recibida</button>`
+            : `<button class="mp-btn" style="background:rgba(255,90,0,.15);border:1px solid rgba(255,90,0,.4);color:#FF7A33;" onclick="pedirUbicacionCliente('${p.id}','${_tel}','${_nomCli}')">📍 Pedir ubicación</button>`;
+
         // Botón asignar repartidor (muestra el asignado o invita a asignar)
         let btnRepartidor = p.repartidorNombre
             ? `<button class="mp-btn" style="background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.4);color:#25D366;" onclick="abrirAsignarRepartidor('${p.id}','${(p.ticket||p.id)}')">🛵 ${p.repartidorNombre}</button>`
@@ -204,6 +212,7 @@ function render() {
                 ${btnPrep}
                 ${btnCobro}
                 ${btnRepartidor}
+                ${btnUbicacion}
             </div>
         </div>`;
     }).join('');
