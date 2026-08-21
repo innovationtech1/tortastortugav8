@@ -207,6 +207,9 @@ body.compacto .kcard-items{padding:.5rem .7rem;}
     <button class="hbtn" onclick="window.location.href='admin.html'" style="background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.4);color:#3B82F6;">⚙️ Admin</button>
     <button class="hbtn" id="compact-btn" onclick="toggleCompacto()">🔎 Compactar</button>
     <button class="hbtn" id="sound-btn" onclick="toggleSound()">🔊 ON</button>
+    <select id="filtro-empleado" onchange="cambiarFiltroEmpleado()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:.4rem .6rem;font-family:inherit;font-size:.8rem;font-weight:600;cursor:pointer;">
+      <option value="">👥 Todos los empleados</option>
+    </select>
     <span id="clock" style="font-size:.75rem;color:var(--muted);"></span>
   </div>
 </div>
@@ -251,7 +254,7 @@ body.compacto .kcard-items{padding:.5rem .7rem;}
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import {
     getFirestore, collection, onSnapshot, updateDoc, deleteDoc,
-    doc, addDoc, serverTimestamp, query, orderBy, limit
+    doc, addDoc, serverTimestamp, query, orderBy, limit, getDocs
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const FB_CONFIG = {
