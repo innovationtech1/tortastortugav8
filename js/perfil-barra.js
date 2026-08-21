@@ -98,7 +98,7 @@
             items = [
                 ['🏠', 'Inicio', _raiz() + 'index.html', false],
                 ['🛒', 'Ordenar', _raiz() + 'ordenar.html', false],
-                ['🧾', 'Mis Pedidos', _base() + 'mis-pedidos.html', false],
+                ['📦', 'Mi Pedido', _base() + 'mi-pedido.html', false],
                 ['⭐', 'Mis Puntos', _raiz() + 'perfil.html', false],
             ];
         }
