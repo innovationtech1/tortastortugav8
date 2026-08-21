@@ -1563,12 +1563,6 @@ function cerrarOrdenModal() {
     </div>
     <div class="header-actions">
         <button class="clear-cart-btn" id="clear-cart-btn" onclick="limpiarCarrito()" style="display:none;">Vaciar</button>
-        <button class="signout-btn" id="btn-mis-rutas" onclick="window.location.href='pages/mi-ruta.html'" title="Mis rutas y órdenes asignadas" style="display:none;background:rgba(91,155,255,.15);border-color:rgba(91,155,255,.35);color:#5B9BFF;">🛵 Mis Rutas</button>
-        <button class="signout-btn" id="btn-cocina-nav" onclick="window.open('pages/cocina.html','_blank')" title="Cocina KDS" style="display:none;background:rgba(251,191,36,.15);border-color:rgba(251,191,36,.3);color:#FBB724;">🧑‍🍳 Cocina</button>
-        <button class="signout-btn" id="btn-mis-pedidos-emp" onclick="window.open('pages/mis-pedidos.html','_blank')" title="Mis pedidos tomados" style="display:none;background:rgba(255,90,0,.15);border-color:rgba(255,90,0,.4);color:#FF5A00;">🧾 Mis Pedidos</button>
-        <button class="signout-btn" onclick="window.location.href='perfil.html'" title="Mi perfil y puntos" style="background:rgba(255,215,0,.15);border-color:rgba(255,215,0,.3);color:#FFD700;" id="btn-perfil">⭐ Mis Puntos</button>
-        <button class="signout-btn" onclick="window.open('pages/mi-pedido.html','_blank')" title="Ver mis pedidos" style="display:none;background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.3);color:#3B82F6;" id="btn-mi-pedido">📦 Mi Pedido</button>
-        <button class="signout-btn" id="btn-admin-nav" onclick="window.location.href='pages/admin.html'" title="Panel de Administrador"> Admin</button>
         <button id="btn-cajero-header" onclick="mostrarPanelCajero()"
             style="display:none;background:rgba(255,90,0,.15);border-color:rgba(255,90,0,.4);
                    color:#FF5A00;font-weight:700;"
@@ -1607,7 +1601,6 @@ function cerrarOrdenModal() {
                 var btn    = document.getElementById('btn-cajero-header');
                 var banner = document.getElementById('cajero-banner');
                 var nomEl  = document.getElementById('cajero-nombre-header');
-                var btnMisPed = document.getElementById('btn-mis-pedidos-emp');
 
                 if (btn) {
                     btn.style.display = 'inline-flex';
@@ -1616,13 +1609,7 @@ function cerrarOrdenModal() {
                 }
                 if (banner) banner.style.display = 'flex';
                 if (nomEl)  nomEl.textContent = nom + ' · ' + rol;
-                if (btnMisPed) btnMisPed.style.display = 'inline-flex';
 
-                // Mostrar botones de empleado: Mis Rutas y Cocina
-                var btnRutas = document.getElementById('btn-mis-rutas');
-                if (btnRutas) btnRutas.style.display = 'inline-flex';
-                var btnCocina = document.getElementById('btn-cocina-nav');
-                if (btnCocina) btnCocina.style.display = 'inline-flex';
             }
         })();
         </script>
