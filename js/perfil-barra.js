@@ -104,8 +104,14 @@
         }
 
         var html = '<div id="pb-menu" class="pb-menu">';
+        // Página actual (para no mostrar el botón que lleva a donde ya estamos)
+        var pagActual = window.location.pathname.split('/').pop() || 'index.html';
+
         items.forEach(function(it) {
             if (it[3] && !esGerente) return; // ocultar items de gerente a otros roles
+            // No mostrar el botón que apunta a la página en la que ya estás
+            var destino = it[2].split('/').pop().split('?')[0];
+            if (destino === pagActual) return;
             var claseGerente = it[3] ? ' pb-nav-gerente' : '';
             html += '<a href="' + it[2] + '" class="pb-nav-btn' + claseGerente + '">' +
                 '<span class="pb-nav-ico">' + it[0] + '</span>' +
