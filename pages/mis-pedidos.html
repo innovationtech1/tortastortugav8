@@ -256,5 +256,90 @@ onSnapshot(collection(db, 'pedidos'), snap => {
     document.getElementById('mp-lista').innerHTML = '<div class="mp-vacio"><div class="ico">⚠️</div><div>Error al cargar. Revisa tu conexión.</div></div>';
 });
 </script>
+
+<!-- Modal asignar repartidor -->
+<div id="rep-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#1a1a1a;border-radius:16px;max-width:400px;width:100%;padding:1.3rem;box-shadow:0 10px 40px rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.1);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <div style="font-size:1.05rem;font-weight:800;color:#fff;">🛵 Asignar repartidor <span id="rep-ticket" style="color:#FF7A33;"></span></div>
+      <button onclick="document.getElementById('rep-modal').style.display='none'" style="background:none;border:none;color:#888;font-size:1.4rem;cursor:pointer;">✕</button>
+    </div>
+    <div id="rep-lista" style="display:flex;flex-direction:column;gap:.5rem;max-height:50vh;overflow-y:auto;"></div>
+    <button id="rep-quitar-btn" onclick="quitarRepartidor()" style="display:none;width:100%;margin-top:.8rem;padding:.7rem;background:rgba(244,67,54,.15);border:1px solid rgba(244,67,54,.4);color:#F44336;border-radius:10px;font-family:inherit;font-weight:700;cursor:pointer;">Quitar repartidor asignado</button>
+  </div>
+</div>
+
+<script type="module">
+import { db } from '../js/firebase-config.js';
+import { collection, doc, updateDoc, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+let _repPedidoId = null;
+
+window.abrirAsignarRepartidor = async function(id, ticket) {
+    _repPedidoId = id;
+    document.getElementById('rep-ticket').textContent = '#' + String(ticket).replace(/^#+/,'');
+    document.getElementById('rep-modal').style.display = 'flex';
+    var lista = document.getElementById('rep-lista');
+    var quitarBtn = document.getElementById('rep-quitar-btn');
+    lista.innerHTML = '<div style="color:#888;font-size:.82rem;text-align:center;padding:1rem;">Cargando repartidores…</div>';
+
+    var pedido = (window._pedidosMP || []).find(function(p){ return String(p.id) === String(id); });
+    quitarBtn.style.display = (pedido && pedido.repartidorId) ? 'block' : 'none';
+
+    try {
+        var snap = await getDocs(collection(db, 'empleados'));
+        var empleados = [];
+        snap.forEach(function(d){ var e = d.data(); e._docId = d.id; empleados.push(e); });
+        if (!empleados.length) {
+            lista.innerHTML = '<div style="color:#888;font-size:.82rem;text-align:center;padding:1rem;">No hay empleados registrados.</div>';
+            return;
+        }
+        var asignadoId = pedido ? pedido.repartidorId : null;
+        lista.innerHTML = empleados.map(function(e){
+            var eid = e.empleadoId || e.id || e._docId;
+            var nombre = e.nombre || eid;
+            var rol = e.rol || 'empleado';
+            var activo = String(asignadoId) === String(eid);
+            return '<button onclick="asignarRepartidor(\'' + eid + '\',\'' + String(nombre).replace(/'/g,"") + '\')" ' +
+                'style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:.7rem .9rem;' +
+                'background:' + (activo ? 'rgba(37,211,102,.2)' : 'rgba(255,255,255,.04)') + ';' +
+                'border:1.5px solid ' + (activo ? 'rgba(37,211,102,.5)' : 'rgba(255,255,255,.1)') + ';' +
+                'border-radius:10px;color:#fff;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">' +
+                '<span>' + nombre + '</span>' +
+                '<span style="font-size:.68rem;color:#888;text-transform:capitalize;">' + rol + (activo ? ' ✓' : '') + '</span>' +
+                '</button>';
+        }).join('');
+    } catch(err) {
+        lista.innerHTML = '<div style="color:#F44336;font-size:.82rem;text-align:center;padding:1rem;">Error cargando repartidores.</div>';
+    }
+};
+
+window.asignarRepartidor = async function(repId, repNombre) {
+    if (!_repPedidoId) return;
+    try {
+        await updateDoc(doc(db, 'pedidos', _repPedidoId), {
+            repartidorId: repId,
+            repartidorNombre: repNombre,
+            repartidorAsignadoEn: new Date().toISOString()
+        });
+        document.getElementById('rep-modal').style.display = 'none';
+    } catch(err) {
+        alert('Error asignando repartidor.');
+    }
+};
+
+window.quitarRepartidor = async function() {
+    if (!_repPedidoId) return;
+    try {
+        await updateDoc(doc(db, 'pedidos', _repPedidoId), {
+            repartidorId: null,
+            repartidorNombre: null
+        });
+        document.getElementById('rep-modal').style.display = 'none';
+    } catch(err) {
+        alert('Error quitando repartidor.');
+    }
+};
+</script>
 </body>
 </html>
