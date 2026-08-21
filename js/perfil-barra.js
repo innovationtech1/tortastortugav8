@@ -81,24 +81,35 @@
         var rol = (sesion.rol || '').toLowerCase();
         var esGerente = rol.indexOf('gerente') >= 0 || rol.indexOf('supervisor') >= 0 || rol.indexOf('admin') >= 0 || rol.indexOf('dueñ') >= 0;
 
-        // Cada item: [icono, etiqueta, url, soloGerente]
-        var items = [
-            ['🏪', 'Tienda (Ordenar)', _raiz() + 'ordenar.html', false],
-            ['🧾', 'Mis Pedidos', _base() + 'mis-pedidos.html', false],
-            ['🍳', 'Cocina', _base() + 'cocina.html', false],
-            ['🛵', 'Mis Rutas', _base() + 'mi-ruta.html', false],
-            ['🔔', 'Pedidos Disponibles', _base() + 'disponibles.html', false],
-            ['📊', 'Reportes', _base() + 'reportes.html', true],
-            ['⚙️', 'Panel Admin', _base() + 'admin.html', true],
-            ['🧑‍💼', 'Panel Empleado', _base() + 'empleados.html', false],
-        ];
+        var items;
+        if (sesion.tipo === 'empleado') {
+            // Menú de EMPLEADO — cada item: [icono, etiqueta, url, soloGerente]
+            items = [
+                ['🛵', 'Mis Rutas', _base() + 'mi-ruta.html', false],
+                ['🧾', 'Mis Pedidos', _base() + 'mis-pedidos.html', false],
+                ['🍳', 'Cocina', _base() + 'cocina.html', false],
+                ['🔔', 'Disponibles', _base() + 'disponibles.html', false],
+                ['🏪', 'Ordenar', _raiz() + 'ordenar.html', false],
+                ['📊', 'Reportes', _base() + 'reportes.html', true],
+                ['⚙️', 'Admin', _base() + 'admin.html', true],
+            ];
+        } else {
+            // Menú de CLIENTE — más simple
+            items = [
+                ['🏠', 'Inicio', _raiz() + 'index.html', false],
+                ['🛒', 'Ordenar', _raiz() + 'ordenar.html', false],
+                ['🧾', 'Mis Pedidos', _base() + 'mis-pedidos.html', false],
+                ['⭐', 'Mis Puntos', _raiz() + 'perfil.html', false],
+            ];
+        }
 
         var html = '<div id="pb-menu" class="pb-menu">';
         items.forEach(function(it) {
             if (it[3] && !esGerente) return; // ocultar items de gerente a otros roles
-            html += '<a href="' + it[2] + '" class="pb-menu-item">' +
-                '<span class="pb-menu-ico">' + it[0] + '</span>' +
-                '<span>' + it[1] + '</span></a>';
+            var claseGerente = it[3] ? ' pb-nav-gerente' : '';
+            html += '<a href="' + it[2] + '" class="pb-nav-btn' + claseGerente + '">' +
+                '<span class="pb-nav-ico">' + it[0] + '</span>' +
+                '<span class="pb-nav-lbl">' + it[1] + '</span></a>';
         });
         html += '</div>';
         return html;
@@ -155,7 +166,7 @@
                 contenido +
                 '<button class="pb-salir" onclick="window._perfilCerrarSesion()" title="Cerrar sesión">Salir</button>' +
             '</div>' +
-            (sesion.tipo === 'empleado' ? _menuNavegacion(sesion) : '');
+            _menuNavegacion(sesion);
 
         document.body.insertBefore(barra, document.body.firstChild);
 
