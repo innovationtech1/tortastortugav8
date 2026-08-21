@@ -317,6 +317,17 @@ function _pasaFiltroEmpleado(p) {
 window.cambiarFiltroEmpleado = function() {
     const sel = document.getElementById('filtro-empleado');
     _filtroEmpleadoId = sel ? sel.value : '';
+    // Actualizar el texto verde del encabezado según lo seleccionado
+    const elVerde = document.getElementById('mi-tortumovil');
+    if (elVerde) {
+        if (_filtroEmpleadoId && sel) {
+            // Texto de la opción elegida (sin el emoji)
+            const nombreSel = sel.options[sel.selectedIndex].text.replace('👤 ', '').trim();
+            elVerde.textContent = '· ' + nombreSel;
+        } else {
+            elVerde.textContent = _esGerenteCocina ? '· Todas (gerente)' : ('· ' + (_miNombreCocina || 'Mi tortumóvil'));
+        }
+    }
     // Re-procesar con la última data guardada (sin esperar nuevo snapshot)
     if (window._ultimaDataCruda) {
         todos = window._ultimaDataCruda.filter(_esMiOrden).filter(_pasaFiltroEmpleado);
