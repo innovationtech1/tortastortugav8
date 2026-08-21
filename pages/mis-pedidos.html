@@ -414,7 +414,66 @@ import { doc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/fire
 
 let _mapaCli = null;
 let _markerCli = null;
+let _markerRep = null;
 let _unsubMapa = null;
+let _watchRepId = null;
+let _miPosMapa = null;
+
+// Distancia en km entre dos puntos (haversine)
+function _distKm(lat1, lng1, lat2, lng2) {
+    const R = 6371;
+    const dLat = (lat2-lat1) * Math.PI/180;
+    const dLng = (lng2-lng1) * Math.PI/180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// Estimar tiempo de llegada (velocidad promedio de ciudad: 30 km/h)
+function _estimarETA(distKm) {
+    const VELOCIDAD_KMH = 30;
+    const minutos = Math.round((distKm / VELOCIDAD_KMH) * 60);
+    if (minutos < 1) return 'menos de 1 min';
+    if (minutos === 1) return '~1 min';
+    if (minutos < 60) return '~' + minutos + ' min';
+    const h = Math.floor(minutos/60), m = minutos % 60;
+    return '~' + h + 'h ' + m + 'min';
+}
+
+let _ultimaPosCliente = null;
+function _actualizarETA() {
+    const etaEl = document.getElementById('mapa-eta');
+    if (!etaEl) return;
+    if (!_miPosMapa || !_ultimaPosCliente) {
+        etaEl.innerHTML = '<span style="color:#888;">Activa tu GPS para ver el tiempo de llegada</span>';
+        return;
+    }
+    const km = _distKm(_miPosMapa.lat, _miPosMapa.lng, _ultimaPosCliente.lat, _ultimaPosCliente.lng);
+    const millas = (km * 0.621371).toFixed(1);
+    const eta = _estimarETA(km);
+    etaEl.innerHTML =
+        '<div style="display:flex;justify-content:space-around;align-items:center;">' +
+        '<div style="text-align:center;"><div style="font-size:1.5rem;font-weight:900;color:#FF7A33;">' + millas + '</div><div style="font-size:.7rem;color:#888;">millas</div></div>' +
+        '<div style="text-align:center;"><div style="font-size:1.5rem;font-weight:900;color:#25D366;">' + eta + '</div><div style="font-size:.7rem;color:#888;">tiempo estimado</div></div>' +
+        '</div>';
+
+    // Dibujar/actualizar el pin del repartidor en el mapa
+    if (_mapaCli) {
+        if (!_markerRep) {
+            const iconRep = L.divIcon({ html: '🛵', className: '', iconSize: [30,30], iconAnchor: [15,15] });
+            _markerRep = L.marker([_miPosMapa.lat, _miPosMapa.lng], { icon: iconRep }).addTo(_mapaCli).bindPopup('Tú (repartidor)');
+        } else {
+            _markerRep.setLatLng([_miPosMapa.lat, _miPosMapa.lng]);
+        }
+    }
+}
+
+function _iniciarGPSRepartidor() {
+    if (_watchRepId !== null || !navigator.geolocation) return;
+    _watchRepId = navigator.geolocation.watchPosition(function(pos) {
+        _miPosMapa = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        _actualizarETA();
+    }, function(){}, { enableHighAccuracy: true, maximumAge: 5000 });
+}
 
 window.verUbicacionCliente = function(pedidoId) {
     const modal = document.getElementById('mapa-modal');
