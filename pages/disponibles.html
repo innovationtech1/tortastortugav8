@@ -254,14 +254,13 @@ function beep() {
 function dispararAlarma() {
     if (sonidoOn) beep();
     if (vibrarOn && navigator.vibrate) navigator.vibrate([300, 150, 300]);
-    // Repetir el beep un par de veces para que se note
-    let n = 0;
+    // Sonar de forma CONTINUA hasta que el repartidor acepte o descarte el pedido
     detenerAlarma();
     alarmaInterval = setInterval(function(){
-        n++;
-        if (n > 3 || !sonidoOn) { detenerAlarma(); return; }
+        if (!sonidoOn) { detenerAlarma(); return; }
         beep();
-    }, 700);
+        if (vibrarOn && navigator.vibrate) navigator.vibrate([300, 150, 300]);
+    }, 1500);
 }
 function detenerAlarma() {
     if (alarmaInterval) { clearInterval(alarmaInterval); alarmaInterval = null; }
