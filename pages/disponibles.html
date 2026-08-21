@@ -515,6 +515,10 @@ function render(disp) {
             '<div class="pn-linea" style="color:#888;">Orden #' + folio + '</div>' +
             '<button class="btn-aceptar" onclick="aceptarPedido(\'' + p.id + '\')">✅ Aceptar este pedido</button>' +
             '<button class="btn-descartar" onclick="descartarPedido(\'' + p.id + '\')">Ahora no (descartar)</button>' +
+            '<button onclick="abrirAsignarRepartidor(\'' + p.id + '\',\'' + folio + '\')" ' +
+              'style="width:100%;margin-top:.5rem;padding:.7rem;border:1px solid rgba(91,155,255,.4);' +
+              'background:rgba(91,155,255,.12);color:#5B9BFF;border-radius:10px;font-family:inherit;' +
+              'font-weight:700;font-size:.85rem;cursor:pointer;">🛵 Asignar a otro repartidor</button>' +
         '</div>';
     }).join('');
 }
