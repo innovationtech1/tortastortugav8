@@ -104,7 +104,7 @@
 <script src="../js/perfil-barra.js?v=1787287932"></script>
 <script type="module">
 import { db } from '../js/firebase-config.js';
-import { collection, onSnapshot, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { collection, onSnapshot, doc, updateDoc, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 function leer(k){ return localStorage.getItem(k) || sessionStorage.getItem(k); }
 const miId     = (leer('tt_emp_id') || leer('tt_cajero_id') || '').trim();
@@ -179,6 +179,11 @@ function render() {
             btnPrep = `<button class="mp-btn mp-btn-listo" onclick="cambiarEstado('${p.id}','Listo ✅')">✅ Lista</button>`;
         }
 
+        // Botón asignar repartidor (muestra el asignado o invita a asignar)
+        let btnRepartidor = p.repartidorNombre
+            ? `<button class="mp-btn" style="background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.4);color:#25D366;" onclick="abrirAsignarRepartidor('${p.id}','${(p.ticket||p.id)}')">🛵 ${p.repartidorNombre}</button>`
+            : `<button class="mp-btn" style="background:rgba(91,155,255,.15);border:1px solid rgba(91,155,255,.4);color:#5B9BFF;" onclick="abrirAsignarRepartidor('${p.id}','${(p.ticket||p.id)}')">🛵 Asignar repartidor</button>`;
+
         // Botón de cobro
         let btnCobro = pagado
             ? `<button class="mp-btn mp-btn-pagado" disabled>✅ Pagado (${p.metodoPagoReal||''})</button>`
@@ -198,6 +203,7 @@ function render() {
             <div class="mp-acciones">
                 ${btnPrep}
                 ${btnCobro}
+                ${btnRepartidor}
             </div>
         </div>`;
     }).join('');
