@@ -301,6 +301,51 @@ const _miNombreCocina = (_leerCoc('tt_emp_nombre') || _leerCoc('tt_cajero_nombre
 const _miRolCocina    = (_leerCoc('tt_emp_rol') || _leerCoc('tt_cajero_rol') || '').toLowerCase();
 const _esGerenteCocina = _miRolCocina.indexOf('gerente') >= 0 || _miRolCocina.indexOf('supervisor') >= 0 || _miRolCocina.indexOf('dueñ') >= 0 || _miRolCocina.indexOf('admin') >= 0;
 
+// ── FILTRO POR EMPLEADO (selector del header) ──
+let _filtroEmpleadoId = '';
+
+function _pasaFiltroEmpleado(p) {
+    if (!_filtroEmpleadoId) return true; // "Todos"
+    return String(p.cajeroId) === String(_filtroEmpleadoId) ||
+           String(p.cajeroNombre) === String(_filtroEmpleadoId);
+}
+
+window.cambiarFiltroEmpleado = function() {
+    const sel = document.getElementById('filtro-empleado');
+    _filtroEmpleadoId = sel ? sel.value : '';
+    // Forzar re-render con la última data
+    if (window._ultimoSnap) window._ultimoSnap();
+};
+
+// Cargar empleados en el selector (desde Firebase)
+async function cargarEmpleadosFiltro() {
+    try {
+        const snap = await getDocs(collection(db, 'empleados'));
+        const sel = document.getElementById('filtro-empleado');
+        if (!sel) return;
+        const vistos = new Set();
+        snap.forEach(function(d) {
+            const e = d.data();
+            const eid = e.empleadoId || e.id || d.id;
+            const nombre = e.nombre || eid;
+            if (vistos.has(eid)) return;
+            vistos.add(eid);
+            const opt = document.createElement('option');
+            opt.value = eid;
+            opt.textContent = '👤 ' + nombre;
+            sel.appendChild(opt);
+        });
+    } catch(e) {
+        // silencioso
+    }
+}
+// Cargar al iniciar
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(cargarEmpleadosFiltro, 500); });
+} else {
+    setTimeout(cargarEmpleadosFiltro, 500);
+}
+
 // ¿Esta orden pertenece a MI tortumóvil? (la tomé yo, o la acepté en ruta)
 function _esMiOrden(p) {
     if (_esGerenteCocina) return true; // el gerente ve todas las cocinas
@@ -899,7 +944,7 @@ function iniciarKDS(){
   function _procesarSnap(snap) {
     // Cada cocina muestra SOLO las órdenes de su tortumóvil (las que tomó el
     // empleado + las que aceptó en Pedidos Disponibles). El gerente ve todas.
-    todos = snap.docs.map(d => ({ id:d.id, ...d.data() })).filter(_esMiOrden);
+    todos = snap.docs.map(d => ({ id:d.id, ...d.data() })).filter(_esMiOrden).filter(_pasaFiltroEmpleado);
 
     const hoy = new Date(); hoy.setHours(0,0,0,0);
     const nuevas = todos.filter(p => {
