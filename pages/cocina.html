@@ -545,6 +545,7 @@ function renderCard(p) {
                 <div class="kticket">#${String(ticket).replace(/^#+/, '')} <span style="font-size:.9rem;color:var(--muted);font-weight:400;">${hora}</span></div>
                 ${_diag}
                 <div class="kcliente">${p.cliente||p.nombre||'Cliente'} ${p.notaCocina?'<span style="color:var(--yellow);font-size:.7rem;">📝 '+p.notaCocina+'</span>':''}</div>
+                ${p.cajeroNombre ? `<div class="kcajero" style="display:inline-flex;align-items:center;gap:.3rem;margin-top:.25rem;font-size:.72rem;font-weight:700;color:#FF7A33;background:rgba(255,90,0,.12);padding:.2rem .55rem;border-radius:6px;border:1px solid rgba(255,90,0,.25);">👤 ${p.cajeroNombre}</div>` : ''}
             </div>
             <div class="ktimer ${timerClass(secs)}" data-ts="${ts}"${terminado ? ` data-fin="${finTiempo}"` : ''} data-tid="ktimer-${p.id}">${timerTxt(secs)}</div>
         </div>
