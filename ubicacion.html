@@ -91,7 +91,7 @@
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, updateDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, doc, updateDoc, getDoc, collection, getDocs, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const app = initializeApp({
   apiKey: "AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k",
@@ -161,6 +161,54 @@ window.guardarReferencia = async function() {
     }
 };
 
+
+// ── DISTANCIA A LA TORTUMÓVIL MÁS CERCANA (lado cliente) ──
+function _distanciaMillasCli(lat1, lng1, lat2, lng2) {
+    const R = 3958.8;
+    const dLat = (lat2-lat1) * Math.PI/180;
+    const dLng = (lng2-lng1) * Math.PI/180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+let _distWatchCli = null;
+function iniciarDistanciaCliente(cliLat, cliLng) {
+    // Crear el elemento de distancia si no existe
+    let distEl = document.getElementById('dist-tortumovil');
+    if (!distEl) {
+        distEl = document.createElement('div');
+        distEl.id = 'dist-tortumovil';
+        distEl.style.cssText = 'margin-top:1rem;padding:1rem;border-radius:14px;' +
+            'background:linear-gradient(160deg,rgba(255,90,0,.15),rgba(255,90,0,.05));' +
+            'border:1px solid rgba(255,90,0,.3);text-align:center;';
+        distEl.innerHTML = '<div style="color:#aaa;font-size:.8rem;">Buscando la tortumóvil más cercana…</div>';
+        statusEl.parentNode.insertBefore(distEl, statusEl.nextSibling);
+    }
+
+    // Escuchar la colección de ubicaciones en vivo
+    if (_distWatchCli) _distWatchCli();
+    _distWatchCli = onSnapshot(collection(db, 'ubicaciones'), function(snap) {
+        let masCerca = null, minDist = Infinity;
+        snap.forEach(function(d) {
+            const u = d.data();
+            if (u.lat && u.lng) {
+                const dist = _distanciaMillasCli(cliLat, cliLng, u.lat, u.lng);
+                if (dist < minDist) { minDist = dist; masCerca = u; }
+            }
+        });
+        if (masCerca) {
+            const millas = minDist.toFixed(1);
+            const nombre = masCerca.nombre || 'Tortumóvil';
+            distEl.innerHTML =
+                '<div style="font-size:.75rem;color:#aaa;margin-bottom:.3rem;">🛵 ' + nombre + '</div>' +
+                '<div style="font-size:1.6rem;font-weight:900;color:#FF7A33;">' + millas + ' millas</div>' +
+                '<div style="font-size:.75rem;color:#aaa;margin-top:.2rem;">de distancia de ti</div>';
+        } else {
+            distEl.innerHTML = '<div style="color:#aaa;font-size:.8rem;">La tortumóvil aún no comparte su ubicación.</div>';
+        }
+    });
+}
+
 window.compartirUbicacion = function() {
     if (!pedidoId) return;
     if (!navigator.geolocation) {
@@ -188,6 +236,9 @@ window.compartirUbicacion = function() {
                 });
 
                 statusEl.innerHTML = '<span class="exito">Ubicacion enviada! El repartidor ya puede verte. Gracias!</span>';
+
+                // Calcular distancia a la tortumovil mas cercana y mostrarla al cliente (en vivo)
+                iniciarDistanciaCliente(lat, lng);
 
                 // Mostrar mini mapa de confirmacion
                 const mapa = document.getElementById('mapa');
