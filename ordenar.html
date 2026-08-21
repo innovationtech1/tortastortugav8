@@ -1701,6 +1701,11 @@ function cerrarOrdenModal() {
                     sessionStorage.getItem('tt_emp_id');
                 var panel = document.getElementById('open-food-panel');
                 if (panel) panel.style.display = esEmpleado ? 'block' : 'none';
+
+                // El carrito viejo del app-header: ocultarlo para CLIENTES
+                // (el cliente usa el carrito de la barra compartida, junto a Mis Puntos)
+                var cartViejo = document.getElementById('cart-icon');
+                if (cartViejo) cartViejo.style.display = esEmpleado ? 'flex' : 'none';
             }
             // Revisar al cargar y despues de un momento (por si la sesion carga async)
             if (document.readyState === 'loading') {
@@ -3635,7 +3640,7 @@ document.addEventListener('click', function(e) {
 </div>
 
 <script src="js/tt-alert.js"></script>
-<script src="js/perfil-barra.js?v=1787277971"></script>
+<script src="js/perfil-barra.js?v=1787287706"></script>
 
 <!-- ═══ SISTEMA DE COLAS DE ENTREGA (acordeón integrado al carrito) ═══ -->
 <script type="module">
