@@ -471,7 +471,12 @@ function escuchar() {
         disp.forEach(p => { if (!vistos.has(p.id)) { vistos.add(p.id); if (!primeraCarga) hayNuevo = true; } });
         primeraCarga = false;
 
-        if (hayNuevo) dispararAlarma();
+        // Pedidos disponibles que este repartidor NO ha descartado
+        const activos = disp.filter(p => !descartados.has(p.id));
+
+        if (hayNuevo && activos.length) dispararAlarma();
+        // Si ya no hay pedidos disponibles (otro los tomó), detener la alarma
+        if (!activos.length) detenerAlarma();
 
         _ultimaLista = disp;
         render(disp);
@@ -488,6 +493,7 @@ function render(disp) {
     const visibles = disp.filter(p => !descartados.has(p.id));
 
     if (!visibles.length) {
+        detenerAlarma();
         cont.innerHTML = '<div class="vacio"><div class="emo">🕐</div>No hay pedidos disponibles ahora.<br>Cuando entre uno nuevo, sonará la alarma.</div>';
         return;
     }
