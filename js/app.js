@@ -907,7 +907,7 @@ window.ordenarCuenta = function(cid) {
     msg += `📋 *${c.nombre}* — Pedido\n`;
     msg += `👤 ${nombre}`;
     if (telefono) msg += ` · 📞 ${telefono}`;
-    msg += `\n${tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Delivery'}\n\n`;
+    msg += `\n${tipo === 'pickup' ? '🚚 Tortumóvil' : '🚗 Delivery'}\n\n`;
 
     c.items.forEach((item, i) => {
         msg += `${i + 1}. ${item.nombre}`;
@@ -932,7 +932,7 @@ window.ordenarTodas = function() {
     let msg = `🐢 *TORTAS TORTUGA — PEDIDO SPLIT*\n`;
     msg += `👤 ${nombre}`;
     if (telefono) msg += ` · 📞 ${telefono}`;
-    msg += `\n${tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Delivery'}\n\n`;
+    msg += `\n${tipo === 'pickup' ? '🚚 Tortumóvil' : '🚗 Delivery'}\n\n`;
 
     cuentas.forEach(c => {
         if (c.items.length === 0) return;
@@ -1303,7 +1303,7 @@ window.enviarOrdenModal = function() {
         '━━━━━━━━━━━━━━━━━━━━',
         '📋 *' + c.nombre + '*',
         '👤 ' + nombre + (telefono ? ' · 📞 ' + telefono : ''),
-        (tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Domicilio'),
+        (tipo === 'pickup' ? '🚚 Tortumóvil' : '🚗 Domicilio'),
         ''
     ];
     c.items.forEach((item, i) => {
@@ -1376,7 +1376,7 @@ window.enviarCuentasSeparadas = async function(cuentas) {
                 cliente: nombreCuenta,
                 telefono: c.telefono || '',
                 tipoServicio: 'Tortumóvil',
-                tipoEntrega: 'Recoger',
+                tipoEntrega: 'Tortumóvil',
                 ordenoEnTortumovil: true,
                 tortumovilId: (window._cajeroActivo ? window._cajeroActivo.id : ''),
                 tortumovilNombre: (window._cajeroActivo ? window._cajeroActivo.nombre : ''),
@@ -1563,7 +1563,7 @@ window.enviarTodasLasCuentas = async function() {
         cliente:     nombre,
         telefono:    telefono,
         tipoServicio: tipoServ,
-        tipoEntrega: tipo === 'pickup' ? 'Recoger' : 'Domicilio',
+        tipoEntrega: tipo === 'pickup' ? 'Tortumóvil' : 'Domicilio',
         // Si se ordenó en el tortumóvil, marcarlo y guardar la referencia
         // del tortumóvil (empleado que la tomó) para el mapa/ubicación.
         ordenoEnTortumovil: ordenoEnTortumovil,
@@ -1667,7 +1667,7 @@ window.enviarTodasLasCuentas = async function() {
             '🔖 *TICKET: #' + String(ticket).replace(/^#+/, '') + '*',
             '🗓️ *Fecha:* ' + fechaHora,
             '👤 *Cliente:* ' + nombre + (telefono ? ' · 📞 ' + telefono : ''),
-            (tipo === 'pickup' ? '🏪 Recoger en tienda' : '🚗 Domicilio'),
+            (tipo === 'pickup' ? '🚚 Tortumóvil' : '🚗 Domicilio'),
             (data.zonaEntregaNombre ? '📍 *Zona:* ' + data.zonaEntregaNombre : ''),
             (data.fechaEntregaEtiqueta ? '🗓️ *Día entrega:* ' + data.fechaEntregaEtiqueta : ''),
             (data.horarioEntregaEtiqueta ? '🕐 *Entrega:* ' + data.horarioEntregaEtiqueta : ''),
