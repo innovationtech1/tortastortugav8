@@ -111,6 +111,20 @@
                 '<span class="pb-nav-ico">' + it[0] + '</span>' +
                 '<span class="pb-nav-lbl">' + it[1] + '</span></a>';
         });
+        // Carrito para el cliente (solo funciona en la pantalla de ordenar)
+        if (sesion.tipo !== 'empleado') {
+            var enOrdenar = /ordenar\.html/.test(window.location.pathname);
+            if (enOrdenar) {
+                html += '<a href="#" onclick="if(window.abrirCarrito){window.abrirCarrito();}return false;" ' +
+                    'class="pb-nav-btn pb-nav-carrito" title="Ver mi carrito">' +
+                    '<span class="pb-nav-ico" style="position:relative;">🛒' +
+                    '<span id="pb-cart-count" style="position:absolute;top:-6px;right:-10px;background:#FF5A00;' +
+                    'color:#fff;font-size:.6rem;font-weight:800;min-width:16px;height:16px;border-radius:8px;' +
+                    'display:none;align-items:center;justify-content:center;padding:0 3px;">0</span></span>' +
+                    '<span class="pb-nav-lbl">Carrito</span></a>';
+            }
+        }
+
         html += '</div>';
         return html;
     }
