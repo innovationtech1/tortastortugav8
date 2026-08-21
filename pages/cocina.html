@@ -207,11 +207,15 @@ body.compacto .kcard-items{padding:.5rem .7rem;}
     <button class="hbtn" onclick="window.location.href='admin.html'" style="background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.4);color:#3B82F6;">⚙️ Admin</button>
     <button class="hbtn" id="compact-btn" onclick="toggleCompacto()">🔎 Compactar</button>
     <button class="hbtn" id="sound-btn" onclick="toggleSound()">🔊 ON</button>
-    <select id="filtro-empleado" onchange="cambiarFiltroEmpleado()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:.4rem .6rem;font-family:inherit;font-size:.8rem;font-weight:600;cursor:pointer;">
-      <option value="">👥 Todos los empleados</option>
-    </select>
     <span id="clock" style="font-size:.75rem;color:var(--muted);"></span>
   </div>
+</div>
+
+<!-- Selector de empleado (debajo de los botones, arriba del contenido) -->
+<div style="display:flex;justify-content:center;padding:.6rem 1rem;background:rgba(0,0,0,.2);">
+  <select id="filtro-empleado" onchange="cambiarFiltroEmpleado()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:10px;padding:.6rem 1.2rem;font-family:inherit;font-size:.95rem;font-weight:700;cursor:pointer;min-width:240px;text-align:center;">
+    <option value="">👥 Todos los empleados</option>
+  </select>
 </div>
 
 <!-- Tabs -->
