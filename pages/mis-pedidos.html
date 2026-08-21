@@ -397,5 +397,77 @@ window.quitarRepartidor = async function() {
 };
 </script>
 <script type="module" src="../js/contador-disponibles.js?v=1787291222"></script>
+
+<!-- Modal mapa ubicación cliente (tiempo real) -->
+<div id="mapa-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;flex-direction:column;padding:1rem;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.7rem;">
+    <div id="mapa-titulo" style="font-size:1rem;font-weight:800;color:#fff;">📍 Ubicación del cliente</div>
+    <button onclick="cerrarMapaCliente()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:10px;width:40px;height:40px;font-size:1.3rem;cursor:pointer;">✕</button>
+  </div>
+  <div id="mapa-cliente" style="flex:1;border-radius:14px;overflow:hidden;min-height:300px;"></div>
+  <div id="mapa-info" style="margin-top:.7rem;text-align:center;color:#aaa;font-size:.8rem;"></div>
+</div>
+
+<script type="module">
+import { db } from '../js/firebase-config.js';
+import { doc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+let _mapaCli = null;
+let _markerCli = null;
+let _unsubMapa = null;
+
+window.verUbicacionCliente = function(pedidoId) {
+    const modal = document.getElementById('mapa-modal');
+    modal.style.display = 'flex';
+    document.getElementById('mapa-info').textContent = 'Cargando ubicación…';
+
+    // Limpiar mapa anterior
+    if (_mapaCli) { _mapaCli.remove(); _mapaCli = null; _markerCli = null; }
+
+    // Escuchar el pedido en TIEMPO REAL (si el cliente actualiza su GPS, se mueve el pin)
+    if (_unsubMapa) _unsubMapa();
+    _unsubMapa = onSnapshot(doc(db, 'pedidos', pedidoId), function(snap) {
+        if (!snap.exists()) return;
+        const p = snap.data();
+        const u = p.ubicacionCliente || p.ubicacion || {};
+        const lat = u.lat, lng = u.lng;
+        const nombre = p.cliente || p.nombre || 'Cliente';
+        const dir = u.direccion || p.referenciaCliente || '';
+
+        document.getElementById('mapa-titulo').textContent = '📍 ' + nombre;
+
+        if (!lat || !lng) {
+            document.getElementById('mapa-info').textContent = 'El cliente aún no comparte su ubicación.';
+            return;
+        }
+
+        if (!_mapaCli) {
+            _mapaCli = L.map('mapa-cliente').setView([lat, lng], 16);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap', maxZoom: 19
+            }).addTo(_mapaCli);
+            _markerCli = L.marker([lat, lng]).addTo(_mapaCli)
+                .bindPopup('<b>' + nombre + '</b>' + (dir ? '<br>' + dir : '')).openPopup();
+            setTimeout(function(){ if(_mapaCli) _mapaCli.invalidateSize(); }, 200);
+        } else {
+            // Actualizar posición en vivo
+            _markerCli.setLatLng([lat, lng]);
+            _mapaCli.panTo([lat, lng]);
+        }
+
+        const hora = u.compartidaEn ? new Date(u.compartidaEn).toLocaleTimeString() : '';
+        document.getElementById('mapa-info').innerHTML =
+            '✅ Ubicación en vivo' + (hora ? ' · actualizada ' + hora : '') +
+            (dir ? '<br>' + dir : '') +
+            '<br><a href="https://www.google.com/maps?q=' + lat + ',' + lng + '" target="_blank" style="color:#5B9BFF;">Abrir en Google Maps</a>';
+    });
+};
+
+window.cerrarMapaCliente = function() {
+    document.getElementById('mapa-modal').style.display = 'none';
+    if (_unsubMapa) { _unsubMapa(); _unsubMapa = null; }
+    if (_mapaCli) { _mapaCli.remove(); _mapaCli = null; _markerCli = null; }
+};
+</script>
 </body>
 </html>
