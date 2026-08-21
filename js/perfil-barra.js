@@ -113,7 +113,16 @@
             var destino = it[2].split('/').pop().split('?')[0];
             if (destino === pagActual) return;
             var claseGerente = it[3] ? ' pb-nav-gerente' : '';
-            html += '<a href="' + it[2] + '" class="pb-nav-btn' + claseGerente + '">' +
+            // Insignia de contador para "Disponibles"
+            var esBadge = it[2].indexOf('disponibles.html') >= 0;
+            var badgeHtml = esBadge
+                ? '<span id="pb-badge-disponibles" style="display:none;position:absolute;top:2px;right:8px;' +
+                  'background:#F44336;color:#fff;font-size:.62rem;font-weight:900;min-width:17px;height:17px;' +
+                  'border-radius:9px;align-items:center;justify-content:center;padding:0 4px;' +
+                  'box-shadow:0 0 0 2px #141414;animation:pbBadgePulse 1.5s infinite;">0</span>'
+                : '';
+            html += '<a href="' + it[2] + '" class="pb-nav-btn' + claseGerente + '" style="position:relative;">' +
+                badgeHtml +
                 '<span class="pb-nav-ico">' + it[0] + '</span>' +
                 '<span class="pb-nav-lbl">' + it[1] + '</span></a>';
         });
@@ -226,6 +235,7 @@
                 '.pb-nav-btn:active { transform:scale(.94); }' +
                 '.pb-nav-gerente { background:rgba(255,90,0,.1); border-color:rgba(255,90,0,.3); }' +
                 '.pb-nav-lbl { font-size:.68rem; font-weight:700; white-space:nowrap; }' +
+                '@keyframes pbBadgePulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.15);} }' +
                 '.pb-nav-ico { font-size:1.6rem; line-height:1; }' +
                 '@media (max-width:480px){ .pb-badge{display:none;} .pb-nombre{font-size:.85rem;} }';
             document.head.appendChild(st);
