@@ -219,6 +219,7 @@ if (!miId && !miNombre) {
 // ── Controles de alarma ──
 window.toggleSonido = function() {
     sonidoOn = !sonidoOn;
+    if (sonidoOn) { desbloquearAudio(); setTimeout(beep, 100); }
     try { localStorage.setItem('tt_disp_sonido', sonidoOn ? '1' : '0'); } catch(e){}
     aplicarPrefs();
 };
