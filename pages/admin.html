@@ -1531,7 +1531,23 @@ window.normalizarRutaImagen = function(src) {
         const win = window.open('', '_blank', 'width=400,height=600');
         const items = (pedido.items || '').split(' | ').map(s => '<div style="margin:.3rem 0">• '+s+'</div>').join('');
         const hora  = pedido.creado?.seconds ? new Date(pedido.creado.seconds*1000).toLocaleString('es-MX') : '';
-        win.document.write('<html><head><style>body{font-family:monospace;width:300px;padding:10px;margin:0 auto}</style></head><body>');
+        win.document.write('<html><head><style>body{font-family:monospace;width:300px;padding:10px;margin:0 auto}</style>
+<style id="ios-compat">
+/* ── Compatibilidad iOS / Safari ── */
+/* Evitar zoom automático al enfocar inputs (iOS hace zoom si font-size < 16px) */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea { font-size: 16px !important; }
+}
+/* Respetar el notch y áreas seguras del iPhone */
+body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+/* Momentum scroll suave en iOS */
+* { -webkit-overflow-scrolling: touch; }
+/* Evitar resaltado azul al tocar botones en iOS */
+button, a, .btn-primary, .hbtn, .mp-btn { -webkit-tap-highlight-color: transparent; }
+/* Evitar que iOS ajuste el tamaño del texto al rotar */
+html { -webkit-text-size-adjust: 100%; }
+</style>
+</head><body>');
         win.document.write('<div style="text-align:center;font-weight:bold;font-size:1.1rem">TORTAS TORTUGA</div>');
         win.document.write('<div style="text-align:center;color:#666;font-size:.8rem">' + hora + '</div>');
         win.document.write('<hr><div><b>Ticket:</b> #' + ticketId + '</div>');
