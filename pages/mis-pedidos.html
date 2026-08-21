@@ -405,7 +405,8 @@ window.quitarRepartidor = async function() {
     <button onclick="cerrarMapaCliente()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:10px;width:40px;height:40px;font-size:1.3rem;cursor:pointer;">✕</button>
   </div>
   <div id="mapa-cliente" style="flex:1;border-radius:14px;overflow:hidden;min-height:300px;"></div>
-  <div id="mapa-info" style="margin-top:.7rem;text-align:center;color:#aaa;font-size:.8rem;"></div>
+  <div id="mapa-eta" style="margin-top:.7rem;padding:.8rem;background:rgba(255,255,255,.05);border-radius:12px;border:1px solid rgba(255,255,255,.1);"></div>
+  <div id="mapa-info" style="margin-top:.6rem;text-align:center;color:#aaa;font-size:.8rem;"></div>
 </div>
 
 <script type="module">
@@ -479,6 +480,7 @@ window.verUbicacionCliente = function(pedidoId) {
     const modal = document.getElementById('mapa-modal');
     modal.style.display = 'flex';
     document.getElementById('mapa-info').textContent = 'Cargando ubicación…';
+    _iniciarGPSRepartidor(); // arrancar GPS del repartidor para el ETA
 
     // Limpiar mapa anterior
     if (_mapaCli) { _mapaCli.remove(); _mapaCli = null; _markerCli = null; }
@@ -514,6 +516,10 @@ window.verUbicacionCliente = function(pedidoId) {
             _mapaCli.panTo([lat, lng]);
         }
 
+        // Guardar posición del cliente y recalcular ETA
+        _ultimaPosCliente = { lat: lat, lng: lng };
+        _actualizarETA();
+
         const hora = u.compartidaEn ? new Date(u.compartidaEn).toLocaleTimeString() : '';
         document.getElementById('mapa-info').innerHTML =
             '✅ Ubicación en vivo' + (hora ? ' · actualizada ' + hora : '') +
@@ -525,7 +531,9 @@ window.verUbicacionCliente = function(pedidoId) {
 window.cerrarMapaCliente = function() {
     document.getElementById('mapa-modal').style.display = 'none';
     if (_unsubMapa) { _unsubMapa(); _unsubMapa = null; }
-    if (_mapaCli) { _mapaCli.remove(); _mapaCli = null; _markerCli = null; }
+    if (_mapaCli) { _mapaCli.remove(); _mapaCli = null; _markerCli = null; _markerRep = null; }
+    if (_watchRepId !== null) { navigator.geolocation.clearWatch(_watchRepId); _watchRepId = null; }
+    _ultimaPosCliente = null;
 };
 </script>
 </body>
