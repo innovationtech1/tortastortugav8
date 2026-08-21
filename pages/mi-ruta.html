@@ -614,6 +614,24 @@ window.cobrarEntrega = async function(metodo) {
 };
 
 // El REPARTIDOR marca la orden como Entregada (cierra su parte del flujo)
+window.marcarEntregadoDirecto = async function(pedidoId) {
+    if (!pedidoId) return;
+    const confirmar = window.ttConfirm
+        ? await window.ttConfirm('¿Marcar esta orden como ENTREGADA?')
+        : confirm('¿Marcar como entregada?');
+    if (!confirmar) return;
+    try {
+        await updateDoc(doc(db, 'pedidos', pedidoId), {
+            estado: 'Entregado 🎉',
+            entregado: true,
+            'tiempos.entregada': Date.now()
+        });
+        if (window.ttAlert) window.ttAlert('🎉 Orden marcada como entregada.');
+    } catch(err) {
+        alert('Error al marcar entregado. Revisa tu conexión.');
+    }
+};
+
 window.marcarEntregado = async function() {
     if (!_pedidoAbierto) return;
     const confirmar = window.ttConfirm
