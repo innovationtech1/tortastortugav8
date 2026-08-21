@@ -219,7 +219,7 @@ if (!miId && !miNombre) {
 // ── Controles de alarma ──
 window.toggleSonido = function() {
     sonidoOn = !sonidoOn;
-    if (sonidoOn) { desbloquearAudio(); setTimeout(beep, 100); }
+    if (sonidoOn) { desbloquearAudio(); setTimeout(beep, 100); if (navigator.vibrate) navigator.vibrate([200,100,200]); }
     try { localStorage.setItem('tt_disp_sonido', sonidoOn ? '1' : '0'); } catch(e){}
     aplicarPrefs();
 };
@@ -282,6 +282,8 @@ function desbloquearAudio() {
         g.gain.value = 0.0001;
         o.connect(g); g.connect(audioCtx.destination);
         o.start(); o.stop(audioCtx.currentTime + 0.05);
+        // Activar vibración (pulso corto) para desbloquearla en móvil
+        if (navigator.vibrate) navigator.vibrate(1);
         _audioDesbloqueado = true;
     } catch(e){}
 }
