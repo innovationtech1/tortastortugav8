@@ -92,6 +92,22 @@
     font-weight:700; font-size:.85rem; text-decoration:none;
   }
 </style>
+
+<style id="ios-compat">
+/* ── Compatibilidad iOS / Safari ── */
+/* Evitar zoom automático al enfocar inputs (iOS hace zoom si font-size < 16px) */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea { font-size: 16px !important; }
+}
+/* Respetar el notch y áreas seguras del iPhone */
+body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+/* Momentum scroll suave en iOS */
+* { -webkit-overflow-scrolling: touch; }
+/* Evitar resaltado azul al tocar botones en iOS */
+button, a, .btn-primary, .hbtn, .mp-btn { -webkit-tap-highlight-color: transparent; }
+/* Evitar que iOS ajuste el tamaño del texto al rotar */
+html { -webkit-text-size-adjust: 100%; }
+</style>
 </head>
 <body>
 
