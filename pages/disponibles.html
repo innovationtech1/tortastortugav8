@@ -290,15 +290,16 @@ function desbloquearAudio() {
     document.addEventListener(ev, desbloquearAudio, { once: false, passive: true });
 });
 function dispararAlarma() {
+    // Si ya está sonando, no reiniciar (evita duplicar el intervalo)
+    if (alarmaInterval) return;
+    // Primer bib inmediato
     if (sonidoOn) beep();
-    if (vibrarOn && navigator.vibrate) navigator.vibrate([300, 150, 300]);
-    // Sonar de forma CONTINUA hasta que el repartidor acepte o descarte el pedido
-    detenerAlarma();
+    if (vibrarOn && navigator.vibrate) navigator.vibrate([400, 200, 400]);
+    // Sonar de forma CONTINUA hasta que el repartidor acepte o descarte
     alarmaInterval = setInterval(function(){
-        if (!sonidoOn) { detenerAlarma(); return; }
-        beep();
-        if (vibrarOn && navigator.vibrate) navigator.vibrate([300, 150, 300]);
-    }, 1500);
+        if (sonidoOn) beep();
+        if (vibrarOn && navigator.vibrate) navigator.vibrate([400, 200, 400]);
+    }, 1800);
 }
 function detenerAlarma() {
     if (alarmaInterval) { clearInterval(alarmaInterval); alarmaInterval = null; }
@@ -512,9 +513,12 @@ function escuchar() {
         // Pedidos disponibles que este repartidor NO ha descartado
         const activos = disp.filter(p => !descartados.has(p.id));
 
-        if (hayNuevo && activos.length) dispararAlarma();
-        // Si ya no hay pedidos disponibles (otro los tomó), detener la alarma
-        if (!activos.length) detenerAlarma();
+        // La alarma debe sonar MIENTRAS haya pedidos disponibles sin descartar
+        if (activos.length > 0) {
+            dispararAlarma();  // arranca (o mantiene) la alarma continua
+        } else {
+            detenerAlarma();   // no hay pedidos: silencio
+        }
 
         _ultimaLista = disp;
         render(disp);
