@@ -50,7 +50,7 @@
 
         <div id="modo-telefono-wrap">
         <div style="text-align:center;">
-            <span class="demo-badge">🐢 Entra con tu nombre y teléfono</span>
+            <span class="intro-badge" style="display:inline-block;background:rgba(255,90,0,.12);border:1px solid rgba(255,90,0,.25);color:#FF7A33;font-size:.8rem;font-weight:600;padding:.4rem .9rem;border-radius:20px;">🐢 Entra con tu nombre y teléfono</span>
         </div>
 
         <!-- PASO 1: Telefono -->
@@ -163,7 +163,7 @@ function guardarSesionCliente(nombre, telefono, uid) {
     else localStorage.removeItem('tt_cliente_uid');
 }
 
-/* ── LOGIN POR TELEFONO (modo demo, sin Firebase Auth) ──────── */
+/* ── LOGIN POR TELEFONO (verificacion por codigo) ──────── */
 // Teléfonos obviamente falsos que rechazamos
 const TELEFONOS_FALSOS = ['0000000000','1111111111','2222222222','3333333333',
     '4444444444','5555555555','6666666666','7777777777','8888888888','9999999999',
