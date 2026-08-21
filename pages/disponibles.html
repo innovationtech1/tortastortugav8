@@ -239,18 +239,55 @@ function aplicarPrefs() {
 
 // ── Alarma (sonido + vibración) ──
 let audioCtx = null, alarmaInterval = null;
+// Un solo "bib" a una frecuencia dada
+function unBib(startOffset, freq) {
+    try {
+        if (!audioCtx) return;
+        const t = audioCtx.currentTime + startOffset;
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'square'; // onda cuadrada = más fuerte y audible en cualquier bocina
+        o.frequency.value = freq || 1000;
+        o.connect(g); g.connect(audioCtx.destination);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.5, t + 0.01);
+        g.gain.setValueAtTime(0.5, t + 0.12);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
+        o.start(t); o.stop(t + 0.16);
+    } catch(e){}
+}
+
+// "Bib bib" — dos tonos rápidos
 function beep() {
     try {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-        o.type = 'sine'; o.frequency.value = 880;
-        o.connect(g); g.connect(audioCtx.destination);
-        g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.3, audioCtx.currentTime + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.4);
-        o.start(); o.stop(audioCtx.currentTime + 0.4);
+        // Si el contexto está suspendido (típico en móvil), reanudarlo
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        unBib(0, 1000);      // primer bib
+        unBib(0.22, 1000);   // segundo bib
     } catch(e){}
 }
+
+// ── DESBLOQUEO DE AUDIO ──
+// Los navegadores (sobre todo móvil) bloquean el audio hasta que el usuario
+// toca la pantalla. Al primer toque, creamos y "despertamos" el AudioContext.
+let _audioDesbloqueado = false;
+function desbloquearAudio() {
+    if (_audioDesbloqueado) return;
+    try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        // Tono silencioso para "activar" el audio del dispositivo
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        g.gain.value = 0.0001;
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(); o.stop(audioCtx.currentTime + 0.05);
+        _audioDesbloqueado = true;
+    } catch(e){}
+}
+// Escuchar el primer toque/clic en cualquier parte
+['click','touchstart','touchend','keydown'].forEach(function(ev){
+    document.addEventListener(ev, desbloquearAudio, { once: false, passive: true });
+});
 function dispararAlarma() {
     if (sonidoOn) beep();
     if (vibrarOn && navigator.vibrate) navigator.vibrate([300, 150, 300]);
