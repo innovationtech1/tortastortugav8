@@ -224,16 +224,45 @@ window.enviarCodigo = async function() {
         console.warn('No se pudo guardar el cliente:', e);
     }
 
-    guardarSesionCliente(nombre, soloDigitos, null);
+    // ── Generar código de verificación y "enviarlo" por SMS ──
+    _codigoGenerado = String(Math.floor(1000 + Math.random() * 9000));
+    _datosCliente = { nombre: nombre, telefono: soloDigitos, conocido: clienteConocido };
 
-    const saludo = clienteConocido ? ('¡Hola de nuevo, ' + nombre + '! 🐢') : ('¡Bienvenido, ' + nombre + '!');
-    showStatus('status-1', saludo, 'success');
+    // Mostrar el código en pantalla (simulación de SMS)
+    const codEl = document.getElementById('codigo-mostrado');
+    if (codEl) codEl.textContent = _codigoGenerado;
 
+    // Mostrar a qué número se "envió"
+    const telMask = '••• ••• ' + soloDigitos.slice(-4);
+    const destEl = document.getElementById('codigo-destino');
+    if (destEl) destEl.textContent = telMask;
+
+    // Pasar al paso del código
+    document.getElementById('paso-telefono').classList.remove('activo');
+    document.getElementById('paso-codigo').classList.add('activo');
+    const inp = document.getElementById('codigo-input');
+    if (inp) { inp.value = ''; setTimeout(function(){ inp.focus(); }, 200); }
+}
+
+// Verificar el código ingresado
+window.verificarCodigoSMS = function() {
+    const ingresado = (document.getElementById('codigo-input').value || '').trim();
+    if (ingresado.length !== 4) {
+        showStatus('status-2', 'Escribe el código de 4 dígitos', 'error'); return;
+    }
+    if (ingresado !== _codigoGenerado) {
+        showStatus('status-2', 'Código incorrecto. Revísalo e intenta de nuevo.', 'error'); return;
+    }
+    // Código correcto → entrar
+    const d = _datosCliente || {};
+    guardarSesionCliente(d.nombre, d.telefono, null);
+    const saludo = d.conocido ? ('¡Hola de nuevo, ' + d.nombre + '! 🐢') : ('¡Bienvenido, ' + d.nombre + '!');
+    showStatus('status-2', saludo, 'success');
     setTimeout(function(){ window.location.href = '../ordenar.html'; }, 700);
 };
 
 // (Ya no se usa código; se conserva por compatibilidad si algo la llama)
-window.verificarCodigo = window.enviarCodigo;
+window.verificarCodigo = window.verificarCodigoSMS;
 
 window.volverPaso1 = function() {
     const pc = document.getElementById('paso-codigo');
