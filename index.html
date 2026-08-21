@@ -362,5 +362,37 @@ window.cerrarMenu = function() {
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape') cerrarMenu(); });
 </script>
 <script src="js/idioma.js?v=1787110420"></script>
+
+<script>
+/* Si hay sesión activa, la barra compartida (perfil-barra.js) ya da toda la
+   navegación. Ocultamos la nav de la landing para no duplicar. */
+(function() {
+    function haySesion() {
+        var ahora = Date.now();
+        var V = 20 * 60 * 1000;
+        var empTs = parseInt(sessionStorage.getItem('tt_emp_ts') || '0');
+        var cajTs = parseInt(sessionStorage.getItem('tt_cajero_ts') || '0');
+        var cliTs = parseInt(sessionStorage.getItem('tt_cliente_ts') || '0');
+        if (sessionStorage.getItem('tt_emp_id') && (ahora - empTs < V)) return true;
+        if (sessionStorage.getItem('tt_cajero_nombre') && (ahora - cajTs < V)) return true;
+        if (sessionStorage.getItem('tt_cliente_nombre') && (ahora - cliTs < V)) return true;
+        // localStorage persistente de empleado
+        if (localStorage.getItem('tt_emp_id') || localStorage.getItem('tt_cajero_id')) return true;
+        return false;
+    }
+    function ajustarNav() {
+        if (haySesion()) {
+            var nav = document.querySelector('.glass-nav');
+            if (nav) nav.style.display = 'none';
+        }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', ajustarNav);
+    } else {
+        ajustarNav();
+    }
+    setTimeout(ajustarNav, 500);
+})();
+</script>
 </body>
 </html>
