@@ -46,11 +46,7 @@
             <p class="logo-sub">Entra para ordenar</p>
         </div>
 
-        <!-- SELECTOR DE MODO -->
-        <div class="modo-tabs">
-            <button class="modo-tab activo" id="tab-telefono" onclick="cambiarModo('telefono')">📱 Teléfono rápido</button>
-            <button class="modo-tab" id="tab-cuenta" onclick="cambiarModo('cuenta')">✉️ Cuenta con email</button>
-        </div>
+        
 
         <div id="modo-telefono-wrap">
         <div style="text-align:center;">
@@ -98,62 +94,7 @@
         </div>
 
         <!-- MODO CUENTA (email + contraseña, Firebase Auth real) -->
-        <div id="modo-cuenta-wrap" style="display:none;">
-
-            <div class="cuenta-tabs">
-                <button class="cuenta-tab activo" id="tab-login" onclick="cambiarCuentaTab('login')">Iniciar sesión</button>
-                <button class="cuenta-tab" id="tab-registro" onclick="cambiarCuentaTab('registro')">Crear cuenta</button>
-            </div>
-
-            <!-- LOGIN -->
-            <div id="cuenta-login" class="cuenta-paso activo">
-                <div class="field-wrap">
-                    <label class="field-label">Email</label>
-                    <input type="email" id="login-email" class="field-input" placeholder="tu@email.com" autocomplete="username">
-                </div>
-                <div class="field-wrap">
-                    <label class="field-label">Contraseña</label>
-                    <input type="password" id="login-pass" class="field-input" autocomplete="current-password">
-                </div>
-                <div class="auth-message" id="status-login"></div>
-                <button class="btn-primary" onclick="loginConCuenta()">Entrar</button>
-                <button class="btn-primary btn-volver" onclick="mostrarRecuperar()">¿Olvidaste tu contraseña?</button>
-            </div>
-
-            <!-- REGISTRO -->
-            <div id="cuenta-registro" class="cuenta-paso">
-                <div class="field-wrap">
-                    <label class="field-label">Tu nombre</label>
-                    <input type="text" id="reg-nombre" class="field-input" placeholder="Ej: Juan Pérez" autocomplete="name">
-                </div>
-                <div class="field-wrap">
-                    <label class="field-label">Teléfono (opcional)</label>
-                    <input type="tel" id="reg-telefono" class="field-input" placeholder="210-555-1234" autocomplete="tel">
-                </div>
-                <div class="field-wrap">
-                    <label class="field-label">Email</label>
-                    <input type="email" id="reg-email" class="field-input" placeholder="tu@email.com" autocomplete="username">
-                </div>
-                <div class="field-wrap">
-                    <label class="field-label">Contraseña</label>
-                    <input type="password" id="reg-pass" class="field-input" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
-                </div>
-                <div class="auth-message" id="status-registro"></div>
-                <button class="btn-primary" onclick="registrarCuenta()">Crear mi cuenta</button>
-            </div>
-
-            <!-- RECUPERAR CONTRASEÑA -->
-            <div id="cuenta-recuperar" class="cuenta-paso">
-                <p style="color:#999;font-size:.85rem;margin-bottom:.8rem;">Te enviamos un correo para restablecer tu contraseña.</p>
-                <div class="field-wrap">
-                    <label class="field-label">Email</label>
-                    <input type="email" id="rec-email" class="field-input" placeholder="tu@email.com">
-                </div>
-                <div class="auth-message" id="status-recuperar"></div>
-                <button class="btn-primary" onclick="enviarRecuperacion()">Enviar enlace</button>
-                <button class="btn-primary btn-volver" onclick="cambiarCuentaTab('login')">← Volver</button>
-            </div>
-        </div>
+        
 
         <div style="text-align:center;margin-top:1.2rem;">
             <a href="auth.html" style="color:#888;font-size:.8rem;text-decoration:none;">¿Eres empleado o cajero? Entra aquí →</a>
@@ -184,10 +125,9 @@ function showStatus(id, msg, tipo) {
 
 /* ── Selector Telefono / Cuenta ─────────────────────────────── */
 window.cambiarModo = function(modo) {
-    document.getElementById('tab-telefono').classList.toggle('activo', modo === 'telefono');
-    document.getElementById('tab-cuenta').classList.toggle('activo', modo === 'cuenta');
-    document.getElementById('modo-telefono-wrap').style.display = modo === 'telefono' ? 'block' : 'none';
-    document.getElementById('modo-cuenta-wrap').style.display = modo === 'cuenta' ? 'block' : 'none';
+    // Solo modo teléfono (opción de email eliminada)
+    var wrap = document.getElementById('modo-telefono-wrap');
+    if (wrap) wrap.style.display = 'block';
 };
 
 window.cambiarCuentaTab = function(tab) {
