@@ -594,6 +594,7 @@ window.marcarEntregado = async function() {
     try {
         await updateDoc(doc(db, 'pedidos', _pedidoAbierto.id), {
             estado: 'Entregado 🎉',
+            entregado: true,
             'tiempos.entregada': Date.now()
         });
         if (window.ttAlert) window.ttAlert('🎉 Orden marcada como entregada.');
