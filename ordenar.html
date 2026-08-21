@@ -1410,11 +1410,18 @@ function cerrarOrdenModal() {
 }
 .carrusel-hint {
     text-align: center;
-    font-size: .72rem;
-    color: rgba(255,255,255,.35);
-    margin-top: -.3rem;
-    margin-bottom: .5rem;
-    letter-spacing: .03em;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin-top: .2rem;
+    margin-bottom: .7rem;
+    letter-spacing: .04em;
+    text-shadow: 0 0 8px rgba(255,255,255,.6), 0 0 16px rgba(255,90,0,.3);
+    animation: hintBrillo 2s ease-in-out infinite;
+}
+@keyframes hintBrillo {
+    0%, 100% { opacity: .85; }
+    50% { opacity: 1; text-shadow: 0 0 12px rgba(255,255,255,.9), 0 0 20px rgba(255,90,0,.5); }
 }
 /* Teléfonos muy pequeños */
 @media (max-width: 380px) {
