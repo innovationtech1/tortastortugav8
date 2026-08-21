@@ -251,6 +251,7 @@ window.confirmarCobro = async function(metodo) {
 onSnapshot(collection(db, 'pedidos'), snap => {
     _pedidos = [];
     snap.forEach(d => _pedidos.push({ id: d.id, ...d.data() }));
+    window._pedidosMP = _pedidos;
     render();
 }, err => {
     document.getElementById('mp-lista').innerHTML = '<div class="mp-vacio"><div class="ico">⚠️</div><div>Error al cargar. Revisa tu conexión.</div></div>';
