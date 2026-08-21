@@ -420,6 +420,12 @@ window.renderCartItems = function() {
         cntEl.textContent = allTot;
         cntEl.style.display = allTot > 0 ? 'flex' : 'none';
     }
+    // Sincronizar el contador del carrito en la barra compartida (cliente)
+    var pbCnt = document.getElementById('pb-cart-count');
+    if (pbCnt) {
+        pbCnt.textContent = allTot;
+        pbCnt.style.display = allTot > 0 ? 'flex' : 'none';
+    }
     actualizarBotones();
 };
 
