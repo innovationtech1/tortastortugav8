@@ -313,8 +313,11 @@ function _pasaFiltroEmpleado(p) {
 window.cambiarFiltroEmpleado = function() {
     const sel = document.getElementById('filtro-empleado');
     _filtroEmpleadoId = sel ? sel.value : '';
-    // Forzar re-render con la última data
-    if (window._ultimoSnap) window._ultimoSnap();
+    // Re-procesar con la última data guardada (sin esperar nuevo snapshot)
+    if (window._ultimaDataCruda) {
+        todos = window._ultimaDataCruda.filter(_esMiOrden).filter(_pasaFiltroEmpleado);
+        if (typeof renderGrid === 'function') renderGrid();
+    }
 };
 
 // Cargar empleados en el selector (desde Firebase)
@@ -942,9 +945,11 @@ function iniciarKDS(){
   // necesita los del día y recientes; esto mantiene la pantalla ágil.
   // Si la consulta optimizada fallara (ej. falta de índice), se usa la normal.
   function _procesarSnap(snap) {
+    // Guardar la data cruda para poder re-filtrar al cambiar el selector
+    if (snap && snap.docs) window._ultimaDataCruda = snap.docs.map(d => ({ id:d.id, ...d.data() }));
     // Cada cocina muestra SOLO las órdenes de su tortumóvil (las que tomó el
     // empleado + las que aceptó en Pedidos Disponibles). El gerente ve todas.
-    todos = snap.docs.map(d => ({ id:d.id, ...d.data() })).filter(_esMiOrden).filter(_pasaFiltroEmpleado);
+    todos = (window._ultimaDataCruda || []).filter(_esMiOrden).filter(_pasaFiltroEmpleado);
 
     const hoy = new Date(); hoy.setHours(0,0,0,0);
     const nuevas = todos.filter(p => {
