@@ -145,7 +145,7 @@
 <script src="../js/tt-alert.js"></script>
 <script type="module">
 import { db } from '../js/firebase-config.js';
-import { collection, onSnapshot, doc, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { collection, onSnapshot, doc, runTransaction, getDocs, updateDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 function _leer(clave) { return sessionStorage.getItem(clave) || localStorage.getItem(clave); }
 
@@ -522,6 +522,71 @@ function render(disp) {
         '</div>';
     }).join('');
 }
+</script>
+
+<!-- Modal asignar repartidor -->
+<div id="rep-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#1a1a1a;border-radius:16px;max-width:400px;width:100%;padding:1.3rem;box-shadow:0 10px 40px rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.1);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <div style="font-size:1.05rem;font-weight:800;color:#fff;">🛵 Asignar repartidor <span id="rep-ticket" style="color:#FF7A33;"></span></div>
+      <button onclick="document.getElementById('rep-modal').style.display='none'" style="background:none;border:none;color:#888;font-size:1.4rem;cursor:pointer;">✕</button>
+    </div>
+    <div id="rep-lista" style="display:flex;flex-direction:column;gap:.5rem;max-height:50vh;overflow-y:auto;"></div>
+  </div>
+</div>
+
+<script type="module">
+import { db } from '../js/firebase-config.js';
+import { collection, doc, updateDoc, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+let _repPedidoId = null;
+
+window.abrirAsignarRepartidor = async function(id, ticket) {
+    _repPedidoId = id;
+    document.getElementById('rep-ticket').textContent = '#' + String(ticket).replace(/^#+/,'');
+    document.getElementById('rep-modal').style.display = 'flex';
+    var lista = document.getElementById('rep-lista');
+    lista.innerHTML = '<div style="color:#888;font-size:.82rem;text-align:center;padding:1rem;">Cargando repartidores…</div>';
+    try {
+        var snap = await getDocs(collection(db, 'empleados'));
+        var empleados = [];
+        snap.forEach(function(d){ var e = d.data(); e._docId = d.id; empleados.push(e); });
+        if (!empleados.length) {
+            lista.innerHTML = '<div style="color:#888;font-size:.82rem;text-align:center;padding:1rem;">No hay empleados registrados.</div>';
+            return;
+        }
+        lista.innerHTML = empleados.map(function(e){
+            var eid = e.empleadoId || e.id || e._docId;
+            var nombre = e.nombre || eid;
+            var rol = e.rol || 'empleado';
+            return '<button onclick="asignarRepartidor(\'' + eid + '\',\'' + String(nombre).replace(/'/g,"") + '\')" ' +
+                'style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:.7rem .9rem;' +
+                'background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.1);' +
+                'border-radius:10px;color:#fff;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">' +
+                '<span>' + nombre + '</span>' +
+                '<span style="font-size:.68rem;color:#888;text-transform:capitalize;">' + rol + '</span>' +
+                '</button>';
+        }).join('');
+    } catch(err) {
+        lista.innerHTML = '<div style="color:#F44336;font-size:.82rem;text-align:center;padding:1rem;">Error cargando repartidores.</div>';
+    }
+};
+
+window.asignarRepartidor = async function(repId, repNombre) {
+    if (!_repPedidoId) return;
+    try {
+        await updateDoc(doc(db, 'pedidos', _repPedidoId), {
+            repartidorId: repId,
+            repartidorNombre: repNombre,
+            repartidorAsignadoEn: new Date().toISOString(),
+            aceptadoPorRepartidor: true
+        });
+        document.getElementById('rep-modal').style.display = 'none';
+        if (window.ttAlert) window.ttAlert('✅ Repartidor asignado: ' + repNombre);
+    } catch(err) {
+        alert('Error asignando repartidor.');
+    }
+};
 </script>
 </body>
 </html>
