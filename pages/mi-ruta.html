@@ -278,7 +278,9 @@ function construirNavMenu() {
         ['⚙️','Panel Admin','admin.html', true],
         ['🧑‍💼','Panel Empleado','empleados.html', false],
     ];
-    document.getElementById('nav-menu-items').innerHTML = items.map(function(it){
+    var _navCont = document.getElementById('nav-menu-items');
+    if (!_navCont) return; // menú propio removido, ahora usa barra compartida
+    _navCont.innerHTML = items.map(function(it){
         if (it[3] && !esGerente) return '';
         return '<a href="'+it[2]+'" style="display:flex;align-items:center;gap:.8rem;padding:.9rem 1.1rem;'+
             'color:#eee;text-decoration:none;font-size:.92rem;font-weight:600;border-bottom:1px solid rgba(255,255,255,.05);">'+
