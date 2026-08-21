@@ -74,17 +74,25 @@
 
         <!-- PASO 2: Codigo -->
         <div id="paso-codigo" class="paso">
-            <div class="codigo-demo">
-                <div class="cd-label">Tu código (demo)</div>
-                <div class="cd-code" id="codigo-mostrado">----</div>
+            <div style="text-align:center;margin-bottom:1.2rem;">
+                <div style="font-size:2.2rem;margin-bottom:.4rem;">💬</div>
+                <div style="font-size:.95rem;color:#fff;font-weight:700;">Te enviamos un código</div>
+                <div style="font-size:.82rem;color:#aaa;margin-top:.3rem;">
+                    Revisa tus mensajes en <span id="codigo-destino" style="color:#25D366;font-weight:700;">tu teléfono</span>
+                </div>
+            </div>
+
+            <div class="codigo-envio" style="background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.25);border-radius:12px;padding:.9rem;text-align:center;margin-bottom:1.1rem;">
+                <div style="font-size:.7rem;color:#888;text-transform:uppercase;letter-spacing:.05em;font-weight:700;">Tu código de verificación</div>
+                <div id="codigo-mostrado" style="font-size:2rem;font-weight:900;color:#25D366;letter-spacing:.4rem;margin-top:.3rem;">----</div>
             </div>
 
             <div class="field-wrap">
                 <label class="field-label">Escribe el código de 4 dígitos</label>
-                <input type="tel" id="codigo-input" class="field-input code-input" inputmode="numeric" maxlength="4" placeholder="----" autocomplete="off">
+                <input type="tel" id="codigo-input" class="field-input code-input" inputmode="numeric" maxlength="4" placeholder="----" autocomplete="off" style="text-align:center;letter-spacing:.5rem;font-size:1.4rem;">
             </div>
 
-            
+            <div id="status-2" class="auth-message" style="display:none;"></div>
 
             <button class="btn-primary" onclick="verificarCodigo()" id="btn-verificar">
                 <span class="btn-text">Verificar y entrar</span>
