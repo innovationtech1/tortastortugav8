@@ -182,7 +182,7 @@ function renderPedidos(pedidos) {
         var bloqueMapa = '';
         if (_esDomMapa && repIdMapa && !entregadoMapa) {
             bloqueMapa =
-                '<div class="tt-track" data-pedido="' + p.id + '" data-rep="' + repId + '"' +
+                '<div class="tt-track" data-pedido="' + p.id + '" data-rep="' + repIdMapa + '"' +
                 (p.ubicacionCliente ? ' data-clat="' + p.ubicacionCliente.lat + '" data-clng="' + p.ubicacionCliente.lng + '"' : '') +
                 ' style="margin-top:.7rem;">' +
                 '<div class="tt-track-info" style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,90,0,.1);border:1px solid rgba(255,90,0,.3);border-radius:10px 10px 0 0;padding:.6rem .8rem;font-size:.82rem;font-weight:700;color:#FF7A33;">' +
