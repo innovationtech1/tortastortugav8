@@ -230,7 +230,7 @@
 <script type="module">
 /* Cajero login — módulo independiente */
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getAuth, signInWithEmailAndPassword , signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { getFirestore, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const FB_CONFIG = {
@@ -287,6 +287,14 @@ async function loginCajero() {
         // Marcar que cajero está iniciando sesión ANTES de Firebase
         // para que auth.js no redirija automáticamente
         sessionStorage.setItem('tt_cajero_logging_in', 'true');
+
+        // Cerrar cualquier sesión anónima activa antes de entrar con PIN
+        // (evita que la sesión anónima interfiera con el login del empleado)
+        try {
+            if (auth.currentUser && auth.currentUser.isAnonymous) {
+                await auth.signOut();
+            }
+        } catch(soErr) { /* seguir de todos modos */ }
 
         let userCred;
         try {
