@@ -352,6 +352,8 @@ async function loginCajero() {
         if (e.code === 'auth/too-many-requests')  msg = 'Demasiados intentos. Espera unos minutos.';
         if (e.code === 'auth/invalid-credential') msg = 'Número o PIN incorrecto.';
         if (e.message?.includes('Firebase no disponible')) msg = e.message;
+        // DIAGNÓSTICO TEMPORAL: mostrar el código de error exacto en pantalla
+        msg = msg + ' [' + (e.code || e.message || 'error') + ']';
         sessionStorage.removeItem('tt_cajero_logging_in');
         showMsg(msg, 'error');
         if (btnCajero) { btnCajero.disabled = false; btnCajero.querySelector('.btn-text').textContent = '🏪 Entrar como Cajero'; }
