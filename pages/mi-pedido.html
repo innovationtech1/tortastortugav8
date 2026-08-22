@@ -164,12 +164,9 @@ function renderPedidos(pedidos) {
             border:1px solid rgba(37,211,102,.35);color:#25D366;">
             ${yaCompartio ? '✅ Ubicación enviada — tocar para actualizar' : '📍 Enviar mi ubicación'}</a>`;
 
-        // Botón para cancelar el pedido (con motivo obligatorio)
-        const btnCancelar = `<button onclick="abrirCancelar('${p.id}','${(p.folioStr||'').replace(/'/g,'')}')"
-            style="display:block;width:100%;margin-top:.5rem;padding:.6rem;text-align:center;
-            border-radius:10px;font-size:.82rem;font-weight:700;font-family:inherit;cursor:pointer;
-            background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#EF4444;">
-            ❌ Cancelar pedido</button>`;
+        // Botón para cancelar el pedido — DESHABILITADO temporalmente
+        // (El código se conserva para poder reactivarlo en el futuro)
+        const btnCancelar = '';
 
         return `
         <div class="pedido-card">
