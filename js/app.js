@@ -1753,7 +1753,46 @@ window._addPedidoToFirestore = async function(pedido) {
     pedido.creado = serverTimestamp();
     const ref = await addDoc(collection(db, 'pedidos'), pedido);
     console.log('Pedido guardado:', ref.id);
+
+    // ── Pedir ubicación automáticamente si es a domicilio ──
+    // Si el pedido es a domicilio y hay teléfono, mandamos un SMS al cliente
+    // con un link para que comparta su ubicación exacta. Queda almacenado en
+    // el pedido cuando el cliente la comparte (campo ubicacionCliente).
+    try {
+        var esDom = String(pedido.tipoEntrega || '').toLowerCase().indexOf('domicilio') >= 0;
+        var tel   = String(pedido.telefono || '').replace(/[^0-9]/g, '');
+        if (esDom && tel) {
+            window._enviarSMSUbicacion(ref.id, pedido.telefono, pedido.cliente);
+        }
+    } catch (e) { console.warn('No se pudo pedir ubicación automática:', e); }
+
     return ref.id;
+};
+
+// Envía al cliente un SMS con el link para compartir su ubicación.
+// Se usa automáticamente al crear un pedido a domicilio.
+window._enviarSMSUbicacion = function(pedidoId, telefono, nombre) {
+    try {
+        // Construir el link a ubicacion.html (está en la raíz del sitio)
+        var origin = window.location.origin;
+        var path = window.location.pathname;
+        // Quitar el archivo final (ordenar.html, pages/xxx.html) para llegar a la raíz
+        var base = origin + path.replace(/[^\/]*$/, '').replace(/pages\/$/, '');
+        var link = base + 'ubicacion.html?pedido=' + pedidoId;
+
+        var saludo = nombre ? ('Hola ' + nombre + '!') : 'Hola!';
+        var mensaje =
+            saludo + ' Somos Tortas Tortuga \uD83D\uDC22\n\n' +
+            'Para entregarte tu pedido necesitamos tu ubicacion exacta.\n\n' +
+            'Solo abre este link y toca "Compartir mi ubicacion":\n' + link;
+
+        var num = String(telefono || '').replace(/[^0-9]/g, '');
+        if (num) {
+            if (num.length === 10) num = '1' + num;
+            var smsUrl = 'sms:+' + num + '?body=' + encodeURIComponent(mensaje);
+            window.open(smsUrl, '_blank');
+        }
+    } catch (e) { console.warn('Error enviando SMS de ubicación:', e); }
 };
 
 
