@@ -1,5 +1,5 @@
 // Service Worker — NETWORK FIRST para HTML/JS/CSS (nunca sirve código viejo)
-const CACHE_NAME = 'tortas-v1787438684';
+const CACHE_NAME = 'tortas-v1787438883';
 
 self.addEventListener('install', e => {
   // Activar de inmediato la nueva versión, sin esperar
