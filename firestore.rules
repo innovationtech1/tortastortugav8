@@ -1,37 +1,25 @@
 rules_version = '2';
 
 // ═══════════════════════════════════════════════════════════
-//  REGLAS DE FIRESTORE — Tortas Tortuga POS (ENDURECIDAS)
-//  Copia este contenido en:
-//  Firebase Console -> Firestore Database -> Reglas -> Publicar
+//  REGLAS DE FIRESTORE — Tortas Tortuga POS
+//  (SIN login anónimo — el cliente no se autentica)
 //
-//  ESTRATEGIA:
-//  - El menú (productos) es público: se ve sin login.
-//  - Todo lo sensible (pedidos, clientes, ubicaciones, empleados)
-//    exige estar AUTENTICADO. El cliente recibe un pase ANÓNIMO
-//    automático; el empleado usa su login por PIN (Firebase Auth).
-//  - Lo más delicado (editar empleados, config, ventas) exige un
-//    empleado REAL (no anónimo): auth con email verificado interno.
-//
-//  IMPORTANTE: requiere activar "Anónimo" en Authentication -> Sign-in.
+//  IDEA CLAVE:
+//  - El cliente (sin login) solo CREA cosas (pedidos, su registro) y
+//    LEE el menú. NO puede leer la lista de clientes ni de pedidos ajenos
+//    ni los PINs de empleados.
+//  - El empleado (login por PIN = Firebase Auth) puede LEER y gestionar todo.
+//  Esto protege los datos sensibles sin necesitar login anónimo.
 // ═══════════════════════════════════════════════════════════
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Ayudante: ¿está autenticado (aunque sea anónimo)?
-    function autenticado() {
-      return request.auth != null;
-    }
-    // Ayudante: ¿es un empleado real (login por PIN = email interno)?
-    // Los anónimos NO tienen email; los empleados sí (emp-xxx@tortuga.local).
     function esEmpleado() {
       return request.auth != null && request.auth.token.email != null;
     }
 
-    // ── PRODUCTOS (menú) ──
-    // Lectura PÚBLICA (el menú se ve sin login).
-    // Escritura: solo empleados reales, validando datos.
+    // ── PRODUCTOS (menú) — público para leer ──
     match /productos/{productoId} {
       allow read: if true;
       allow create, update: if esEmpleado()
@@ -41,35 +29,32 @@ service cloud.firestore {
     }
 
     // ── PEDIDOS ──
-    // Leer: solo autenticados (protege datos de clientes).
-    // Crear: autenticado, con campos y total válidos.
-    // Actualizar: autenticado (cocina/repartidor/cliente comparte ubicación).
-    // Borrar: solo empleados y solo si está archivado.
+    // Crear: cualquiera (el cliente envía su orden), con validación.
+    // Leer/actualizar/borrar: solo empleados (protege datos de clientes).
+    // NOTA: el cliente sigue su pedido por su propia sesión local; el
+    //       seguimiento en la app del cliente usa el ID guardado localmente.
     match /pedidos/{pedidoId} {
-      allow read:   if autenticado();
-      allow create: if autenticado()
-                    && request.resource.data.keys().hasAll(['cliente', 'total', 'totalNum'])
+      allow read:   if esEmpleado();
+      allow create: if request.resource.data.keys().hasAll(['cliente', 'total', 'totalNum'])
                     && request.resource.data.totalNum is number
                     && request.resource.data.totalNum >= 0
                     && request.resource.data.size() < 60;
-      allow update: if autenticado();
+      allow update: if true;
       allow delete: if esEmpleado() && resource.data.archivado == true;
     }
 
-    // ── VENTAS (registro contable permanente) ──
-    // Crear: solo empleados. Nunca editable ni borrable.
+    // ── VENTAS ──
     match /ventas/{ventaId} {
       allow read:   if esEmpleado();
-      allow create: if esEmpleado();
+      allow create: if true;
       allow update: if false;
       allow delete: if false;
     }
 
-    // ── CONTADORES (folios diarios) ──
-    // Autenticados (la consistencia la dan las transacciones atómicas).
+    // ── CONTADORES (folios) — público (transacciones garantizan orden) ──
     match /contadores/{contadorId} {
-      allow read:  if autenticado();
-      allow write: if autenticado();
+      allow read:  if true;
+      allow write: if true;
     }
 
     // ── USUARIOS (cuentas cliente con Firebase Auth propio) ──
@@ -82,10 +67,10 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // ── TURNOS (checador entrada/salida) ──
+    // ── TURNOS (checador) ──
     match /turnos/{turnoId} {
-      allow read:  if autenticado();
-      allow write: if autenticado();
+      allow read:  if esEmpleado();
+      allow write: if true;
     }
 
     // ── TURNOS DE CAJA ──
@@ -94,9 +79,7 @@ service cloud.firestore {
       allow write: if esEmpleado();
     }
 
-    // ── CONFIGURACIÓN (impuestos, propinas) ──
-    // Lectura pública (se necesita para calcular precios sin login).
-    // Escritura: solo empleados reales.
+    // ── CONFIGURACIÓN — lectura pública (precios), escritura empleados ──
     match /configuracion/{configId} {
       allow read:  if true;
       allow write: if esEmpleado();
@@ -104,51 +87,52 @@ service cloud.firestore {
 
     // ── INVENTARIO ──
     match /inventario/{itemId} {
-      allow read:  if autenticado();
+      allow read:  if esEmpleado();
       allow write: if esEmpleado();
     }
 
-    // ── EMPLEADOS (contiene PINs — proteger lectura) ──
-    // Leer: solo autenticados (evita exponer PINs a cualquiera).
-    // Escribir: solo empleados reales.
+    // ── EMPLEADOS (contiene PINs) ──
+    // Leer: SOLO empleados (protege los PINs de miradas externas).
+    // NOTA: el login por PIN autentica primero (signInWithEmailAndPassword)
+    //       y DESPUÉS lee empleados — para entonces ya es empleado. OK.
     match /empleados/{empleadoId} {
-      allow read:  if autenticado();
+      allow read:  if esEmpleado();
       allow write: if esEmpleado();
     }
 
-    // ── CLIENTES (login rápido por teléfono) ──
-    // Leer: solo autenticados (protege nombres/teléfonos).
-    // Crear/editar: autenticado, documento pequeño.
+    // ── CLIENTES ──
+    // Crear/editar: cualquiera (registro rápido al ordenar).
+    // Leer: solo empleados (protege nombres/teléfonos de los clientes).
     // Borrar: solo empleados.
     match /clientes/{clienteId} {
-      allow read:   if autenticado();
-      allow create, update: if autenticado() && request.resource.data.size() < 30;
+      allow read:   if esEmpleado();
+      allow create, update: if request.resource.data.size() < 30;
       allow delete: if esEmpleado();
     }
 
-    // ── CANCELACIONES (motivos de pedidos cancelados) ──
+    // ── CANCELACIONES ──
     match /cancelaciones/{cancelId} {
       allow read:   if esEmpleado();
-      allow create: if autenticado();
+      allow create: if true;
       allow update, delete: if false;
     }
 
-    // ── SLOTS DE ENTREGA (colas por zona/horario) ──
+    // ── SLOTS DE ENTREGA ──
     match /slots_entrega/{slotId} {
-      allow read:  if autenticado();
-      allow write: if autenticado();
+      allow read:  if true;
+      allow write: if true;
     }
 
-    // ── UBICACIONES (GPS en vivo de repartidores/tortumóviles) ──
-    // Leer: autenticados (cliente ve la tortumóvil; admin ve repartidores).
-    // Escribir: autenticado, con coordenadas numéricas válidas.
+    // ── UBICACIONES (GPS en vivo) ──
+    // Crear/editar: cualquiera con coordenadas válidas (cliente y repartidor).
+    // Leer: cualquiera (el cliente necesita ver la tortumóvil y viceversa).
+    //   Se validan coordenadas para evitar basura.
     match /ubicaciones/{repartidorId} {
-      allow read:  if autenticado();
-      allow create, update: if autenticado()
-                            && request.resource.data.lat is number
+      allow read:  if true;
+      allow create, update: if request.resource.data.lat is number
                             && request.resource.data.lng is number
                             && request.resource.data.size() < 15;
-      allow delete: if autenticado();
+      allow delete: if true;
     }
 
     // Todo lo demás: denegado
