@@ -199,9 +199,80 @@ function renderPedidos(pedidos) {
             <div class="pedido-items">${(p.items || '').replace(/</g,'&lt;')}</div>
             <div class="pedido-total">${p.total || ''}</div>
             ${btnUbic}
+            ${bloqueMapa}
             ${btnCancelar}
         </div>`;
     }).join('');
+    setTimeout(activarMapasEnVivo, 100);
+}
+
+// ── Mapas en vivo de la tortumóvil (tiempo real + distancia + ETA) ──
+var _ttMapas = {};
+function _ttDistanciaMillas(lat1, lng1, lat2, lng2) {
+    var R = 3958.8;
+    var dLat = (lat2 - lat1) * Math.PI / 180;
+    var dLng = (lng2 - lng1) * Math.PI / 180;
+    var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+            Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function activarMapasEnVivo() {
+    if (!window.L) return;
+    var bloques = document.querySelectorAll('.tt-track');
+    bloques.forEach(function(bloque) {
+        var pedidoId = bloque.getAttribute('data-pedido');
+        var repId    = bloque.getAttribute('data-rep');
+        var clat = parseFloat(bloque.getAttribute('data-clat'));
+        var clng = parseFloat(bloque.getAttribute('data-clng'));
+        if (_ttMapas[pedidoId]) return;
+
+        var cont  = bloque.querySelector('.tt-track-map');
+        var etaEl = bloque.querySelector('.tt-track-eta');
+        if (!cont) return;
+
+        var map = L.map(cont, { zoomControl: true, attributionControl: false });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+        map.setView([29.4241, -98.4936], 12);
+
+        var estado = { map: map, repMarker: null, cliMarker: null, line: null, unsub: null };
+        _ttMapas[pedidoId] = estado;
+
+        if (!isNaN(clat) && !isNaN(clng)) {
+            var iconoCli = L.divIcon({ html: '📍', className: 'tt-emoji-icon', iconSize: [30,30], iconAnchor: [15,30] });
+            estado.cliMarker = L.marker([clat, clng], { icon: iconoCli }).addTo(map).bindPopup('Tu ubicación');
+        }
+
+        var docRef = _ttDoc(db, 'ubicaciones', repId);
+        estado.unsub = _ttOnSnapshot(docRef, function(snap) {
+            if (!snap.exists()) { if(etaEl) etaEl.textContent = 'Sin señal'; return; }
+            var d = snap.data();
+            if (typeof d.lat !== 'number' || typeof d.lng !== 'number') return;
+
+            var iconoRep = L.divIcon({ html: '🛵', className: 'tt-emoji-icon', iconSize: [34,34], iconAnchor: [17,17] });
+            if (!estado.repMarker) {
+                estado.repMarker = L.marker([d.lat, d.lng], { icon: iconoRep }).addTo(map).bindPopup(d.nombre || 'Tortumóvil');
+            } else {
+                estado.repMarker.setLatLng([d.lat, d.lng]);
+            }
+
+            if (estado.cliMarker && !isNaN(clat)) {
+                var grupo = L.featureGroup([estado.repMarker, estado.cliMarker]);
+                map.fitBounds(grupo.getBounds().pad(0.3));
+                if (estado.line) map.removeLayer(estado.line);
+                estado.line = L.polyline([[d.lat, d.lng], [clat, clng]], { color: '#FF7A33', weight: 3, dashArray: '6,8' }).addTo(map);
+                var millas = _ttDistanciaMillas(d.lat, d.lng, clat, clng);
+                var minutos = Math.max(1, Math.round((millas / 18.6) * 60));
+                if (etaEl) etaEl.textContent = millas.toFixed(1) + ' mi · ~' + minutos + ' min';
+            } else {
+                map.setView([d.lat, d.lng], 15);
+                if (etaEl) etaEl.textContent = 'En camino';
+            }
+        }, function(err) {
+            if (etaEl) etaEl.textContent = 'Sin señal';
+        });
+
+        setTimeout(function(){ map.invalidateSize(); }, 200);
+    });
 }
 
 onSnapshot(collection(db, 'pedidos'), snap => {
