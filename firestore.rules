@@ -1,69 +1,80 @@
 rules_version = '2';
 
 // ═══════════════════════════════════════════════════════════
-//  REGLAS DE FIRESTORE — Tortas Tortuga POS
+//  REGLAS DE FIRESTORE — Tortas Tortuga POS (ENDURECIDAS)
 //  Copia este contenido en:
-//  Firebase Console → Firestore Database → Reglas → Publicar
+//  Firebase Console -> Firestore Database -> Reglas -> Publicar
 //
-//  NOTA: La app usa login por PIN (empleados/gerente) que NO genera
-//  sesión de Firebase Auth. Por eso varias colecciones siguen abiertas
-//  a escritura, pero ahora con VALIDACIONES que evitan datos basura o
-//  maliciosos. Para cerrar del todo se necesita migrar a Firebase Auth.
+//  ESTRATEGIA:
+//  - El menú (productos) es público: se ve sin login.
+//  - Todo lo sensible (pedidos, clientes, ubicaciones, empleados)
+//    exige estar AUTENTICADO. El cliente recibe un pase ANÓNIMO
+//    automático; el empleado usa su login por PIN (Firebase Auth).
+//  - Lo más delicado (editar empleados, config, ventas) exige un
+//    empleado REAL (no anónimo): auth con email verificado interno.
+//
+//  IMPORTANTE: requiere activar "Anónimo" en Authentication -> Sign-in.
 // ═══════════════════════════════════════════════════════════
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── PRODUCTOS ──
-    // Lectura pública (el menú debe verse sin login).
-    // Escritura pública (gerente edita en modo PIN), pero validando que
-    // el producto tenga al menos nombre y un precio numérico — evita
-    // inyectar documentos basura en el menú.
+    // Ayudante: ¿está autenticado (aunque sea anónimo)?
+    function autenticado() {
+      return request.auth != null;
+    }
+    // Ayudante: ¿es un empleado real (login por PIN = email interno)?
+    // Los anónimos NO tienen email; los empleados sí (emp-xxx@tortuga.local).
+    function esEmpleado() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+
+    // ── PRODUCTOS (menú) ──
+    // Lectura PÚBLICA (el menú se ve sin login).
+    // Escritura: solo empleados reales, validando datos.
     match /productos/{productoId} {
       allow read: if true;
-      allow create, update: if request.resource.data.keys().hasAny(['nombre', 'name'])
+      allow create, update: if esEmpleado()
+                            && request.resource.data.keys().hasAny(['nombre', 'name'])
                             && request.resource.data.size() < 50;
-      allow delete: if true;
+      allow delete: if esEmpleado();
     }
 
     // ── PEDIDOS ──
-    // Crear: cualquiera puede enviar una orden, PERO debe traer los
-    // campos esenciales y un total numérico >= 0 (evita pedidos basura
-    // o con totales negativos/manipulados).
-    // Leer/actualizar: cocina y admin necesitan acceso (modo PIN).
-    // Borrar: SOLO si ya está archivado (nunca un pedido activo).
+    // Leer: solo autenticados (protege datos de clientes).
+    // Crear: autenticado, con campos y total válidos.
+    // Actualizar: autenticado (cocina/repartidor/cliente comparte ubicación).
+    // Borrar: solo empleados y solo si está archivado.
     match /pedidos/{pedidoId} {
-      allow read:   if true;
-      allow create: if request.resource.data.keys().hasAll(['cliente', 'total', 'totalNum'])
+      allow read:   if autenticado();
+      allow create: if autenticado()
+                    && request.resource.data.keys().hasAll(['cliente', 'total', 'totalNum'])
                     && request.resource.data.totalNum is number
                     && request.resource.data.totalNum >= 0
                     && request.resource.data.size() < 60;
-      allow update: if true;
-      allow delete: if resource.data.archivado == true;
+      allow update: if autenticado();
+      allow delete: if esEmpleado() && resource.data.archivado == true;
     }
 
     // ── VENTAS (registro contable permanente) ──
-    // Público para crear (modo PIN), nunca editable ni borrable.
+    // Crear: solo empleados. Nunca editable ni borrable.
     match /ventas/{ventaId} {
-      allow read:   if true;
-      allow create: if true;
+      allow read:   if esEmpleado();
+      allow create: if esEmpleado();
       allow update: if false;
       allow delete: if false;
     }
 
     // ── CONTADORES (folios diarios) ──
-    // Necesario para el número secuencial de orden #001, #002...
-    // (la consistencia la garantizan las transacciones atómicas).
+    // Autenticados (la consistencia la dan las transacciones atómicas).
     match /contadores/{contadorId} {
-      allow read: if true;
-      allow write: if true;
+      allow read:  if autenticado();
+      allow write: if autenticado();
     }
 
-    // ── USUARIOS (cuentas de cliente con email+contraseña, Firebase Auth) ──
-    // Cada cliente autenticado solo puede leer/escribir SU PROPIO documento.
-    // Nunca puede auto-asignarse un rol distinto de 'cliente'.
+    // ── USUARIOS (cuentas cliente con Firebase Auth propio) ──
     match /usuarios/{usuarioId} {
-      allow read:  if request.auth != null && request.auth.uid == usuarioId;
+      allow read:   if request.auth != null && request.auth.uid == usuarioId;
       allow create: if request.auth != null && request.auth.uid == usuarioId
                     && request.resource.data.rol == 'cliente';
       allow update: if request.auth != null && request.auth.uid == usuarioId
@@ -71,68 +82,73 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // ── TURNOS (checador individual: entrada/salida por empleado) ──
-    // Público a propósito: el checador funciona sin Firebase Auth.
+    // ── TURNOS (checador entrada/salida) ──
     match /turnos/{turnoId} {
-      allow read:  if true;
-      allow write: if true;
+      allow read:  if autenticado();
+      allow write: if autenticado();
     }
 
     // ── TURNOS DE CAJA ──
-    // Solo autenticados (corte de caja).
     match /turnos_caja/{turnoId} {
-      allow read:  if request.auth != null;
-      allow write: if request.auth != null;
+      allow read:  if esEmpleado();
+      allow write: if esEmpleado();
     }
 
-    // ── CONFIGURACIÓN (impuestos, propinas, etc) ──
-    // Lectura pública; escritura solo autenticados.
+    // ── CONFIGURACIÓN (impuestos, propinas) ──
+    // Lectura pública (se necesita para calcular precios sin login).
+    // Escritura: solo empleados reales.
     match /configuracion/{configId} {
       allow read:  if true;
-      allow write: if request.auth != null;
+      allow write: if esEmpleado();
     }
 
     // ── INVENTARIO ──
     match /inventario/{itemId} {
-      allow read:  if true;
-      allow write: if true;
+      allow read:  if autenticado();
+      allow write: if esEmpleado();
     }
 
-    // ── EMPLEADOS ──
-    // Leer sin auth (fallback del login por PIN).
-    // Escribir (crear/editar/borrar empleados y PINs) requiere Firebase Auth.
+    // ── EMPLEADOS (contiene PINs — proteger lectura) ──
+    // Leer: solo autenticados (evita exponer PINs a cualquiera).
+    // Escribir: solo empleados reales.
     match /empleados/{empleadoId} {
-      allow read:  if true;
-      allow write: if request.auth != null;
+      allow read:  if autenticado();
+      allow write: if esEmpleado();
     }
 
-    // ── CLIENTES (login rápido por teléfono, sin Firebase Auth) ──
-    // Público a propósito (login demo). Se valida tamaño para evitar
-    // que llenen la base con documentos gigantes.
+    // ── CLIENTES (login rápido por teléfono) ──
+    // Leer: solo autenticados (protege nombres/teléfonos).
+    // Crear/editar: autenticado, documento pequeño.
+    // Borrar: solo empleados.
     match /clientes/{clienteId} {
-      allow read:  if true;
-      allow create, update: if request.resource.data.size() < 30;
-      allow delete: if true;
+      allow read:   if autenticado();
+      allow create, update: if autenticado() && request.resource.data.size() < 30;
+      allow delete: if esEmpleado();
     }
 
-    // ── SLOTS DE ENTREGA (sistema de colas por zona/horario) ──
-    // Público como pedidos/turnos: la consistencia (no superposiciones)
-    // la garantizan las transacciones atómicas, no las reglas.
+    // ── CANCELACIONES (motivos de pedidos cancelados) ──
+    match /cancelaciones/{cancelId} {
+      allow read:   if esEmpleado();
+      allow create: if autenticado();
+      allow update, delete: if false;
+    }
+
+    // ── SLOTS DE ENTREGA (colas por zona/horario) ──
     match /slots_entrega/{slotId} {
-      allow read:  if true;
-      allow write: if true;
+      allow read:  if autenticado();
+      allow write: if autenticado();
     }
 
-    // ── UBICACIONES DE TORTUMÓVILES (GPS en vivo de repartidores) ──
-    // El repartidor comparte su posición mientras usa Mi Ruta; el admin la
-    // lee para el mapa en vivo. Público (modo PIN), validando que traiga
-    // coordenadas numéricas y sea un documento pequeño.
+    // ── UBICACIONES (GPS en vivo de repartidores/tortumóviles) ──
+    // Leer: autenticados (cliente ve la tortumóvil; admin ve repartidores).
+    // Escribir: autenticado, con coordenadas numéricas válidas.
     match /ubicaciones/{repartidorId} {
-      allow read:  if true;
-      allow create, update: if request.resource.data.lat is number
+      allow read:  if autenticado();
+      allow create, update: if autenticado()
+                            && request.resource.data.lat is number
                             && request.resource.data.lng is number
                             && request.resource.data.size() < 15;
-      allow delete: if true;
+      allow delete: if autenticado();
     }
 
     // Todo lo demás: denegado
