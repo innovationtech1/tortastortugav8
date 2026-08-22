@@ -170,6 +170,24 @@ function renderPedidos(pedidos) {
         // (El código se conserva para poder reactivarlo en el futuro)
         const btnCancelar = '';
 
+        // ── Mapa en vivo de la tortumóvil (solo domicilio con repartidor) ──
+        var esDomicilio = String(p.tipoEntrega || '').toLowerCase().indexOf('domicilio') >= 0;
+        var repId = p.repartidorId || p.tortumovilId || '';
+        var entregado = String(p.estado || '').toLowerCase().indexOf('entregad') >= 0;
+        var bloqueMapa = '';
+        if (esDomicilio && repId && !entregado) {
+            bloqueMapa =
+                '<div class="tt-track" data-pedido="' + p.id + '" data-rep="' + repId + '"' +
+                (p.ubicacionCliente ? ' data-clat="' + p.ubicacionCliente.lat + '" data-clng="' + p.ubicacionCliente.lng + '"' : '') +
+                ' style="margin-top:.7rem;">' +
+                '<div class="tt-track-info" style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,90,0,.1);border:1px solid rgba(255,90,0,.3);border-radius:10px 10px 0 0;padding:.6rem .8rem;font-size:.82rem;font-weight:700;color:#FF7A33;">' +
+                '<span>🛵 Tu tortumóvil en camino</span>' +
+                '<span class="tt-track-eta">Buscando…</span>' +
+                '</div>' +
+                '<div class="tt-track-map" style="height:220px;border-radius:0 0 10px 10px;overflow:hidden;background:#1a1a1a;"></div>' +
+                '</div>';
+        }
+
         return `
         <div class="pedido-card">
             <div class="pedido-top">
