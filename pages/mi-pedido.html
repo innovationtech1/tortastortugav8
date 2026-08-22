@@ -207,6 +207,9 @@ function renderPedidos(pedidos) {
 }
 
 // ── Mapas en vivo de la tortumóvil (tiempo real + distancia + ETA) ──
+// Alias de Firestore para el mapa en vivo (doc/onSnapshot ya importados arriba)
+var _ttDoc = doc;
+var _ttOnSnapshot = onSnapshot;
 var _ttMapas = {};
 function _ttDistanciaMillas(lat1, lng1, lat2, lng2) {
     var R = 3958.8;
