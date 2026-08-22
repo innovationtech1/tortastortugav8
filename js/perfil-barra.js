@@ -97,7 +97,7 @@
             // Menú de CLIENTE — más simple
             items = [
                 ['🏠', 'Inicio', _raiz() + 'index.html', false],
-                ['📋', 'Ordenar', _raiz() + 'ordenar.html', false],
+                ['🍔', 'Menú', _raiz() + 'ordenar.html', false],
                 ['🛍️', 'Mi Orden', _base() + 'mi-pedido.html', false],
                 ['⭐', 'Mis Puntos', _raiz() + 'perfil.html', false],
             ];
