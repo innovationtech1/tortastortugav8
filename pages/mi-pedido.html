@@ -175,11 +175,12 @@ function renderPedidos(pedidos) {
         const btnCancelar = '';
 
         // ── Mapa en vivo de la tortumóvil (solo domicilio con repartidor) ──
-        var esDomicilio = String(p.tipoEntrega || '').toLowerCase().indexOf('domicilio') >= 0;
-        var repId = p.repartidorId || p.tortumovilId || '';
-        var entregado = String(p.estado || '').toLowerCase().indexOf('entregad') >= 0;
+        // Reusa la variable esDomicilio ya declarada arriba (L153).
+        var _esDomMapa = esDomicilio || String(p.tipoEntrega || '').toLowerCase().indexOf('domicilio') >= 0;
+        var repIdMapa = p.repartidorId || p.tortumovilId || '';
+        var entregadoMapa = String(p.estado || '').toLowerCase().indexOf('entregad') >= 0;
         var bloqueMapa = '';
-        if (esDomicilio && repId && !entregado) {
+        if (_esDomMapa && repIdMapa && !entregadoMapa) {
             bloqueMapa =
                 '<div class="tt-track" data-pedido="' + p.id + '" data-rep="' + repId + '"' +
                 (p.ubicacionCliente ? ' data-clat="' + p.ubicacionCliente.lat + '" data-clng="' + p.ubicacionCliente.lng + '"' : '') +
