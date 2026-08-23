@@ -164,6 +164,21 @@ window.normalizarRutaImagen = function(src) {
           tbody tr td .print-btn { width: 100% !important; box-sizing: border-box; display: block; }
           /* Cualquier contenedor con min-width grande: resetear */
           tbody tr td div[style*="min-width"] { min-width: 0 !important; }
+          /* CLAVE: anular los min-width de las columnas (nth-child) en móvil.
+             Estos venían de la tabla de escritorio y sacaban el contenido. */
+          td:nth-child(1), td:nth-child(2), td:nth-child(3),
+          td:nth-child(4), td:nth-child(5), td:nth-child(6) {
+            width: 100% !important; min-width: 0 !important;
+          }
+          td:nth-child(5) select { min-width: 0 !important; width: 100% !important; }
+          /* Botones al 100%, alineados a la IZQUIERDA, texto que no se corta */
+          tbody tr td a, tbody tr td button {
+            width: 100% !important; box-sizing: border-box !important;
+            justify-content: flex-start !important; text-align: left !important;
+            white-space: normal !important; overflow: visible !important;
+          }
+          /* El resumen (barra colapsada) NO debe verse afectado por lo anterior */
+          .tt-resumen, .tt-resumen * { width: auto !important; }
           table { min-width: 0; width: 100%; }
           /* Ocultar encabezados de columna */
           thead { display: none; }
