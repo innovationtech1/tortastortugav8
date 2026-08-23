@@ -151,6 +151,19 @@ window.normalizarRutaImagen = function(src) {
           tbody tr td.tt-detalle .order-id { font-size: .8rem !important; color: #888 !important; }
           /* Botón imprimir y demás: texto completo visible */
           tbody tr td a[href*="tel:"], tbody tr td button { font-size: .8rem !important; }
+          /* CLAVE: los hijos flex (Llamar, Ubicación, etc.) deben poder encogerse.
+             flex:1 con min-width alto los saca de pantalla; forzamos min-width:0
+             y flex-basis auto para que se envuelvan y quepan. */
+          tbody tr td div[style*="flex"] > a,
+          tbody tr td div[style*="flex"] > button {
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
+            flex-basis: 100% !important;
+          }
+          /* Botón imprimir ticket: ancho completo real */
+          tbody tr td .print-btn { width: 100% !important; box-sizing: border-box; display: block; }
+          /* Cualquier contenedor con min-width grande: resetear */
+          tbody tr td div[style*="min-width"] { min-width: 0 !important; }
           table { min-width: 0; width: 100%; }
           /* Ocultar encabezados de columna */
           thead { display: none; }
