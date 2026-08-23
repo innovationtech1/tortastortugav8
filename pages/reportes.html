@@ -94,13 +94,39 @@ const _miNombreRep = (_leerRep('tt_emp_nombre') || _leerRep('tt_cajero_nombre') 
 let _scopeVentas = 'mias';  // 'mias' o 'todas'
 let _periodoActual = 'hoy';
 
-// ¿Esta venta es mía? (la tomé o la cobré yo)
+// ── ¿Es una VENTA VÁLIDA (contable)? ──
+// Regla de negocio de Tortas Tortuga:
+//  • Domicilio:  debe estar PAGADA + tener repartidor asignado.
+//  • Tortumóvil/otro: debe estar ENTREGADA + PAGADA.
+// Solo las ventas válidas cuentan en los totales de reportes.
+function _esDomicilioVenta(p) {
+    return String(p.tipoEntrega || '').toLowerCase().indexOf('domicilio') >= 0
+        || String(p.tipo || '').toLowerCase() === 'domicilio';
+}
+function esVentaValida(p) {
+    var pagada = p.estadoPago === 'Pagado';
+    if (!pagada) return false;
+    if (_esDomicilioVenta(p)) {
+        // Domicilio: pagada + con repartidor asignado
+        return !!p.repartidorId;
+    } else {
+        // Tortumóvil/otro: pagada + entregada
+        return String(p.estado || '').toLowerCase().indexOf('entregad') >= 0;
+    }
+}
+
+// ¿A quién se le atribuye esta venta?
+//  • Domicilio  → al repartidor asignado (repartidorId)
+//  • Tortumóvil → a quien la cobró (cobradoPor)
 function _esMiVenta(p) {
-    return (p.cajeroId && p.cajeroId === _miIdRep) ||
-           (p.cajeroNombre && p.cajeroNombre === _miNombreRep) ||
-           (p.cobradoPor && p.cobradoPor === _miNombreRep) ||
-           (p.tortumovilId && p.tortumovilId === _miIdRep) ||
-           (p.repartidorId && p.repartidorId === _miIdRep);
+    if (_esDomicilioVenta(p)) {
+        return (p.repartidorId && p.repartidorId === _miIdRep);
+    } else {
+        return (p.cobradoPor && p.cobradoPor === _miNombreRep) ||
+               (p.cajeroId && p.cajeroId === _miIdRep) ||
+               (p.cajeroNombre && p.cajeroNombre === _miNombreRep) ||
+               (p.tortumovilId && p.tortumovilId === _miIdRep);
+    }
 }
 
 window.setScope = function(scope) {
