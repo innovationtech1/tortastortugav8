@@ -229,11 +229,17 @@ window.aplicarRango = function() {
 
 function render() {
   const p = _filtrados;
-  const total = p.reduce((s,x) => s+totalDe(x), 0);
-  const num = p.length;
+  // Solo las VENTAS VÁLIDAS cuentan en los totales (regla de negocio):
+  // domicilio = pagada + repartidor; tortumóvil = entregada + pagada.
+  const ventas = p.filter(esVentaValida);
+  const pendientes = p.filter(x => !esVentaValida(x));
+  const total = ventas.reduce((s,x) => s+totalDe(x), 0);
+  const num = ventas.length;
   const ticket = num > 0 ? total/num : 0;
-  const entregados = p.filter(x => x.estado?.includes('Entregado')).length;
-  const pagados = p.filter(x => x.estadoPago === 'Pagado').length;
+  const entregados = ventas.filter(x => x.estado?.includes('Entregado')).length;
+  const pagados = ventas.length;
+  const totalPendiente = pendientes.reduce((s,x) => s+totalDe(x), 0);
+  const numPendiente = pendientes.length;
 
   // Desglose
   let sub=0, imp=0, prop=0, desc=0;
