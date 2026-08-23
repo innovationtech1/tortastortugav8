@@ -85,13 +85,13 @@
         if (sesion.tipo === 'empleado') {
             // Menú de EMPLEADO — cada item: [icono, etiqueta, url, soloGerente]
             items = [
-                ['🛵', 'Mis Rutas', _base() + 'mi-ruta.html', false],
-                ['🧾', 'Mis Pedidos', _base() + 'mis-pedidos.html', false],
-                ['🍳', 'Cocina', _base() + 'cocina.html', false],
-                ['🔔', 'Disponibles', _base() + 'disponibles.html', false],
                 ['🏪', 'Ordenar', _raiz() + 'ordenar.html', false],
+                ['🧾', 'Mis Pedidos', _base() + 'mis-pedidos.html', false],
+                ['🔔', 'Disponibles', _base() + 'disponibles.html', false],
+                ['🛵', 'Mis Rutas', _base() + 'mi-ruta.html', false],
                 ['📊', 'Reportes', _base() + 'reportes.html', true],
                 ['⚙️', 'Admin', _base() + 'admin.html', true],
+                ['🍳', 'Cocina', _base() + 'cocina.html', false],
             ];
         } else {
             // Menú de CLIENTE — más simple
