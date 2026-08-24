@@ -95,7 +95,13 @@ window._pendingItem = window._pendingItem || null;
         sessionStorage.setItem('tt_cajero_ts', Date.now().toString());
     }
 
-    if (cajeroId && cajeroNombre && (Date.now() - cajeroTs < VEINTE_MIN)) {
+    // ¿Hay sesión de CLIENTE activa? Si el usuario entró como cliente,
+    // NO mostrar información de empleado (privacidad).
+    var _cliNom = sessionStorage.getItem('tt_cliente_nombre') || localStorage.getItem('tt_cliente_nombre');
+    var _cliTs  = parseInt(sessionStorage.getItem('tt_cliente_ts') || localStorage.getItem('tt_cliente_ts') || '0');
+    var _clienteEntro = !!(_cliNom && (Date.now() - _cliTs < VEINTE_MIN));
+
+    if (cajeroId && cajeroNombre && (Date.now() - cajeroTs < VEINTE_MIN) && !_clienteEntro) {
         window._cajeroActivo = { id: cajeroId, nombre: cajeroNombre, rol: cajeroRol };
         sessionStorage.setItem('tt_cajero_ts', Date.now().toString());
 
