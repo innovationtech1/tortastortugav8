@@ -307,9 +307,12 @@ window.compartirMiUbicacion = function() {
                 mapaEl.style.display = 'block';
                 mapaEl.innerHTML = '<iframe src="https://maps.google.com/maps?q=' + lat + ',' + lng + '&z=16&output=embed" style="width:100%;height:100%;border:0;"></iframe>';
             }
-            if (btnEl) { btnEl.innerHTML = '<span class="btn-text">✅ Ubicación compartida — Entrar</span>'; btnEl.disabled = false; btnEl.setAttribute('onclick', 'irAlMenu()'); }
-            var saludo = (_datosCliente && _datosCliente.conocido) ? ('¡Hola de nuevo, ' + _datosCliente.nombre + '! 🐢') : ('¡Bienvenido, ' + _datosCliente.nombre + '! 🐢');
-            showStatus('status-2', saludo, 'success');
+            // Mostrar el selector de horario
+            _generarHorarios();
+            var hw = document.getElementById('horario-wrap');
+            if (hw) hw.style.display = 'block';
+            if (btnEl) { btnEl.innerHTML = '<span class="btn-text">✅ Entrar a ordenar</span>'; btnEl.disabled = false; btnEl.setAttribute('onclick', 'confirmarUbicacionYHorario()'); }
+            showStatus('status-2', 'Ahora elige el horario para tu servicio.', 'info');
         },
         function(err) {
             if (estadoEl) estadoEl.innerHTML = '<div style="font-size:.85rem;color:#F44336;font-weight:700;">No pudimos obtener tu ubicación</div>';
@@ -320,8 +323,59 @@ window.compartirMiUbicacion = function() {
     );
 };
 
-// Entrar sin ubicación (opcional)
-window.entrarSinUbicacion = function() { irAlMenu(); };
+// Generar franjas de horario: 10:00am a 7:00pm, cada 45 min
+function _generarHorarios() {
+    var sel = document.getElementById('horario-select');
+    if (!sel || sel.options.length > 1) return; // ya generado
+    var inicio = 10 * 60;  // 10:00am en minutos
+    var fin = 19 * 60;     // 7:00pm en minutos
+    var paso = 45;
+    function fmt(min) {
+        var h = Math.floor(min / 60);
+        var m = min % 60;
+        var ampm = h >= 12 ? 'pm' : 'am';
+        var h12 = h % 12; if (h12 === 0) h12 = 12;
+        return h12 + ':' + (m < 10 ? '0' : '') + m + ampm;
+    }
+    // Si ya pasó la hora actual, empezar desde la próxima franja disponible
+    var ahora = new Date();
+    var minAhora = ahora.getHours() * 60 + ahora.getMinutes();
+    for (var t = inicio; t + paso <= fin + paso && t < fin; t += paso) {
+        // Saltar franjas que ya pasaron hoy (con 20 min de margen)
+        if (t < minAhora + 20) continue;
+        var etiqueta = fmt(t) + ' – ' + fmt(t + paso);
+        var op = document.createElement('option');
+        op.value = etiqueta;
+        op.textContent = etiqueta;
+        sel.appendChild(op);
+    }
+    // Si no quedan franjas hoy, ofrecer "Lo antes posible"
+    if (sel.options.length <= 1) {
+        var op = document.createElement('option');
+        op.value = 'Lo antes posible';
+        op.textContent = 'Lo antes posible (mañana)';
+        sel.appendChild(op);
+    }
+}
+
+// Confirmar ubicación + horario y entrar
+window.confirmarUbicacionYHorario = function() {
+    var sel = document.getElementById('horario-select');
+    var horario = sel ? sel.value : '';
+    if (!horario) {
+        showStatus('status-2', '🕐 Por favor elige un horario para tu servicio.', 'error');
+        if (sel) sel.focus();
+        return;
+    }
+    // Guardar el horario en la sesión
+    try {
+        sessionStorage.setItem('tt_cliente_horario', horario);
+        localStorage.setItem('tt_cliente_horario', horario);
+    } catch(e) {}
+    var saludo = (_datosCliente && _datosCliente.conocido) ? ('¡Hola de nuevo, ' + _datosCliente.nombre + '! 🐢') : ('¡Bienvenido, ' + _datosCliente.nombre + '! 🐢');
+    showStatus('status-2', saludo, 'success');
+    setTimeout(irAlMenu, 600);
+};
 
 // Ir al menú
 window.irAlMenu = function() {
