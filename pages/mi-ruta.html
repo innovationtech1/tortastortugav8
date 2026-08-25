@@ -344,6 +344,53 @@ function esMiPedido(p) {
     return false;
 }
 
+// ── FILTRO POR REPARTIDOR ──
+var _filtroRepActual = '__mias__';
+function _esJefeRuta() {
+    var r = (miRol || '').toLowerCase();
+    return r.indexOf('gerente') >= 0 || r.indexOf('supervisor') >= 0;
+}
+function _filtrarPedidosRuta(todos) {
+    // Si no es jefe, siempre solo las suyas
+    if (!_esJefeRuta()) return todos.filter(esMiPedido);
+    if (_filtroRepActual === '__todas__') return todos.slice();
+    if (_filtroRepActual === '__mias__') return todos.filter(esMiPedido);
+    // Filtrar por un repartidor específico (por id)
+    return todos.filter(function(p){ return String(p.repartidorId||'') === String(_filtroRepActual); });
+}
+function _poblarFiltroRepartidores() {
+    var wrap = document.getElementById('filtro-rep-wrap');
+    var sel = document.getElementById('filtro-rep');
+    if (!wrap || !sel) return;
+    // Mostrar el filtro solo para gerente/supervisor
+    if (!_esJefeRuta()) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    // Obtener repartidores únicos de los pedidos
+    var vistos = {};
+    var reps = [];
+    (window._todosPedidosRuta || []).forEach(function(p){
+        if (p.repartidorId && !vistos[p.repartidorId]) {
+            vistos[p.repartidorId] = true;
+            reps.push({ id: p.repartidorId, nombre: p.repartidorNombre || p.repartidorId });
+        }
+    });
+    // Reconstruir opciones conservando la selección actual
+    var actual = sel.value || '__mias__';
+    var html = '<option value="__mias__">Mis órdenes</option><option value="__todas__">Todas las órdenes</option>';
+    reps.forEach(function(r){
+        html += '<option value="' + r.id + '">🛵 ' + r.nombre + '</option>';
+    });
+    sel.innerHTML = html;
+    sel.value = actual;
+}
+window.aplicarFiltroRep = function() {
+    var sel = document.getElementById('filtro-rep');
+    _filtroRepActual = sel ? sel.value : '__mias__';
+    var mios = _filtrarPedidosRuta(window._todosPedidosRuta || []);
+    _pedidosActuales = mios;
+    render(mios);
+};
+
 function metodoPagoInfo(p) {
     const m = (p.metodoPagoReal || p.metodoPago || '').toLowerCase();
     if (!p.estadoPago || p.estadoPago !== 'Pagado') {
@@ -526,8 +573,11 @@ function mostrarToastRuta(txt) {
 function escucharRuta() {
     onSnapshot(collection(db, 'pedidos'), snap => {
         const todos = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-        // Solo los míos, y que no estén archivados
-        const mios = todos.filter(p => esMiPedido(p) && p.archivado !== true);
+        window._todosPedidosRuta = todos.filter(p => p.archivado !== true);
+        // Poblar el filtro de repartidores (solo gerente/supervisor)
+        _poblarFiltroRepartidores();
+        // Aplicar el filtro seleccionado
+        const mios = _filtrarPedidosRuta(window._todosPedidosRuta);
         _pedidosActuales = mios;
         render(mios);
         // Si hay una entrega abierta, refrescar su estado de pago en vivo
