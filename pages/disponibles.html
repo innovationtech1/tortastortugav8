@@ -331,6 +331,14 @@ window.descartarPedido = function(id) {
 };
 
 // ── Aceptar (atómico: solo uno se lo queda) ──
+window.tomarOrdenSolicitud = function(pedidoId) {
+    // Abrir el menú (ordenar.html) para tomar la orden de esta solicitud.
+    // Pasa el ID de la solicitud para que al completar se ACTUALICE (no cree otra).
+    var base = location.pathname.replace(/[^\/]*$/, '');  // .../pages/
+    var url = base + '../ordenar.html?solicitud=' + encodeURIComponent(pedidoId);
+    window.location.href = url;
+};
+
 window.aceptarPedido = async function(id) {
     detenerAlarma();
     try {
@@ -572,6 +580,7 @@ function render(disp) {
             (p.telefono ? '<div class="pn-linea">📞 <a href="tel:'+p.telefono+'">'+p.telefono+'</a></div>' : '') +
             ((p.horarioAgendado || p.horarioEntregaEtiqueta) ? '<div class="pn-linea" style="color:#FBB724;font-weight:700;">🕐 Agendado: ' + (p.horarioAgendado || p.horarioEntregaEtiqueta) + '</div>' : '') +
             '<div class="pn-linea" style="color:#888;">Orden #' + folio + '</div>' +
+            (p.esSolicitudUnidad ? '<button onclick="tomarOrdenSolicitud(\'' + p.id + '\')" style="width:100%;margin-bottom:.5rem;padding:.85rem;border:none;background:linear-gradient(135deg,#FF7A33,#FF5A00);color:#fff;border-radius:12px;font-family:inherit;font-weight:800;font-size:.95rem;cursor:pointer;box-shadow:0 4px 12px rgba(255,90,0,.3);">📝 Tomar orden (abrir menú)</button>' : '') +
             '<button class="btn-aceptar" onclick="aceptarPedido(\'' + p.id + '\')">✅ Aceptar este pedido</button>' +
             '<button class="btn-descartar" onclick="descartarPedido(\'' + p.id + '\')">Ahora no (descartar)</button>' +
             '<button onclick="abrirAsignarRepartidor(\'' + p.id + '\',\'' + folio + '\')" ' +
