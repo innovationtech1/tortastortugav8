@@ -228,7 +228,7 @@ html { -webkit-text-size-adjust: 100%; }
 <script src="../js/tt-alert.js"></script>
 <script type="module">
 import { db } from '../js/firebase-config.js';
-import { collection, onSnapshot, doc, updateDoc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { collection, onSnapshot, doc, updateDoc, setDoc, serverTimestamp, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // Guarda los pedidos actuales para abrirlos en la vista de entrega
 let _pedidosActuales = [];
@@ -668,6 +668,45 @@ window.cobrarEntrega = async function(metodo) {
 };
 
 // El REPARTIDOR marca la orden como Entregada (cierra su parte del flujo)
+// ── TOMAR ORDEN POR EL CLIENTE (abre el menú con datos precargados) ──
+window.tomarOrdenPorCliente = function(pedidoId) {
+    var base = location.pathname.replace(/[^\/]*$/, '');  // .../pages/
+    var url = base + '../ordenar.html?solicitud=' + encodeURIComponent(pedidoId);
+    window.location.href = url;
+};
+
+// ── CAMBIAR / ASIGNAR repartidor ──
+window.cambiarRepartidorRuta = async function(pedidoId, clienteNombre) {
+    try {
+        var snap = await getDocs(collection(db, 'empleados'));
+        var reps = [];
+        snap.forEach(function(d){ var e = d.data(); e._docId = d.id; reps.push(e); });
+        if (!reps.length) { alert('No hay repartidores registrados.'); return; }
+        // Construir lista numerada para elegir
+        var msg = 'Asignar orden de ' + (clienteNombre || 'cliente') + ' a:\n\n';
+        reps.forEach(function(r, i){
+            msg += (i+1) + '. ' + (r.nombre || r.id || 'Empleado') + (r.rol ? ' (' + r.rol + ')' : '') + '\n';
+        });
+        msg += '\nEscribe el número del repartidor:';
+        var eleccion = prompt(msg);
+        if (!eleccion) return;
+        var idx = parseInt(eleccion, 10) - 1;
+        if (isNaN(idx) || idx < 0 || idx >= reps.length) { alert('Número no válido.'); return; }
+        var rep = reps[idx];
+        var repId = rep.id || rep._docId;
+        var repNom = rep.nombre || repId;
+        await updateDoc(doc(db, 'pedidos', pedidoId), {
+            repartidorId: String(repId),
+            repartidorNombre: repNom,
+            repartidorAsignadoEn: new Date().toISOString()
+        });
+        alert('✅ Orden asignada a ' + repNom);
+    } catch(e) {
+        console.error(e);
+        alert('No se pudo cambiar el repartidor. Intenta de nuevo.');
+    }
+};
+
 window.marcarEntregadoDirecto = async function(pedidoId) {
     if (!pedidoId) return;
     const confirmar = window.ttConfirm
