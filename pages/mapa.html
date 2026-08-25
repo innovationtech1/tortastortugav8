@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mapa de Despacho — Tortas Tortuga</title>
+<link rel="icon" href="../favicon.ico">
+<link rel="stylesheet" href="../css/leaflet/leaflet.css">
+<script src="../js/leaflet/leaflet.js"></script>
+<style id="ios-compat">
+  @supports (-webkit-touch-callout: none) { input, select, textarea { font-size: 16px !important; } }
+  html { -webkit-text-size-adjust: 100%; overflow-x: hidden; }
+  * { -webkit-tap-highlight-color: transparent; }
+</style>
+<style>
+  :root { --bg:#0f0f0f; --surface:#1a1a1a; --text:#f0f0f0; --muted:#888; --orange:#FF5A00; --orange2:#FF7A33; --green:#25D366; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
+  .header { background:linear-gradient(135deg,var(--orange2),var(--orange)); padding:1rem 1.2rem; display:flex; align-items:center; justify-content:space-between; }
+  .header h1 { font-size:1.1rem; font-weight:900; color:#fff; }
+  .header .salir { color:#fff; text-decoration:none; font-size:.85rem; font-weight:700; opacity:.9; }
+  .barra-filtro { padding:.8rem 1rem; display:flex; gap:.6rem; align-items:center; background:var(--surface); }
+  .barra-filtro select { flex:1; padding:.6rem; border-radius:10px; border:1px solid rgba(255,90,0,.3); background:#111; color:#fff; font-family:inherit; font-weight:700; font-size:16px; }
+  #mapa { width:100%; height:calc(100vh - 200px); min-height:300px; }
+  .leaflet-container { background:#1a1a1a; }
+  .tt-emoji-icon { font-size:26px; text-align:center; line-height:1; background:none; border:none; filter:drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+  .resumen { display:flex; gap:.5rem; padding:.7rem 1rem; background:var(--surface); border-top:1px solid rgba(255,255,255,.06); }
+  .resumen .r { flex:1; text-align:center; }
+  .resumen .r .n { font-size:1.2rem; font-weight:900; }
+  .resumen .r .l { font-size:.65rem; color:var(--muted); text-transform:uppercase; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🗺️ Mapa de Despacho</h1>
+  <a href="empleados.html" class="salir">Salir</a>
+</div>
+
+<div class="barra-filtro">
+  <label style="font-size:.8rem;color:#aaa;font-weight:700;white-space:nowrap;">🛵 Ver:</label>
+  <select id="filtro-mapa" onchange="aplicarFiltroMapa()">
+    <option value="__todos__">Todos los repartidores</option>
+  </select>
+</div>
+
+<div id="mapa"></div>
+
+<div class="resumen" id="resumen">
+  <div class="r"><div class="n" style="color:#FF7A33;" id="r-ordenes">0</div><div class="l">Órdenes</div></div>
+  <div class="r"><div class="n" style="color:#5B9BFF;" id="r-reps">0</div><div class="l">Repartidores</div></div>
+  <div class="r"><div class="n" style="color:#25D366;" id="r-sinasig">0</div><div class="l">Sin asignar</div></div>
+</div>
+
+<script type="module">
+import { db } from '../js/firebase-config.js';
+import { collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+var map, _pedidos = [], _ubicaciones = {}, _filtro = '__todos__';
+var _markers = [], _lineas = [];
+
+// Colores por repartidor (para distinguir rutas)
+var COLORES = ['#FF5A00','#5B9BFF','#25D366','#A78BFA','#FBB724','#F44336','#00BCD4','#E91E63','#8BC34A','#FF9800'];
+function _colorRep(nombre) {
+  var h = 0; for (var i=0;i<nombre.length;i++) h = nombre.charCodeAt(i) + ((h<<5)-h);
+  return COLORES[Math.abs(h) % COLORES.length];
+}
+
+function _initMap() {
+  map = L.map('mapa', { zoomControl: true, attributionControl: false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+  map.setView([29.4241, -98.4936], 12); // San Antonio
+}
+
+function _esActiva(p) {
+  if (p.archivado === true) return false;
+  var e = String(p.estado||'').toLowerCase();
+  if (p.entregado || e.indexOf('entregad') >= 0) return false; // no mostrar entregadas
+  return true;
+}
+function _nombreRep(p) {
+  return (p.repartidorNombre || p.repartidorId || '').trim();
+}
+
+function _limpiar() {
+  _markers.forEach(function(m){ map.removeLayer(m); });
+  _lineas.forEach(function(l){ map.removeLayer(l); });
+  _markers = []; _lineas = [];
+}
+
+function render() {
+  if (!map) return;
+  _limpiar();
+
+  var activas = _pedidos.filter(_esActiva);
+  // Aplicar filtro por repartidor
+  if (_filtro !== '__todos__') {
+    activas = activas.filter(function(p){ return _nombreRep(p).toLowerCase() === _filtro.toLowerCase(); });
+  }
+
+  var puntos = [];
+  var repsConOrden = {};
+  var sinAsignar = 0;
+
+  // Marcadores de CLIENTES (órdenes)
+  activas.forEach(function(p){
+    var u = p.ubicacionCliente;
+    if (!u || typeof u.lat !== 'number') return;
+    var repNom = _nombreRep(p);
+    var color = repNom ? _colorRep(repNom) : '#888';
+    if (repNom) repsConOrden[repNom.toLowerCase()] = true; else sinAsignar++;
+
+    var icon = L.divIcon({ html:'📍', className:'tt-emoji-icon', iconSize:[28,28], iconAnchor:[14,28] });
+    var m = L.marker([u.lat, u.lng], { icon: icon }).addTo(map);
+    m.bindPopup('<b>' + (p.cliente||'Cliente') + '</b><br>' +
+                (p.folioStr||'') + '<br>' +
+                (repNom ? ('🛵 ' + repNom) : '⚠️ Sin repartidor') + '<br>' +
+                (p.total||''));
+    _markers.push(m);
+    puntos.push([u.lat, u.lng]);
+  });
+
+  // Marcadores de REPARTIDORES (GPS en vivo) + líneas a sus órdenes
+  Object.keys(_ubicaciones).forEach(function(repId){
+    var u = _ubicaciones[repId];
+    if (!u || typeof u.lat !== 'number') return;
+    var repNom = (u.nombre || repId).trim();
+    // Si hay filtro, solo mostrar ese repartidor
+    if (_filtro !== '__todos__' && repNom.toLowerCase() !== _filtro.toLowerCase()) return;
+
+    var color = _colorRep(repNom);
+    var icon = L.divIcon({ html:'🛵', className:'tt-emoji-icon', iconSize:[32,32], iconAnchor:[16,16] });
+    var m = L.marker([u.lat, u.lng], { icon: icon }).addTo(map);
+    m.bindPopup('<b>🛵 ' + repNom + '</b><br>Repartidor en vivo');
+    _markers.push(m);
+    puntos.push([u.lat, u.lng]);
+
+    // Trazar líneas del repartidor a cada una de sus órdenes
+    activas.forEach(function(p){
+      if (_nombreRep(p).toLowerCase() !== repNom.toLowerCase()) return;
+      var cu = p.ubicacionCliente;
+      if (!cu || typeof cu.lat !== 'number') return;
+      var linea = L.polyline([[u.lat,u.lng],[cu.lat,cu.lng]], { color: color, weight: 3, dashArray:'6,8', opacity:.8 }).addTo(map);
+      _lineas.push(linea);
+    });
+  });
+
+  // Ajustar vista a todos los puntos
+  if (puntos.length) {
+    try { map.fitBounds(L.latLngBounds(puntos).pad(0.2)); } catch(e){}
+  }
+
+  // Resumen
+  document.getElementById('r-ordenes').textContent = activas.length;
+  document.getElementById('r-reps').textContent = Object.keys(repsConOrden).length;
+  document.getElementById('r-sinasig').textContent = sinAsignar;
+}
+
+function _poblarFiltro() {
+  var sel = document.getElementById('filtro-mapa');
+  if (!sel) return;
+  var vistos = {}, reps = [];
+  _pedidos.filter(_esActiva).forEach(function(p){
+    var n = _nombreRep(p);
+    if (n && !vistos[n.toLowerCase()]) { vistos[n.toLowerCase()] = true; reps.push(n); }
+  });
+  Object.keys(_ubicaciones).forEach(function(id){
+    var n = (_ubicaciones[id].nombre || id).trim();
+    if (n && !vistos[n.toLowerCase()]) { vistos[n.toLowerCase()] = true; reps.push(n); }
+  });
+  reps.sort();
+  var firma = reps.join('|');
+  if (sel._firma === firma) return;
+  sel._firma = firma;
+  var html = '<option value="__todos__">Todos los repartidores</option>';
+  reps.forEach(function(n){ html += '<option value="' + n + '">🛵 ' + n + '</option>'; });
+  sel.innerHTML = html;
+  sel.value = _filtro;
+  if (!sel.value) sel.value = '__todos__';
+}
+
+window.aplicarFiltroMapa = function() {
+  var sel = document.getElementById('filtro-mapa');
+  _filtro = sel ? sel.value : '__todos__';
+  render();
+};
+
+// Inicializar
+_initMap();
+
+// Escuchar pedidos
+onSnapshot(collection(db, 'pedidos'), function(snap){
+  _pedidos = [];
+  snap.forEach(function(d){ _pedidos.push({ id:d.id, ...d.data() }); });
+  _poblarFiltro();
+  render();
+});
+
+// Escuchar ubicaciones de repartidores (GPS en vivo)
+onSnapshot(collection(db, 'ubicaciones'), function(snap){
+  _ubicaciones = {};
+  snap.forEach(function(d){ _ubicaciones[d.id] = d.data(); });
+  _poblarFiltro();
+  render();
+});
+
+setTimeout(function(){ if (map) map.invalidateSize(); }, 300);
+</script>
+<script src="../js/perfil-barra.js"></script>
+</body>
+</html>
