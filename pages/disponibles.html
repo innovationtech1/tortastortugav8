@@ -570,7 +570,7 @@ function render(disp) {
               '<div class="pn-total">' + (p.total || '') + '</div>' +
             '</div>' +
             (p.telefono ? '<div class="pn-linea">📞 <a href="tel:'+p.telefono+'">'+p.telefono+'</a></div>' : '') +
-            (p.horarioEntregaEtiqueta ? '<div class="pn-linea">🕐 ' + p.horarioEntregaEtiqueta + '</div>' : '') +
+            ((p.horarioAgendado || p.horarioEntregaEtiqueta) ? '<div class="pn-linea" style="color:#FBB724;font-weight:700;">🕐 Agendado: ' + (p.horarioAgendado || p.horarioEntregaEtiqueta) + '</div>' : '') +
             '<div class="pn-linea" style="color:#888;">Orden #' + folio + '</div>' +
             '<button class="btn-aceptar" onclick="aceptarPedido(\'' + p.id + '\')">✅ Aceptar este pedido</button>' +
             '<button class="btn-descartar" onclick="descartarPedido(\'' + p.id + '\')">Ahora no (descartar)</button>' +
