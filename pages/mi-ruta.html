@@ -355,8 +355,12 @@ function _filtrarPedidosRuta(todos) {
     if (!_esJefeRuta()) return todos.filter(esMiPedido);
     if (_filtroRepActual === '__todas__') return todos.slice();
     if (_filtroRepActual === '__mias__') return todos.filter(esMiPedido);
-    // Filtrar por un repartidor específico (por id)
-    return todos.filter(function(p){ return String(p.repartidorId||'') === String(_filtroRepActual); });
+    // Filtrar por un repartidor específico (por NOMBRE normalizado)
+    var objetivo = String(_filtroRepActual || '').trim().toLowerCase();
+    return todos.filter(function(p){
+        var nom = (p.repartidorNombre || p.repartidorId || '').trim().toLowerCase();
+        return nom === objetivo;
+    });
 }
 var _filtroOpcionesFirma = '';
 function _poblarFiltroRepartidores() {
@@ -366,15 +370,21 @@ function _poblarFiltroRepartidores() {
     // Mostrar el filtro solo para gerente/supervisor
     if (!_esJefeRuta()) { wrap.style.display = 'none'; return; }
     wrap.style.display = 'block';
-    // Obtener repartidores únicos de los pedidos
+    // Obtener repartidores únicos POR NOMBRE (evita duplicados si el mismo
+    // repartidor tiene IDs distintos en diferentes órdenes).
     var vistos = {};
     var reps = [];
     (window._todosPedidosRuta || []).forEach(function(p){
-        if (p.repartidorId && !vistos[p.repartidorId]) {
-            vistos[p.repartidorId] = true;
-            reps.push({ id: p.repartidorId, nombre: p.repartidorNombre || p.repartidorId });
+        var nom = (p.repartidorNombre || '').trim();
+        if (!nom && p.repartidorId) nom = String(p.repartidorId).trim();
+        if (!nom) return;
+        var clave = nom.toLowerCase();
+        if (!vistos[clave]) {
+            vistos[clave] = true;
+            reps.push({ id: nom, nombre: nom });  // filtramos por nombre
         }
     });
+    reps.sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
     // Firma de las opciones actuales — solo reconstruir el <select> si CAMBIÓ.
     // Así no interferimos con la selección del usuario en cada snapshot.
     var firma = reps.map(function(r){ return r.id + ':' + r.nombre; }).join('|');
