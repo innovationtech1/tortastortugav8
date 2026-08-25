@@ -1569,6 +1569,14 @@ window.enviarTodasLasCuentas = async function() {
         ordenoEnTortumovil: ordenoEnTortumovil,
         tortumovilId: ordenoEnTortumovil ? (cuentaPrincipal.tortumovilId || '') : null,
         tortumovilNombre: ordenoEnTortumovil ? (cuentaPrincipal.tortumovilNombre || '') : null,
+        // ── Agendamiento: ubicación GPS y horario elegido por el cliente ──
+        ubicacionCliente: (function(){
+            try {
+                var u = sessionStorage.getItem('tt_cliente_ubicacion') || localStorage.getItem('tt_cliente_ubicacion');
+                return u ? JSON.parse(u) : null;
+            } catch(e) { return null; }
+        })(),
+        horarioAgendado: (sessionStorage.getItem('tt_cliente_horario') || localStorage.getItem('tt_cliente_horario') || ''),
         itemsData:   itemsData,
         items:       itemsStr,
         total:       '$' + totalGen.toFixed(2),
