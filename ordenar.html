@@ -1264,6 +1264,34 @@ function cerrarOrdenModal() {
     <script type="module">
         import { auth, db } from './js/firebase-config.js';
         import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+        // ── Precargar datos de una SOLICITUD de tortumóvil ──
+        // Lee el pedido/solicitud de Firestore y llena nombre, teléfono y ubicación.
+        window._precargarSolicitud = async function(pedidoId) {
+            try {
+                var snap = await getDoc(doc(db, 'pedidos', pedidoId));
+                if (!snap.exists()) { return; }
+                var p = snap.data();
+                window._solicitudDatos = p;
+                // Precargar nombre y teléfono en los campos del cliente
+                var n = document.getElementById('customer-name');
+                var t = document.getElementById('customer-phone');
+                if (n) n.value = p.cliente || p.nombre || '';
+                if (t) t.value = p.telefono || '';
+                // Guardar la ubicación del cliente para el pedido final
+                if (p.ubicacionCliente) {
+                    try { sessionStorage.setItem('tt_cliente_ubicacion', JSON.stringify(p.ubicacionCliente)); } catch(e){}
+                }
+                // Aviso visual de que se está tomando una orden de solicitud
+                var aviso = document.createElement('div');
+                aviso.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#FF7A33,#FF5A00);color:#fff;padding:.6rem 1rem;text-align:center;font-weight:800;font-size:.85rem;box-shadow:0 2px 8px rgba(0,0,0,.3);';
+                aviso.innerHTML = '📝 Tomando orden de: ' + (p.cliente || 'Cliente') + ' · 🛵 Solicitud tortumóvil ($5 incluido)';
+                document.body.appendChild(aviso);
+                document.body.style.paddingTop = '2.5rem';
+            } catch(e) {
+                console.warn('No se pudo precargar la solicitud:', e);
+            }
+        };
         import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
         onAuthStateChanged(auth, async (user) => {
             // El menú es público — no redirigir si no hay sesión
