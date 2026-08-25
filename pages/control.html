@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Control de Órdenes — Tortas Tortuga</title>
+<link rel="icon" href="../favicon.ico">
+<style id="ios-compat">
+  @supports (-webkit-touch-callout: none) {
+    input, select, textarea { font-size: 16px !important; }
+  }
+  html { -webkit-text-size-adjust: 100%; overflow-x: hidden; }
+  * { -webkit-tap-highlight-color: transparent; }
+</style>
+<style>
+  :root {
+    --bg: #0f0f0f; --surface: #1a1a1a; --text: #f0f0f0; --muted: #888;
+    --orange: #FF5A00; --orange2: #FF7A33; --green: #25D366; --yellow: #FBB724; --blue: #5B9BFF;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh;
+    padding-bottom: 3rem; overflow-x: hidden;
+  }
+  .header {
+    background: linear-gradient(135deg, var(--orange2), var(--orange));
+    padding: 1.1rem 1.2rem; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header h1 { font-size: 1.15rem; font-weight: 900; color: #fff; }
+  .header .salir { color: #fff; text-decoration: none; font-size: .85rem; font-weight: 700; opacity: .9; }
+  .tabs {
+    display: flex; gap: .5rem; padding: 1rem 1rem .5rem 1rem;
+  }
+  .tab {
+    flex: 1; padding: .7rem; border-radius: 12px; border: 1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.04); color: var(--muted); font-weight: 800; font-size: .9rem;
+    cursor: pointer; font-family: inherit; text-align: center; transition: all .15s;
+  }
+  .tab.activo { background: rgba(255,90,0,.15); border-color: var(--orange); color: var(--orange2); }
+  .resumen-global {
+    display: flex; gap: .6rem; padding: 0 1rem 1rem 1rem; flex-wrap: wrap;
+  }
+  .stat {
+    flex: 1; min-width: 90px; background: var(--surface); border: 1px solid rgba(255,255,255,.08);
+    border-radius: 14px; padding: .8rem; text-align: center;
+  }
+  .stat .num { font-size: 1.5rem; font-weight: 900; }
+  .stat .lbl { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; margin-top: .2rem; }
+  .grupo {
+    margin: 0 1rem 1rem 1rem; background: var(--surface); border: 1px solid rgba(255,255,255,.1);
+    border-radius: 16px; overflow: hidden;
+  }
+  .grupo-head {
+    display: flex; align-items: center; justify-content: space-between; gap: .6rem;
+    padding: .9rem 1rem; background: rgba(255,255,255,.03); cursor: pointer;
+  }
+  .grupo-head .izq { display: flex; align-items: center; gap: .7rem; min-width: 0; }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--orange2), var(--orange));
+    display: flex; align-items: center; justify-content: center; font-size: 1.15rem; font-weight: 900; color: #fff;
+  }
+  .avatar.zona { background: linear-gradient(135deg, #5B9BFF, #3B6FD4); }
+  .grupo-nombre { font-size: 1rem; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .grupo-meta { font-size: .78rem; color: var(--muted); margin-top: .1rem; }
+  .grupo-total { font-size: 1.1rem; font-weight: 900; color: var(--green); text-align: right; flex-shrink: 0; }
+  .grupo-flecha { color: var(--muted); font-size: .9rem; transition: transform .2s; }
+  .grupo.abierto .grupo-flecha { transform: rotate(180deg); }
+  .grupo-body { display: none; padding: 0 1rem 1rem 1rem; }
+  .grupo.abierto .grupo-body { display: block; }
+  .orden {
+    display: flex; align-items: center; justify-content: space-between; gap: .6rem;
+    padding: .7rem; border-radius: 10px; background: rgba(255,255,255,.02);
+    border: 1px solid rgba(255,255,255,.06); margin-top: .5rem;
+  }
+  .orden .o-info { min-width: 0; flex: 1; }
+  .orden .o-cliente { font-size: .9rem; font-weight: 700; color: #eee; }
+  .orden .o-detalle { font-size: .72rem; color: var(--muted); margin-top: .15rem; }
+  .orden .o-total { font-size: .95rem; font-weight: 800; color: var(--green); flex-shrink: 0; }
+  .badge { font-size: .62rem; font-weight: 800; padding: .12rem .4rem; border-radius: 7px; white-space: nowrap; }
+  .vacio { text-align: center; color: var(--muted); padding: 3rem 1rem; }
+  .vacio .emo { font-size: 2.5rem; margin-bottom: .6rem; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>📋 Control de Órdenes</h1>
+  <a href="empleados.html" class="salir">Salir</a>
+</div>
+
+<div class="tabs">
+  <button class="tab activo" id="tab-rep" onclick="cambiarVista('repartidor')">🛵 Por Repartidor</button>
+  <button class="tab" id="tab-zona" onclick="cambiarVista('zona')">📍 Por Zona</button>
+</div>
+
+<div class="resumen-global" id="resumen-global"></div>
+
+<div id="contenido">
+  <div class="vacio"><div class="emo">⏳</div>Cargando órdenes…</div>
+</div>
+
+<script type="module">
+import { db } from '../js/firebase-config.js';
+import { collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+var _vista = 'repartidor';
+var _pedidos = [];
+var _abiertos = {};
+
+function _num(p) {
+  if (typeof p.totalNum === 'number') return p.totalNum;
+  var t = String(p.total || '0').replace(/[^0-9.]/g, '');
+  return parseFloat(t) || 0;
+}
+function _esActiva(p) {
+  // Órdenes activas: no archivadas
+  return p.archivado !== true;
+}
+function _estadoBadge(p) {
+  var e = String(p.estado || '').toLowerCase();
+  if (p.entregado || e.indexOf('entregad') >= 0) return '<span class="badge" style="background:rgba(167,139,250,.15);color:#A78BFA;">Entregado</span>';
+  if (e.indexOf('listo') >= 0) return '<span class="badge" style="background:rgba(37,211,102,.15);color:#25D366;">Listo</span>';
+  if (e.indexOf('prepar') >= 0) return '<span class="badge" style="background:rgba(251,183,36,.15);color:#FBB724;">En prep.</span>';
+  return '<span class="badge" style="background:rgba(91,155,255,.15);color:#5B9BFF;">Nuevo</span>';
+}
+function _pagoBadge(p) {
+  return p.estadoPago === 'Pagado'
+    ? '<span class="badge" style="background:rgba(37,211,102,.15);color:#25D366;">✅ Pagado</span>'
+    : '<span class="badge" style="background:rgba(244,67,54,.15);color:#F44336;">Por cobrar</span>';
+}
+
+window.cambiarVista = function(v) {
+  _vista = v;
+  document.getElementById('tab-rep').classList.toggle('activo', v === 'repartidor');
+  document.getElementById('tab-zona').classList.toggle('activo', v === 'zona');
+  render();
+};
+
+window.toggleGrupo = function(key) {
+  _abiertos[key] = !_abiertos[key];
+  render();
+};
+
+function render() {
+  var activas = _pedidos.filter(_esActiva);
+  // Resumen global
+  var totalGlobal = activas.reduce(function(s,p){ return s + _num(p); }, 0);
+  var numGlobal = activas.length;
+  var entregadas = activas.filter(function(p){ return p.entregado || String(p.estado||'').toLowerCase().indexOf('entregad')>=0; }).length;
+  var resEl = document.getElementById('resumen-global');
+  resEl.innerHTML =
+    '<div class="stat"><div class="num" style="color:#FF7A33;">' + numGlobal + '</div><div class="lbl">Órdenes</div></div>' +
+    '<div class="stat"><div class="num" style="color:#25D366;">$' + totalGlobal.toFixed(0) + '</div><div class="lbl">Total</div></div>' +
+    '<div class="stat"><div class="num" style="color:#A78BFA;">' + entregadas + '</div><div class="lbl">Entregadas</div></div>';
+
+  // Agrupar
+  var grupos = {};
+  activas.forEach(function(p){
+    var key, nombre;
+    if (_vista === 'repartidor') {
+      nombre = p.repartidorNombre || 'Sin asignar';
+      key = 'rep_' + (p.repartidorId || 'sin');
+    } else {
+      nombre = p.zonaEntregaNombre || 'Sin zona';
+      key = 'zona_' + nombre;
+    }
+    if (!grupos[key]) grupos[key] = { nombre: nombre, ordenes: [], total: 0 };
+    grupos[key].ordenes.push(p);
+    grupos[key].total += _num(p);
+  });
+
+  var keys = Object.keys(grupos).sort(function(a,b){ return grupos[b].total - grupos[a].total; });
+  if (!keys.length) {
+    document.getElementById('contenido').innerHTML = '<div class="vacio"><div class="emo">📭</div>No hay órdenes activas ahora.</div>';
+    return;
+  }
+
+  var html = '';
+  keys.forEach(function(key){
+    var g = grupos[key];
+    var abierto = _abiertos[key];
+    var inicial = (g.nombre.charAt(0) || '?').toUpperCase();
+    var avatarCls = _vista === 'zona' ? 'avatar zona' : 'avatar';
+    var icono = _vista === 'zona' ? '📍' : '🛵';
+    html += '<div class="grupo ' + (abierto ? 'abierto' : '') + '">' +
+      '<div class="grupo-head" onclick="toggleGrupo(\'' + key + '\')">' +
+        '<div class="izq">' +
+          '<div class="' + avatarCls + '">' + inicial + '</div>' +
+          '<div style="min-width:0;">' +
+            '<div class="grupo-nombre">' + icono + ' ' + g.nombre + '</div>' +
+            '<div class="grupo-meta">' + g.ordenes.length + ' orden' + (g.ordenes.length !== 1 ? 'es' : '') + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:.6rem;">' +
+          '<div class="grupo-total">$' + g.total.toFixed(2) + '</div>' +
+          '<span class="grupo-flecha">▼</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="grupo-body">';
+    // Ordenar por folio
+    g.ordenes.sort(function(a,b){ return (b.folio||0) - (a.folio||0); });
+    g.ordenes.forEach(function(p){
+      var folio = p.folioStr || (p.id ? '#' + p.id.slice(-4) : '');
+      html += '<div class="orden">' +
+        '<div class="o-info">' +
+          '<div class="o-cliente">' + (p.cliente || p.nombre || 'Cliente') + '</div>' +
+          '<div class="o-detalle">' + folio + ' · ' + (p.tipoEntrega || '') + '</div>' +
+          '<div style="display:flex;gap:.3rem;margin-top:.3rem;flex-wrap:wrap;">' + _estadoBadge(p) + _pagoBadge(p) + '</div>' +
+        '</div>' +
+        '<div class="o-total">' + (p.total || '$0') + '</div>' +
+      '</div>';
+    });
+    html += '</div></div>';
+  });
+  document.getElementById('contenido').innerHTML = html;
+}
+
+// Escuchar pedidos en tiempo real
+onSnapshot(collection(db, 'pedidos'), function(snap){
+  _pedidos = [];
+  snap.forEach(function(d){ _pedidos.push({ id: d.id, ...d.data() }); });
+  render();
+}, function(err){
+  document.getElementById('contenido').innerHTML = '<div class="vacio"><div class="emo">⚠️</div>Error al cargar. Revisa tu conexión.</div>';
+});
+</script>
+<script src="../js/perfil-barra.js"></script>
+</body>
+</html>
