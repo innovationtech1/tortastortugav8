@@ -112,6 +112,15 @@ html { -webkit-text-size-adjust: 100%; }
                         </select>
                     </div>
 
+                    <!-- Aviso del cargo de servicio (aparece con el horario) -->
+                    <div id="cargo-aviso" style="display:none;background:rgba(251,183,36,.1);border:1px solid rgba(251,183,36,.35);border-radius:12px;padding:.9rem 1rem;margin-bottom:1rem;">
+                        <div style="font-size:.9rem;color:#FBB724;font-weight:800;margin-bottom:.3rem;">🛵 Pedir tortumóvil a tu ubicación</div>
+                        <div style="font-size:.82rem;color:#ddd;line-height:1.5;">
+                            Una unidad irá a tu ubicación a la hora que elegiste. Un repartidor te llamará para confirmar tu orden.
+                        </div>
+                        <div style="font-size:.95rem;color:#25D366;font-weight:800;margin-top:.5rem;">💵 Costo del servicio: $5.00 USD</div>
+                    </div>
+
                     <div id="status-2" class="auth-message" style="display:none;"></div>
 
                     <button class="btn-primary" onclick="compartirMiUbicacion()" id="btn-ubicacion">
