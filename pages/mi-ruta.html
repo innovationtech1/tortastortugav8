@@ -677,33 +677,75 @@ window.tomarOrdenPorCliente = function(pedidoId) {
 
 // ── CAMBIAR / ASIGNAR repartidor ──
 window.cambiarRepartidorRuta = async function(pedidoId, clienteNombre) {
+    var modal = document.getElementById('rep-modal-tt');
+    var lista = document.getElementById('rep-modal-lista');
+    var cliEl = document.getElementById('rep-modal-cliente');
+    if (cliEl) cliEl.textContent = 'Orden de: ' + (clienteNombre || 'cliente');
+    if (modal) modal.style.display = 'flex';
+    if (lista) lista.innerHTML = '<div style="color:#888;text-align:center;padding:1rem;">Cargando repartidores…</div>';
+    window._repPedidoIdTT = pedidoId;
     try {
         var snap = await getDocs(collection(db, 'empleados'));
         var reps = [];
         snap.forEach(function(d){ var e = d.data(); e._docId = d.id; reps.push(e); });
-        if (!reps.length) { alert('No hay repartidores registrados.'); return; }
-        // Construir lista numerada para elegir
-        var msg = 'Asignar orden de ' + (clienteNombre || 'cliente') + ' a:\n\n';
-        reps.forEach(function(r, i){
-            msg += (i+1) + '. ' + (r.nombre || r.id || 'Empleado') + (r.rol ? ' (' + r.rol + ')' : '') + '\n';
+        if (!reps.length) {
+            if (lista) lista.innerHTML = '<div style="color:#888;text-align:center;padding:1rem;">No hay repartidores registrados.</div>';
+            return;
+        }
+        var html = '';
+        reps.forEach(function(r){
+            var repId = r.id || r._docId;
+            var repNom = r.nombre || repId;
+            var rol = r.rol || '';
+            var inicial = (repNom.charAt(0) || '?').toUpperCase();
+            html += '<button onclick="_seleccionarRepTT(\'' + String(repId).replace(/\x27/g,'') + '\',\'' + String(repNom).replace(/\x27/g,'') + '\')" ' +
+                'style="width:100%;display:flex;align-items:center;gap:.8rem;padding:.8rem;margin-bottom:.5rem;' +
+                'background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:14px;' +
+                'cursor:pointer;font-family:inherit;text-align:left;transition:all .15s;" ' +
+                'onmouseover="this.style.background=\'rgba(255,90,0,.12)\';this.style.borderColor=\'rgba(255,90,0,.4)\'" ' +
+                'onmouseout="this.style.background=\'rgba(255,255,255,.04)\';this.style.borderColor=\'rgba(255,255,255,.1)\'">' +
+                '<div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#FF7A33,#FF5A00);' +
+                'display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:900;color:#fff;flex-shrink:0;">' + inicial + '</div>' +
+                '<div style="flex:1;min-width:0;">' +
+                '<div style="font-size:.95rem;font-weight:800;color:#fff;">🛵 ' + repNom + '</div>' +
+                (rol ? '<div style="font-size:.78rem;color:#888;">' + rol + '</div>' : '') +
+                '</div>' +
+                '<div style="color:#FF7A33;font-size:1.2rem;">›</div>' +
+                '</button>';
         });
-        msg += '\nEscribe el número del repartidor:';
-        var eleccion = prompt(msg);
-        if (!eleccion) return;
-        var idx = parseInt(eleccion, 10) - 1;
-        if (isNaN(idx) || idx < 0 || idx >= reps.length) { alert('Número no válido.'); return; }
-        var rep = reps[idx];
-        var repId = rep.id || rep._docId;
-        var repNom = rep.nombre || repId;
+        if (lista) lista.innerHTML = html;
+    } catch(e) {
+        console.error(e);
+        if (lista) lista.innerHTML = '<div style="color:#F44336;text-align:center;padding:1rem;">Error al cargar. Intenta de nuevo.</div>';
+    }
+};
+
+// Cerrar el modal
+window.cerrarRepModalTT = function() {
+    var modal = document.getElementById('rep-modal-tt');
+    if (modal) modal.style.display = 'none';
+};
+
+// Seleccionar un repartidor del modal
+window._seleccionarRepTT = async function(repId, repNom) {
+    var pedidoId = window._repPedidoIdTT;
+    if (!pedidoId) return;
+    try {
         await updateDoc(doc(db, 'pedidos', pedidoId), {
             repartidorId: String(repId),
             repartidorNombre: repNom,
             repartidorAsignadoEn: new Date().toISOString()
         });
-        alert('✅ Orden asignada a ' + repNom);
+        cerrarRepModalTT();
+        // Aviso visual bonito
+        var aviso = document.createElement('div');
+        aviso.style.cssText = 'position:fixed;top:1rem;left:50%;transform:translateX(-50%);z-index:10001;background:linear-gradient(135deg,#25D366,#1DA851);color:#fff;padding:.8rem 1.4rem;border-radius:14px;font-weight:800;font-size:.9rem;box-shadow:0 6px 20px rgba(0,0,0,.4);';
+        aviso.textContent = '✅ Asignado a ' + repNom;
+        document.body.appendChild(aviso);
+        setTimeout(function(){ aviso.remove(); }, 2500);
     } catch(e) {
         console.error(e);
-        alert('No se pudo cambiar el repartidor. Intenta de nuevo.');
+        alert('No se pudo asignar. Intenta de nuevo.');
     }
 };
 
