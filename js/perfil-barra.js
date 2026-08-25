@@ -92,6 +92,7 @@
                 ['🍳', 'Cocina', _base() + 'cocina.html', false],
                 ['📊', 'Reportes', _base() + 'reportes.html', true],
                 ['⚙️', 'Admin', _base() + 'admin.html', true],
+                ['📋', 'Control', _base() + 'control.html', true],
             ];
         } else {
             // Menú de CLIENTE — más simple
