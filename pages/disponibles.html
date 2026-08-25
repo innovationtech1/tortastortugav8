@@ -367,6 +367,18 @@ window.aceptarPedido = async function(id) {
 
 // ── Escuchar pedidos disponibles ──
 let _ultimaLista = [];
+// Formatear fecha/hora de ingreso de la orden
+function _fechaIngreso(p) {
+    var ts = null;
+    if (p.creado && p.creado.seconds) ts = p.creado.seconds * 1000;
+    else if (p.tiempos && p.tiempos.recibida) ts = p.tiempos.recibida;
+    else if (p.tomadaEn) ts = new Date(p.tomadaEn).getTime();
+    if (!ts) return '';
+    var d = new Date(ts);
+    var opts = { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' };
+    return d.toLocaleString('es-MX', opts);
+}
+
 function esDisponible(p) {
     // Domicilio, sin repartidor, no archivado
     const esDomicilio = (p.tipoEntrega === 'Domicilio') || (p.tipo === 'domicilio') || !!p.zonaEntregaNombre;
@@ -580,6 +592,7 @@ function render(disp) {
             (p.telefono ? '<div class="pn-linea">📞 <a href="tel:'+p.telefono+'">'+p.telefono+'</a></div>' : '') +
             ((p.horarioAgendado || p.horarioEntregaEtiqueta) ? '<div class="pn-linea" style="color:#FBB724;font-weight:700;">🕐 Agendado: ' + (p.horarioAgendado || p.horarioEntregaEtiqueta) + '</div>' : '') +
             '<div class="pn-linea" style="color:#888;">Orden #' + folio + '</div>' +
+            (_fechaIngreso(p) ? '<div class="pn-linea" style="color:#888;font-size:.75rem;">🕐 Ingresó: ' + _fechaIngreso(p) + '</div>' : '') +
             (p.esSolicitudUnidad ? '<button onclick="tomarOrdenSolicitud(\'' + p.id + '\')" style="width:100%;margin-bottom:.5rem;padding:.85rem;border:none;background:linear-gradient(135deg,#FF7A33,#FF5A00);color:#fff;border-radius:12px;font-family:inherit;font-weight:800;font-size:.95rem;cursor:pointer;box-shadow:0 4px 12px rgba(255,90,0,.3);">📝 Tomar orden (abrir menú)</button>' : '') +
             '<button class="btn-aceptar" onclick="aceptarPedido(\'' + p.id + '\')">✅ Aceptar este pedido</button>' +
             '<button class="btn-descartar" onclick="descartarPedido(\'' + p.id + '\')">Ahora no (descartar)</button>' +
