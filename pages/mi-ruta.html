@@ -440,6 +440,21 @@ function render(pedidos) {
               ) +
             '</div>' +
 
+            // ── Botón TOMAR ORDEN (solo si es solicitud sin productos) ──
+            (p.esSolicitudUnidad
+                ? '<button onclick="tomarOrdenPorCliente(\''+p.id+'\')" ' +
+                  'style="width:100%;margin-top:.7rem;padding:.8rem;border:none;border-radius:10px;' +
+                  'background:linear-gradient(135deg,#FF7A33,#FF5A00);color:#fff;font-family:inherit;' +
+                  'font-size:.9rem;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(255,90,0,.3);">' +
+                  '📝 Tomar orden por el cliente</button>'
+                : '') +
+
+            // ── Botón CAMBIAR/ASIGNAR repartidor ──
+            '<button onclick="cambiarRepartidorRuta(\''+p.id+'\',\''+String(p.cliente||p.nombre||'').replace(/\x27/g,'')+'\')" ' +
+            'style="width:100%;margin-top:.5rem;padding:.75rem;border:1px solid rgba(91,155,255,.4);' +
+            'background:rgba(91,155,255,.12);color:#5B9BFF;border-radius:10px;font-family:inherit;' +
+            'font-weight:700;font-size:.85rem;cursor:pointer;">🛵 Cambiar repartidor</button>' +
+
             // ── Botón marcar entregado (o sello si ya está entregado) ──
             (p.entregado
               ? '<div style="margin-top:.7rem;text-align:center;background:rgba(37,211,102,.12);' +
