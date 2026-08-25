@@ -263,14 +263,65 @@ window.enviarCodigo = async function() {
         console.warn('No se pudo guardar el cliente:', e);
     }
 
-    // ── Entrar DIRECTO (sin validación SMS) ──
-    // El cliente entra de inmediato al menú. La verificación del teléfono
-    // la hace la operación al llamar para confirmar el pedido.
+    // ── Guardar datos y pasar al paso de UBICACIÓN ──
+    // (Sin SMS). Guardamos la sesión ya; la ubicación es el siguiente paso.
     guardarSesionCliente(nombre, soloDigitos, null);
-    const saludo = clienteConocido ? ('¡Hola de nuevo, ' + nombre + '! 🐢') : ('¡Bienvenido, ' + nombre + '! 🐢');
-    showStatus('status-1', saludo, 'success');
-    setTimeout(function(){ window.location.href = '../ordenar.html'; }, 600);
+    _datosCliente = { nombre: nombre, telefono: soloDigitos, conocido: clienteConocido };
+    // Pasar al paso de ubicación
+    document.getElementById('paso-telefono').classList.remove('activo');
+    document.getElementById('paso-ubicacion').classList.add('activo');
 }
+
+// ── Compartir ubicación GPS y entrar ──
+window.compartirMiUbicacion = function() {
+    var estadoEl = document.getElementById('ubi-estado');
+    var btnEl = document.getElementById('btn-ubicacion');
+    if (!navigator.geolocation) {
+        showStatus('status-2', 'Tu navegador no soporta ubicación. Puedes continuar sin ella.', 'error');
+        return;
+    }
+    if (estadoEl) estadoEl.innerHTML = '<div style="font-size:.85rem;color:#FF7A33;font-weight:700;">📡 Obteniendo tu ubicación…</div>';
+    if (btnEl) btnEl.disabled = true;
+
+    navigator.geolocation.getCurrentPosition(
+        function(pos) {
+            var lat = pos.coords.latitude;
+            var lng = pos.coords.longitude;
+            var precision = Math.round(pos.coords.accuracy || 0);
+            // Guardar la ubicación en la sesión del cliente
+            var ubi = { lat: lat, lng: lng, precision: precision, compartidaEn: new Date().toISOString() };
+            try {
+                sessionStorage.setItem('tt_cliente_ubicacion', JSON.stringify(ubi));
+                localStorage.setItem('tt_cliente_ubicacion', JSON.stringify(ubi));
+            } catch(e) {}
+
+            if (estadoEl) estadoEl.innerHTML = '<div style="font-size:.85rem;color:#25D366;font-weight:700;">✅ Ubicación lista (±' + precision + 'm)</div>';
+            // Mini mapa de confirmación
+            var mapaEl = document.getElementById('ubi-mapa');
+            if (mapaEl) {
+                mapaEl.style.display = 'block';
+                mapaEl.innerHTML = '<iframe src="https://maps.google.com/maps?q=' + lat + ',' + lng + '&z=16&output=embed" style="width:100%;height:100%;border:0;"></iframe>';
+            }
+            if (btnEl) { btnEl.innerHTML = '<span class="btn-text">✅ Ubicación compartida — Entrar</span>'; btnEl.disabled = false; btnEl.setAttribute('onclick', 'irAlMenu()'); }
+            var saludo = (_datosCliente && _datosCliente.conocido) ? ('¡Hola de nuevo, ' + _datosCliente.nombre + '! 🐢') : ('¡Bienvenido, ' + _datosCliente.nombre + '! 🐢');
+            showStatus('status-2', saludo, 'success');
+        },
+        function(err) {
+            if (estadoEl) estadoEl.innerHTML = '<div style="font-size:.85rem;color:#F44336;font-weight:700;">No pudimos obtener tu ubicación</div>';
+            showStatus('status-2', 'No se pudo obtener tu ubicación. Puedes continuar sin ella y darla después.', 'error');
+            if (btnEl) btnEl.disabled = false;
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+};
+
+// Entrar sin ubicación (opcional)
+window.entrarSinUbicacion = function() { irAlMenu(); };
+
+// Ir al menú
+window.irAlMenu = function() {
+    window.location.href = '../ordenar.html';
+};
 
 // Verificar el código ingresado
 window.verificarCodigoSMS = function() {
