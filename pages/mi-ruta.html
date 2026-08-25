@@ -358,6 +358,7 @@ function _filtrarPedidosRuta(todos) {
     // Filtrar por un repartidor específico (por id)
     return todos.filter(function(p){ return String(p.repartidorId||'') === String(_filtroRepActual); });
 }
+var _filtroOpcionesFirma = '';
 function _poblarFiltroRepartidores() {
     var wrap = document.getElementById('filtro-rep-wrap');
     var sel = document.getElementById('filtro-rep');
@@ -374,21 +375,28 @@ function _poblarFiltroRepartidores() {
             reps.push({ id: p.repartidorId, nombre: p.repartidorNombre || p.repartidorId });
         }
     });
-    // Reconstruir opciones conservando la selección actual
-    var actual = sel.value || '__mias__';
+    // Firma de las opciones actuales — solo reconstruir el <select> si CAMBIÓ.
+    // Así no interferimos con la selección del usuario en cada snapshot.
+    var firma = reps.map(function(r){ return r.id + ':' + r.nombre; }).join('|');
+    if (firma === _filtroOpcionesFirma) return; // sin cambios, no tocar el select
+    _filtroOpcionesFirma = firma;
     var html = '<option value="__mias__">Mis órdenes</option><option value="__todas__">Todas las órdenes</option>';
     reps.forEach(function(r){
         html += '<option value="' + r.id + '">🛵 ' + r.nombre + '</option>';
     });
     sel.innerHTML = html;
-    sel.value = actual;
+    // Conservar la selección actual del filtro (variable, no el DOM)
+    sel.value = _filtroRepActual || '__mias__';
+    if (!sel.value) sel.value = '__mias__';
 }
 window.aplicarFiltroRep = function() {
     var sel = document.getElementById('filtro-rep');
     _filtroRepActual = sel ? sel.value : '__mias__';
-    var mios = _filtrarPedidosRuta(window._todosPedidosRuta || []);
-    _pedidosActuales = mios;
-    render(mios);
+    var lista = _filtrarPedidosRuta(window._todosPedidosRuta || []);
+    _pedidosActuales = lista;
+    render(lista);
+    // Refrescar el resumen (contadores) si existe la función
+    try { if (typeof actualizarResumen === 'function') actualizarResumen(lista); } catch(e){}
 };
 
 function metodoPagoInfo(p) {
