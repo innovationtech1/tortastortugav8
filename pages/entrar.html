@@ -439,6 +439,11 @@ function mostrarConfirmacionSolicitud() {
     }
 }
 
+// Cerrar la pantalla de solicitud (volver al inicio)
+window.cerrarSolicitud = function() {
+    window.location.href = '../index.html';
+};
+
 // Verificar el código ingresado
 window.verificarCodigoSMS = function() {
     const ingresado = (document.getElementById('codigo-input').value || '').trim();
