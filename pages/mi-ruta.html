@@ -474,7 +474,7 @@ function render(pedidos) {
         return '<div class="pedido-card '+(p.entregado?'entregado':'')+'">' +
             '<div class="pc-top">' +
               '<div><div class="pc-cliente">'+(p.cliente||p.nombre||'Cliente')+'</div>' +
-              '<div class="pc-folio">Orden #'+folio+(p.zonaEntregaNombre?(' · '+p.zonaEntregaNombre):'')+'</div></div>' +
+              '<div class="pc-folio">Orden #'+folio+(p.zonaEntregaNombre?(' · '+p.zonaEntregaNombre):'')+(_fechaIngreso(p)?(' · 🕐 '+_fechaIngreso(p)):'')+'</div></div>' +
               '<div class="pc-total">'+(p.total||'')+'</div>' +
             '</div>' +
             (p.telefono ? '<div class="pc-linea">📞 <a href="tel:'+p.telefono+'" style="color:#5B9BFF;">'+p.telefono+'</a></div>' : '') +
