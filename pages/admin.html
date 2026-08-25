@@ -851,6 +851,7 @@ window.normalizarRutaImagen = function(src) {
     <div style="font-size:1rem;font-weight:700;color:#fff;margin-bottom:2px;">${displayNombre}</div>
     <div style="color:#25D366;font-size:0.85rem;font-weight:600;margin-bottom:2px;">📞 ${displayTel}</div>
     <span class="tipo-badge ${tipoCls}" style="margin-top:2px;">${displayTipo}</span>
+    ${p.horarioAgendado ? `<div style="margin-top:6px;color:#FBB724;font-size:0.85rem;font-weight:700;">🕐 Agendado: ${p.horarioAgendado}</div>` : ''}
 
     ${window.tieneTelefonoValido(p.telefono) ? `
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">
