@@ -140,7 +140,7 @@ html { -webkit-text-size-adjust: 100%; }
 
 <script type="module">
 import { auth, db } from '../js/firebase-config.js';
-import { doc, setDoc, getDoc, getDocs, collection, query, where } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { doc, setDoc, getDoc, getDocs, collection, query, where, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import {
     createUserWithEmailAndPassword, signInWithEmailAndPassword,
     sendPasswordResetEmail, updateProfile
@@ -316,12 +316,14 @@ window.compartirMiUbicacion = function() {
                 mapaEl.style.display = 'block';
                 mapaEl.innerHTML = '<iframe src="https://maps.google.com/maps?q=' + lat + ',' + lng + '&z=16&output=embed" style="width:100%;height:100%;border:0;"></iframe>';
             }
-            // Mostrar el selector de horario
+            // Mostrar el selector de horario + aviso del cargo
             _generarHorarios();
             var hw = document.getElementById('horario-wrap');
             if (hw) hw.style.display = 'block';
-            if (btnEl) { btnEl.innerHTML = '<span class="btn-text">✅ Entrar a ordenar</span>'; btnEl.disabled = false; btnEl.setAttribute('onclick', 'confirmarUbicacionYHorario()'); }
-            showStatus('status-2', 'Ahora elige el horario para tu servicio.', 'info');
+            var cargoEl = document.getElementById('cargo-aviso');
+            if (cargoEl) cargoEl.style.display = 'block';
+            if (btnEl) { btnEl.innerHTML = '<span class="btn-text">🛵 Pedir tortumóvil ($5)</span>'; btnEl.disabled = false; btnEl.setAttribute('onclick', 'confirmarUbicacionYHorario()'); }
+            showStatus('status-2', 'Elige el horario y confirma tu solicitud.', 'info');
         },
         function(err) {
             if (estadoEl) estadoEl.innerHTML = '<div style="font-size:.85rem;color:#F44336;font-weight:700;">No pudimos obtener tu ubicación</div>';
