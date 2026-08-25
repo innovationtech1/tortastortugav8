@@ -116,9 +116,10 @@ html { -webkit-text-size-adjust: 100%; }
                     <div id="cargo-aviso" style="display:none;background:rgba(251,183,36,.1);border:1px solid rgba(251,183,36,.35);border-radius:12px;padding:.9rem 1rem;margin-bottom:1rem;">
                         <div style="font-size:.9rem;color:#FBB724;font-weight:800;margin-bottom:.3rem;">🛵 Pedir tortumóvil a tu ubicación</div>
                         <div style="font-size:.82rem;color:#ddd;line-height:1.5;">
-                            Una unidad irá a tu ubicación a la hora que elegiste. Un repartidor te llamará para confirmar tu orden.
+                            Una unidad irá a tu ubicación lo antes posible. Un repartidor te llamará para confirmar tu orden.
                         </div>
                         <div style="font-size:.95rem;color:#25D366;font-weight:800;margin-top:.5rem;">💵 Costo del servicio: $5.00 USD</div>
+                        <div style="font-size:.78rem;color:#FBB724;margin-top:.35rem;">➕ Lo que ordenes se cobra aparte (además de los $5).</div>
                     </div>
 
                     <div id="status-2" class="auth-message" style="display:none;"></div>
@@ -444,11 +445,11 @@ function mostrarConfirmacionSolicitud() {
                 '<div style="font-size:3rem;margin-bottom:.6rem;">🛵</div>' +
                 '<div style="font-size:1.1rem;color:#25D366;font-weight:800;margin-bottom:.5rem;">¡Solicitud enviada!</div>' +
                 '<div style="font-size:.9rem;color:#ddd;line-height:1.6;margin-bottom:1rem;">' +
-                    'Una tortumóvil irá a tu ubicación' + (horario ? ' (' + horario + ')' : '') + '.<br>' +
-                    'Un repartidor te <b>llamará pronto</b> para confirmar tu orden. 🐢' +
+                    'Una tortumóvil irá a tu ubicación <b>lo antes posible</b>.<br>' +
+                    'Un repartidor te <b>llamará pronto</b> para tomar tu orden. 🐢' +
                 '</div>' +
                 '<div style="background:rgba(251,183,36,.1);border:1px solid rgba(251,183,36,.3);border-radius:12px;padding:.8rem;font-size:.82rem;color:#FBB724;">' +
-                    '💵 Recuerda: el servicio tiene un costo de $5.00 + tu orden.' +
+                    '💵 El servicio cuesta $5.00. Lo que ordenes se cobra aparte.' +
                 '</div>' +
             '</div>';
     }
