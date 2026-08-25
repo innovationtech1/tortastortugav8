@@ -369,8 +369,8 @@ function _generarHorarios() {
     }
 }
 
-// Confirmar ubicación + horario y entrar
-window.confirmarUbicacionYHorario = function() {
+// Confirmar y CREAR la solicitud de tortumóvil (entra a Pedidos Disponibles)
+window.confirmarUbicacionYHorario = async function() {
     var sel = document.getElementById('horario-select');
     var horario = sel ? sel.value : '';
     if (!horario) {
@@ -383,15 +383,76 @@ window.confirmarUbicacionYHorario = function() {
         sessionStorage.setItem('tt_cliente_horario', horario);
         localStorage.setItem('tt_cliente_horario', horario);
     } catch(e) {}
-    var saludo = (_datosCliente && _datosCliente.conocido) ? ('¡Hola de nuevo, ' + _datosCliente.nombre + '! 🐢') : ('¡Bienvenido, ' + _datosCliente.nombre + '! 🐢');
-    showStatus('status-2', saludo, 'success');
-    setTimeout(irAlMenu, 600);
+
+    var btnEl = document.getElementById('btn-ubicacion');
+    if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '<span class="btn-text">Enviando solicitud…</span>'; }
+
+    // Leer datos del cliente y ubicación
+    var nombre = (_datosCliente && _datosCliente.nombre) || sessionStorage.getItem('tt_cliente_nombre') || '';
+    var telefono = (_datosCliente && _datosCliente.telefono) || sessionStorage.getItem('tt_cliente_telefono') || '';
+    var ubi = null;
+    try {
+        var u = sessionStorage.getItem('tt_cliente_ubicacion') || localStorage.getItem('tt_cliente_ubicacion');
+        ubi = u ? JSON.parse(u) : null;
+    } catch(e) {}
+
+    try {
+        // Obtener un folio secuencial simple (contador por fecha)
+        var folioNum = Date.now() % 100000; // folio simple único
+        // Crear la SOLICITUD de tortumóvil en 'pedidos'
+        await addDoc(collection(db, 'pedidos'), {
+            cliente: nombre,
+            nombre: nombre,
+            telefono: telefono,
+            tipoEntrega: 'Domicilio',
+            tipoServicio: 'Solicitud tortumóvil',
+            esSolicitudUnidad: true,       // marca especial: solo solicitud, sin productos aún
+            ubicacionCliente: ubi,
+            horarioAgendado: horario,
+            // Cargo de servicio de $5 (se sumará cuando el repartidor tome la orden)
+            cargoServicio: 5,
+            items: '(Pendiente — el repartidor tomará la orden)',
+            itemsData: [],
+            total: '$5.00',
+            totalNum: 5,
+            estado: 'Nuevo 🆕',
+            estadoPago: 'Por pagar',
+            folio: folioNum,
+            folioStr: '#' + String(folioNum).slice(-4),
+            archivado: false,
+            creado: serverTimestamp(),
+            tiempos: { recibida: Date.now() }
+        });
+
+        showStatus('status-2', '✅ ¡Solicitud enviada! Un repartidor te llamará pronto para confirmar tu orden. 🐢', 'success');
+        // Mostrar pantalla de confirmación (no menú)
+        setTimeout(mostrarConfirmacionSolicitud, 800);
+    } catch(err) {
+        console.error(err);
+        showStatus('status-2', 'No se pudo enviar tu solicitud. Revisa tu conexión e intenta de nuevo.', 'error');
+        if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = '<span class="btn-text">🛵 Pedir tortumóvil ($5)</span>'; }
+    }
 };
 
-// Ir al menú
-window.irAlMenu = function() {
-    window.location.href = '../ordenar.html';
-};
+// Pantalla de confirmación tras enviar la solicitud
+function mostrarConfirmacionSolicitud() {
+    var horario = sessionStorage.getItem('tt_cliente_horario') || '';
+    var cont = document.querySelector('.paso.activo') || document.getElementById('paso-ubicacion');
+    if (cont) {
+        cont.innerHTML =
+            '<div style="text-align:center;padding:1rem 0;">' +
+                '<div style="font-size:3rem;margin-bottom:.6rem;">🛵</div>' +
+                '<div style="font-size:1.1rem;color:#25D366;font-weight:800;margin-bottom:.5rem;">¡Solicitud enviada!</div>' +
+                '<div style="font-size:.9rem;color:#ddd;line-height:1.6;margin-bottom:1rem;">' +
+                    'Una tortumóvil irá a tu ubicación' + (horario ? ' (' + horario + ')' : '') + '.<br>' +
+                    'Un repartidor te <b>llamará pronto</b> para confirmar tu orden. 🐢' +
+                '</div>' +
+                '<div style="background:rgba(251,183,36,.1);border:1px solid rgba(251,183,36,.3);border-radius:12px;padding:.8rem;font-size:.82rem;color:#FBB724;">' +
+                    '💵 Recuerda: el servicio tiene un costo de $5.00 + tu orden.' +
+                '</div>' +
+            '</div>';
+    }
+}
 
 // Verificar el código ingresado
 window.verificarCodigoSMS = function() {
