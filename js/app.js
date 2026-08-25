@@ -302,6 +302,39 @@ function formatearFolio(n) {
 
 async function guardarPedidoFirebase(data, metodoPago) {
     try {
+        // ── ¿Estamos tomando la orden de una SOLICITUD de tortumóvil? ──
+        // Si es así, ACTUALIZAMOS ese pedido (le agregamos los productos)
+        // en vez de crear uno nuevo. El cargo de $5 ya está en la solicitud.
+        var _solId = window._solicitudActiva || sessionStorage.getItem('tt_solicitud_activa');
+        if (_solId) {
+            try {
+                // Sumar el cargo de servicio de $5 al total de la orden
+                var totalConCargo = (data.totalNum || 0) + 5;
+                await updateDoc(doc(db, 'pedidos', _solId), {
+                    items: data.items,
+                    itemsData: data.itemsData,
+                    desglose: data.desglose,
+                    cargoServicio: 5,
+                    total: '$' + totalConCargo.toFixed(2),
+                    totalNum: totalConCargo,
+                    esSolicitudUnidad: false,   // ya se tomó la orden
+                    ordenTomada: true,
+                    ordenTomadaEn: new Date().toISOString(),
+                    cajeroId: (window._cajeroActivo ? window._cajeroActivo.id : 'directo'),
+                    cajeroNombre: (window._cajeroActivo ? window._cajeroActivo.nombre : 'Sistema'),
+                    estado: 'Nuevo 🆕'
+                });
+                // Limpiar la solicitud activa
+                window._solicitudActiva = null;
+                sessionStorage.removeItem('tt_solicitud_activa');
+                console.log('✅ Orden tomada sobre solicitud:', _solId);
+                return { id: _solId, ticket: (data.folioStr || _solId.slice(-4)) };
+            } catch(errSol) {
+                console.error('Error actualizando solicitud, se creará pedido normal:', errSol);
+                // Si falla, sigue el flujo normal (crear pedido nuevo)
+            }
+        }
+
         // Obtener folio secuencial del día
         const folio = await obtenerFolioDiario();
 
