@@ -104,14 +104,6 @@ html { -webkit-text-size-adjust: 100%; }
 
                     <div id="ubi-mapa" style="display:none;height:180px;border-radius:12px;overflow:hidden;margin-bottom:1rem;"></div>
 
-                    <!-- Selector de horario (aparece tras compartir ubicación) -->
-                    <div id="horario-wrap" style="display:none;margin-bottom:1rem;">
-                        <label class="field-label" style="display:block;margin-bottom:.5rem;">🕐 ¿A qué hora quieres tu servicio?</label>
-                        <select id="horario-select" class="field-input" style="width:100%;">
-                            <option value="">Selecciona un horario…</option>
-                        </select>
-                    </div>
-
                     <!-- Aviso del cargo de servicio (aparece con el horario) -->
                     <div id="cargo-aviso" style="display:none;background:rgba(251,183,36,.1);border:1px solid rgba(251,183,36,.35);border-radius:12px;padding:.9rem 1rem;margin-bottom:1rem;">
                         <div style="font-size:.9rem;color:#FBB724;font-weight:800;margin-bottom:.3rem;">🛵 Pedir tortumóvil a tu ubicación</div>
@@ -317,10 +309,7 @@ window.compartirMiUbicacion = function() {
                 mapaEl.style.display = 'block';
                 mapaEl.innerHTML = '<iframe src="https://maps.google.com/maps?q=' + lat + ',' + lng + '&z=16&output=embed" style="width:100%;height:100%;border:0;"></iframe>';
             }
-            // Mostrar el selector de horario + aviso del cargo
-            _generarHorarios();
-            var hw = document.getElementById('horario-wrap');
-            if (hw) hw.style.display = 'block';
+            // Mostrar el aviso del cargo (sin horario — es "lo antes posible")
             var cargoEl = document.getElementById('cargo-aviso');
             if (cargoEl) cargoEl.style.display = 'block';
             if (btnEl) { btnEl.innerHTML = '<span class="btn-text">🛵 Pedir tortumóvil ($5)</span>'; btnEl.disabled = false; btnEl.setAttribute('onclick', 'confirmarUbicacionYHorario()'); }
@@ -372,14 +361,8 @@ function _generarHorarios() {
 
 // Confirmar y CREAR la solicitud de tortumóvil (entra a Pedidos Disponibles)
 window.confirmarUbicacionYHorario = async function() {
-    var sel = document.getElementById('horario-select');
-    var horario = sel ? sel.value : '';
-    if (!horario) {
-        showStatus('status-2', '🕐 Por favor elige un horario para tu servicio.', 'error');
-        if (sel) sel.focus();
-        return;
-    }
-    // Guardar el horario en la sesión
+    // Ya no se pide horario — el servicio es "lo antes posible"
+    var horario = 'Lo antes posible';
     try {
         sessionStorage.setItem('tt_cliente_horario', horario);
         localStorage.setItem('tt_cliente_horario', horario);
