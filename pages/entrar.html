@@ -104,13 +104,18 @@ html { -webkit-text-size-adjust: 100%; }
 
                     <div id="ubi-mapa" style="display:none;height:180px;border-radius:12px;overflow:hidden;margin-bottom:1rem;"></div>
 
+                    <!-- Selector de horario (aparece tras compartir ubicación) -->
+                    <div id="horario-wrap" style="display:none;margin-bottom:1rem;">
+                        <label class="field-label" style="display:block;margin-bottom:.5rem;">🕐 ¿A qué hora quieres tu servicio?</label>
+                        <select id="horario-select" class="field-input" style="width:100%;">
+                            <option value="">Selecciona un horario…</option>
+                        </select>
+                    </div>
+
                     <div id="status-2" class="auth-message" style="display:none;"></div>
 
                     <button class="btn-primary" onclick="compartirMiUbicacion()" id="btn-ubicacion">
                         <span class="btn-text">📍 Compartir mi ubicación</span>
-                    </button>
-                    <button class="btn-primary" onclick="entrarSinUbicacion()" id="btn-saltar" style="background:rgba(255,255,255,.08);color:#aaa;margin-top:.5rem;">
-                        <span class="btn-text">Continuar sin ubicación →</span>
                     </button>
                     <button class="btn-primary btn-volver" onclick="volverPaso1()">← Cambiar datos</button>
                 </div>
