@@ -1615,6 +1615,17 @@ html { -webkit-text-size-adjust: 100%; }
             var urlRol = params.get('cj_rol');
             var urlTs  = params.get('cj_ts');
 
+            // ── Tomar orden de una SOLICITUD de tortumóvil ──
+            // Si viene ?solicitud=ID, guardamos ese ID para actualizar el pedido
+            // existente (en vez de crear uno nuevo) al completar la orden.
+            var urlSolicitud = params.get('solicitud');
+            if (urlSolicitud) {
+                window._solicitudActiva = urlSolicitud;
+                sessionStorage.setItem('tt_solicitud_activa', urlSolicitud);
+                // Cargar los datos del cliente de esa solicitud y precargarlos
+                setTimeout(function(){ _precargarSolicitud(urlSolicitud); }, 400);
+            }
+
             // Si vienen por URL, guardar en sessionStorage
             if (urlId && urlNom) {
                 sessionStorage.setItem('tt_cajero_id',     urlId);
