@@ -336,6 +336,16 @@ if (!miId && !miNombre) {
 }
 
 // ¿Este pedido es de este repartidor?
+function _fechaIngreso(p) {
+    var ts = null;
+    if (p.creado && p.creado.seconds) ts = p.creado.seconds * 1000;
+    else if (p.tiempos && p.tiempos.recibida) ts = p.tiempos.recibida;
+    else if (p.tomadaEn) ts = new Date(p.tomadaEn).getTime();
+    if (!ts) return '';
+    var d = new Date(ts);
+    return d.toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
 function esMiPedido(p) {
     if (p.repartidorId && miId && p.repartidorId === miId) return true;
     // Respaldo por nombre (por si el id no coincide exactamente)
