@@ -93,6 +93,7 @@
                 ['📊', 'Reportes', _base() + 'reportes.html', true],
                 ['⚙️', 'Admin', _base() + 'admin.html', true],
                 ['📋', 'Control', _base() + 'control.html', true],
+                ['🗺️', 'Mapa', _base() + 'mapa.html', true],
             ];
         } else {
             // Menú de CLIENTE — más simple
