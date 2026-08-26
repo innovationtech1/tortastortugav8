@@ -111,10 +111,16 @@ function render() {
 
     var icon = L.divIcon({ html:'📍', className:'tt-emoji-icon', iconSize:[28,28], iconAnchor:[14,28] });
     var m = L.marker([u.lat, u.lng], { icon: icon }).addTo(map);
-    m.bindPopup('<b>' + (p.cliente||'Cliente') + '</b><br>' +
-                (p.folioStr||'') + '<br>' +
-                (repNom ? ('🛵 ' + repNom) : '⚠️ Sin repartidor') + '<br>' +
-                (p.total||''));
+    // Destino según el tipo de orden: si aún es solicitud, ir a Disponibles; si no, a Mis Rutas
+    var destino = p.esSolicitudUnidad ? 'disponibles.html' : 'mi-ruta.html';
+    var popupHtml = '<div style="min-width:160px;">' +
+        '<b>' + (p.cliente||'Cliente') + '</b><br>' +
+        '<span style="color:#666;">' + (p.folioStr||'') + '</span><br>' +
+        (repNom ? ('🛵 ' + repNom) : '⚠️ Sin repartidor') + '<br>' +
+        '<b style="color:#25D366;">' + (p.total||'') + '</b><br>' +
+        '<a href="' + destino + '" style="display:block;margin-top:8px;padding:8px;background:linear-gradient(135deg,#FF7A33,#FF5A00);color:#fff;text-align:center;border-radius:8px;text-decoration:none;font-weight:800;font-size:13px;">📋 Ver orden</a>' +
+        '</div>';
+    m.bindPopup(popupHtml);
     _markers.push(m);
     puntos.push([u.lat, u.lng]);
   });
