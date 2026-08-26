@@ -1984,7 +1984,20 @@ window.guardarProducto = async function(id) {
         varContainer.querySelectorAll('.var-row').forEach(function(row) {
             var lbl = row.querySelector('.var-label')?.value.trim() || '';
             var pr  = parseFloat(row.querySelector('.var-precio')?.value) || 0;
-            if (pr > 0) variantes.push({ label: lbl, precio: pr });
+            // Sincronizar el precio dentro de la etiqueta: si la etiqueta tiene
+            // un "$XX" viejo, reemplazarlo por el precio numérico actual.
+            // Así el cliente siempre ve el precio correcto.
+            if (pr > 0) {
+                var lblSync = lbl;
+                if (/\$\s*\d+(\.\d+)?/.test(lblSync)) {
+                    // Reemplazar el precio existente en el texto
+                    lblSync = lblSync.replace(/\$\s*\d+(\.\d+)?/, '$' + pr);
+                }
+                variantes.push({ label: lblSync, precio: pr });
+                // Actualizar también el campo visible para que el usuario vea el cambio
+                var lblInput = row.querySelector('.var-label');
+                if (lblInput && lblInput.value !== lblSync) lblInput.value = lblSync;
+            }
         });
     }
 
