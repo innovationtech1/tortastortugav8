@@ -168,42 +168,6 @@ window._pendingItem = window._pendingItem || null;
                 if (!c0.telefono) c0.telefono = window._clienteActivo.telefono;
             }
         } catch(e) {}
-        // ── Asignar nombre a la orden desde el menú (solo empleados) ──
-window.toggleNombrarOrden = function() {
-    var campo = document.getElementById('campo-nombrar-orden');
-    var txt = document.getElementById('btn-nombrar-txt');
-    if (!campo) return;
-    if (campo.style.display === 'none') {
-        campo.style.display = 'block';
-        if (txt) txt.textContent = 'Nombre de la orden:';
-        var inp = document.getElementById('input-nombrar-orden');
-        if (inp) { inp.focus(); }
-    } else {
-        campo.style.display = 'none';
-        if (txt) txt.textContent = 'Asignar mesa / nombre a la orden';
-    }
-};
-
-// Sincronizar el nombre con el campo del carrito (cuenta activa)
-window.sincronizarNombreOrden = function(valor) {
-    // Actualizar el input del carrito
-    var inpCarrito = document.getElementById('nombre-cuenta-input');
-    if (inpCarrito) {
-        inpCarrito.value = valor;
-        // Disparar el evento para que se guarde en la cuenta activa
-        try { inpCarrito.dispatchEvent(new Event('input', { bubbles: true })); } catch(e){}
-        try { inpCarrito.dispatchEvent(new Event('change', { bubbles: true })); } catch(e){}
-    }
-    // Guardar también en la cuenta activa directamente si existe la estructura
-    try {
-        if (window.CS && window.CS.cuentas && window.CS.cuentaActivaId) {
-            var c = window.CS.cuentas.find(function(x){ return x.id === window.CS.cuentaActivaId; });
-            if (c) c.nombre = valor;
-            if (typeof window.guardarCarrito === 'function') window.guardarCarrito();
-        }
-    } catch(e){}
-};
-
 function precargarCliente() {
             var n = document.getElementById('customer-name');
             var t = document.getElementById('customer-phone');
@@ -4432,5 +4396,38 @@ window.cartCompartirUbicacion = function() {
 })();
 </script>
 <script type="module" src="js/contador-disponibles.js?v=1787291222"></script>
+<script>
+// ── Asignar nombre a la orden desde el menú (solo empleados) — NIVEL GLOBAL ──
+window.toggleNombrarOrden = function() {
+    var campo = document.getElementById('campo-nombrar-orden');
+    var txt = document.getElementById('btn-nombrar-txt');
+    if (!campo) return;
+    if (campo.style.display === 'none' || !campo.style.display) {
+        campo.style.display = 'block';
+        if (txt) txt.textContent = 'Nombre de la orden:';
+        var inp = document.getElementById('input-nombrar-orden');
+        if (inp) { setTimeout(function(){ inp.focus(); }, 50); }
+    } else {
+        campo.style.display = 'none';
+        if (txt) txt.textContent = 'Asignar mesa / nombre a la orden';
+    }
+};
+
+window.sincronizarNombreOrden = function(valor) {
+    var inpCarrito = document.getElementById('nombre-cuenta-input');
+    if (inpCarrito) {
+        inpCarrito.value = valor;
+        try { inpCarrito.dispatchEvent(new Event('input', { bubbles: true })); } catch(e){}
+        try { inpCarrito.dispatchEvent(new Event('change', { bubbles: true })); } catch(e){}
+    }
+    try {
+        if (window.CS && window.CS.cuentas && window.CS.cuentaActivaId) {
+            var c = window.CS.cuentas.find(function(x){ return x.id === window.CS.cuentaActivaId; });
+            if (c) c.nombre = valor;
+            if (typeof window.guardarCarrito === 'function') window.guardarCarrito();
+        }
+    } catch(e){}
+};
+</script>
 </body>
 </html>
