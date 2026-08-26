@@ -715,6 +715,31 @@ function el(id){ return document.getElementById(id); }
   // Sesión válida — Firebase la restaurará automáticamente
   window._autoLoginEmp = { empId: empId, pin: pin };
   console.log('🔄 Sesión activa para', empId, '— restaurando...');
+  // Ocultar el login y mostrar "restaurando" mientras Firebase reconecta,
+  // para no pedir de nuevo el portal a un empleado ya logueado.
+  try {
+    document.addEventListener('DOMContentLoaded', function(){
+      var authScreen = document.getElementById('s-auth');
+      if (authScreen) {
+        // Insertar un aviso de restauración arriba del login
+        var aviso = document.getElementById('_restaurando_aviso');
+        if (!aviso) {
+          aviso = document.createElement('div');
+          aviso.id = '_restaurando_aviso';
+          aviso.style.cssText = 'position:fixed;inset:0;z-index:9998;background:#0f0f0f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;';
+          aviso.innerHTML = '<div style="font-size:2.5rem;">🐢</div>' +
+            '<div style="color:#FF7A33;font-weight:800;font-size:1.05rem;">Restaurando tu sesión…</div>' +
+            '<div style="color:#888;font-size:.85rem;">' + empId + '</div>';
+          document.body.appendChild(aviso);
+          // Si en 6 segundos no restauró, quitar el aviso y dejar ver el login
+          setTimeout(function(){
+            var a = document.getElementById('_restaurando_aviso');
+            if (a) a.remove();
+          }, 6000);
+        }
+      }
+    });
+  } catch(e) {}
 })();
 function showScreen(id){ document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('on');}); var e=el(id); if(e)e.classList.add('on'); if(id==='s-auth'){ try{ _revisarHuellaGuardada(); }catch(_){} } }
 function aOv(id){ var e=el(id); if(e)e.classList.add('open'); }
@@ -1130,6 +1155,9 @@ onAuthStateChanged(auth, async u=>{
 
 /* ─── MOSTRAR PANEL EMPLEADO ──────────────────── */
 function mostrarEmp(){
+  // Quitar el aviso de restauración si existe
+  var _av = document.getElementById('_restaurando_aviso');
+  if (_av) _av.remove();
   showScreen('s-emp');
   el('btn-logout').style.display='flex';
   el('btn-back').style.display='none';
