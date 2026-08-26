@@ -1705,7 +1705,7 @@ html { -webkit-text-size-adjust: 100%; }
 <main>
     <!-- Asignar nombre/tipo a la orden (SOLO EMPLEADOS) -->
     <div id="menu-nombre-orden" style="display:none;padding:.7rem 1rem .3rem 1rem;">
-        <button onclick="abrirModalNombreCuenta()" style="width:100%;padding:.75rem 1rem;border:1px dashed rgba(255,90,0,.5);background:rgba(255,90,0,.06);color:#FF7A33;border-radius:12px;font-family:inherit;font-weight:800;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem;">
+        <button onclick="window.abrirModalNombreCuenta && window.abrirModalNombreCuenta()" style="width:100%;padding:.75rem 1rem;border:1px dashed rgba(255,90,0,.5);background:rgba(255,90,0,.06);color:#FF7A33;border-radius:12px;font-family:inherit;font-weight:800;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem;">
             🏷️ <span>Identificar cuenta (Tortumóvil / Domicilio)</span>
         </button>
     </div>
