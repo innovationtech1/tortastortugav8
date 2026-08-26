@@ -5,7 +5,23 @@
 // ═══════════════════════════════════════════════════════════
 
 (function() {
-    var VEINTE_MIN = 20 * 60 * 1000;
+    var VEINTE_MIN = 12 * 60 * 60 * 1000;  // 12 horas (turno de trabajo completo)
+
+    // Renovar el timestamp de la sesión activa para que no expire mientras el empleado trabaja
+    function renovarSesion() {
+        var ahora = Date.now();
+        function leer(k){ return sessionStorage.getItem(k) || localStorage.getItem(k); }
+        try {
+            if (leer('tt_emp_id')) {
+                sessionStorage.setItem('tt_emp_ts', String(ahora));
+                localStorage.setItem('tt_emp_ts', String(ahora));
+            }
+            if (leer('tt_cajero_nombre')) {
+                sessionStorage.setItem('tt_cajero_ts', String(ahora));
+                localStorage.setItem('tt_cajero_ts', String(ahora));
+            }
+        } catch(e) {}
+    }
 
     // Detectar que tipo de sesion hay activa
     function detectarSesion() {
@@ -265,6 +281,8 @@
 
     // Inicializar cuando el DOM este listo
     function init() {
+        // Renovar la sesión del empleado en cada carga de página
+        renovarSesion();
         var sesion = detectarSesion();
         if (sesion) crearBarra(sesion);
     }
