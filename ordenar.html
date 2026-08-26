@@ -107,7 +107,7 @@ window._pendingItem = window._pendingItem || null;
 
         // Mostrar UI cajero — funciona con DOM ya cargado o pendiente
         function mostrarUICajero() {
-                var nombreOrdenBox = document.getElementById('menu-nombre-orden'); if (nombreOrdenBox) nombreOrdenBox.style.display = 'block';            var banner = document.getElementById('cajero-banner');
+            var banner = document.getElementById('cajero-banner');
             var nomEl  = document.getElementById('cajero-nombre-header');
             var btnCaj = document.getElementById('btn-cajero-header');
             if (banner) banner.style.display = 'flex';
@@ -1703,13 +1703,6 @@ html { -webkit-text-size-adjust: 100%; }
 </header>
 
 <main>
-    <!-- Asignar nombre/tipo a la orden (SOLO EMPLEADOS) -->
-    <div id="menu-nombre-orden" style="display:none;padding:.7rem 1rem .3rem 1rem;">
-        <button onclick="window._abrirIdentificarDesdeMenu()" style="width:100%;padding:.75rem 1rem;border:1px dashed rgba(255,90,0,.5);background:rgba(255,90,0,.06);color:#FF7A33;border-radius:12px;font-family:inherit;font-weight:800;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem;">
-            🏷️ <span>Identificar cuenta (Tortumóvil / Domicilio)</span>
-        </button>
-    </div>
-
     <!-- TABS DE CATEGORÍAS -->
     <div id="menu-tabs-bar" style="
         display:flex;gap:.45rem;padding:.6rem 1rem;
@@ -4422,32 +4415,6 @@ window.sincronizarNombreOrden = function(valor) {
             if (typeof window.guardarCarrito === 'function') window.guardarCarrito();
         }
     } catch(e){}
-};
-</script>
-<script>
-// Wrapper seguro para abrir el modal Identificar cuenta desde el menú
-window._abrirIdentificarDesdeMenu = function() {
-    try {
-        if (typeof window.abrirModalNombreCuenta === 'function') {
-            window.abrirModalNombreCuenta();
-            // Verificar si el modal se abrió; si no, forzar la clase active
-            setTimeout(function(){
-                var m = document.getElementById('nombre-cuenta-modal');
-                if (m && !m.classList.contains('active')) {
-                    m.classList.add('active');
-                }
-            }, 100);
-        } else {
-            // Fallback: abrir el modal directamente
-            var m = document.getElementById('nombre-cuenta-modal');
-            if (m) m.classList.add('active');
-        }
-    } catch(e) {
-        console.error('Error al abrir Identificar cuenta:', e);
-        // Último recurso: mostrar el modal directamente
-        var m = document.getElementById('nombre-cuenta-modal');
-        if (m) m.classList.add('active');
-    }
 };
 </script>
 </body>
