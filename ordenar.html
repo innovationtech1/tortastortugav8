@@ -1702,6 +1702,18 @@ html { -webkit-text-size-adjust: 100%; }
 </header>
 
 <main>
+    <!-- Asignar nombre a la orden (SOLO EMPLEADOS) -->
+    <div id="menu-nombre-orden" style="display:none;padding:.7rem 1rem .3rem 1rem;">
+        <button id="btn-nombrar-orden" onclick="toggleNombrarOrden()" style="width:100%;padding:.75rem 1rem;border:1px dashed rgba(255,90,0,.5);background:rgba(255,90,0,.06);color:#FF7A33;border-radius:12px;font-family:inherit;font-weight:800;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem;">
+            🏷️ <span id="btn-nombrar-txt">Asignar mesa / nombre a la orden</span>
+        </button>
+        <div id="campo-nombrar-orden" style="display:none;margin-top:.5rem;">
+            <input type="text" id="input-nombrar-orden" placeholder="Ej: Mesa 5, Juan, Para llevar…"
+                oninput="sincronizarNombreOrden(this.value)"
+                style="width:100%;padding:.8rem 1rem;border:1px solid rgba(255,90,0,.4);background:#1a1a1a;color:#fff;border-radius:12px;font-family:inherit;font-size:16px;font-weight:700;">
+        </div>
+    </div>
+
     <!-- TABS DE CATEGORÍAS -->
     <div id="menu-tabs-bar" style="
         display:flex;gap:.45rem;padding:.6rem 1rem;
