@@ -480,9 +480,9 @@ function render(pedidos) {
             (p.telefono ? '<div class="pc-linea">📞 <a href="tel:'+p.telefono+'" style="color:#5B9BFF;">'+p.telefono+'</a></div>' : '') +
             (dir ? '<div class="pc-linea">📍 '+dir+'</div>' : '') +
             (p.horarioEntregaEtiqueta ? '<div class="pc-linea">🕐 '+p.horarioEntregaEtiqueta+'</div>' : '') +
-            (itemsTxt.length ? '<div class="pc-linea" style="flex-direction:column;gap:.1rem;margin-top:.4rem;">'+
+            (itemsTxt.length ? '<div class="pc-linea" style="flex-direction:column;gap:.1rem;margin-top:.4rem;text-align:center;align-items:center;">'+
                 itemsTxt.map(function(it){ return '<div>• '+it+'</div>'; }).join('')+'</div>' : '') +
-            '<div><span class="pc-pago '+pago.clase+'">'+pago.txt+'</span></div>' +
+            '<div style="text-align:center;margin:.4rem 0;"><span class="pc-pago '+pago.clase+'">'+pago.txt+'</span></div>' +
             // Botón pedir ubicación (solo si el cliente aún no la compartió)
             ((!lat || !lng) ?
               '<button class="btn-pedir-ubi" style="width:100%;border:1px solid rgba(255,90,0,.4);' +
