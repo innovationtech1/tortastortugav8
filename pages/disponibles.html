@@ -367,6 +367,28 @@ window.aceptarPedido = async function(id) {
 
 // ── Escuchar pedidos disponibles ──
 let _ultimaLista = [];
+// Mostrar los productos ordenados (si la orden ya tiene items)
+function _listaProductos(p) {
+    // No mostrar si aún es solicitud pendiente sin productos
+    if (p.esSolicitudUnidad) return '';
+    var items = p.itemsData;
+    var html = '';
+    if (Array.isArray(items) && items.length) {
+        html = items.map(function(it){
+            var nom = it.nombre || it.producto || it.name || 'Producto';
+            var cant = it.cantidad || it.qty || 1;
+            return '<div style="font-size:.8rem;color:#ccc;padding:.1rem 0;">• ' + cant + '× ' + nom + '</div>';
+        }).join('');
+    } else if (p.items && typeof p.items === 'string' && p.items.indexOf('Pendiente') < 0) {
+        // Respaldo: items como texto
+        html = '<div style="font-size:.8rem;color:#ccc;">' + p.items + '</div>';
+    }
+    if (!html) return '';
+    return '<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:.5rem .6rem;margin:.4rem 0;">' +
+           '<div style="font-size:.7rem;color:#888;text-transform:uppercase;font-weight:700;margin-bottom:.2rem;">🛍️ Orden del cliente</div>' +
+           html + '</div>';
+}
+
 // Formatear fecha/hora de ingreso de la orden
 function _fechaIngreso(p) {
     var ts = null;
@@ -590,6 +612,7 @@ function render(disp) {
               '<div class="pn-total">' + (p.total || '') + '</div>' +
             '</div>' +
             (p.telefono ? '<div class="pn-linea">📞 <a href="tel:'+p.telefono+'">'+p.telefono+'</a></div>' : '') +
+            _listaProductos(p) +
             ((p.horarioAgendado || p.horarioEntregaEtiqueta) ? '<div class="pn-linea" style="color:#FBB724;font-weight:700;">🕐 Agendado: ' + (p.horarioAgendado || p.horarioEntregaEtiqueta) + '</div>' : '') +
             '<div class="pn-linea" style="color:#888;">Orden #' + folio + '</div>' +
             (_fechaIngreso(p) ? '<div class="pn-linea" style="color:#888;font-size:.75rem;">🕐 Ingresó: ' + _fechaIngreso(p) + '</div>' : '') +
