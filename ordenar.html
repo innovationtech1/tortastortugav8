@@ -1846,13 +1846,14 @@ html { -webkit-text-size-adjust: 100%; }
         <!-- BOTONES CUENTA -->
         <div id="cart-nombre-row" style="display:flex;gap:.4rem;padding:.4rem .9rem;flex-shrink:0;align-items:center;">
             <button onclick="window.abrirModalNombreCuenta()"
-                style="flex:2;box-sizing:border-box;padding:.55rem .7rem;
-                       background:rgba(255,90,0,.1);
-                       border:1.5px solid rgba(255,90,0,.35);
-                       color:#fff;border-radius:8px;font-family:inherit;
-                       font-size:.82rem;font-weight:600;cursor:pointer;text-align:left;
+                style="flex:2;box-sizing:border-box;padding:.7rem .9rem;
+                       background:linear-gradient(135deg,#FF7A33,#FF5A00);
+                       border:none;
+                       color:#fff;border-radius:12px;font-family:inherit;
+                       font-size:.88rem;font-weight:800;cursor:pointer;text-align:left;
+                       box-shadow:0 3px 12px rgba(255,90,0,.35);
                        display:flex;align-items:center;gap:.5rem;min-width:0;">
-                <span style="flex-shrink:0;">🏷️</span>
+                <span style="flex-shrink:0;font-size:1.05rem;">🏷️</span>
                 <span id="nombre-cuenta-display" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Asignar mesa / nombre</span>
             </button>
             <button onclick="window.limpiarCuentaActiva()"
