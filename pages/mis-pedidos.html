@@ -205,10 +205,10 @@ function render() {
             ? `<button class="mp-btn" style="background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.4);color:#25D366;" onclick="verUbicacionCliente('${p.id}')">🗺️ Ver ubicación en vivo</button>`
             : `<button class="mp-btn" style="background:rgba(255,90,0,.15);border:1px solid rgba(255,90,0,.4);color:#FF7A33;" onclick="pedirUbicacionCliente('${p.id}','${_tel}','${_nomCli}')">📍 Pedir ubicación</button>`;
 
-        // Botón asignar repartidor (muestra el asignado o invita a asignar)
+        // Etiqueta informativa del repartidor asignado (la asignación se hace en Mis Rutas)
         let btnRepartidor = p.repartidorNombre
-            ? `<button class="mp-btn" style="background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.4);color:#25D366;" onclick="abrirAsignarRepartidor('${p.id}','${(p.ticket||p.id)}')">🛵 ${p.repartidorNombre}</button>`
-            : `<button class="mp-btn" style="background:rgba(91,155,255,.15);border:1px solid rgba(91,155,255,.4);color:#5B9BFF;" onclick="abrirAsignarRepartidor('${p.id}','${(p.ticket||p.id)}')">🛵 Asignar repartidor</button>`;
+            ? `<div class="mp-btn" style="background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.3);color:#25D366;cursor:default;">🛵 Reparte: ${p.repartidorNombre}</div>`
+            : `<div class="mp-btn" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:#888;cursor:default;">🛵 Sin repartidor asignado</div>`;
 
         // Botón de cobro
         let btnCobro = pagado
