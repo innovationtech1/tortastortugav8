@@ -1703,13 +1703,6 @@ html { -webkit-text-size-adjust: 100%; }
 </header>
 
 <main>
-    <!-- Ingresar nombre del cliente (SOLO EMPLEADOS) -->
-    <div id="menu-ingresar-nombre" style="display:none;padding:.8rem 1rem .4rem 1rem;">
-        <button id="btn-ingresar-nombre-cliente" type="button" onclick="var _m=document.getElementById('nombre-cuenta-modal'); if(window.abrirModalNombreCuenta){try{window.abrirModalNombreCuenta();}catch(e){}} if(_m){_m.classList.add('active');}" style="width:100%;padding:.9rem 1rem;border:none;border-radius:14px;background:linear-gradient(135deg,#FF7A33,#FF5A00);color:#fff;font-family:inherit;font-weight:800;font-size:.95rem;cursor:pointer;box-shadow:0 4px 14px rgba(255,90,0,.35);display:flex;align-items:center;justify-content:center;gap:.5rem;">
-            🏷️ Ingresar nombre del cliente
-        </button>
-    </div>
-
     <!-- TABS DE CATEGORÍAS -->
     <div id="menu-tabs-bar" style="
         display:flex;gap:.45rem;padding:.6rem 1rem;
@@ -4391,49 +4384,5 @@ window.cartCompartirUbicacion = function() {
 })();
 </script>
 <script type="module" src="js/contador-disponibles.js?v=1787291222"></script>
-<script>
-// Botón "Ingresar nombre del cliente" — mostrar solo a empleados y conectar el clic.
-// Script independiente y seguro.
-(function(){
-    function _initBtnNombre() {
-        try {
-            var empId = sessionStorage.getItem('tt_emp_id') || localStorage.getItem('tt_emp_id') ||
-                        sessionStorage.getItem('tt_cajero_id') || localStorage.getItem('tt_cajero_id');
-            var cliNom = sessionStorage.getItem('tt_cliente_nombre') || localStorage.getItem('tt_cliente_nombre');
-            var cliTs = parseInt(sessionStorage.getItem('tt_cliente_ts') || localStorage.getItem('tt_cliente_ts') || '0');
-            var clienteActivo = cliNom && (Date.now() - cliTs < 20*60*1000);
-            var box = document.getElementById('menu-ingresar-nombre');
-            var btn = document.getElementById('btn-ingresar-nombre-cliente');
-            if (box && empId && !clienteActivo) {
-                box.style.display = 'block';
-            }
-            // Conectar el clic con addEventListener (más confiable que onclick inline)
-            if (btn && !btn._conectado) {
-                btn._conectado = true;
-                btn.addEventListener('click', function(ev){
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                    // Abrir el modal Identificar cuenta
-                    if (typeof window.abrirModalNombreCuenta === 'function') {
-                        window.abrirModalNombreCuenta();
-                    }
-                    // Asegurar que el modal quede visible
-                    setTimeout(function(){
-                        var m = document.getElementById('nombre-cuenta-modal');
-                        if (m) m.classList.add('active');
-                    }, 60);
-                });
-            }
-        } catch(e) { console.warn('btn nombre cliente:', e); }
-    }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', _initBtnNombre);
-    } else {
-        _initBtnNombre();
-    }
-    // Reintentar por si el DOM del modal carga después
-    setTimeout(_initBtnNombre, 1500);
-})();
-</script>
 </body>
 </html>
