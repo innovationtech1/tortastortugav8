@@ -1703,6 +1703,13 @@ html { -webkit-text-size-adjust: 100%; }
 </header>
 
 <main>
+    <!-- Ingresar nombre del cliente (SOLO EMPLEADOS) -->
+    <div id="menu-ingresar-nombre" style="display:none;padding:.7rem 1rem .3rem 1rem;">
+        <button onclick="window.abrirModalNombreCuenta()" style="width:100%;padding:.75rem 1rem;border:1px dashed rgba(255,90,0,.5);background:rgba(255,90,0,.06);color:#FF7A33;border-radius:12px;font-family:inherit;font-weight:800;font-size:.9rem;cursor:pointer;">
+            🏷️ Ingresar nombre del cliente
+        </button>
+    </div>
+
     <!-- TABS DE CATEGORÍAS -->
     <div id="menu-tabs-bar" style="
         display:flex;gap:.45rem;padding:.6rem 1rem;
@@ -4384,5 +4391,29 @@ window.cartCompartirUbicacion = function() {
 })();
 </script>
 <script type="module" src="js/contador-disponibles.js?v=1787291222"></script>
+<script>
+// Mostrar el botón "Ingresar nombre del cliente" SOLO si hay sesión de empleado.
+// Script independiente y seguro — no interfiere con el resto del código.
+(function(){
+    function _mostrarBtnNombre() {
+        try {
+            var empId = sessionStorage.getItem('tt_emp_id') || localStorage.getItem('tt_emp_id') ||
+                        sessionStorage.getItem('tt_cajero_id') || localStorage.getItem('tt_cajero_id');
+            var cliNom = sessionStorage.getItem('tt_cliente_nombre') || localStorage.getItem('tt_cliente_nombre');
+            var cliTs = parseInt(sessionStorage.getItem('tt_cliente_ts') || localStorage.getItem('tt_cliente_ts') || '0');
+            var clienteActivo = cliNom && (Date.now() - cliTs < 20*60*1000);
+            var box = document.getElementById('menu-ingresar-nombre');
+            if (box && empId && !clienteActivo) {
+                box.style.display = 'block';
+            }
+        } catch(e) {}
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _mostrarBtnNombre);
+    } else {
+        _mostrarBtnNombre();
+    }
+})();
+</script>
 </body>
 </html>
