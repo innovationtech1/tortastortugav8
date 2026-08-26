@@ -220,6 +220,7 @@ function render() {
                 <div>
                     <div class="mp-folio">${folio} <span class="mp-hora">${hora}</span></div>
                     <div class="mp-cliente">${p.cliente || 'Cliente'}</div>
+                        ${(p.cajeroNombre || p.tortumovilNombre) ? `<div style="font-size:.72rem;color:#888;margin-top:2px;">📝 Tomó: ${p.cajeroNombre || p.tortumovilNombre}</div>` : ''}
                     ${esTortu ? '<span class="mp-badge" style="background:rgba(37,211,102,.15);color:#25D366;">🚐 Tortumóvil</span>' : ''}
                 </div>
                 <span class="mp-estado ${claseEstado(estado)}">${estado}</span>
