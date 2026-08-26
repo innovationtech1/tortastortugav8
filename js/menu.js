@@ -485,17 +485,18 @@ function _renderProductos(productos) {
 }
 
 export async function renderMenu() {
-    // Solo cargar una vez
-    if (window._menuCargado) return;
-    window._menuCargado = true;
+    // Evitar suscripciones duplicadas
+    if (window._menuSnapshotActivo) return;
+    window._menuSnapshotActivo = true;
 
     _limpiarMenuContainers();
     const mc = document.getElementById('menu-container');
     if (mc) mc.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">Cargando menú...</div>';
 
-    try {
-        const snapshot = await getDocs(collection(db, 'productos'));
-
+    // ── TIEMPO REAL: escuchar cambios en productos y re-renderizar al instante ──
+    // Así los cambios de precio o productos nuevos aparecen sin recargar.
+    onSnapshot(collection(db, 'productos'), function(snapshot) {
+      try {
         if (snapshot.empty) {
             _renderProductos([...PRODUCTOS_INICIALES]);
             return;
@@ -568,10 +569,14 @@ export async function renderMenu() {
         });
 
         _renderProductos(fsProds);
-    } catch(e) {
+      } catch(e) {
         console.warn('Menu Firestore error, usando estatico:', e);
         _renderProductos([...PRODUCTOS_INICIALES]);
-    }
+      }
+    }, function(err){
+        console.warn('onSnapshot productos error:', err);
+        _renderProductos([...PRODUCTOS_INICIALES]);
+    });
 }
 
 
