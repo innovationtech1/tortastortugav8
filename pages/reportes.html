@@ -120,7 +120,7 @@ function esVentaValida(p) {
 //  • Tortumóvil → a quien la cobró (cobradoPor)
 function _esMiVenta(p) {
     if (_esDomicilioVenta(p)) {
-        return (p.repartidorId && p.repartidorId === _miIdRep);
+        return (p.repartidorId && String(p.repartidorId) === String(_miIdRep));
     } else {
         return (p.cobradoPor && p.cobradoPor === _miNombreRep) ||
                (p.cajeroId && p.cajeroId === _miIdRep) ||
