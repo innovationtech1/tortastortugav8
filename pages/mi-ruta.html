@@ -814,6 +814,22 @@ window.cerrarRepModalTT = function() {
 };
 
 // Seleccionar un repartidor del modal
+window._toggleFotoRuta = function(pid) {
+    var cont = document.getElementById('fotor-cont-' + pid);
+    var txt = document.getElementById('fotor-txt-' + pid);
+    var icon = document.getElementById('fotor-icon-' + pid);
+    if (!cont) return;
+    if (cont.style.display === 'none') {
+        cont.style.display = 'block';
+        if (txt) txt.textContent = 'Ocultar foto';
+        if (icon) icon.textContent = '🔽';
+    } else {
+        cont.style.display = 'none';
+        if (txt) txt.textContent = 'Ver foto de referencia';
+        if (icon) icon.textContent = '📸';
+    }
+};
+
 window._seleccionarRepTT = function(repId, repNom) {
     var pedidoId = window._repPedidoIdTT;
     if (!pedidoId) return;
