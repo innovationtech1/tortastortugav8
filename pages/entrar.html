@@ -302,6 +302,54 @@ window.enviarCodigo = async function() {
 }
 
 // ── Compartir ubicación GPS y entrar ──
+// ── Foto de referencia (opcional): procesar, comprimir y guardar ──
+window._fotoRefData = null;  // guardará la foto comprimida en base64
+
+window.procesarFotoRef = function(input) {
+    var file = input.files && input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var img = new Image();
+        img.onload = function() {
+            // Comprimir: redimensionar a máx 800px de ancho y calidad 0.6
+            var canvas = document.createElement('canvas');
+            var maxW = 800;
+            var scale = Math.min(1, maxW / img.width);
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            // Comprimir a JPEG calidad 0.6
+            var dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+            // Si sigue muy grande (>700KB en base64), bajar más la calidad
+            if (dataUrl.length > 700000) {
+                dataUrl = canvas.toDataURL('image/jpeg', 0.4);
+            }
+            window._fotoRefData = dataUrl;
+            // Mostrar vista previa
+            var prev = document.getElementById('foto-ref-preview');
+            var imgEl = document.getElementById('foto-ref-img');
+            var botones = document.getElementById('foto-ref-botones');
+            if (imgEl) imgEl.src = dataUrl;
+            if (prev) prev.style.display = 'block';
+            if (botones) botones.style.display = 'none';
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+};
+
+window.quitarFotoRef = function() {
+    window._fotoRefData = null;
+    var prev = document.getElementById('foto-ref-preview');
+    var botones = document.getElementById('foto-ref-botones');
+    var imgEl = document.getElementById('foto-ref-img');
+    if (imgEl) imgEl.src = '';
+    if (prev) prev.style.display = 'none';
+    if (botones) botones.style.display = 'flex';
+};
+
 window.compartirMiUbicacion = function() {
     var estadoEl = document.getElementById('ubi-estado');
     var btnEl = document.getElementById('btn-ubicacion');
@@ -334,6 +382,8 @@ window.compartirMiUbicacion = function() {
             // Mostrar el aviso del cargo (sin horario — es "lo antes posible")
             var cargoEl = document.getElementById('cargo-aviso');
             if (cargoEl) cargoEl.style.display = 'block';
+                    var fotoSecc = document.getElementById('foto-ref-seccion');
+                    if (fotoSecc) fotoSecc.style.display = 'block';
             if (btnEl) { btnEl.innerHTML = '<span class="btn-text">🛵 Pedir tortumóvil ($5)</span>'; btnEl.disabled = false; btnEl.setAttribute('onclick', 'confirmarUbicacionYHorario()'); }
             showStatus('status-2', 'Elige el horario y confirma tu solicitud.', 'info');
         },
