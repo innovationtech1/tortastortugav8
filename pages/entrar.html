@@ -542,6 +542,7 @@ window.volverPaso1 = function() {
     const pt = document.getElementById('paso-telefono');
     if (pc) pc.classList.remove('activo');
     if (pt) pt.classList.add('activo');
+    try { sessionStorage.removeItem('tt_paso_activo'); } catch(e){}
     var s = document.getElementById('status-2');
     if (s) s.style.display = 'none';
 };
@@ -634,6 +635,50 @@ window.enviarRecuperacion = async function() {
         showStatus('status-recuperar', msgs[e.code] || 'No se pudo enviar el correo. Intenta de nuevo.', 'error');
     }
 };
+
+// ── Restaurar el paso activo tras volver de la cámara/galería ──
+// Android puede recargar la página al abrir la cámara; restauramos el paso.
+(function _restaurarPaso() {
+    function restaurar() {
+        try {
+            var pasoGuardado = sessionStorage.getItem('tt_paso_activo');
+            var nombre = sessionStorage.getItem('tt_cliente_nombre');
+            if (pasoGuardado === 'ubicacion' && nombre) {
+                var pt = document.getElementById('paso-telefono');
+                var pc = document.getElementById('paso-ubicacion');
+                if (pt && pc) {
+                    pt.classList.remove('activo');
+                    pc.classList.add('activo');
+                    // Restaurar la ubicación en el mapa si ya la tenía
+                    var uStr = sessionStorage.getItem('tt_cliente_ubicacion') || localStorage.getItem('tt_cliente_ubicacion');
+                    if (uStr) {
+                        try {
+                            var u = JSON.parse(uStr);
+                            var estadoEl = document.getElementById('ubi-estado');
+                            if (estadoEl) estadoEl.innerHTML = '<div style="font-size:.85rem;color:#25D366;font-weight:700;">✅ Ubicación lista (±' + (u.precision||0) + 'm)</div>';
+                            var mapaEl = document.getElementById('ubi-mapa');
+                            if (mapaEl) {
+                                mapaEl.style.display = 'block';
+                                mapaEl.innerHTML = '<iframe src="https://maps.google.com/maps?q=' + u.lat + ',' + u.lng + '&z=16&output=embed" style="width:100%;height:100%;border:0;"></iframe>';
+                            }
+                            var fotoSecc = document.getElementById('foto-ref-seccion');
+                            if (fotoSecc) fotoSecc.style.display = 'block';
+                            var cargoEl = document.getElementById('cargo-aviso');
+                            if (cargoEl) cargoEl.style.display = 'block';
+                            var btnEl = document.getElementById('btn-ubicacion');
+                            if (btnEl) { btnEl.innerHTML = '<span class="btn-text">🛵 Pedir tortumóvil ($5)</span>'; btnEl.disabled = false; btnEl.setAttribute('onclick', 'confirmarUbicacionYHorario()'); }
+                        } catch(e){}
+                    }
+                }
+            }
+        } catch(e){}
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', restaurar);
+    } else {
+        restaurar();
+    }
+})();
 </script>
 </body>
 </html>
