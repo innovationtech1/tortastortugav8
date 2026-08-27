@@ -474,7 +474,7 @@ window.confirmarUbicacionYHorario = async function() {
             tipoServicio: 'Solicitud tortumóvil',
             esSolicitudUnidad: true,       // marca especial: solo solicitud, sin productos aún
             ubicacionCliente: ubi,
-            fotoReferencia: window._fotoRefData || null,   // foto de referencia del cliente (opcional)
+            fotoReferencia: (window._fotoRefData || sessionStorage.getItem('tt_foto_ref') || null),   // foto de referencia (opcional)
             horarioAgendado: horario,
             // Cargo de servicio de $5 (se sumará cuando el repartidor tome la orden)
             cargoServicio: 5,
@@ -673,6 +673,14 @@ window.enviarRecuperacion = async function() {
                             }
                             var fotoSecc = document.getElementById('foto-ref-seccion');
                             if (fotoSecc) fotoSecc.style.display = 'block';
+                            // Restaurar la foto de referencia si ya se había tomado
+                            try {
+                                var fotoGuardada = sessionStorage.getItem('tt_foto_ref');
+                                if (fotoGuardada) {
+                                    window._fotoRefData = fotoGuardada;
+                                    if (typeof _mostrarPreviewFoto === 'function') _mostrarPreviewFoto(fotoGuardada);
+                                }
+                            } catch(e){}
                             var cargoEl = document.getElementById('cargo-aviso');
                             if (cargoEl) cargoEl.style.display = 'block';
                             var btnEl = document.getElementById('btn-ubicacion');
