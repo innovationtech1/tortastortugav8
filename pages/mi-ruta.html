@@ -494,6 +494,7 @@ function render(pedidos) {
               '<div style="text-align:center;font-size:.75rem;color:#25D366;margin-bottom:.5rem;font-weight:600;">✅ Cliente compartió su ubicación</div>'
             ) +
             '<button class="btn-maps" style="width:100%;border:1px solid rgba(66,133,244,.4);cursor:pointer;" onclick="abrirEntrega(\''+p.id+'\')">🗺️ Cómo llegar y cobrar</button>' +
+            (p.fotoReferencia ? '<button onclick="_toggleFotoRuta(\''+p.id+'\')" style="width:100%;margin-top:.5rem;padding:.55rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;border-radius:8px;font-family:inherit;font-weight:700;font-size:.8rem;cursor:pointer;">📸 <span id="fotor-txt-'+p.id+'">Ver foto de referencia</span></button><div id="fotor-cont-'+p.id+'" style="display:none;margin-top:.5rem;"><img src="'+p.fotoReferencia+'" style="width:100%;border-radius:8px;" onclick="window.open(this.src)"></div>' : '') +
 
             // ── Estado de la orden + repartidor + cliente ──
             '<div style="margin-top:.7rem;padding-top:.7rem;border-top:1px solid rgba(255,255,255,.08);font-size:.8rem;line-height:1.7;">' +
