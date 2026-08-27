@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Programar orden — Tortas Tortuga</title>
+<link rel="stylesheet" href="../css/style.css?v=1786503981">
+<style>
+    body { background:#0E0E0E; color:#fff; font-family:'Poppins',-apple-system,sans-serif; margin:0; }
+    .prog-wrap { max-width:520px; margin:0 auto; padding:1rem 1rem 6rem; }
+    .prog-header {
+        background:linear-gradient(135deg,#FF7A33,#FF5A00); border-radius:0 0 20px 20px;
+        padding:1.2rem 1.2rem 1.4rem; margin:-1rem -1rem 1.2rem; box-shadow:0 4px 16px rgba(0,0,0,.3);
+    }
+    .prog-header h1 { margin:0; font-size:1.3rem; font-weight:900; display:flex; align-items:center; gap:.5rem; }
+    .prog-header p { margin:.3rem 0 0; font-size:.82rem; opacity:.9; }
+    .prog-card { background:#1a1a1a; border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:1rem; margin-bottom:1rem; }
+    .prog-label { font-size:.75rem; color:#888; text-transform:uppercase; font-weight:700; letter-spacing:.03em; margin-bottom:.4rem; }
+    .prog-input {
+        width:100%; box-sizing:border-box; background:#111; border:1.5px solid rgba(255,255,255,.15);
+        color:#fff; border-radius:10px; padding:.75rem; font-family:inherit; font-size:16px; margin-bottom:.8rem;
+    }
+    .prog-input:focus { outline:none; border-color:rgba(255,90,0,.5); }
+    /* Acordeón zona/día/horario */
+    .prog-acc { margin-bottom:.6rem; }
+    .prog-acc-head {
+        width:100%; display:flex; justify-content:space-between; align-items:center;
+        background:#1a1a1a; border:1.5px solid rgba(255,90,0,.25); color:#fff; border-radius:12px;
+        padding:.85rem 1rem; font-family:inherit; font-size:.9rem; font-weight:700; cursor:pointer;
+    }
+    .prog-acc-head .val { color:#888; font-weight:600; font-size:.8rem; }
+    .prog-acc-body { display:none; padding:.6rem 0; }
+    .prog-zona-grid { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; }
+    .prog-zona-btn, .prog-fecha-btn, .prog-hora-btn {
+        padding:.7rem; background:rgba(255,255,255,.05); border:1.5px solid rgba(255,255,255,.12);
+        color:#fff; border-radius:10px; font-family:inherit; font-size:.82rem; font-weight:700; cursor:pointer;
+    }
+    .prog-zona-btn.sel, .prog-fecha-btn.sel, .prog-hora-btn.sel {
+        background:rgba(255,90,0,.15); border-color:#FF7A33; color:#FF7A33;
+    }
+    .prog-hora-btn:disabled { opacity:.3; cursor:not-allowed; }
+    .prog-fecha-row { display:flex; gap:.4rem; overflow-x:auto; padding-bottom:.3rem; }
+    .prog-fecha-btn { flex-shrink:0; min-width:64px; text-align:center; }
+    .prog-hora-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.4rem; max-height:34vh; overflow-y:auto; }
+    .prog-enviar {
+        width:100%; padding:1rem; border:none; border-radius:14px;
+        background:linear-gradient(135deg,#FF7A33,#FF5A00); color:#fff;
+        font-family:inherit; font-weight:800; font-size:1rem; cursor:pointer;
+        box-shadow:0 4px 16px rgba(255,90,0,.35); margin-top:.5rem;
+    }
+    .prog-enviar:disabled { opacity:.5; cursor:not-allowed; }
+    .prog-status { text-align:center; font-size:.85rem; padding:.6rem; border-radius:10px; margin-top:.8rem; display:none; }
+    .prog-status.ok { background:rgba(37,211,102,.12); color:#25D366; display:block; }
+    .prog-status.err { background:rgba(244,67,54,.12); color:#F44336; display:block; }
+    .prog-status.info { background:rgba(91,155,255,.12); color:#5B9BFF; display:block; }
+    #prog-loading-hora { font-size:.78rem; color:#888; padding:.3rem 0; }
+</style>
+</head>
+<body>
+<div class="prog-wrap">
+    <div class="prog-header">
+        <h1>🗓️ Programar orden</h1>
+        <p>Agenda una entrega a domicilio por zona y horario. Los productos se toman después.</p>
+    </div>
+
+    <!-- Datos del cliente -->
+    <div class="prog-card">
+        <div class="prog-label">👤 Nombre del cliente</div>
+        <input type="text" id="prog-nombre" class="prog-input" placeholder="Ej: Juan Pérez">
+        <div class="prog-label">📞 Teléfono</div>
+        <input type="tel" id="prog-telefono" class="prog-input" placeholder="210-555-1234">
+    </div>
+
+    <!-- Zona / Día / Horario -->
+    <div class="prog-card">
+        <!-- Zona -->
+        <div class="prog-acc">
+            <button type="button" class="prog-acc-head" onclick="progToggle('zona')">
+                <span>📍 1. Zona de entrega</span>
+                <span class="val" id="prog-zona-val">Elegir</span>
+            </button>
+            <div class="prog-acc-body" id="prog-zona-body">
+                <div class="prog-zona-grid" id="prog-zona-botones"></div>
+            </div>
+        </div>
+        <!-- Día -->
+        <div class="prog-acc">
+            <button type="button" class="prog-acc-head" onclick="progToggle('fecha')">
+                <span>🗓️ 2. Día de entrega</span>
+                <span class="val" id="prog-fecha-val">Elegir</span>
+            </button>
+            <div class="prog-acc-body" id="prog-fecha-body">
+                <div class="prog-fecha-row" id="prog-fecha-botones"></div>
+            </div>
+        </div>
+        <!-- Horario -->
+        <div class="prog-acc">
+            <button type="button" class="prog-acc-head" onclick="progToggle('horario')">
+                <span>🕐 3. Horario</span>
+                <span class="val" id="prog-horario-val">Elegir</span>
+            </button>
+            <div class="prog-acc-body" id="prog-horario-body">
+                <div id="prog-loading-hora" style="display:none;">Cargando horarios…</div>
+                <div class="prog-hora-grid" id="prog-horario-botones"></div>
+                <div id="prog-horario-vacio" style="display:none;font-size:.78rem;color:#F44336;padding:.3rem 0;">Elige primero la zona y el día.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ubicación / dirección -->
+    <div class="prog-card">
+        <div class="prog-label">📌 Dirección o referencia (opcional)</div>
+        <input type="text" id="prog-direccion" class="prog-input" placeholder="Ej: 123 Main St, o punto de referencia">
+        <div style="font-size:.75rem;color:#888;">Puedes dejar la dirección exacta para después; la zona y el horario ya organizan la entrega.</div>
+    </div>
+
+    <button class="prog-enviar" id="prog-btn-enviar" onclick="programarOrden()">🗓️ Programar esta orden</button>
+    <div class="prog-status" id="prog-status"></div>
+</div>
+
+<script type="module">
+import { db } from '../js/firebase-config.js';
+import { collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { CONFIG_COLAS, fechasDisponibles, consultarDisponibilidad, reservarSlot, horaBonita } from '../js/colas-entrega.js';
+
+// Estado de la selección
+let _sel = { zona: null, zonaNombre: null, fecha: null, fechaNombre: null, hora: null };
+
+// ── Acordeón ──
+window.progToggle = function(cual) {
+    var body = document.getElementById('prog-' + cual + '-body');
+    if (!body) return;
+    var abierto = body.style.display === 'block';
+    // Cerrar todos
+    ['zona','fecha','horario'].forEach(function(c){
+        var b = document.getElementById('prog-' + c + '-body');
+        if (b) b.style.display = 'none';
+    });
+    if (!abierto) body.style.display = 'block';
+    if (cual === 'horario' && !abierto) _cargarHorarios();
+};
+
+// ── Renderizar zonas ──
+function _renderZonas() {
+    var cont = document.getElementById('prog-zona-botones');
+    if (!cont) return;
+    cont.innerHTML = CONFIG_COLAS.zonas.map(function(z){
+        return '<button type="button" class="prog-zona-btn" data-zona="'+z.id+'" onclick="progElegirZona(\'' + z.id + '\',\'' + z.nombre + '\')">' + z.nombre + '</button>';
+    }).join('');
+}
+
+window.progElegirZona = function(id, nombre) {
+    _sel.zona = id;
+    _sel.zonaNombre = nombre;
+    document.getElementById('prog-zona-val').textContent = nombre;
+    document.querySelectorAll('.prog-zona-btn').forEach(function(b){
+        b.classList.toggle('sel', b.dataset.zona === id);
+    });
+    // Reset horario porque cambió la zona
+    _sel.hora = null;
+    document.getElementById('prog-horario-val').textContent = 'Elegir';
+    // Abrir el siguiente paso
+    setTimeout(function(){ window.progToggle('fecha'); }, 200);
+};
+
+// ── Renderizar fechas ──
+function _renderFechas() {
+    var cont = document.getElementById('prog-fecha-botones');
+    if (!cont) return;
+    var fechas = fechasDisponibles(7);
+    cont.innerHTML = fechas.map(function(f){
+        return '<button type="button" class="prog-fecha-btn" data-fecha="'+f.fecha+'" onclick="progElegirFecha(\'' + f.fecha + '\',\'' + f.etiqueta + '\')">' + f.etiqueta + '</button>';
+    }).join('');
+}
+
+window.progElegirFecha = function(valor, etiqueta) {
+    _sel.fecha = valor;
+    _sel.fechaNombre = etiqueta;
+    document.getElementById('prog-fecha-val').textContent = etiqueta;
+    document.querySelectorAll('.prog-fecha-btn').forEach(function(b){
+        b.classList.toggle('sel', b.dataset.fecha === valor);
+    });
+    _sel.hora = null;
+    document.getElementById('prog-horario-val').textContent = 'Elegir';
+    setTimeout(function(){ window.progToggle('horario'); }, 200);
+};
+
+// ── Cargar horarios disponibles según zona + fecha ──
+async function _cargarHorarios() {
+    var loading = document.getElementById('prog-loading-hora');
+    var cont = document.getElementById('prog-horario-botones');
+    var vacio = document.getElementById('prog-horario-vacio');
+    if (!_sel.zona || !_sel.fecha) {
+        if (cont) cont.innerHTML = '';
+        if (vacio) vacio.style.display = 'block';
+        return;
+    }
+    if (vacio) vacio.style.display = 'none';
+    if (loading) loading.style.display = 'block';
+    if (cont) cont.innerHTML = '';
+    try {
+        var disp = await consultarDisponibilidad(_sel.zona, _sel.fecha);
+        if (loading) loading.style.display = 'none';
+        if (!disp || !disp.length) {
+            if (vacio) { vacio.textContent = 'No hay horarios disponibles ese día.'; vacio.style.display = 'block'; }
+            return;
+        }
+        cont.innerHTML = disp.map(function(h){
+            var libre = h.restantes > 0 && !h.bloqueado && !h.yaPaso;
+            return '<button type="button" class="prog-hora-btn" data-hora="'+h.hora+'" ' +
+                   (libre ? '' : 'disabled') +
+                   ' onclick="progElegirHora(\'' + h.hora + '\')">' + horaBonita(h.hora) +
+                   (libre ? '' : ' (lleno)') + '</button>';
+        }).join('');
+    } catch(e) {
+        console.error('Error cargando horarios:', e);
+        if (loading) loading.style.display = 'none';
+        if (vacio) { vacio.textContent = 'No se pudieron cargar los horarios.'; vacio.style.display = 'block'; }
+    }
+}
+
+window.progElegirHora = function(hora) {
+    _sel.hora = hora;
+    document.getElementById('prog-horario-val').textContent = horaBonita(hora);
+    document.querySelectorAll('.prog-hora-btn').forEach(function(b){
+        b.classList.toggle('sel', b.dataset.hora === hora);
+    });
+    setTimeout(function(){
+        var body = document.getElementById('prog-horario-body');
+        if (body) body.style.display = 'none';
+    }, 200);
+};
+
+// ── Programar la orden ──
+window.programarOrden = async function() {
+    var nombre = (document.getElementById('prog-nombre').value || '').trim();
+    var telefono = (document.getElementById('prog-telefono').value || '').trim();
+    var direccion = (document.getElementById('prog-direccion').value || '').trim();
+    var status = document.getElementById('prog-status');
+    var btn = document.getElementById('prog-btn-enviar');
+
+    function mostrar(msg, tipo) {
+        if (status) { status.textContent = msg; status.className = 'prog-status ' + tipo; }
+    }
+
+    if (!nombre) { mostrar('Escribe el nombre del cliente.', 'err'); return; }
+    if (!_sel.zona) { mostrar('Elige la zona de entrega.', 'err'); return; }
+    if (!_sel.fecha) { mostrar('Elige el día de entrega.', 'err'); return; }
+    if (!_sel.hora) { mostrar('Elige el horario.', 'err'); return; }
+
+    btn.disabled = true;
+    mostrar('Programando…', 'info');
+
+    try {
+        // Quién agenda (empleado logueado)
+        var empId = sessionStorage.getItem('tt_emp_id') || localStorage.getItem('tt_emp_id') ||
+                    sessionStorage.getItem('tt_cajero_id') || localStorage.getItem('tt_cajero_id') || '';
+        var empNombre = sessionStorage.getItem('tt_emp_nombre') || localStorage.getItem('tt_emp_nombre') ||
+                        sessionStorage.getItem('tt_cajero_nombre') || localStorage.getItem('tt_cajero_nombre') || '';
+
+        var folioNum = Date.now() % 100000;
+
+        // Crear el pedido agendado (sin productos aún — se toman después)
+        var ref = await addDoc(collection(db, 'pedidos'), {
+            cliente: nombre,
+            nombre: nombre,
+            telefono: telefono,
+            tipoEntrega: 'Domicilio',
+            tipoServicio: 'Orden programada',
+            esOrdenProgramada: true,
+            esSolicitudUnidad: true,          // sin productos aún (se toman después)
+            zonaEntrega: _sel.zona,
+            zonaEntregaNombre: _sel.zonaNombre,
+            fechaEntrega: _sel.fecha,
+            horaEntrega: _sel.hora,
+            horarioAgendado: _sel.fechaNombre + ' · ' + horaBonita(_sel.hora),
+            horarioEntregaEtiqueta: _sel.fechaNombre + ' · ' + horaBonita(_sel.hora),
+            direccionReferencia: direccion || null,
+            items: '(Pendiente — se tomará la orden)',
+            itemsData: [],
+            total: '$0.00',
+            totalNum: 0,
+            estado: 'Programado 🗓️',
+            estadoPago: 'Por pagar',
+            folio: folioNum,
+            folioStr: '#' + String(folioNum).slice(-4),
+            programadoPor: empNombre,
+            programadoPorId: empId,
+            archivado: false,
+            creado: serverTimestamp(),
+            tiempos: { recibida: Date.now() }
+        });
+
+        // Reservar el slot en la cola de entregas (evita sobreventa)
+        try {
+            await reservarSlot(_sel.zona, _sel.hora, ref.id, _sel.fecha);
+        } catch(e) {
+            console.warn('No se pudo reservar el slot (se creó el pedido igual):', e);
+        }
+
+        mostrar('✅ ¡Orden programada! ' + _sel.zonaNombre + ' · ' + _sel.fechaNombre + ' · ' + horaBonita(_sel.hora), 'ok');
+
+        // Limpiar el formulario para la siguiente
+        setTimeout(function(){
+            document.getElementById('prog-nombre').value = '';
+            document.getElementById('prog-telefono').value = '';
+            document.getElementById('prog-direccion').value = '';
+            _sel = { zona:null, zonaNombre:null, fecha:null, fechaNombre:null, hora:null };
+            document.getElementById('prog-zona-val').textContent = 'Elegir';
+            document.getElementById('prog-fecha-val').textContent = 'Elegir';
+            document.getElementById('prog-horario-val').textContent = 'Elegir';
+            document.querySelectorAll('.sel').forEach(function(b){ b.classList.remove('sel'); });
+            btn.disabled = false;
+        }, 2500);
+
+    } catch(err) {
+        console.error('Error al programar:', err);
+        mostrar('No se pudo programar la orden. Revisa tu conexión e intenta de nuevo.', 'err');
+        btn.disabled = false;
+    }
+};
+
+// ── Inicializar ──
+_renderZonas();
+_renderFechas();
+</script>
+<script src="../js/perfil-barra.js"></script>
+</body>
+</html>
