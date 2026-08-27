@@ -105,6 +105,7 @@
                 ['🧾', 'Mis Pedidos', _base() + 'mis-pedidos.html', false],
                 ['🔔', 'Disponibles', _base() + 'disponibles.html', false],
                 ['🛵', 'Mis Rutas', _base() + 'mi-ruta.html', false],
+                ['🗓️', 'Programar', _base() + 'programar.html', true],
                 ['🍳', 'Cocina', _base() + 'cocina.html', false],
                 ['📊', 'Reportes', _base() + 'reportes.html', true],
                 ['⚙️', 'Admin', _base() + 'admin.html', true],
