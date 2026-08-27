@@ -393,6 +393,8 @@ function _resetBotonesFoto() { _restaurarBotonesFoto(); }
 window.quitarFotoRef = function() {
     window._fotoRefData = null;
     try { sessionStorage.removeItem('tt_foto_ref'); } catch(e){}
+    try { localStorage.removeItem('tt_foto_ref'); } catch(e){}
+    _restaurarBotonesFoto();
     var prev = document.getElementById('foto-ref-preview');
     var botones = document.getElementById('foto-ref-botones');
     var imgEl = document.getElementById('foto-ref-img');
@@ -515,7 +517,7 @@ window.confirmarUbicacionYHorario = async function() {
             tipoServicio: 'Solicitud tortumóvil',
             esSolicitudUnidad: true,       // marca especial: solo solicitud, sin productos aún
             ubicacionCliente: ubi,
-            fotoReferencia: (window._fotoRefData || sessionStorage.getItem('tt_foto_ref') || null),   // foto de referencia (opcional)
+            fotoReferencia: (window._fotoRefData || localStorage.getItem('tt_foto_ref') || sessionStorage.getItem('tt_foto_ref') || null),   // foto de referencia (opcional)
             horarioAgendado: horario,
             // Cargo de servicio de $5 (se sumará cuando el repartidor tome la orden)
             cargoServicio: 5,
@@ -536,6 +538,7 @@ window.confirmarUbicacionYHorario = async function() {
         // Limpiar la foto y el paso guardado (ya se envió)
         try {
             sessionStorage.removeItem('tt_foto_ref');
+            localStorage.removeItem('tt_foto_ref');
             sessionStorage.removeItem('tt_paso_activo');
             window._fotoRefData = null;
         } catch(e){}
@@ -722,7 +725,7 @@ window.enviarRecuperacion = async function() {
                             if (fotoSecc) fotoSecc.style.display = 'block';
                             // Restaurar la foto de referencia si ya se había tomado
                             try {
-                                var fotoGuardada = sessionStorage.getItem('tt_foto_ref');
+                                var fotoGuardada = localStorage.getItem('tt_foto_ref') || sessionStorage.getItem('tt_foto_ref');
                                 if (fotoGuardada) {
                                     window._fotoRefData = fotoGuardada;
                                     if (typeof _mostrarPreviewFoto === 'function') _mostrarPreviewFoto(fotoGuardada);
