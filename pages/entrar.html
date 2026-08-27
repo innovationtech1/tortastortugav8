@@ -299,6 +299,7 @@ window.enviarCodigo = async function() {
     // Pasar al paso de ubicación
     document.getElementById('paso-telefono').classList.remove('activo');
     document.getElementById('paso-ubicacion').classList.add('activo');
+                try { sessionStorage.setItem('tt_paso_activo', 'ubicacion'); } catch(e){}
 }
 
 // ── Compartir ubicación GPS y entrar ──
