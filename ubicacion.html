@@ -244,6 +244,56 @@ function iniciarDistanciaCliente(cliLat, cliLng) {
     });
 }
 
+// ── Foto de referencia (galería, con compresión) ──
+window._fotoRefData = null;
+window.procesarFotoRef = function(input) {
+    var file = input.files && input.files[0];
+    if (!file) return;
+    var botones = document.getElementById('foto-ref-botones');
+    if (botones) botones.innerHTML = '<div style="width:100%;text-align:center;color:#5B9BFF;font-weight:700;font-size:.85rem;padding:.5rem;">⏳ Procesando…</div>';
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var img = new Image();
+        img.onload = function() {
+            try {
+                var canvas = document.createElement('canvas');
+                var scale = Math.min(1, 800 / img.width);
+                canvas.width = Math.round(img.width * scale);
+                canvas.height = Math.round(img.height * scale);
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                var dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+                if (dataUrl.length > 700000) dataUrl = canvas.toDataURL('image/jpeg', 0.4);
+                window._fotoRefData = dataUrl;
+                try { localStorage.setItem('tt_foto_ref_ubi', dataUrl); } catch(e){}
+                _mostrarPreviewFoto(dataUrl);
+            } catch(err) { _restaurarBotonFoto(); }
+        };
+        img.onerror = _restaurarBotonFoto;
+        img.src = e.target.result;
+    };
+    reader.onerror = _restaurarBotonFoto;
+    reader.readAsDataURL(file);
+};
+function _mostrarPreviewFoto(dataUrl) {
+    var prev = document.getElementById('foto-ref-preview');
+    var imgEl = document.getElementById('foto-ref-img');
+    var botones = document.getElementById('foto-ref-botones');
+    if (imgEl) imgEl.src = dataUrl;
+    if (prev) prev.style.display = 'block';
+    if (botones) botones.style.display = 'none';
+}
+function _restaurarBotonFoto() {
+    var botones = document.getElementById('foto-ref-botones');
+    if (botones) { botones.style.display = 'flex'; botones.innerHTML = '<label style="flex:1;text-align:center;padding:.7rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;border-radius:8px;font-weight:700;font-size:.85rem;cursor:pointer;">🖼️ Subir foto<input type="file" accept="image/*" onchange="procesarFotoRef(this)" style="display:none;"></label>'; }
+}
+window.quitarFotoRef = function() {
+    window._fotoRefData = null;
+    try { localStorage.removeItem('tt_foto_ref_ubi'); } catch(e){}
+    var prev = document.getElementById('foto-ref-preview');
+    if (prev) prev.style.display = 'none';
+    _restaurarBotonFoto();
+};
+
 window.compartirUbicacion = function() {
     if (!pedidoId) return;
     if (!navigator.geolocation) {
