@@ -492,6 +492,12 @@ window.confirmarUbicacionYHorario = async function() {
         });
 
         showStatus('status-2', '✅ ¡Solicitud enviada! Un repartidor te llamará pronto para confirmar tu orden. 🐢', 'success');
+        // Limpiar la foto y el paso guardado (ya se envió)
+        try {
+            sessionStorage.removeItem('tt_foto_ref');
+            sessionStorage.removeItem('tt_paso_activo');
+            window._fotoRefData = null;
+        } catch(e){}
         // Mostrar pantalla de confirmación (no menú)
         setTimeout(mostrarConfirmacionSolicitud, 800);
     } catch(err) {
