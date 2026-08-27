@@ -464,6 +464,7 @@ window.confirmarUbicacionYHorario = async function() {
             tipoServicio: 'Solicitud tortumóvil',
             esSolicitudUnidad: true,       // marca especial: solo solicitud, sin productos aún
             ubicacionCliente: ubi,
+            fotoReferencia: window._fotoRefData || null,   // foto de referencia del cliente (opcional)
             horarioAgendado: horario,
             // Cargo de servicio de $5 (se sumará cuando el repartidor tome la orden)
             cargoServicio: 5,
