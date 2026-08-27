@@ -306,6 +306,17 @@ window.enviarCodigo = async function() {
 // ── Foto de referencia (opcional): procesar, comprimir y guardar ──
 window._fotoRefData = null;  // guardará la foto comprimida en base64
 
+// Mostrar la vista previa de la foto
+function _mostrarPreviewFoto(dataUrl) {
+    var prev = document.getElementById('foto-ref-preview');
+    var imgEl = document.getElementById('foto-ref-img');
+    var botones = document.getElementById('foto-ref-botones');
+    if (imgEl) imgEl.src = dataUrl;
+    if (prev) prev.style.display = 'block';
+    if (botones) botones.style.display = 'none';
+    window._fotoRefData = dataUrl;
+}
+
 window.procesarFotoRef = function(input) {
     var file = input.files && input.files[0];
     if (!file) return;
@@ -328,13 +339,10 @@ window.procesarFotoRef = function(input) {
                 dataUrl = canvas.toDataURL('image/jpeg', 0.4);
             }
             window._fotoRefData = dataUrl;
+            // Guardar en sessionStorage para que sobreviva si Android recarga la página
+            try { sessionStorage.setItem('tt_foto_ref', dataUrl); } catch(e){ console.warn('No se pudo guardar foto:', e); }
             // Mostrar vista previa
-            var prev = document.getElementById('foto-ref-preview');
-            var imgEl = document.getElementById('foto-ref-img');
-            var botones = document.getElementById('foto-ref-botones');
-            if (imgEl) imgEl.src = dataUrl;
-            if (prev) prev.style.display = 'block';
-            if (botones) botones.style.display = 'none';
+            _mostrarPreviewFoto(dataUrl);
         };
         img.src = e.target.result;
     };
@@ -343,6 +351,7 @@ window.procesarFotoRef = function(input) {
 
 window.quitarFotoRef = function() {
     window._fotoRefData = null;
+    try { sessionStorage.removeItem('tt_foto_ref'); } catch(e){}
     var prev = document.getElementById('foto-ref-preview');
     var botones = document.getElementById('foto-ref-botones');
     var imgEl = document.getElementById('foto-ref-img');
