@@ -320,34 +320,75 @@ function _mostrarPreviewFoto(dataUrl) {
 window.procesarFotoRef = function(input) {
     var file = input.files && input.files[0];
     if (!file) return;
+
+    // Mostrar aviso de "procesando" de inmediato (feedback al usuario)
+    var botones = document.getElementById('foto-ref-botones');
+    if (botones) botones.innerHTML = '<div style="width:100%;text-align:center;color:#5B9BFF;font-weight:700;font-size:.85rem;padding:.5rem;">⏳ Procesando foto…</div>';
+
     var reader = new FileReader();
+    reader.onerror = function() {
+        console.error('Error al leer el archivo');
+        _resetBotonesFoto();
+        alert('No se pudo leer la foto. Intenta de nuevo.');
+    };
     reader.onload = function(e) {
-        var img = new Image();
-        img.onload = function() {
-            // Comprimir: redimensionar a máx 800px de ancho y calidad 0.6
-            var canvas = document.createElement('canvas');
-            var maxW = 800;
-            var scale = Math.min(1, maxW / img.width);
-            canvas.width = img.width * scale;
-            canvas.height = img.height * scale;
-            var ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            // Comprimir a JPEG calidad 0.6
-            var dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-            // Si sigue muy grande (>700KB en base64), bajar más la calidad
-            if (dataUrl.length > 700000) {
-                dataUrl = canvas.toDataURL('image/jpeg', 0.4);
-            }
-            window._fotoRefData = dataUrl;
-            // Guardar en sessionStorage para que sobreviva si Android recarga la página
-            try { sessionStorage.setItem('tt_foto_ref', dataUrl); } catch(e){ console.warn('No se pudo guardar foto:', e); }
-            // Mostrar vista previa
-            _mostrarPreviewFoto(dataUrl);
-        };
-        img.src = e.target.result;
+        try {
+            var img = new Image();
+            img.onerror = function() {
+                console.error('Error al cargar la imagen');
+                _resetBotonesFoto();
+                alert('No se pudo procesar la foto. Intenta de nuevo.');
+            };
+            img.onload = function() {
+                try {
+                    var canvas = document.createElement('canvas');
+                    var maxW = 800;
+                    var scale = Math.min(1, maxW / img.width);
+                    canvas.width = Math.round(img.width * scale);
+                    canvas.height = Math.round(img.height * scale);
+                    var ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    var dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+                    if (dataUrl.length > 700000) {
+                        dataUrl = canvas.toDataURL('image/jpeg', 0.4);
+                    }
+                    window._fotoRefData = dataUrl;
+                    // Guardar en localStorage Y sessionStorage (doble respaldo)
+                    try { localStorage.setItem('tt_foto_ref', dataUrl); } catch(e){}
+                    try { sessionStorage.setItem('tt_foto_ref', dataUrl); } catch(e){}
+                    _restaurarBotonesFoto();
+                    _mostrarPreviewFoto(dataUrl);
+                } catch(err) {
+                    console.error('Error procesando canvas:', err);
+                    // Respaldo: usar la imagen original sin comprimir
+                    try {
+                        window._fotoRefData = e.target.result;
+                        localStorage.setItem('tt_foto_ref', e.target.result);
+                        _restaurarBotonesFoto();
+                        _mostrarPreviewFoto(e.target.result);
+                    } catch(e2) {
+                        _resetBotonesFoto();
+                        alert('La foto es muy grande. Intenta con otra.');
+                    }
+                }
+            };
+            img.src = e.target.result;
+        } catch(err) {
+            console.error('Error en onload:', err);
+            _resetBotonesFoto();
+        }
     };
     reader.readAsDataURL(file);
 };
+
+// Restaurar los botones de cámara/galería (con foto tomada, quedan ocultos por el preview)
+function _restaurarBotonesFoto() {
+    var botones = document.getElementById('foto-ref-botones');
+    if (botones) botones.innerHTML =
+        '<label style="flex:1;text-align:center;padding:.7rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;border-radius:10px;font-weight:700;font-size:.85rem;cursor:pointer;">📷 Cámara<input type="file" accept="image/*" capture="environment" onchange="procesarFotoRef(this)" style="display:none;"></label>' +
+        '<label style="flex:1;text-align:center;padding:.7rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;border-radius:10px;font-weight:700;font-size:.85rem;cursor:pointer;">🖼️ Galería<input type="file" accept="image/*" onchange="procesarFotoRef(this)" style="display:none;"></label>';
+}
+function _resetBotonesFoto() { _restaurarBotonesFoto(); }
 
 window.quitarFotoRef = function() {
     window._fotoRefData = null;
