@@ -242,14 +242,21 @@ window.compartirUbicacion = function() {
             const precision = Math.round(pos.coords.accuracy);
 
             try {
-                await updateDoc(doc(db, 'pedidos', pedidoId), {
+                // Guardar ubicación + foto de referencia + cargo de $5 del tortumóvil
+                var _fotoRef = (window._fotoRefData || localStorage.getItem('tt_foto_ref_ubi') || null);
+                var _updateData = {
                     ubicacionCliente: {
                         lat: lat,
                         lng: lng,
                         precision: precision,
                         compartidaEn: new Date().toISOString(),
-                    }
-                });
+                    },
+                    cargoServicio: 5,          // $5 por envío de tortumóvil
+                    ubicacionCompartida: true
+                };
+                if (_fotoRef) _updateData.fotoReferencia = _fotoRef;
+                await updateDoc(doc(db, 'pedidos', pedidoId), _updateData);
+                try { localStorage.removeItem('tt_foto_ref_ubi'); } catch(e){}
 
                 statusEl.innerHTML = '<span class="exito">Ubicacion enviada! El repartidor ya puede verte. Gracias!</span>';
 
