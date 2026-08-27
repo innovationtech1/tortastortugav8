@@ -367,6 +367,37 @@ window.aceptarPedido = async function(id) {
 
 // ── Escuchar pedidos disponibles ──
 let _ultimaLista = [];
+// Mostrar la foto de referencia del cliente con botón abrir/cerrar
+function _fotoReferencia(p) {
+    if (!p.fotoReferencia) return '';
+    var pid = String(p.id || Math.random()).replace(/[^a-zA-Z0-9]/g,'');
+    return '<div style="margin:.4rem 0;">' +
+           '<button onclick="_toggleFoto(\'' + pid + '\')" style="width:100%;padding:.5rem .7rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;border-radius:8px;font-family:inherit;font-weight:700;font-size:.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.3rem;">' +
+           '<span id="foto-icon-' + pid + '">📸</span> <span id="foto-txt-' + pid + '">Ver foto de referencia</span>' +
+           '</button>' +
+           '<div id="foto-cont-' + pid + '" style="display:none;margin-top:.5rem;">' +
+           '<img src="' + p.fotoReferencia + '" alt="Referencia" style="width:100%;border-radius:8px;" onclick="window.open(this.src)">' +
+           '</div>' +
+           '</div>';
+}
+
+// Alternar mostrar/ocultar la foto de referencia
+window._toggleFoto = function(pid) {
+    var cont = document.getElementById('foto-cont-' + pid);
+    var txt = document.getElementById('foto-txt-' + pid);
+    var icon = document.getElementById('foto-icon-' + pid);
+    if (!cont) return;
+    if (cont.style.display === 'none') {
+        cont.style.display = 'block';
+        if (txt) txt.textContent = 'Ocultar foto';
+        if (icon) icon.textContent = '🔽';
+    } else {
+        cont.style.display = 'none';
+        if (txt) txt.textContent = 'Ver foto de referencia';
+        if (icon) icon.textContent = '📸';
+    }
+};
+
 // Mostrar los productos ordenados (si la orden ya tiene items)
 function _listaProductos(p) {
     // No mostrar si aún es solicitud pendiente sin productos
@@ -613,6 +644,7 @@ function render(disp) {
             '</div>' +
             (p.telefono ? '<div class="pn-linea">📞 <a href="tel:'+p.telefono+'">'+p.telefono+'</a></div>' : '') +
             _listaProductos(p) +
+            _fotoReferencia(p) +
             ((p.horarioAgendado || p.horarioEntregaEtiqueta) ? '<div class="pn-linea" style="color:#FBB724;font-weight:700;">🕐 Agendado: ' + (p.horarioAgendado || p.horarioEntregaEtiqueta) + '</div>' : '') +
             '<div class="pn-linea" style="color:#888;">Orden #' + folio + '</div>' +
             (_fechaIngreso(p) ? '<div class="pn-linea" style="color:#888;font-size:.75rem;">🕐 Ingresó: ' + _fechaIngreso(p) + '</div>' : '') +
