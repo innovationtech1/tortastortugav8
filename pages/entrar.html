@@ -104,6 +104,28 @@ html { -webkit-text-size-adjust: 100%; }
 
                     <div id="ubi-mapa" style="display:none;height:180px;border-radius:12px;overflow:hidden;margin-bottom:1rem;"></div>
 
+                    <!-- Foto de referencia (opcional pero recomendada) -->
+                    <div id="foto-ref-seccion" style="display:none;background:rgba(91,155,255,.06);border:1px solid rgba(91,155,255,.25);border-radius:12px;padding:.9rem 1rem;margin-bottom:1rem;">
+                        <div style="font-size:.88rem;color:#5B9BFF;font-weight:800;margin-bottom:.3rem;">📸 Foto de referencia (opcional)</div>
+                        <div style="font-size:.8rem;color:#bbb;line-height:1.45;margin-bottom:.7rem;">Toma o sube una foto de tu casa, entrada o un punto de referencia para que el repartidor te encuentre más fácil.</div>
+                        <!-- Vista previa -->
+                        <div id="foto-ref-preview" style="display:none;margin-bottom:.7rem;position:relative;">
+                            <img id="foto-ref-img" src="" alt="Foto de referencia" style="width:100%;max-height:200px;object-fit:cover;border-radius:10px;">
+                            <button type="button" onclick="quitarFotoRef()" style="position:absolute;top:.4rem;right:.4rem;background:rgba(0,0,0,.6);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:1rem;cursor:pointer;">✕</button>
+                        </div>
+                        <!-- Botones cámara y galería -->
+                        <div id="foto-ref-botones" style="display:flex;gap:.5rem;">
+                            <label style="flex:1;text-align:center;padding:.7rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;border-radius:10px;font-weight:700;font-size:.85rem;cursor:pointer;">
+                                📷 Cámara
+                                <input type="file" accept="image/*" capture="environment" onchange="procesarFotoRef(this)" style="display:none;">
+                            </label>
+                            <label style="flex:1;text-align:center;padding:.7rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;border-radius:10px;font-weight:700;font-size:.85rem;cursor:pointer;">
+                                🖼️ Galería
+                                <input type="file" accept="image/*" onchange="procesarFotoRef(this)" style="display:none;">
+                            </label>
+                        </div>
+                    </div>
+
                     <!-- Aviso del cargo de servicio (aparece con el horario) -->
                     <div id="cargo-aviso" style="display:none;background:rgba(251,183,36,.1);border:1px solid rgba(251,183,36,.35);border-radius:12px;padding:.9rem 1rem;margin-bottom:1rem;">
                         <div style="font-size:.9rem;color:#FBB724;font-weight:800;margin-bottom:.3rem;">🛵 Pedir tortumóvil a tu ubicación</div>
