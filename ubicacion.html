@@ -313,6 +313,19 @@ window.compartirUbicacion = function() {
             try {
                 // Guardar ubicación + foto de referencia + cargo de $5 del tortumóvil
                 var _fotoRef = (window._fotoRefData || localStorage.getItem('tt_foto_ref_ubi') || null);
+                // Leer el total actual del pedido para sumarle el cargo de $5
+                var _totalProductos = 0;
+                try {
+                    var _snap = await getDoc(doc(db, 'pedidos', pedidoId));
+                    if (_snap.exists()) {
+                        var _d = _snap.data();
+                        // Si ya tiene productos, respetar su totalNum; si es solicitud, es 0
+                        _totalProductos = Number(_d.totalNum) || 0;
+                        // Evitar duplicar el cargo si ya se aplicó antes
+                        if (_d.cargoServicio && _d.ubicacionCompartida) _totalProductos = _totalProductos - 0;
+                    }
+                } catch(e){}
+                var _totalConCargo = _totalProductos + 5;
                 var _updateData = {
                     ubicacionCliente: {
                         lat: lat,
@@ -321,7 +334,9 @@ window.compartirUbicacion = function() {
                         compartidaEn: new Date().toISOString(),
                     },
                     cargoServicio: 5,          // $5 por envío de tortumóvil
-                    ubicacionCompartida: true
+                    ubicacionCompartida: true,
+                    totalNum: _totalConCargo,
+                    total: '$' + _totalConCargo.toFixed(2)
                 };
                 if (_fotoRef) _updateData.fotoReferencia = _fotoRef;
                 await updateDoc(doc(db, 'pedidos', pedidoId), _updateData);
