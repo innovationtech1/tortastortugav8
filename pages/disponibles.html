@@ -619,6 +619,7 @@ function escuchar() {
     });
 }
 
+let _firmaRenderAnterior = '';
 function render(disp) {
     const cont = document.getElementById('lista-disp');
     // Quitar los que este repartidor descartó
@@ -626,11 +627,22 @@ function render(disp) {
 
     if (!visibles.length) {
         detenerAlarma();
+        _firmaRenderAnterior = '';
         cont.innerHTML = '<div class="vacio"><div class="emo">🕐</div>No hay pedidos disponibles ahora.<br>Cuando entre uno nuevo, sonará la alarma.</div>';
         return;
     }
     // Más recientes primero
     visibles.sort((a,b) => (b.folio||0) - (a.folio||0));
+
+    // Evitar reconstruir la lista si no cambió realmente (así no se cierra la foto abierta
+    // ni parpadea la tarjeta con cada actualización de Firebase).
+    var firma = visibles.map(function(p){
+        return p.id + '|' + (p.estado||'') + '|' + (p.total||'') + '|' + (p.repartidorId||'') + '|' + (p.fotoReferencia?'1':'0');
+    }).join('~');
+    if (firma === _firmaRenderAnterior) {
+        return;  // nada cambió — no reconstruir (mantiene la foto abierta)
+    }
+    _firmaRenderAnterior = firma;
 
     cont.innerHTML = visibles.map(p => {
         const folio = p.folioStr || (p.id ? p.id.slice(-4).toUpperCase() : '');
