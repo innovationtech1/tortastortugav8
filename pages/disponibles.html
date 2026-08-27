@@ -724,7 +724,7 @@ window.asignarRepartidor = async function(repId, repNombre) {
     if (!_repPedidoId) return;
     try {
         await updateDoc(doc(db, 'pedidos', _repPedidoId), {
-            repartidorId: repId,
+            repartidorId: String(repId),
             repartidorNombre: repNombre,
             repartidorAsignadoEn: new Date().toISOString(),
             aceptadoPorRepartidor: true
