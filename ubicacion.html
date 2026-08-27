@@ -74,6 +74,25 @@ html { -webkit-text-size-adjust: 100%; }
 
     <div class="pedido-info" id="pedido-info">Cargando pedido...</div>
 
+    <!-- Foto de referencia (opcional) -->
+    <div id="foto-ref-seccion" style="background:rgba(91,155,255,.06);border:1px solid rgba(91,155,255,.25);border-radius:12px;padding:.9rem;margin:1rem 0;text-align:left;">
+        <div style="font-size:.85rem;color:#5B9BFF;font-weight:800;margin-bottom:.3rem;">📸 Foto de referencia (opcional)</div>
+        <div style="font-size:.78rem;color:#bbb;line-height:1.4;margin-bottom:.6rem;">Sube una foto de tu casa o entrada para que el repartidor te encuentre fácil.</div>
+        <div id="foto-ref-preview" style="display:none;margin-bottom:.6rem;position:relative;">
+            <img id="foto-ref-img" src="" style="width:100%;max-height:180px;object-fit:cover;border-radius:8px;">
+            <button type="button" onclick="quitarFotoRef()" style="position:absolute;top:.4rem;right:.4rem;background:rgba(0,0,0,.6);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:.9rem;cursor:pointer;">✕</button>
+        </div>
+        <div id="foto-ref-botones" style="display:flex;">
+            <label style="flex:1;text-align:center;padding:.7rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;border-radius:8px;font-weight:700;font-size:.85rem;cursor:pointer;">🖼️ Subir foto<input type="file" accept="image/*" onchange="procesarFotoRef(this)" style="display:none;"></label>
+        </div>
+    </div>
+
+    <!-- Aviso del cargo -->
+    <div style="background:rgba(251,183,36,.1);border:1px solid rgba(251,183,36,.35);border-radius:12px;padding:.8rem;margin-bottom:1rem;text-align:left;">
+        <div style="font-size:.85rem;color:#25D366;font-weight:800;">💵 Costo del envío: $5.00</div>
+        <div style="font-size:.75rem;color:#aaa;margin-top:.2rem;">Al compartir tu ubicación aceptas el cargo de $5 por el tortumóvil. Lo que ordenes se cobra aparte.</div>
+    </div>
+
     <button class="btn-share" id="btn-share" onclick="compartirUbicacion()">
       <span>📍</span> Compartir mi ubicacion
     </button>
