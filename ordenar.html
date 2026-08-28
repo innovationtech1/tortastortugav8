@@ -1703,16 +1703,6 @@ html { -webkit-text-size-adjust: 100%; }
 </header>
 
 <main>
-    <!-- BÚSQUEDA DE PRODUCTOS -->
-    <div style="padding:.6rem 1rem .3rem;">
-        <div style="position:relative;">
-            <input type="text" id="menu-buscar" placeholder="🔍 Buscar producto…" oninput="buscarProductos(this.value)"
-                style="width:100%;box-sizing:border-box;padding:.7rem 2.4rem .7rem 1rem;background:#1a1a1a;border:1.5px solid rgba(255,255,255,.15);color:#fff;border-radius:12px;font-family:inherit;font-size:15px;">
-            <button id="menu-buscar-x" onclick="limpiarBusqueda()" style="display:none;position:absolute;right:.5rem;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.1);border:none;color:#fff;width:28px;height:28px;border-radius:50%;font-size:.9rem;cursor:pointer;">✕</button>
-        </div>
-        <div id="menu-buscar-vacio" style="display:none;text-align:center;color:#888;font-size:.85rem;padding:1rem;">No se encontraron productos con ese nombre.</div>
-    </div>
-
     <!-- TABS DE CATEGORÍAS -->
     <div id="menu-tabs-bar" style="
         display:flex;gap:.45rem;padding:.6rem 1rem;
@@ -4395,60 +4385,5 @@ window.cartCompartirUbicacion = function() {
 })();
 </script>
 <script type="module" src="js/contador-disponibles.js?v=1787291222"></script>
-<script>
-// ── Búsqueda de productos en el menú ──
-window.buscarProductos = function(texto) {
-    var q = (texto || '').toLowerCase().trim();
-    var xBtn = document.getElementById('menu-buscar-x');
-    var vacio = document.getElementById('menu-buscar-vacio');
-    var tabsBar = document.getElementById('menu-tabs-bar');
-    if (xBtn) xBtn.style.display = q ? 'block' : 'none';
-
-    var cards = document.querySelectorAll('.menu-card-buscable');
-    if (!q) {
-        // Sin búsqueda: mostrar todo y restaurar las pestañas normales
-        cards.forEach(function(c){ c.style.display = ''; });
-        if (vacio) vacio.style.display = 'none';
-        // Mostrar solo la sección de la pestaña activa
-        _restaurarVistaTabs();
-        if (tabsBar) tabsBar.style.display = '';
-        return;
-    }
-
-    // Con búsqueda: ocultar pestañas, mostrar TODAS las secciones y filtrar tarjetas
-    if (tabsBar) tabsBar.style.display = 'none';
-    document.querySelectorAll('.menu-tab-content, .app-menu-section').forEach(function(s){
-        s.style.display = 'block';
-        s.classList.add('menu-buscando');
-    });
-
-    var encontrados = 0;
-    cards.forEach(function(c){
-        var txt = c.getAttribute('data-buscar') || '';
-        if (txt.indexOf(q) >= 0) { c.style.display = ''; encontrados++; }
-        else { c.style.display = 'none'; }
-    });
-    if (vacio) vacio.style.display = encontrados === 0 ? 'block' : 'none';
-};
-
-window.limpiarBusqueda = function() {
-    var inp = document.getElementById('menu-buscar');
-    if (inp) inp.value = '';
-    window.buscarProductos('');
-};
-
-// Restaurar la vista normal de pestañas (mostrar solo la activa)
-function _restaurarVistaTabs() {
-    document.querySelectorAll('.menu-tab-content, .app-menu-section').forEach(function(s){
-        s.classList.remove('menu-buscando');
-    });
-    // Volver a activar la pestaña que estaba seleccionada
-    var activa = document.querySelector('.menu-tab.active, .tab-btn.active');
-    if (activa && activa.click) {
-        // Re-disparar el clic de la pestaña activa para restaurar su vista
-        try { activa.click(); } catch(e){}
-    }
-}
-</script>
 </body>
 </html>
