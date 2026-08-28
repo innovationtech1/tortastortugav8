@@ -261,6 +261,9 @@ function crearCard(p) {
 
     const card = document.createElement('div');
     card.style.cssText = 'background:#1E1E1E;border-radius:18px;border:1px solid rgba(255,255,255,.07);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 4px 20px rgba(0,0,0,.45);';
+    // Atributo para búsqueda: nombre + descripción en minúsculas
+    card.className = (card.className || '') + ' menu-card-buscable';
+    card.setAttribute('data-buscar', ((p.nombre||'') + ' ' + (p.descripcion||'') + ' ' + (p.categoria||'')).toLowerCase());
 
     // Badge
     const badgeTxt = p.badge ? p.badge.texto : '';
