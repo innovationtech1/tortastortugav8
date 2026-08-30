@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Clientes — Tortas Tortuga</title>
+<link rel="stylesheet" href="../css/style.css?v=1786503981">
+<style>
+    body { background:#0E0E0E; color:#fff; font-family:'Poppins',-apple-system,sans-serif; margin:0; }
+    .cli-wrap { max-width:560px; margin:0 auto; padding:1rem 1rem 6rem; }
+    .cli-header {
+        background:linear-gradient(135deg,#FF7A33,#FF5A00); border-radius:0 0 20px 20px;
+        padding:1.2rem 1.2rem 1.4rem; margin:-1rem -1rem 1.2rem; box-shadow:0 4px 16px rgba(0,0,0,.3);
+    }
+    .cli-header h1 { margin:0; font-size:1.3rem; font-weight:900; display:flex; align-items:center; gap:.5rem; }
+    .cli-header p { margin:.3rem 0 0; font-size:.82rem; opacity:.9; }
+    .cli-buscar {
+        width:100%; box-sizing:border-box; padding:.75rem 1rem; margin-bottom:1rem;
+        background:#1a1a1a; border:1.5px solid rgba(255,255,255,.15); color:#fff;
+        border-radius:12px; font-family:inherit; font-size:16px;
+    }
+    .cli-buscar:focus { outline:none; border-color:rgba(255,90,0,.5); }
+    .cli-card {
+        background:#1a1a1a; border:1px solid rgba(255,255,255,.08); border-radius:14px;
+        padding:1rem; margin-bottom:.7rem; cursor:pointer; transition:border-color .2s;
+    }
+    .cli-card:active { border-color:rgba(255,90,0,.4); }
+    .cli-card-top { display:flex; justify-content:space-between; align-items:flex-start; }
+    .cli-nombre { font-size:1.05rem; font-weight:800; }
+    .cli-tel { font-size:.82rem; color:#5B9BFF; margin-top:.15rem; }
+    .cli-total { font-size:1.1rem; font-weight:900; color:#25D366; }
+    .cli-stats { display:flex; gap:1rem; margin-top:.6rem; font-size:.76rem; color:#999; }
+    .cli-stats span b { color:#ddd; }
+    .cli-loading, .cli-vacio { text-align:center; color:#888; padding:2rem; font-size:.9rem; }
+    /* Modal de detalle */
+    .cli-modal {
+        position:fixed; inset:0; z-index:100; background:rgba(0,0,0,.8); backdrop-filter:blur(4px);
+        display:none; align-items:flex-end; justify-content:center;
+    }
+    .cli-modal.activo { display:flex; }
+    .cli-modal-panel {
+        background:#141414; border-radius:20px 20px 0 0; width:100%; max-width:560px;
+        max-height:85vh; overflow-y:auto; padding:1.2rem 1.2rem 2rem;
+        border-top:2px solid rgba(255,90,0,.4);
+    }
+    .cli-modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
+    .cli-modal-nombre { font-size:1.2rem; font-weight:900; }
+    .cli-modal-cerrar { background:rgba(255,255,255,.1); border:none; color:#fff; width:34px; height:34px; border-radius:50%; font-size:1rem; cursor:pointer; }
+    .cli-pedido {
+        background:#1E1E1E; border:1px solid rgba(255,255,255,.07); border-radius:10px;
+        padding:.8rem; margin-bottom:.6rem;
+    }
+    .cli-pedido-top { display:flex; justify-content:space-between; font-size:.85rem; }
+    .cli-pedido-fecha { color:#888; font-size:.75rem; margin-top:.2rem; }
+    .cli-pedido-items { font-size:.78rem; color:#bbb; margin-top:.3rem; }
+</style>
+</head>
+<body>
+<div class="cli-wrap">
+    <div class="cli-header">
+        <h1>👥 Clientes</h1>
+        <p>Historial de clientes y sus pedidos</p>
+    </div>
+
+    <input type="text" id="cli-buscar" class="cli-buscar" placeholder="🔍 Buscar por nombre o teléfono…" oninput="filtrarClientes(this.value)">
+
+    <div class="cli-loading" id="cli-loading">Cargando clientes…</div>
+    <div id="cli-lista"></div>
+    <div class="cli-vacio" id="cli-vacio" style="display:none;">No se encontraron clientes.</div>
+</div>
+
+<!-- Modal detalle del cliente -->
+<div class="cli-modal" id="cli-modal">
+    <div class="cli-modal-panel">
+        <div class="cli-modal-header">
+            <div>
+                <div class="cli-modal-nombre" id="cli-modal-nombre">—</div>
+                <div id="cli-modal-tel" style="font-size:.82rem;color:#5B9BFF;"></div>
+            </div>
+            <button class="cli-modal-cerrar" onclick="cerrarDetalle()">✕</button>
+        </div>
+        <div id="cli-modal-resumen" style="display:flex;gap:1rem;margin-bottom:1rem;font-size:.8rem;"></div>
+        <div style="font-size:.9rem;font-weight:800;margin-bottom:.6rem;">📋 Pedidos</div>
+        <div id="cli-modal-pedidos"></div>
+    </div>
+</div>
+
+<script type="module">
+import { db } from '../js/firebase-config.js';
+import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+let _clientes = [];       // lista consolidada
+let _pedidosPorTel = {};  // teléfono -> [pedidos]
+
+function _num(p) {
+    return Number(p.totalNum) || parseFloat(String(p.total||'').replace(/[^0-9.]/g,'')) || 0;
+}
+function _soloDigitos(t) { return String(t||'').replace(/[^0-9]/g,''); }
+
+function _fechaBonita(p) {
+    var f = null;
+    if (p.creado && p.creado.seconds) f = new Date(p.creado.seconds*1000);
+    else if (p.tiempos && p.tiempos.recibida) f = new Date(p.tiempos.recibida);
+    if (!f) return '—';
+    return f.getDate() + '/' + (f.getMonth()+1) + '/' + f.getFullYear() + ' ' +
+           f.getHours() + ':' + String(f.getMinutes()).padStart(2,'0');
+}
+
+async function _cargar() {
+    try {
+        // 1. Cargar pedidos y agruparlos por teléfono
+        var snapP = await getDocs(collection(db, 'pedidos'));
+        var mapa = {};   // tel -> { nombre, tel, pedidos:[], total, visitas, ultimo }
+        snapP.forEach(function(doc){
+            var p = doc.data(); p.id = doc.id;
+            var tel = _soloDigitos(p.telefono);
+            if (!tel) return;
+            if (!mapa[tel]) mapa[tel] = { nombre: p.cliente || p.nombre || 'Cliente', tel: tel, pedidos: [], total: 0 };
+            mapa[tel].pedidos.push(p);
+            // Solo sumar ventas pagadas al total gastado
+            if (p.estadoPago === 'Pagado') mapa[tel].total += _num(p);
+            // Actualizar nombre si el pedido tiene uno mejor
+            if ((p.cliente || p.nombre) && mapa[tel].nombre === 'Cliente') mapa[tel].nombre = p.cliente || p.nombre;
+        });
+
+        // 2. Enriquecer con la colección 'clientes' (visitas, último acceso)
+        try {
+            var snapC = await getDocs(collection(db, 'clientes'));
+            snapC.forEach(function(doc){
+                var c = doc.data();
+                var tel = _soloDigitos(c.telefono);
+                if (!tel) return;
+                if (!mapa[tel]) mapa[tel] = { nombre: c.nombre || 'Cliente', tel: tel, pedidos: [], total: 0 };
+                mapa[tel].visitas = c.visitas || mapa[tel].pedidos.length;
+                mapa[tel].ultimoAcceso = c.ultimoAcceso;
+                if (c.nombre) mapa[tel].nombre = c.nombre;
+            });
+        } catch(e){}
+
+        // 3. Consolidar y ordenar por total gastado
+        _clientes = Object.values(mapa).map(function(c){
+            c.visitas = c.visitas || c.pedidos.length;
+            // Último pedido (fecha)
+            c.pedidos.sort(function(a,b){
+                var fa = (a.creado && a.creado.seconds) ? a.creado.seconds : 0;
+                var fb = (b.creado && b.creado.seconds) ? b.creado.seconds : 0;
+                return fb - fa;
+            });
+            c.ultimoPedido = c.pedidos.length ? _fechaBonita(c.pedidos[0]) : '—';
+            return c;
+        }).sort(function(a,b){ return b.total - a.total; });
+
+        _pedidosPorTel = {};
+        _clientes.forEach(function(c){ _pedidosPorTel[c.tel] = c.pedidos; });
+
+        document.getElementById('cli-loading').style.display = 'none';
+        _render(_clientes);
+    } catch(e) {
+        console.error('Error cargando clientes:', e);
+        document.getElementById('cli-loading').textContent = 'No se pudieron cargar los clientes.';
+    }
+}
+
+function _render(lista) {
+    var cont = document.getElementById('cli-lista');
+    var vacio = document.getElementById('cli-vacio');
+    if (!lista.length) {
+        cont.innerHTML = '';
+        vacio.style.display = 'block';
+        return;
+    }
+    vacio.style.display = 'none';
+    cont.innerHTML = lista.map(function(c){
+        return '<div class="cli-card" onclick="verDetalle(\'' + c.tel + '\')">' +
+            '<div class="cli-card-top">' +
+                '<div><div class="cli-nombre">' + c.nombre + '</div>' +
+                '<div class="cli-tel">📞 ' + c.tel + '</div></div>' +
+                '<div class="cli-total">$' + c.total.toFixed(0) + '</div>' +
+            '</div>' +
+            '<div class="cli-stats">' +
+                '<span>🛍️ <b>' + c.pedidos.length + '</b> pedidos</span>' +
+                '<span>🔄 <b>' + c.visitas + '</b> visitas</span>' +
+                '<span>🕐 ' + c.ultimoPedido + '</span>' +
+            '</div>' +
+        '</div>';
+    }).join('');
+}
+
+window.filtrarClientes = function(texto) {
+    var q = (texto||'').toLowerCase().trim();
+    if (!q) { _render(_clientes); return; }
+    var filtrados = _clientes.filter(function(c){
+        return c.nombre.toLowerCase().indexOf(q) >= 0 || c.tel.indexOf(q) >= 0;
+    });
+    _render(filtrados);
+};
+
+window.verDetalle = function(tel) {
+    var cliente = _clientes.find(function(c){ return c.tel === tel; });
+    if (!cliente) return;
+    document.getElementById('cli-modal-nombre').textContent = cliente.nombre;
+    document.getElementById('cli-modal-tel').textContent = '📞 ' + cliente.tel;
+    document.getElementById('cli-modal-resumen').innerHTML =
+        '<span style="color:#25D366;font-weight:800;">$' + cliente.total.toFixed(0) + ' gastado</span>' +
+        '<span style="color:#999;">' + cliente.pedidos.length + ' pedidos</span>';
+
+    var pedidos = _pedidosPorTel[tel] || [];
+    var cont = document.getElementById('cli-modal-pedidos');
+    if (!pedidos.length) {
+        cont.innerHTML = '<div style="color:#888;font-size:.85rem;">Sin pedidos registrados.</div>';
+    } else {
+        cont.innerHTML = pedidos.map(function(p){
+            var items = '';
+            if (Array.isArray(p.itemsData) && p.itemsData.length) {
+                items = p.itemsData.map(function(it){
+                    return (it.cantidad||1) + '× ' + (it.nombre||it.producto||'Producto');
+                }).join(', ');
+            } else if (typeof p.items === 'string') {
+                items = p.items;
+            }
+            var pagado = p.estadoPago === 'Pagado';
+            return '<div class="cli-pedido">' +
+                '<div class="cli-pedido-top">' +
+                    '<span style="font-weight:700;">' + (p.folioStr || ('#'+(p.folio||''))) + '</span>' +
+                    '<span style="font-weight:800;color:' + (pagado?'#25D366':'#FBB724') + ';">' + (p.total||'$0') + (pagado?'':' (por pagar)') + '</span>' +
+                '</div>' +
+                '<div class="cli-pedido-fecha">' + _fechaBonita(p) + ' · ' + (p.estado||'') + '</div>' +
+                (items ? '<div class="cli-pedido-items">' + items + '</div>' : '') +
+            '</div>';
+        }).join('');
+    }
+    document.getElementById('cli-modal').classList.add('activo');
+};
+
+window.cerrarDetalle = function() {
+    document.getElementById('cli-modal').classList.remove('activo');
+};
+
+// Cerrar modal al tocar el fondo
+document.getElementById('cli-modal').addEventListener('click', function(e){
+    if (e.target === this) cerrarDetalle();
+});
+
+_cargar();
+</script>
+<script src="../js/perfil-barra.js"></script>
+</body>
+</html>
