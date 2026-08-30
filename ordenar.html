@@ -3997,6 +3997,18 @@ window.cartCompartirUbicacion = function() {
     // en esta sesión. Se recuerda con sessionStorage para no repetir en cada
     // navegación dentro de la misma visita.
     window._mostrarOverlayEntrega = function() {
+        // TOMAR ORDEN DE UNA SOLICITUD EXISTENTE (?solicitud=ID): ya es un pedido a
+        // domicilio con ubicación; el empleado va directo al menú sin la pantalla de tipo.
+        var _params = new URLSearchParams(window.location.search);
+        if (_params.get('solicitud')) {
+            window._entregaCarrito = window._entregaCarrito || {};
+            window._entregaCarrito.tipoPedido = 'domicilio';
+            sessionStorage.setItem('tt_entrega_lista', '1');
+            sessionStorage.setItem('tt_tipo_pedido', 'domicilio');
+            var ovS = document.getElementById('entrega-overlay');
+            if (ovS) { ovS.style.display = 'none'; document.body.classList.remove('modal-open'); }
+            return;
+        }
         // CLIENTE: ya no se muestra esta pantalla. Se asume Domicilio por defecto
         // y entra directo al menú (la validación de tipo ya se hizo antes en el flujo).
         if (esClientePuro()) {
