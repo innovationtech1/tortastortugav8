@@ -218,11 +218,16 @@ function renderPedidos(pedidos) {
                 '</div>';
         }
 
+        const codigoRef = (p.codigoOrden || (p.id ? p.id.slice(-4).toUpperCase() : '----'));
         return `
         <div class="pedido-card">
             <div class="pedido-top">
                 <span class="pedido-folio">${p.folioStr || '#---'}</span>
                 <span class="pedido-estado ${claseEstado(p.estado)}">${(p.estado || 'Nuevo').replace(/[^\w\sáéíóúñ]/gi,'').trim()}</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:.5rem;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:10px;padding:.6rem;margin:.4rem 0 .6rem;">
+                <span style="font-size:.72rem;color:#888;text-transform:uppercase;letter-spacing:.05em;">N° de orden:</span>
+                <span style="font-size:1.1rem;font-weight:900;color:#25D366;letter-spacing:.05em;">#${codigoRef}</span>
             </div>
             ${fechaHora ? `<div class="pedido-fecha">🗓️ ${fechaHora}</div>` : ''}
             <div class="progreso">${pasos}</div>
