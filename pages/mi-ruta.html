@@ -293,9 +293,6 @@ async async function _guardarUbicacion(pos) {
     var ids = [String(miId)];
     var uid = _leer('tt_emp_docid');
     if (uid && ids.indexOf(uid) < 0) ids.push(uid);
-    if (auth && auth.currentUser && auth.currentUser.uid && ids.indexOf(auth.currentUser.uid) < 0) {
-        ids.push(auth.currentUser.uid);
-    }
     try {
         await Promise.all(ids.map(function(id){
             return setDoc(doc(db, 'ubicaciones', id), datos);
