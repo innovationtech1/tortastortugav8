@@ -683,7 +683,10 @@ function tarifaSugerida(p) {
 window._cacheDirecciones = window._cacheDirecciones || {};
 async function obtenerDireccion(lat, lng) {
     var clave = lat.toFixed(5) + ',' + lng.toFixed(5);
-    if (window._cacheDirecciones[clave]) return window._cacheDirecciones[clave];
+    if (window._cacheDirecciones[clave]) {
+        var c = window._cacheDirecciones[clave];
+        return (typeof c === 'string') ? { texto: c, zona: null } : c;
+    }
     try {
         var url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng + '&zoom=18&addressdetails=1';
         var resp = await fetch(url, { headers: { 'Accept-Language': 'es' } });
@@ -698,12 +701,33 @@ async function obtenerDireccion(lat, lng) {
         var ciudad = a.city || a.town || a.village || '';
         if (ciudad) partes.push(ciudad);
         var texto = partes.join(', ') || (data.display_name || '').split(',').slice(0,2).join(',');
-        window._cacheDirecciones[clave] = texto;
-        return texto;
+        // Detectar zona automáticamente según ciudad/colonia
+        var zonaDetectada = _detectarZona(a);
+        var resultado = { texto: texto, zona: zonaDetectada };
+        window._cacheDirecciones[clave] = resultado;
+        return resultado;
     } catch(e) {
         console.warn('No se pudo obtener dirección:', e);
-        return '';
+        return { texto: '', zona: null };
     }
+}
+
+// Detectar la zona conocida según la dirección de Nominatim
+function _detectarZona(a) {
+    var ciudad = ((a.city || a.town || a.village || '') + '').toLowerCase();
+    var barrio = ((a.neighbourhood || a.suburb || a.quarter || '') + '').toLowerCase();
+    var cp = (a.postcode || '') + '';
+    // Mapeo por ciudad conocida
+    if (ciudad.indexOf('converse') >= 0) return { id: 'converse', nombre: 'Converse' };
+    if (ciudad.indexOf('seguin') >= 0) return { id: 'seguin', nombre: 'Seguin' };
+    if (ciudad.indexOf('castroville') >= 0) return { id: 'castroville', nombre: 'Castroville' };
+    // Culebra es un área/road dentro de San Antonio
+    if (barrio.indexOf('culebra') >= 0) return { id: 'culebra', nombre: 'Culebra' };
+    // Código postal 78211 → Zona 211
+    if (cp.indexOf('78211') >= 0 || cp === '211') return { id: '211', nombre: 'Zona 211' };
+    // Por defecto, si es San Antonio
+    if (ciudad.indexOf('san antonio') >= 0) return { id: 'san-antonio', nombre: 'San Antonio' };
+    return null;
 }
 
 function textoDistancia(p) {
