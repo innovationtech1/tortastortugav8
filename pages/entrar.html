@@ -331,7 +331,50 @@ window.enviarCodigo = async function() {
     document.getElementById('paso-telefono').classList.remove('activo');
     document.getElementById('paso-ubicacion').classList.add('activo');
                 try { sessionStorage.setItem('tt_paso_activo', 'ubicacion'); } catch(e){}
+    // Revisar si el cliente ya tiene pedidos ACTIVOS para mostrar opciones
+    _revisarPedidosActivos(soloDigitos);
 }
+
+// ── Detectar pedidos activos del cliente (no entregados) ──
+async function _revisarPedidosActivos(telefono) {
+    try {
+        var tel = String(telefono || '').replace(/[^0-9]/g,'');
+        if (!tel) return;
+        var qs = await getDocs(collection(db, 'pedidos'));
+        var activos = 0;
+        qs.forEach(function(d){
+            var p = d.data();
+            var t = String(p.telefono||'').replace(/[^0-9]/g,'');
+            if (t !== tel) return;
+            var estado = String(p.estado||'').toLowerCase();
+            // Activo = NO entregado y NO cancelado
+            var entregado = estado.indexOf('entregad') >= 0;
+            var cancelado = estado.indexOf('cancelad') >= 0;
+            if (!entregado && !cancelado) activos++;
+        });
+        if (activos > 0) {
+            var panel = document.getElementById('panel-tiene-pedidos');
+            var seccion = document.getElementById('seccion-compartir-ubi');
+            var sub = document.getElementById('ptp-sub');
+            if (sub) sub.textContent = 'Tienes ' + activos + (activos === 1 ? ' pedido activo' : ' pedidos activos') + '. ¿Qué quieres hacer?';
+            if (panel) panel.style.display = 'block';
+            if (seccion) seccion.style.display = 'none';
+        }
+    } catch(e) { console.warn('No se pudo revisar pedidos activos:', e); }
+}
+
+// Ver mis pedidos → ir a mi-pedido.html
+window.irAVerMisPedidos = function() {
+    window.location.href = 'mi-pedido.html';
+};
+
+// Hacer nuevo pedido → mostrar la sección de compartir ubicación
+window.hacerNuevoPedido = function() {
+    var panel = document.getElementById('panel-tiene-pedidos');
+    var seccion = document.getElementById('seccion-compartir-ubi');
+    if (panel) panel.style.display = 'none';
+    if (seccion) seccion.style.display = 'block';
+};
 
 // ── Compartir ubicación GPS y entrar ──
 // ── Foto de referencia (opcional): procesar, comprimir y guardar ──
