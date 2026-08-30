@@ -1430,6 +1430,13 @@ window.enviarCuentasSeparadas = async function(cuentas) {
 
             var result = await guardarPedidoFirebase(data, 'cocina');
             var ticket = result && result.ticket ? result.ticket : (result && result.id ? result.id.slice(-4).toUpperCase() : '----');
+            // Guardar el código de orden en el pedido para mostrarlo en todas las pantallas
+            if (result && result.id) {
+                try {
+                    var _fs = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+                    await _fs.updateDoc(_fs.doc(window._db || db, 'pedidos', result.id), { codigoOrden: String(ticket).replace(/^#+/, '') });
+                } catch(errCod) { console.warn('No se pudo guardar codigoOrden:', errCod); }
+            }
             ticketsEnviados.push('#' + String(ticket).replace(/^#+/, '') + ' (' + nombreCuenta + ')');
         }
 
