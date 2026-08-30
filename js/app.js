@@ -2391,7 +2391,7 @@ console.log('✅ Gestión de cuentas cargada');
 // ═══════════════════════════════════════════════════════════
 //  MODULO DE DINERO — impuestos, propinas, descuentos
 //  IMPORTANTE: la tasa de impuesto debe validarla un contador.
-//  8.25% es la tasa combinada tipica en San Antonio TX (2024),
+//  Tortas Tortuga usa 4% sobre subtotal + envio. Validar con contador. Antes San Antonio TX (2024),
 //  pero puede variar por direccion y tipo de producto.
 // ═══════════════════════════════════════════════════════════
 
