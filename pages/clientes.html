@@ -212,8 +212,9 @@ window.verDetalle = function(tel) {
         cont.innerHTML = pedidos.map(function(p){
             var items = '';
             if (Array.isArray(p.itemsData) && p.itemsData.length) {
-                items = p.itemsData.map(function(it){
-                    return (it.cantidad||1) + '× ' + (it.nombre||it.producto||'Producto');
+                var _g = window.agruparItems ? window.agruparItems(p.itemsData) : p.itemsData.map(function(i){ i.cantidad=i.cantidad||1; return i; });
+                items = _g.map(function(g){
+                    return g.cantidad + '× ' + (g.nombre||'Producto') + (g.variante ? ' ('+g.variante+')' : '');
                 }).join(', ');
             } else if (typeof p.items === 'string') {
                 items = p.items;
