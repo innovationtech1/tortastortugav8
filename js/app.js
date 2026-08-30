@@ -418,16 +418,17 @@ function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waU
                 <div style="font-size:.75rem;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem;">Tu número de orden</div>
                 <div style="font-size:2.2rem;font-weight:900;color:#25D366;">#${String(ticketStr).replace(/^#+/, '')}</div>
             </div>
-            ${esDomicilio && !yaTieneUbicacion ? `<div id="aviso-ubic" style="font-size:.8rem;color:#FBB724;margin-bottom:1rem;background:rgba(251,183,36,.1);border:1px solid rgba(251,183,36,.3);border-radius:10px;padding:.6rem;">📍 Para tu entrega a domicilio, comparte tu ubicación con el botón de abajo.</div>`
-                          : (esDomicilio && yaTieneUbicacion ? `<div style="font-size:.8rem;color:#25D366;margin-bottom:1rem;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:10px;padding:.6rem;">✅ Ubicación recibida. Tu pedido ya está en camino a la cocina.</div>`
-                          : `<div style="font-size:.78rem;color:#888;margin-bottom:1.2rem;">Guarda tu número de orden para seguir el estado de tu pedido.</div>`)}
+            ${itemsResumen ? `<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:.9rem;margin-bottom:1rem;text-align:left;">
+                <div style="font-size:.72rem;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">🛍️ Tu pedido</div>
+                ${(window.agruparItems ? window.agruparItems((itemsResumen||'').split(' | ').filter(Boolean).map(function(t){ return { nombre: t.replace(/ - \$[\d.]+$/, '').replace(/^\d+x?\s*/, ''), precio: 0, cantidad: (t.match(/^(\d+)x/) ? parseInt(t.match(/^(\d+)x/)[1]) : 1) }; })).map(function(g){ return '<div style=\'font-size:.85rem;color:#ddd;padding:.15rem 0;\'>• <b style=\'color:#FF7A33;\'>' + g.cantidad + '×</b> ' + g.nombre + '</div>'; }).join('') : (itemsResumen||'').split(' | ').filter(Boolean).map(function(t){ return '<div style=\'font-size:.85rem;color:#ddd;padding:.15rem 0;\'>• ' + t + '</div>'; }).join(''))}
+                ${totalResumen ? `<div style="border-top:1px solid rgba(255,255,255,.1);margin-top:.5rem;padding-top:.5rem;display:flex;justify-content:space-between;font-weight:800;"><span style="color:#fff;">Total</span><span style="color:#25D366;">$${Number(totalResumen).toFixed(2)}</span></div>` : ''}
+            </div>`
+            : `<div style="font-size:.78rem;color:#888;margin-bottom:1.2rem;">Guarda tu número de orden para seguir el estado de tu pedido.</div>`}
             <div style="display:flex;flex-direction:column;gap:.6rem;">
                 ${window._clienteActivo ? `<a href="pages/mi-pedido.html" target="_blank" style="background:rgba(59,130,246,.15);
                     border:1px solid rgba(59,130,246,.3);color:#3B82F6;padding:.7rem;border-radius:10px;
                     font-size:.85rem;font-weight:700;text-decoration:none;">📦 Ver estado de mi pedido</a>` : ''}
-                ${linkUbicacion ? `<a href="${linkUbicacion}" style="background:rgba(37,211,102,.15);
-                    border:1px solid rgba(37,211,102,.3);color:#25D366;padding:.7rem;border-radius:10px;
-                    font-size:.85rem;font-weight:700;text-decoration:none;">📍 ${esDomicilio ? 'Enviar mi ubicación (requerido)' : 'Enviar mi ubicación'}</a>` : ''}
+
                 <button id="btn-cerrar-confirmacion" style="background:rgba(255,255,255,.06);
                     border:1px solid rgba(255,255,255,.12);color:#ccc;padding:.7rem;border-radius:10px;
                     font-size:.85rem;font-weight:700;cursor:pointer;">Cerrar</button>
