@@ -232,10 +232,56 @@ function render() {
                 ${btnCobro}
                 ${btnRepartidor}
                 ${btnUbicacion}
+                ${_tel ? `<button class="mp-btn" style="background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.4);color:#25D366;" onclick="enviarTicketWA('${p.id}')">📱 Enviar ticket WhatsApp</button>` : ''}
             </div>
         </div>`;
     }).join('');
 }
+
+// ── Enviar ticket por WhatsApp ──
+window.enviarTicketWA = function(pedidoId) {
+    var p = (window._pedidosActuales || []).find(function(x){ return x.id === pedidoId; });
+    if (!p) { alert('No se encontró el pedido.'); return; }
+    var tel = String(p.telefono || p.cliente_telefono || p.telefonoCliente || '').replace(/[^0-9]/g,'');
+    if (!tel) { alert('Este pedido no tiene teléfono del cliente.'); return; }
+    if (tel.length === 10) tel = '1' + tel;  // código de país USA por defecto
+
+    var msg = _armarTicketWA(p);
+    var url = 'https://wa.me/' + tel + '?text=' + encodeURIComponent(msg);
+    window.open(url, '_blank');
+};
+
+// Armar el texto del ticket para WhatsApp
+window._armarTicketWA = function(p) {
+    var L = [];
+    L.push('🐢 *TORTAS TORTUGA*');
+    L.push('━━━━━━━━━━━━━');
+    L.push('Pedido ' + (p.folioStr || ('#'+(p.folio||''))));
+    if (p.cliente || p.nombre) L.push('Cliente: ' + (p.cliente || p.nombre));
+    L.push('');
+    L.push('🛍️ *Tu orden:*');
+    var items = p.itemsData;
+    if (Array.isArray(items) && items.length) {
+        items.forEach(function(it){
+            var cant = it.cantidad || it.qty || 1;
+            var nom = it.nombre || it.producto || it.name || 'Producto';
+            var prc = Number(it.precio) || 0;
+            L.push('• ' + cant + '× ' + nom + (prc ? ' — $' + prc.toFixed(2) : ''));
+        });
+    } else if (typeof p.items === 'string' && p.items.indexOf('Pendiente') < 0) {
+        L.push('• ' + p.items);
+    } else {
+        L.push('• (Orden por definir)');
+    }
+    L.push('');
+    L.push('━━━━━━━━━━━━━');
+    if (p.cargoServicio) L.push('🛵 Envío: $' + Number(p.cargoServicio).toFixed(2));
+    L.push('💵 *Total: ' + (p.total || '$0.00') + '*');
+    L.push(p.estadoPago === 'Pagado' ? '✅ Pagado' : '⏳ Por pagar');
+    L.push('');
+    L.push('¡Gracias por tu compra! 🐢');
+    return L.join('\n');
+};
 
 window.cambiarEstado = async function(id, estado) {
     try {
