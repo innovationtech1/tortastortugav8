@@ -408,6 +408,16 @@ window.aceptarPedido = async function(id) {
                 repartidorAsignadoEn: new Date().toISOString(),
                 aceptadoPorRepartidor: true
             };
+            // Guardar zona detectada automáticamente (si el pedido no tenía zona)
+            if (!p.zonaEntregaNombre && pedidoLista && pedidoLista._zonaDetectada) {
+                cambios.zonaEntregaId = pedidoLista._zonaDetectada.id;
+                cambios.zonaEntregaNombre = pedidoLista._zonaDetectada.nombre;
+                cambios.zonaAutodetectada = true;
+            }
+            // Guardar la dirección legible para que el repartidor la vea en su ruta
+            if (pedidoLista && pedidoLista._direccionLegible) {
+                cambios.direccionLegible = pedidoLista._direccionLegible;
+            }
             // Aplicar la tarifa de envío según el tiempo, ajustando el total
             if (cargoAplicar != null) {
                 var totalProductos = Number(p.totalNum) || parseFloat(String(p.total||'').replace(/[^0-9.]/g,'')) || 0;
