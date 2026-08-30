@@ -251,6 +251,11 @@ window.progElegirHora = function(hora) {
 };
 
 // ── Programar la orden ──
+// Cargo de envío según la ubicación capturada (0 si no se capturó)
+function _cargoProg() {
+    return (_progUbicacion && _progUbicacion.cargo) ? _progUbicacion.cargo : 0;
+}
+
 window.programarOrden = async function() {
     var nombre = (document.getElementById('prog-nombre').value || '').trim();
     var telefono = (document.getElementById('prog-telefono').value || '').trim();
@@ -294,11 +299,19 @@ window.programarOrden = async function() {
             horaEntrega: _sel.hora,
             horarioAgendado: _sel.fechaNombre + ' · ' + horaBonita(_sel.hora),
             horarioEntregaEtiqueta: _sel.fechaNombre + ' · ' + horaBonita(_sel.hora),
-            direccionReferencia: direccion || null,
+            direccionReferencia: direccion || (_progUbicacion && _progUbicacion.direccion) || null,
             items: '(Pendiente — se tomará la orden)',
             itemsData: [],
-            total: '$0.00',
-            totalNum: 0,
+            total: '$' + _cargoProg().toFixed(2),
+            totalNum: _cargoProg(),
+            cargoServicio: _cargoProg(),
+            ubicacionCliente: _progUbicacion ? {
+                lat: _progUbicacion.lat,
+                lng: _progUbicacion.lng,
+                direccion: _progUbicacion.direccion || null,
+                compartidaEn: Date.now()
+            } : null,
+            tiempoEstimadoMin: _progUbicacion ? _progUbicacion.minutos : null,
             estado: 'Programado 🗓️',
             estadoPago: 'Por pagar',
             folio: folioNum,
