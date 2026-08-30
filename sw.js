@@ -1,7 +1,7 @@
 // Service Worker — STALE-WHILE-REVALIDATE
 // Sirve la página AL INSTANTE desde caché (navegación rápida, sin recarga visible)
 // y en segundo plano descarga la versión nueva para la próxima vez.
-const CACHE_NAME = 'tortas-swr-v1788047498';
+const CACHE_NAME = 'tortas-swr-v1788056437';
 
 self.addEventListener('install', e => {
   self.skipWaiting();
