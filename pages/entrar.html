@@ -330,9 +330,10 @@ window.abrirCamara = async function() {
         return;
     }
     try {
-        // Preferir cámara trasera (environment)
+        // Usar la cámara seleccionada (por defecto trasera 'environment')
+        if (!window._camaraFacing) window._camaraFacing = 'environment';
         var stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: 'environment' } },
+            video: { facingMode: { ideal: window._camaraFacing } },
             audio: false
         });
         window._camaraStream = stream;
@@ -345,6 +346,41 @@ window.abrirCamara = async function() {
             alert('No diste permiso para la cámara. Puedes usar la Galería o permitir el acceso en la configuración del navegador.');
         } else {
             alert('No se pudo abrir la cámara. Usa la opción de Galería.');
+        }
+    }
+};
+
+// Girar cámara: alterna entre trasera (environment) y frontal (user)
+window.girarCamara = async function() {
+    // Cambiar el modo
+    window._camaraFacing = (window._camaraFacing === 'user') ? 'environment' : 'user';
+    // Detener el stream actual
+    if (window._camaraStream) {
+        window._camaraStream.getTracks().forEach(function(t){ t.stop(); });
+        window._camaraStream = null;
+    }
+    var video = document.getElementById('foto-camara-video');
+    try {
+        var stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: window._camaraFacing } },
+            audio: false
+        });
+        window._camaraStream = stream;
+        if (video) video.srcObject = stream;
+    } catch(e) {
+        console.error('Error al girar cámara:', e);
+        // Si falla (ej. no hay cámara frontal), volver a la anterior
+        window._camaraFacing = (window._camaraFacing === 'user') ? 'environment' : 'user';
+        try {
+            var stream2 = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: window._camaraFacing } },
+                audio: false
+            });
+            window._camaraStream = stream2;
+            if (video) video.srcObject = stream2;
+            alert('Este dispositivo solo tiene una cámara disponible.');
+        } catch(e2) {
+            alert('No se pudo cambiar de cámara.');
         }
     }
 };
