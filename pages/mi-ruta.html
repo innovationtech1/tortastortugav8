@@ -294,8 +294,55 @@ function iniciarCompartirUbicacion() {
         console.warn('GPS no disponible para compartir ubicación:', err.message);
     }, { enableHighAccuracy:true, maximumAge:3000, timeout:10000 });
 }
-// Arrancar el seguimiento si es un repartidor (tiene id)
-if (miId) { iniciarCompartirUbicacion(); }
+// Detener el seguimiento de ubicación
+function detenerCompartirUbicacion() {
+    if (_watchId !== null) {
+        navigator.geolocation.clearWatch(_watchId);
+        _watchId = null;
+    }
+}
+
+// Interruptor para activar/desactivar el compartir ubicación en tiempo real
+window.toggleCompartirUbicacion = function() {
+    var activo = (_watchId !== null);
+    if (activo) {
+        detenerCompartirUbicacion();
+        try { localStorage.setItem('tt_compartir_ubi', '0'); } catch(e){}
+    } else {
+        iniciarCompartirUbicacion();
+        try { localStorage.setItem('tt_compartir_ubi', '1'); } catch(e){}
+    }
+    _actualizarInterruptorUbi();
+};
+
+function _actualizarInterruptorUbi() {
+    var activo = (_watchId !== null);
+    var cont = document.getElementById('ubi-toggle-cont');
+    if (!cont) return;
+    cont.innerHTML =
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;">' +
+            '<div style="display:flex;align-items:center;gap:.5rem;">' +
+                '<span style="font-size:1.3rem;">' + (activo ? '📡' : '📴') + '</span>' +
+                '<div>' +
+                    '<div style="font-weight:800;font-size:.9rem;color:' + (activo ? '#25D366' : '#888') + ';">' +
+                        (activo ? 'Compartiendo ubicación' : 'Ubicación desactivada') + '</div>' +
+                    '<div style="font-size:.72rem;color:#888;">' +
+                        (activo ? 'El cliente ve tu tortumóvil en tiempo real' : 'Actívala para que el cliente te siga') + '</div>' +
+                '</div>' +
+            '</div>' +
+            '<button onclick="toggleCompartirUbicacion()" style="min-width:64px;height:34px;border-radius:20px;border:none;cursor:pointer;font-family:inherit;font-weight:800;font-size:.8rem;background:' +
+                (activo ? '#25D366' : 'rgba(255,255,255,.15)') + ';color:' + (activo ? '#000' : '#fff') + ';">' +
+                (activo ? 'ON' : 'OFF') + '</button>' +
+        '</div>';
+}
+
+// Arrancar automáticamente si el repartidor lo tenía activo (o por defecto ON)
+if (miId) {
+    var pref = null;
+    try { pref = localStorage.getItem('tt_compartir_ubi'); } catch(e){}
+    if (pref !== '0') { iniciarCompartirUbicacion(); }  // por defecto activo
+    setTimeout(_actualizarInterruptorUbi, 500);
+}
 
 // ── Menú de navegación ──
 window.toggleNavMenu = function() {
