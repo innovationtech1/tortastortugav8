@@ -42,6 +42,19 @@
     .dash-extra-fila:last-child { border-bottom:none; }
     .dash-extra-fila .lbl { color:#aaa; }
     .dash-extra-fila .num { font-weight:800; }
+    /* Gráficas */
+    .dash-chart {
+        background:#1a1a1a; border:1px solid rgba(255,255,255,.08); border-radius:16px;
+        padding:1rem; margin-bottom:1rem;
+    }
+    .dash-chart-titulo { font-size:.9rem; font-weight:800; color:#fff; margin-bottom:.8rem; }
+    .dash-chart-body { min-height:60px; }
+    .barra-fila { display:flex; align-items:center; gap:.6rem; margin-bottom:.5rem; }
+    .barra-lbl { font-size:.75rem; color:#aaa; width:64px; flex-shrink:0; text-align:right; }
+    .barra-track { flex:1; background:rgba(255,255,255,.06); border-radius:6px; height:22px; overflow:hidden; position:relative; }
+    .barra-fill { height:100%; border-radius:6px; background:linear-gradient(90deg,#FF7A33,#FF5A00); transition:width .5s ease; min-width:2px; }
+    .barra-val { font-size:.72rem; color:#fff; font-weight:700; width:48px; flex-shrink:0; }
+    .chart-vacio { text-align:center; color:#666; font-size:.82rem; padding:1rem; }
 </style>
 </head>
 <body>
@@ -100,6 +113,22 @@
         </div>
 
         <div class="dash-actualizado" id="dash-actualizado">—</div>
+
+        <!-- GRÁFICAS -->
+        <div class="dash-chart">
+            <div class="dash-chart-titulo">📈 Ventas últimos 7 días</div>
+            <div id="chart-dias" class="dash-chart-body">—</div>
+        </div>
+
+        <div class="dash-chart">
+            <div class="dash-chart-titulo">🕐 Ventas por hora (hoy)</div>
+            <div id="chart-horas" class="dash-chart-body">—</div>
+        </div>
+
+        <div class="dash-chart">
+            <div class="dash-chart-titulo">📍 Ventas por zona (hoy)</div>
+            <div id="chart-zonas" class="dash-chart-body">—</div>
+        </div>
     </div>
 </div>
 
