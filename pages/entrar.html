@@ -879,6 +879,61 @@ window.enviarRecuperacion = async function() {
         restaurar();
     }
 })();
+
+// ── Botón "Ver mi pedido" (si el cliente ya tiene sesión) ──
+(function _mostrarVerMiPedido() {
+    try {
+        var tel = localStorage.getItem('tt_cliente_telefono') || sessionStorage.getItem('tt_cliente_telefono');
+        var wrap = document.getElementById('ver-mi-pedido-wrap');
+        if (tel && wrap) wrap.style.display = 'block';
+    } catch(e){}
+})();
+
+window.irAMiPedido = function() {
+    window.location.href = 'mi-pedido.html';
+};
+
+// ── Confirmación al retroceder (estilo Tortas Tortuga) ──
+(function _confirmarSalida() {
+    // Empujar un estado al historial para interceptar el botón atrás
+    try { history.pushState({ tt: true }, '', location.href); } catch(e){}
+    window.addEventListener('popstate', function(e) {
+        // Mostrar el modal de confirmación
+        _mostrarModalSalir();
+        // Volver a empujar el estado para no salir todavía
+        try { history.pushState({ tt: true }, '', location.href); } catch(e){}
+    });
+})();
+
+window._mostrarModalSalir = function() {
+    if (document.getElementById('tt-modal-salir')) return; // ya está abierto
+    var ov = document.createElement('div');
+    ov.id = 'tt-modal-salir';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.8);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:1.5rem;';
+    ov.innerHTML =
+        '<div style="background:#1C1C1C;border:1px solid rgba(255,90,0,.3);border-radius:20px;padding:1.8rem 1.4rem;max-width:340px;width:100%;text-align:center;">' +
+            '<div style="font-size:3rem;margin-bottom:.5rem;">🐢</div>' +
+            '<div style="font-size:1.1rem;font-weight:900;color:#fff;margin-bottom:.4rem;">¿Estás seguro de salir?</div>' +
+            '<div style="font-size:.85rem;color:#bbb;margin-bottom:1.3rem;line-height:1.5;">Si sales, tendrás que volver a entrar para ordenar en Tortas Tortuga.</div>' +
+            '<div style="display:flex;gap:.6rem;">' +
+                '<button onclick="_cerrarModalSalir()" style="flex:1;padding:.85rem;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:12px;font-family:inherit;font-weight:700;font-size:.9rem;cursor:pointer;">Quedarme</button>' +
+                '<button onclick="_confirmarSalirApp()" style="flex:1;padding:.85rem;background:linear-gradient(135deg,#FF7A33,#FF5A00);border:none;color:#fff;border-radius:12px;font-family:inherit;font-weight:800;font-size:.9rem;cursor:pointer;">Salir</button>' +
+            '</div>' +
+        '</div>';
+    document.body.appendChild(ov);
+};
+
+window._cerrarModalSalir = function() {
+    var ov = document.getElementById('tt-modal-salir');
+    if (ov) ov.remove();
+};
+
+window._confirmarSalirApp = function() {
+    _cerrarModalSalir();
+    // Intentar salir: retroceder dos veces (el estado que empujamos + el real)
+    history.go(-2);
+};
+
 </script>
 </body>
 </html>
