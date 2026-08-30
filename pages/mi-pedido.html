@@ -139,13 +139,37 @@ function esMio(p) {
     return false;
 }
 
+let _firmaRenderPedidos = '';
 function renderPedidos(pedidos) {
     const cont = document.getElementById('lista-pedidos');
     if (!pedidos.length) {
         cont.innerHTML = '<div class="vacio">Todavía no tienes pedidos. ¡Haz el primero! 🌯</div>';
+        _firmaRenderPedidos = '';
         return;
     }
     pedidos.sort((a, b) => (b.creado?.seconds || 0) - (a.creado?.seconds || 0));
+
+    // Firma de render: solo reconstruir si cambió algo relevante (evita destruir el mapa en cada snapshot)
+    var firma = pedidos.map(function(p){
+        return p.id + '|' + (p.estado||'') + '|' + (p.repartidorId||'') + '|' + (p.repartidorNombre||'') + '|' + (p.total||'') + '|' + (p.estadoPago||'');
+    }).join('~');
+    if (firma === _firmaRenderPedidos) {
+        // Nada relevante cambió: solo refrescar los mapas (por si cambió el repartidor no, pero mantiene el rastreo vivo)
+        setTimeout(activarMapasEnVivo, 100);
+        return;
+    }
+    _firmaRenderPedidos = firma;
+
+    // Se va a reconstruir el HTML: limpiar los mapas viejos para que se recreen sobre los nuevos divs
+    try {
+        Object.keys(_ttMapas).forEach(function(pid){
+            var est = _ttMapas[pid];
+            if (est && est.unsub) { try { est.unsub(); } catch(e){} }
+            if (est && est.map) { try { est.map.remove(); } catch(e){} }
+            delete _ttMapas[pid];
+        });
+    } catch(e){}
+
     cont.innerHTML = pedidos.map(p => {
         const paso = pasoActual(p.estado);
         // Para domicilio el flujo tiene 5 pasos (incluye "En camino").
