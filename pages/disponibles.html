@@ -681,10 +681,27 @@ function pintarClientes(disp) {
         const lng = p.ubicacionCliente && p.ubicacionCliente.lng;
         if (!lat || !lng) return;
         const dist = textoDistancia(p);
-        L.marker([lat, lng]).addTo(_capaClientes)
-            .bindPopup('<b>' + (p.cliente||'Cliente') + '</b>' +
-                       (p.zonaEntregaNombre ? '<br>📍 ' + p.zonaEntregaNombre : '') +
-                       (dist ? '<br>🚗 ' + dist : ''));
+        const tiempo = textoTiempo(p);
+        const marker = L.marker([lat, lng]).addTo(_capaClientes);
+        // Popup inicial (la dirección se carga en un momento)
+        var popupBase = '<b>' + (p.cliente||'Cliente') + '</b>' +
+                   (p.zonaEntregaNombre ? '<br>📍 ' + p.zonaEntregaNombre : '') +
+                   (dist ? '<br>🚗 ' + dist : '') +
+                   (tiempo ? '<br>⏱️ ' + tiempo : '') +
+                   '<br><span id="dir-' + p.id + '" style="color:#666;font-size:.85em;">📍 buscando dirección…</span>';
+        marker.bindPopup(popupBase);
+        // Cargar la dirección legible (Nominatim) y actualizar el popup
+        obtenerDireccion(lat, lng).then(function(dir){
+            if (!dir) return;
+            var nuevoPopup = '<b>' + (p.cliente||'Cliente') + '</b>' +
+                   (p.zonaEntregaNombre ? '<br>📍 ' + p.zonaEntregaNombre : '') +
+                   (dist ? '<br>🚗 ' + dist : '') +
+                   (tiempo ? '<br>⏱️ ' + tiempo : '') +
+                   '<br><span style="color:#333;font-size:.85em;">🏠 ' + dir + '</span>';
+            marker.setPopupContent(nuevoPopup);
+            // Guardar la dirección en el pedido para mostrarla en la tarjeta
+            p._direccionLegible = dir;
+        });
     });
 }
 
