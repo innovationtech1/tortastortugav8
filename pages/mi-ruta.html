@@ -494,6 +494,7 @@ function render(pedidos) {
               '<div style="text-align:center;font-size:.75rem;color:#25D366;margin-bottom:.5rem;font-weight:600;">✅ Cliente compartió su ubicación</div>'
             ) +
             '<button class="btn-maps" style="width:100%;border:1px solid rgba(66,133,244,.4);cursor:pointer;" onclick="abrirEntrega(\''+p.id+'\')">🗺️ Cómo llegar y cobrar</button>' +
+            '<button onclick="enviarTicketWA(\''+p.id+'\')" style="width:100%;margin-top:.5rem;padding:.55rem;background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.4);color:#25D366;border-radius:8px;font-family:inherit;font-weight:700;font-size:.8rem;cursor:pointer;">📱 Enviar ticket por WhatsApp</button>' +
             (p.fotoReferencia ? '<button onclick="_toggleFotoRuta(\''+p.id+'\')" style="width:100%;margin-top:.5rem;padding:.55rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;border-radius:8px;font-family:inherit;font-weight:700;font-size:.8rem;cursor:pointer;">📸 <span id="fotor-txt-'+p.id+'">Ver foto de referencia</span></button><div id="fotor-cont-'+p.id+'" style="display:none;margin-top:.5rem;"><img src="'+p.fotoReferencia+'" style="width:100%;border-radius:8px;" onclick="window.open(this.src)"></div>' : '') +
 
             // ── Estado de la orden + repartidor + cliente ──
@@ -644,6 +645,44 @@ function escucharRuta() {
 }
 
 // ── VISTA DE ENTREGA (mapa + orden + cobro) ──────────────────
+// ── Enviar ticket por WhatsApp ──
+window.enviarTicketWA = function(pedidoId) {
+    var p = _pedidosActuales.find(function(x){ return x.id === pedidoId; });
+    if (!p) { alert('No se encontró el pedido.'); return; }
+    var tel = String(p.telefono || '').replace(/[^0-9]/g,'');
+    if (!tel) { alert('Este pedido no tiene teléfono del cliente.'); return; }
+    if (tel.length === 10) tel = '1' + tel;
+    var L = [];
+    L.push('🐢 *TORTAS TORTUGA*');
+    L.push('━━━━━━━━━━━━━');
+    L.push('Pedido ' + (p.folioStr || ('#'+(p.folio||''))));
+    if (p.cliente || p.nombre) L.push('Cliente: ' + (p.cliente || p.nombre));
+    L.push('');
+    L.push('🛍️ *Tu orden:*');
+    var items = p.itemsData;
+    if (Array.isArray(items) && items.length) {
+        items.forEach(function(it){
+            var cant = it.cantidad || it.qty || 1;
+            var nom = it.nombre || it.producto || it.name || 'Producto';
+            var prc = Number(it.precio) || 0;
+            L.push('• ' + cant + '× ' + nom + (prc ? ' — $' + prc.toFixed(2) : ''));
+        });
+    } else if (typeof p.items === 'string' && p.items.indexOf('Pendiente') < 0) {
+        L.push('• ' + p.items);
+    } else {
+        L.push('• (Orden por definir)');
+    }
+    L.push('');
+    L.push('━━━━━━━━━━━━━');
+    if (p.cargoServicio) L.push('🛵 Envío: $' + Number(p.cargoServicio).toFixed(2));
+    L.push('💵 *Total: ' + (p.total || '$0.00') + '*');
+    L.push(p.estadoPago === 'Pagado' ? '✅ Pagado' : '⏳ Por pagar');
+    L.push('');
+    L.push('¡Gracias por tu compra! 🐢');
+    var url = 'https://wa.me/' + tel + '?text=' + encodeURIComponent(L.join('\n'));
+    window.open(url, '_blank');
+};
+
 window.abrirEntrega = function(pedidoId) {
     const p = _pedidosActuales.find(x => x.id === pedidoId);
     if (!p) return;
