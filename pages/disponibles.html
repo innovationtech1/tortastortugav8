@@ -443,10 +443,11 @@ function _listaProductos(p) {
     var items = p.itemsData;
     var html = '';
     if (Array.isArray(items) && items.length) {
-        html = items.map(function(it){
-            var nom = it.nombre || it.producto || it.name || 'Producto';
-            var cant = it.cantidad || it.qty || 1;
-            return '<div style="font-size:.8rem;color:#ccc;padding:.1rem 0;">• ' + cant + '× ' + nom + '</div>';
+        var _grupos = window.agruparItems ? window.agruparItems(items) : items.map(function(it){ it.cantidad = it.cantidad||1; return it; });
+        html = _grupos.map(function(g){
+            var nom = g.nombre || 'Producto';
+            var varTxt = g.variante ? ' (' + g.variante + ')' : '';
+            return '<div style="font-size:.8rem;color:#ccc;padding:.1rem 0;">• <b style="color:#FF7A33;">' + g.cantidad + '×</b> ' + nom + varTxt + '</div>';
         }).join('');
     } else if (p.items && typeof p.items === 'string' && p.items.indexOf('Pendiente') < 0) {
         // Respaldo: items como texto
