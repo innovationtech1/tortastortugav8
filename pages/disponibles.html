@@ -759,16 +759,17 @@ function pintarClientes(disp) {
                    '<br><span id="dir-' + p.id + '" style="color:#666;font-size:.85em;">📍 buscando dirección…</span>';
         marker.bindPopup(popupBase);
         // Cargar la dirección legible (Nominatim) y actualizar el popup
-        obtenerDireccion(lat, lng).then(function(dir){
-            if (!dir) return;
+        obtenerDireccion(lat, lng).then(function(res){
+            if (!res || !res.texto) return;
+            var zonaTxt = p.zonaEntregaNombre || (res.zona ? res.zona.nombre + ' (auto)' : '');
             var nuevoPopup = '<b>' + (p.cliente||'Cliente') + '</b>' +
-                   (p.zonaEntregaNombre ? '<br>📍 ' + p.zonaEntregaNombre : '') +
+                   (zonaTxt ? '<br>📍 ' + zonaTxt : '') +
                    (dist ? '<br>🚗 ' + dist : '') +
                    (tiempo ? '<br>⏱️ ' + tiempo : '') +
-                   '<br><span style="color:#333;font-size:.85em;">🏠 ' + dir + '</span>';
+                   '<br><span style="color:#333;font-size:.85em;">🏠 ' + res.texto + '</span>';
             marker.setPopupContent(nuevoPopup);
-            // Guardar la dirección en el pedido para mostrarla en la tarjeta
-            p._direccionLegible = dir;
+            p._direccionLegible = res.texto;
+            if (res.zona) p._zonaDetectada = res.zona;
         });
     });
 }
@@ -834,7 +835,7 @@ function render(disp) {
         const folio = p.folioStr || (p.id ? p.id.slice(-4).toUpperCase() : '');
         const zona = p.zonaEntregaNombre || 'Sin zona';
         return '<div class="pedido-nuevo">' +
-            '<div class="pn-zona">📍 ' + zona + '</div>' +
+            '<div class="pn-zona" id="pn-zona-' + p.id + '">📍 ' + zona + '</div>' +
             (textoDistancia(p) ? '<span class="pn-distancia">🚗 ' + textoDistancia(p) + '</span>' : '') +
             '<div class="pn-top">' +
               '<div class="pn-cliente">' + (p.cliente || p.nombre || 'Cliente') + '</div>' +
@@ -866,10 +867,16 @@ function render(disp) {
         if (!lat || !lng) return;
         var el = document.getElementById('pn-dir-' + p.id);
         if (!el) return;
-        obtenerDireccion(lat, lng).then(function(dir){
+        obtenerDireccion(lat, lng).then(function(res){
             var el2 = document.getElementById('pn-dir-' + p.id);
-            if (el2 && dir) el2.innerHTML = '🏠 ' + dir;
+            if (el2 && res && res.texto) el2.innerHTML = '🏠 ' + res.texto;
             else if (el2) el2.style.display = 'none';
+            // Actualizar la zona detectada en la tarjeta (si no tenía zona)
+            if (res && res.zona && !p.zonaEntregaNombre) {
+                var zonaEl = document.getElementById('pn-zona-' + p.id);
+                if (zonaEl) zonaEl.innerHTML = '📍 ' + res.zona.nombre + ' <span style="color:#888;font-size:.8em;">(auto)</span>';
+                p._zonaDetectada = res.zona;
+            }
         });
     });
 }
