@@ -436,11 +436,7 @@ function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waU
         </div>`;
     document.body.appendChild(ov);
 
-    // En domicilio SIN ubicación previa: escuchar el pedido para actualizar el
-    // aviso cuando el cliente comparta su ubicación.
-    if (esDomicilio && pedidoId && !yaTieneUbicacion) {
-        actualizarAvisoTrasUbicacion(pedidoId, ov);
-    }
+    // (Ya no se pide ubicación en esta pantalla; el resumen del pedido se muestra directamente.)
 
     ov.querySelector('#btn-cerrar-confirmacion')?.addEventListener('click', () => { if (ov._unsub) ov._unsub(); ov.remove(); });
     ov.addEventListener('click', (e) => { if (e.target === ov) { if (ov._unsub) ov._unsub(); ov.remove(); } });
