@@ -1,3 +1,56 @@
+// ══════════════════════════════════════════════════════════
+// Helper GLOBAL para agrupar productos iguales por cantidad
+// Ej: 12 "Miche Tortuga" iguales → { nombre, cantidad:12, precio }
+// Agrupa por: nombre + precio + modificaciones (mismas = se juntan)
+// ══════════════════════════════════════════════════════════
+window.agruparItems = function(items) {
+    if (!Array.isArray(items) || !items.length) return [];
+    var grupos = {};
+    var orden = [];
+    items.forEach(function(it){
+        var nombre = it.nombre || it.producto || it.name || 'Producto';
+        var precio = Number(it.precio) || Number(it.precioBase) || 0;
+        var variante = it.variante || '';
+        var mods = '';
+        if (it.modificaciones && it.modificaciones.length) {
+            mods = it.modificaciones.slice().sort().join('|');
+        }
+        // Cantidad que ya trae el item (por si viene pre-agrupado)
+        var cantItem = Number(it.cantidad) || Number(it.qty) || 1;
+        // Clave única: nombre + precio + variante + modificaciones
+        var clave = nombre + '||' + precio + '||' + variante + '||' + mods;
+        if (!grupos[clave]) {
+            grupos[clave] = {
+                nombre: nombre,
+                precio: precio,
+                variante: variante,
+                modificaciones: it.modificaciones || [],
+                cantidad: 0,
+                categoria: it.categoria || '',
+                _original: it
+            };
+            orden.push(clave);
+        }
+        grupos[clave].cantidad += cantItem;
+    });
+    return orden.map(function(k){ return grupos[k]; });
+};
+
+// Formatea un grupo como texto legible: "12× Miche Tortuga — $15.00"
+window.textoItemAgrupado = function(g, opts) {
+    opts = opts || {};
+    var linea = g.cantidad + '× ' + g.nombre;
+    if (g.variante) linea += ' (' + g.variante + ')';
+    if (opts.conPrecio && g.precio) {
+        // Precio unitario × cantidad
+        linea += ' — $' + (g.precio).toFixed(2);
+        if (g.cantidad > 1 && opts.mostrarTotalLinea) {
+            linea += ' c/u ($' + (g.precio * g.cantidad).toFixed(2) + ')';
+        }
+    }
+    return linea;
+};
+
 // ═══════════════════════════════════════════════════════════
 //  BARRA DE PERFIL — Tortas Tortuga
 //  Muestra quien esta logueado (cliente o empleado) en tiempo real.
