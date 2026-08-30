@@ -379,6 +379,22 @@ window.tomarOrdenSolicitud = function(pedidoId) {
 
 window.aceptarPedido = async function(id) {
     detenerAlarma();
+
+    // Calcular tarifa sugerida por tiempo de llegada (usando el pedido de la lista actual)
+    var pedidoLista = (_ultimaLista || []).find(function(x){ return x.id === id; });
+    var cargoAplicar = null;
+    if (pedidoLista && pedidoLista.ubicacionCliente && pedidoLista.ubicacionCliente.lat) {
+        var sugerida = tarifaSugerida(pedidoLista);
+        if (sugerida === 'preguntar') {
+            var resp = prompt('Este pedido está a más de 1 hora.\n¿Cuánto quieres cobrar de envío? (escribe solo el número, ej. 25)', '25');
+            if (resp === null) return;  // canceló
+            var n = parseFloat(String(resp).replace(/[^0-9.]/g,''));
+            cargoAplicar = isNaN(n) ? null : n;
+        } else if (typeof sugerida === 'number') {
+            cargoAplicar = sugerida;
+        }
+    }
+
     try {
         await runTransaction(db, async (tx) => {
             const ref = doc(db, 'pedidos', id);
@@ -386,14 +402,27 @@ window.aceptarPedido = async function(id) {
             if (!snap.exists()) throw new Error('no-existe');
             const p = snap.data();
             if (p.repartidorId) throw new Error('ya-tomado');
-            tx.update(ref, {
+            var cambios = {
                 repartidorId: miId,
                 repartidorNombre: miNombre,
                 repartidorAsignadoEn: new Date().toISOString(),
                 aceptadoPorRepartidor: true
-            });
+            };
+            // Aplicar la tarifa de envío según el tiempo, ajustando el total
+            if (cargoAplicar != null) {
+                var totalProductos = Number(p.totalNum) || parseFloat(String(p.total||'').replace(/[^0-9.]/g,'')) || 0;
+                // Restar cargo previo si existía, para no duplicar
+                var cargoPrevio = Number(p.cargoServicio) || 0;
+                var baseProductos = totalProductos - cargoPrevio;
+                var nuevoTotal = baseProductos + cargoAplicar;
+                cambios.cargoServicio = cargoAplicar;
+                cambios.totalNum = nuevoTotal;
+                cambios.total = '$' + nuevoTotal.toFixed(2);
+            }
+            tx.update(ref, cambios);
         });
-        if (window.ttAlert) window.ttAlert('✅ ¡Pedido aceptado! Ya está en tu ruta.');
+        var msgTarifa = cargoAplicar != null ? (' Envío: $' + cargoAplicar) : '';
+        if (window.ttAlert) window.ttAlert('✅ ¡Pedido aceptado! Ya está en tu ruta.' + msgTarifa);
     } catch(err) {
         if (err.message === 'ya-tomado') {
             if (window.ttAlert) window.ttAlert('😕 Otro repartidor tomó este pedido primero.');
