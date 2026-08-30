@@ -400,7 +400,7 @@ async function guardarEnSheets(data) {
     } catch(e) {}
 }
 
-function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waUrl, ubicacionPrevia) {
+function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waUrl, ubicacionPrevia, itemsResumen, totalResumen) {
     const ov = document.createElement('div');
     ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;' +
         'display:flex;align-items:center;justify-content:center;padding:1rem;';
@@ -1725,7 +1725,7 @@ window.enviarTodasLasCuentas = async function() {
         // Confirmación en pantalla: pasa la URL de WhatsApp y el tipo para
         // que el modal decida si habilita el botón de una vez (pickup) o
         // solo tras compartir ubicación (domicilio).
-        mostrarConfirmacionTicket(ticket, nombre, result ? result.id : null, tipo, waUrl, data.ubicacionCliente || null);
+        mostrarConfirmacionTicket(ticket, nombre, result ? result.id : null, tipo, waUrl, data.ubicacionCliente || null, itemsStr, totalGen);
     } catch (e) {
         console.error('Error al enviar orden:', e);
         alert('❌ Error al enviar la orden:\n' + (e.message || e) + '\n\nRevisa que tengas conexión a internet.');
