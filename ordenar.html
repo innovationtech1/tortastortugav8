@@ -4524,5 +4524,46 @@ if (document.readyState === 'loading') {
     setTimeout(_cargarMasVendidos, 1500);
 }
 </script>
+<script>
+// ── Enviar ticket del POS por WhatsApp (cuando el cliente lo pide) ──
+window.enviarTicketPOS = function() {
+    // Pedir el teléfono del cliente
+    var tel = prompt('📱 Escribe el número de WhatsApp del cliente (10 dígitos):');
+    if (!tel) return;
+    tel = String(tel).replace(/[^0-9]/g, '');
+    if (tel.length < 10) { alert('El número no es válido. Deben ser al menos 10 dígitos.'); return; }
+    if (tel.length === 10) tel = '1' + tel;  // código USA por defecto
+
+    // Armar el ticket con los productos de las cuentas actuales
+    var cs = window._cuentasSys;
+    if (!cs) { alert('No hay productos en el carrito.'); return; }
+    var cuentasConItems = cs.cuentas.filter(function(c){ return c.items && c.items.length > 0; });
+    if (!cuentasConItems.length) { alert('No hay productos en el carrito.'); return; }
+
+    var L = [];
+    L.push('🐢 *TORTAS TORTUGA*');
+    L.push('━━━━━━━━━━━━━');
+    L.push('🛍️ *Tu orden:*');
+    var totalGen = 0;
+    cuentasConItems.forEach(function(c){
+        if (cuentasConItems.length > 1) L.push('_' + (c.nombre || 'Cuenta') + ':_');
+        c.items.forEach(function(it){
+            var prc = Number(it.precio) || 0;
+            totalGen += prc;
+            L.push('• ' + (it.nombre || 'Producto') + (it.variante ? ' (' + it.variante + ')' : '') + ' — $' + prc.toFixed(2));
+        });
+    });
+    L.push('');
+    L.push('━━━━━━━━━━━━━');
+    L.push('💵 *Total: $' + totalGen.toFixed(2) + '*');
+    var metodo = window._metodoPagoActual || 'efectivo';
+    L.push('Método: ' + (metodo === 'efectivo' ? '💵 Efectivo' : '💳 Tarjeta'));
+    L.push('');
+    L.push('¡Gracias por tu compra! 🐢');
+
+    var url = 'https://wa.me/' + tel + '?text=' + encodeURIComponent(L.join('\n'));
+    window.open(url, '_blank');
+};
+</script>
 </body>
 </html>
