@@ -267,11 +267,9 @@ window._armarTicketWA = function(p) {
     L.push('🛍️ *Tu orden:*');
     var items = p.itemsData;
     if (Array.isArray(items) && items.length) {
-        items.forEach(function(it){
-            var cant = it.cantidad || it.qty || 1;
-            var nom = it.nombre || it.producto || it.name || 'Producto';
-            var prc = Number(it.precio) || 0;
-            L.push('• ' + cant + '× ' + nom + (prc ? ' — $' + prc.toFixed(2) : ''));
+        var grupos = window.agruparItems ? window.agruparItems(items) : items.map(function(i){ i.cantidad=i.cantidad||1; return i; });
+        grupos.forEach(function(g){
+            L.push('• ' + g.cantidad + '× ' + g.nombre + (g.variante ? ' ('+g.variante+')' : '') + (g.precio ? ' — $' + g.precio.toFixed(2) : ''));
         });
     } else if (typeof p.items === 'string' && p.items.indexOf('Pendiente') < 0) {
         L.push('• ' + p.items);
