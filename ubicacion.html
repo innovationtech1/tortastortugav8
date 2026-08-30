@@ -326,8 +326,72 @@ function _mostrarPreviewFoto(dataUrl) {
 }
 function _restaurarBotonFoto() {
     var botones = document.getElementById('foto-ref-botones');
-    if (botones) { botones.style.display = 'flex'; botones.innerHTML = '<label style="flex:1;text-align:center;padding:.7rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;border-radius:8px;font-weight:700;font-size:.85rem;cursor:pointer;">🖼️ Subir foto<input type="file" accept="image/*" onchange="procesarFotoRef(this)" style="display:none;"></label>'; }
+    if (botones) {
+        botones.style.display = 'flex';
+        botones.innerHTML =
+            '<button type="button" onclick="abrirCamara()" style="flex:1;text-align:center;padding:.7rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;border-radius:8px;font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer;">📷 Cámara</button>' +
+            '<label style="flex:1;text-align:center;padding:.7rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;border-radius:8px;font-weight:700;font-size:.85rem;cursor:pointer;">🖼️ Galería<input type="file" accept="image/*" onchange="procesarFotoRef(this)" style="display:none;"></label>';
+    }
 }
+
+// ── Cámara en vivo (getUserMedia) ──
+window.abrirCamara = async function() {
+    var visor = document.getElementById('foto-camara-visor');
+    var botones = document.getElementById('foto-ref-botones');
+    var video = document.getElementById('foto-camara-video');
+    if (!window._camaraFacing) window._camaraFacing = 'environment';
+    try {
+        var stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: window._camaraFacing } }, audio: false });
+        window._camaraStream = stream;
+        if (video) video.srcObject = stream;
+        if (visor) visor.style.display = 'block';
+        if (botones) botones.style.display = 'none';
+    } catch(e) {
+        alert('No se pudo abrir la cámara. Da permiso o usa la galería.');
+    }
+};
+
+window.girarCamara = async function() {
+    window._camaraFacing = (window._camaraFacing === 'user') ? 'environment' : 'user';
+    if (window._camaraStream) { window._camaraStream.getTracks().forEach(function(t){ t.stop(); }); window._camaraStream = null; }
+    var video = document.getElementById('foto-camara-video');
+    try {
+        var stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: window._camaraFacing } }, audio: false });
+        window._camaraStream = stream;
+        if (video) video.srcObject = stream;
+    } catch(e) {
+        window._camaraFacing = (window._camaraFacing === 'user') ? 'environment' : 'user';
+        try {
+            var s2 = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: window._camaraFacing } }, audio: false });
+            window._camaraStream = s2; if (video) video.srcObject = s2;
+            alert('Este dispositivo solo tiene una cámara.');
+        } catch(e2) { alert('No se pudo cambiar de cámara.'); }
+    }
+};
+
+window.capturarFotoCamara = function() {
+    var video = document.getElementById('foto-camara-video');
+    if (!video) return;
+    var canvas = document.createElement('canvas');
+    var scale = Math.min(1, 800 / (video.videoWidth || 800));
+    canvas.width = Math.round((video.videoWidth || 640) * scale);
+    canvas.height = Math.round((video.videoHeight || 480) * scale);
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    var dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+    if (dataUrl.length > 700000) dataUrl = canvas.toDataURL('image/jpeg', 0.4);
+    window._fotoRefData = dataUrl;
+    try { localStorage.setItem('tt_foto_ref_ubi', dataUrl); } catch(e){}
+    cerrarCamara();
+    _mostrarPreviewFoto(dataUrl);
+};
+
+window.cerrarCamara = function() {
+    if (window._camaraStream) { window._camaraStream.getTracks().forEach(function(t){ t.stop(); }); window._camaraStream = null; }
+    var visor = document.getElementById('foto-camara-visor');
+    var botones = document.getElementById('foto-ref-botones');
+    if (visor) visor.style.display = 'none';
+    if (botones) botones.style.display = 'flex';
+};
 window.quitarFotoRef = function() {
     window._fotoRefData = null;
     try { localStorage.removeItem('tt_foto_ref_ubi'); } catch(e){}
