@@ -361,7 +361,7 @@ function abrirCarrito() {
 }
 
 // NOTA: limpiarCarrito ya no se redefine aquí. window.limpiarCarrito
-// (definido una sola vez en js/app.js?v=1788104278, junto a la lógica de cuentas
+// (definido una sola vez en js/app.js?v=1788111347, junto a la lógica de cuentas
 // múltiples) es lo que realmente se ejecuta al hacer clic en "Vaciar".
 
 /* addToCart y addDrink — expuestas globalmente para menu.js */
@@ -436,7 +436,7 @@ window.renderCartItems = function() {
     actualizarBotones();
 };
 
-// NOTA: renderCuentasTabs vive una sola vez en js/app.js?v=1788104278 (incluye ahi el
+// NOTA: renderCuentasTabs vive una sola vez en js/app.js?v=1788111347 (incluye ahi el
 // placeholder "Asignar mesa / nombre" que antes dependia de un hook aparte
 // que nunca llegaba a ejecutarse). Aqui habia una copia vieja, eliminada.
 
@@ -1165,7 +1165,7 @@ function cerrarNombreModal() {
     if (ov) ov.classList.remove('open');
 }
 // NOTA: guardarNombreCuenta ya no se redefine aquí. window.guardarNombreCuenta
-// (definido una sola vez en js/app.js?v=1788104278) es lo que realmente se ejecuta.
+// (definido una sola vez en js/app.js?v=1788111347) es lo que realmente se ejecuta.
 function limpiarCuentaActual() {
     var cs = window._cuentasSys;
     var c = cs ? cs.cuentas.find(function(x){ return x.id === cs.activa; }) : null;
@@ -2226,7 +2226,7 @@ html { -webkit-text-size-adjust: 100%; }
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1788104278"></script>
+<script type="module" src="js/app.js?v=1788111347"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -3113,12 +3113,12 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(initNombreInput, 500);
 })();
 
-// NOTA: editarNombreCuenta real vive en js/app.js?v=1788104278 (la usa el panel de
+// NOTA: editarNombreCuenta real vive en js/app.js?v=1788111347 (la usa el panel de
 // dividir cuenta). Aquí había una versión muerta de un paradigma de UI
 // (input con wrap/mostrar-ocultar) que ya no existe en este HTML.
 
 // NOTA: guardarNombreCuenta ya no se redefine aquí tampoco. La única
-// definición vigente vive en js/app.js?v=1788104278 y ahora lee el input del modal
+// definición vigente vive en js/app.js?v=1788111347 y ahora lee el input del modal
 // directamente (ver #nombre-modal-overlay más arriba en este archivo).
 
 // Guardar con Enter dentro del modal de nombre de cuenta
@@ -3555,7 +3555,7 @@ document.addEventListener('click', function(e) {
     };
 
     // NOTA: el placeholder "Asignar mesa / nombre" ya vive dentro de
-    // renderCuentasTabs en js/app.js?v=1788104278 — este hook aparte nunca sobrevivía
+    // renderCuentasTabs en js/app.js?v=1788111347 — este hook aparte nunca sobrevivía
     // a la carga del módulo (app.js?v=1788104278 siempre reasignaba la función después),
     // así que nunca se ejecutaba de verdad. Se elimina.
 })();
