@@ -1533,13 +1533,31 @@ window.enviarTodasLasCuentas = async function() {
         return;
     }
 
-    // Para clientes a DOMICILIO: validar zona, día, horario y ubicación
-    // (se configuran en el overlay de pasos). Pickup no requiere nada de esto.
+    // Para clientes a DOMICILIO: solo se requiere la UBICACIÓN.
+    // La zona se detecta automáticamente y la entrega es "lo antes posible".
     if (esClientePuro && tipo === 'domicilio') {
-        if (!entregaCli.zona || !entregaCli.fecha || !entregaCli.horario) {
-            alert('⚠️ Falta configurar tu entrega. Toca "Cambiar" en el resumen de entrega del carrito para completar zona, día y horario.');
+        // Buscar ubicación en el carrito o en la sesión
+        var _ubiOk = entregaCli.ubicacion && entregaCli.ubicacion.lat;
+        if (!_ubiOk) {
+            try {
+                var _uStr = sessionStorage.getItem('tt_cliente_ubicacion') || localStorage.getItem('tt_cliente_ubicacion');
+                if (_uStr) { var _u = JSON.parse(_uStr); if (_u && _u.lat) { entregaCli.ubicacion = _u; _ubiOk = true; } }
+            } catch(e){}
+        }
+        if (!_ubiOk) {
+            alert('⚠️ Necesitamos tu ubicación para la entrega a domicilio. Comparte tu ubicación e intenta de nuevo.');
             return;
         }
+        // Asignar valores automáticos si faltan (entrega lo antes posible)
+        if (!entregaCli.fecha)   entregaCli.fecha = 'hoy';
+        if (!entregaCli.horario) entregaCli.horario = 'asap';
+        if (!entregaCli.fechaEtiqueta)   entregaCli.fechaEtiqueta = 'Hoy';
+        if (!entregaCli.horarioEtiqueta) entregaCli.horarioEtiqueta = 'Lo antes posible';
+        if (!entregaCli.zona && entregaCli.ubicacion && entregaCli.ubicacion.zonaNombre) {
+            entregaCli.zona = entregaCli.ubicacion.zona || 'auto';
+            entregaCli.zonaNombre = entregaCli.ubicacion.zonaNombre;
+        }
+        if (!entregaCli.zona) { entregaCli.zona = 'auto'; entregaCli.zonaNombre = entregaCli.zonaNombre || 'Detectada por ubicación'; }
     }
 
     // Ya NO se abre WhatsApp en automático. El mensaje se arma abajo y se
