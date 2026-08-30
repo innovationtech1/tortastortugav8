@@ -146,28 +146,59 @@ const infoEl = document.getElementById('pedido-info');
 const statusEl = document.getElementById('status');
 const btnEl = document.getElementById('btn-share');
 
-if (!pedidoId) {
-    infoEl.textContent = 'Link invalido. Pide al restaurante un nuevo enlace.';
-    btnEl.style.display = 'none';
-} else {
-    // Cargar info del pedido
-    (async function() {
-        try {
+// ID del pedido a usar (viene en la URL o se busca el último del cliente)
+window._pedidoActivoId = pedidoId;
+
+(async function cargarPedido() {
+    try {
+        var p = null;
+        // 1) Si viene el ID en la URL, cargar ese pedido
+        if (pedidoId) {
             const snap = await getDoc(doc(db, 'pedidos', pedidoId));
-            if (snap.exists()) {
-                const p = snap.data();
-                infoEl.textContent = 'Pedido ' + (p.folioStr || '') + (p.cliente ? ' - ' + p.cliente : '');
-                if (p.ubicacionCliente) {
-                    statusEl.innerHTML = '<span class="exito">Ya compartiste tu ubicacion. Gracias!</span>';
-                }
-            } else {
-                infoEl.textContent = 'Pedido no encontrado.';
-            }
-        } catch(e) {
-            infoEl.textContent = 'Pedido a domicilio';
+            if (snap.exists()) { p = snap.data(); p.id = snap.id; window._pedidoActivoId = snap.id; }
         }
-    })();
-}
+        // 2) Si no hay ID (o no se encontró), buscar el ÚLTIMO pedido del cliente por su teléfono
+        if (!p) {
+            var tel = (localStorage.getItem('tt_cliente_telefono') || sessionStorage.getItem('tt_cliente_telefono') || '').replace(/[^0-9]/g,'');
+            if (tel) {
+                var qs = await getDocs(collection(db, 'pedidos'));
+                var mios = [];
+                qs.forEach(function(d){
+                    var x = d.data(); x.id = d.id;
+                    var t = String(x.telefono||'').replace(/[^0-9]/g,'');
+                    if (t === tel) mios.push(x);
+                });
+                // Ordenar por fecha (más reciente primero)
+                mios.sort(function(a,b){
+                    var fa = (a.creado && a.creado.seconds) ? a.creado.seconds : 0;
+                    var fb = (b.creado && b.creado.seconds) ? b.creado.seconds : 0;
+                    return fb - fa;
+                });
+                if (mios.length) { p = mios[0]; window._pedidoActivoId = p.id; }
+            }
+        }
+        // 3) Mostrar la info del pedido
+        if (p) {
+            var items = '';
+            if (Array.isArray(p.itemsData) && p.itemsData.length && window.agruparItems) {
+                items = window.agruparItems(p.itemsData).map(function(g){ return g.cantidad + '× ' + g.nombre; }).join(', ');
+            } else if (typeof p.items === 'string' && p.items.indexOf('Pendiente') < 0) {
+                items = p.items.split(' | ').slice(0,4).join(', ');
+            }
+            infoEl.innerHTML = '<b>Pedido ' + (p.folioStr || ('#'+(p.folio||''))) + '</b>' +
+                (p.cliente ? ' · ' + p.cliente : '') +
+                (items ? '<div style="font-size:.8rem;color:#bbb;margin-top:.4rem;">🛍️ ' + items + '</div>' : '');
+            if (p.ubicacionCliente && p.ubicacionCliente.lat) {
+                statusEl.innerHTML = '<span class="exito">✅ Ya compartiste tu ubicación. ¡Gracias!</span>';
+            }
+        } else {
+            infoEl.textContent = 'No encontramos tu pedido. Puedes compartir tu ubicación de todas formas.';
+        }
+    } catch(e) {
+        console.warn('Error cargando pedido:', e);
+        infoEl.textContent = 'Pedido a domicilio';
+    }
+})();
 
 window.regresarAMiPedido = function() {
     // Volver a la vista del cliente. Si venimos desde ahi (misma app),
