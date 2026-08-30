@@ -1434,7 +1434,7 @@ window.enviarCuentasSeparadas = async function(cuentas) {
             if (result && result.id) {
                 try {
                     var _fs = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-                    await _fs.updateDoc(_fs.doc(window._db || db, 'pedidos', result.id), { codigoOrden: String(ticket).replace(/^#+/, '') });
+                    await _fs.updateDoc(_fs.doc(db, 'pedidos', result.id), { codigoOrden: String(ticket).replace(/^#+/, '') });
                 } catch(errCod) { console.warn('No se pudo guardar codigoOrden:', errCod); }
             }
             ticketsEnviados.push('#' + String(ticket).replace(/^#+/, '') + ' (' + nombreCuenta + ')');
