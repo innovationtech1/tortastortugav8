@@ -3796,26 +3796,50 @@ window.initEntregaCarrito = function() {
         return;
     }
 
-    // Domicilio: resumen COMPACTO (2x2) para no tapar los productos
-    var _ubicTxt = '—';
-    if (e.ubicacion && e.ubicacion.lat) {
-        _ubicTxt = e.ubicacion.direccion ? (e.ubicacion.direccion.length > 22 ? e.ubicacion.direccion.slice(0,22) + '…' : e.ubicacion.direccion) : 'Compartida ✓';
+    // Domicilio: resumen AUTOMÁTICO — dirección legible + zona detectada de la ubicación compartida
+    // Obtener la ubicación del cliente (del carrito o de la sesión)
+    var ubi = (e.ubicacion && e.ubicacion.lat) ? e.ubicacion : null;
+    if (!ubi) {
+        try {
+            var uStr = leerSes('tt_cliente_ubicacion');
+            if (uStr) { var u = JSON.parse(uStr); if (u && u.lat) ubi = u; }
+        } catch(err){}
     }
-    var celdas = [
-        ['📍 Zona', e.zonaNombre || '—'],
-        ['🗓️ Día', e.fechaEtiqueta || '—'],
-        ['🕐 Horario', e.horarioEtiqueta || '—'],
-        ['📌 Ubicación', _ubicTxt],
-    ];
+
+    var dirTxt = (ubi && ubi.direccion) ? ubi.direccion : (ubi ? 'Ubicación compartida ✓' : 'Comparte tu ubicación');
+    var zonaTxt = e.zonaNombre || (ubi && ubi.zonaNombre) || 'Detectando…';
+
     sec.innerHTML = '<div style="padding:.4rem .2rem;">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">' +
         '<span style="font-size:.72rem;color:#FF5A00;font-weight:800;text-transform:uppercase;letter-spacing:.04em;">🚗 Entrega a domicilio</span>' +
         '<button onclick="window.eoReabrir()" style="background:rgba(255,90,0,.12);border:1px solid rgba(255,90,0,.3);color:#FF5A00;border-radius:8px;padding:.25rem .6rem;font-family:inherit;font-size:.7rem;font-weight:700;cursor:pointer;">Cambiar</button>' +
         '</div>' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;">' +
-        celdas.map(function(f){
-            var ok = f[1] !== '—';
-            return '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:.4rem .6rem;">' +
+        '<div style="background:rgba(37,211,102,.06);border:1px solid rgba(37,211,102,.25);border-radius:12px;padding:.7rem .8rem;">' +
+            '<div style="display:flex;align-items:flex-start;gap:.5rem;margin-bottom:.5rem;">' +
+                '<span style="font-size:1rem;">🏠</span>' +
+                '<div style="flex:1;min-width:0;"><div style="font-size:.7rem;color:#888;">Tu dirección</div>' +
+                '<div id="cart-dir-auto" style="font-size:.85rem;color:#fff;font-weight:600;line-height:1.3;">' + dirTxt + '</div></div>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:.5rem;">' +
+                '<span style="font-size:1rem;">🎯</span>' +
+                '<div style="flex:1;"><div style="font-size:.7rem;color:#888;">Zona detectada</div>' +
+                '<div id="cart-zona-auto" style="font-size:.85rem;color:#25D366;font-weight:700;">' + zonaTxt + '</div></div>' +
+            '</div>' +
+            '<div style="font-size:.72rem;color:#888;margin-top:.5rem;padding-top:.5rem;border-top:1px solid rgba(255,255,255,.08);">🕐 Entrega: lo antes posible</div>' +
+        '</div>' +
+    '</div>';
+
+    // Cargar dirección legible y zona automáticamente si no las tenemos
+    if (ubi && ubi.lat && (!ubi.direccion || zonaTxt === 'Detectando…')) {
+        _cartDetectarDireccionZona(ubi.lat, ubi.lng);
+    }
+    return;
+
+    // (código anterior deshabilitado)
+    var _celdasNoUsado = [
+        celdas => celdas
+    ];
+    var _sinUsar = '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:.4rem .6rem;">' +
                 '<div style="color:#888;font-size:.68rem;margin-bottom:.1rem;">' + f[0] + '</div>' +
                 '<div style="color:' + (ok ? '#25D366' : '#FF4444') + ';font-weight:700;font-size:.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + f[1] + '</div></div>';
         }).join('') +
