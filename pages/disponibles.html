@@ -231,6 +231,44 @@ if (!miId && !miNombre) {
     }
 }
 
+// ── Notificaciones del navegador ──
+// Pedir permiso al cargar (si no se ha decidido)
+(function _pedirPermisoNotif() {
+    try {
+        if ('Notification' in window && Notification.permission === 'default') {
+            // Pedir al primer toque del usuario (requisito de algunos navegadores)
+            document.addEventListener('click', function _once() {
+                Notification.requestPermission();
+                document.removeEventListener('click', _once);
+            }, { once: true });
+        }
+    } catch(e){}
+})();
+
+function _notificarNuevoPedido(cuantos) {
+    try {
+        if (!('Notification' in window)) return;
+        if (Notification.permission !== 'granted') return;
+        // Solo notificar si la pestaña no está visible (para no duplicar con el sonido)
+        var titulo = '🐢 ¡Nuevo pedido disponible!';
+        var cuerpo = cuantos > 1 ? ('Hay ' + cuantos + ' pedidos esperando repartidor.') : 'Un pedido nuevo espera repartidor.';
+        var notif = new Notification(titulo, {
+            body: cuerpo,
+            icon: '../icons/icon-192.png',
+            badge: '../icons/icon-192.png',
+            tag: 'nuevo-pedido-disponible',   // reemplaza notificaciones previas (no acumula)
+            renotify: true,
+            vibrate: [200,100,200]
+        });
+        notif.onclick = function() {
+            window.focus();
+            notif.close();
+        };
+        // Auto-cerrar a los 8 segundos
+        setTimeout(function(){ try { notif.close(); } catch(e){} }, 8000);
+    } catch(e) { console.warn('No se pudo mostrar notificación:', e); }
+}
+
 // ── Controles de alarma ──
 window.toggleSonido = function() {
     sonidoOn = !sonidoOn;
@@ -599,6 +637,9 @@ function escuchar() {
         let hayNuevo = false;
         disp.forEach(p => { if (!vistos.has(p.id)) { vistos.add(p.id); if (!primeraCarga) hayNuevo = true; } });
         primeraCarga = false;
+
+        // Notificación del navegador si hay pedido nuevo
+        if (hayNuevo) _notificarNuevoPedido(disp.length);
 
         // Pedidos disponibles que este repartidor NO ha descartado
         const activos = disp.filter(p => !descartados.has(p.id));
