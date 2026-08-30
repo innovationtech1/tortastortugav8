@@ -747,6 +747,7 @@ function mostrarToastRuta(txt) {
 
 function escucharRuta() {
     onSnapshot(collection(db, 'pedidos'), snap => {
+      try {
         const todos = snap.docs.map(d => ({ id:d.id, ...d.data() }));
         window._todosPedidosRuta = todos.filter(p => p.archivado !== true);
         // Poblar el filtro de repartidores (solo gerente/supervisor)
@@ -755,6 +756,11 @@ function escucharRuta() {
         const mios = _filtrarPedidosRuta(window._todosPedidosRuta);
         _pedidosActuales = mios;
         render(mios);
+      } catch(errRender) {
+        console.error('Error al mostrar la ruta:', errRender);
+        var c = document.getElementById('lista-ruta');
+        if (c) c.innerHTML = '<div style="padding:1rem;color:#FF8888;">Hubo un problema al cargar la ruta. Detalle: ' + (errRender.message||errRender) + '</div>';
+      }
         // Si hay una entrega abierta, refrescar su estado de pago en vivo
         if (_pedidoAbierto) {
             const actualizado = mios.find(x => x.id === _pedidoAbierto.id);
