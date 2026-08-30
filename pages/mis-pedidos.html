@@ -240,7 +240,7 @@ function render() {
 
 // ── Enviar ticket por WhatsApp ──
 window.enviarTicketWA = function(pedidoId) {
-    var p = (window._pedidosActuales || []).find(function(x){ return x.id === pedidoId; });
+    var p = (window._pedidos || _pedidos || []).find(function(x){ return x.id === pedidoId; });
     if (!p) { alert('No se encontró el pedido.'); return; }
     var tel = String(p.telefono || p.cliente_telefono || p.telefonoCliente || '').replace(/[^0-9]/g,'');
     if (!tel) { alert('Este pedido no tiene teléfono del cliente.'); return; }
