@@ -314,6 +314,79 @@ window.enviarCodigo = async function() {
 // ── Foto de referencia (opcional): procesar, comprimir y guardar ──
 window._fotoRefData = null;  // guardará la foto comprimida en base64
 
+// ── Cámara integrada en la página (getUserMedia) ──
+window._camaraStream = null;
+
+window.abrirCamara = async function() {
+    var visor = document.getElementById('foto-camara-visor');
+    var video = document.getElementById('foto-camara-video');
+    var botones = document.getElementById('foto-ref-botones');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Tu navegador no permite abrir la cámara. Usa la opción de Galería.');
+        return;
+    }
+    try {
+        // Preferir cámara trasera (environment)
+        var stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' } },
+            audio: false
+        });
+        window._camaraStream = stream;
+        if (video) { video.srcObject = stream; }
+        if (visor) visor.style.display = 'block';
+        if (botones) botones.style.display = 'none';
+    } catch(e) {
+        console.error('Error al abrir cámara:', e);
+        if (e.name === 'NotAllowedError') {
+            alert('No diste permiso para la cámara. Puedes usar la Galería o permitir el acceso en la configuración del navegador.');
+        } else {
+            alert('No se pudo abrir la cámara. Usa la opción de Galería.');
+        }
+    }
+};
+
+window.capturarFotoCamara = function() {
+    var video = document.getElementById('foto-camara-video');
+    if (!video || !video.videoWidth) { alert('La cámara aún no está lista, espera un momento.'); return; }
+    try {
+        // Dibujar el frame actual del video en un canvas
+        var canvas = document.createElement('canvas');
+        var maxW = 800;
+        var scale = Math.min(1, maxW / video.videoWidth);
+        canvas.width = Math.round(video.videoWidth * scale);
+        canvas.height = Math.round(video.videoHeight * scale);
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        var dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+        if (dataUrl.length > 700000) dataUrl = canvas.toDataURL('image/jpeg', 0.4);
+        // Guardar la foto (mismo flujo que galería)
+        window._fotoRefData = dataUrl;
+        try { localStorage.setItem('tt_foto_ref', dataUrl); } catch(e){}
+        try { sessionStorage.setItem('tt_foto_ref', dataUrl); } catch(e){}
+        // Cerrar la cámara y mostrar la vista previa
+        cerrarCamara();
+        _mostrarPreviewFoto(dataUrl);
+    } catch(e) {
+        console.error('Error al capturar:', e);
+        alert('No se pudo capturar la foto. Intenta de nuevo.');
+    }
+};
+
+window.cerrarCamara = function() {
+    // Detener el stream de la cámara (libera el hardware)
+    if (window._camaraStream) {
+        window._camaraStream.getTracks().forEach(function(t){ t.stop(); });
+        window._camaraStream = null;
+    }
+    var visor = document.getElementById('foto-camara-visor');
+    var video = document.getElementById('foto-camara-video');
+    var botones = document.getElementById('foto-ref-botones');
+    if (video) video.srcObject = null;
+    if (visor) visor.style.display = 'none';
+    // Solo mostrar botones si no hay foto tomada
+    if (botones && !window._fotoRefData) botones.style.display = 'flex';
+};
+
 // Mostrar la vista previa de la foto
 function _mostrarPreviewFoto(dataUrl) {
     var prev = document.getElementById('foto-ref-preview');
