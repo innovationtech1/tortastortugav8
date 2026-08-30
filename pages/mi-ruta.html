@@ -956,7 +956,7 @@ window.cambiarRepartidorRuta = async function(pedidoId, clienteNombre) {
         }
         var html = '';
         reps.forEach(function(r){
-            var repId = r.id || r._docId;
+            var repId = r.empleadoId || r.id || r._docId;
             var repNom = r.nombre || repId;
             var rol = r.rol || '';
             var inicial = (repNom.charAt(0) || '?').toUpperCase();
