@@ -139,6 +139,42 @@ function esMio(p) {
     return false;
 }
 
+// Desglose del cobro para que el cliente vea qué se le cobra
+function _desgloseCobro(p) {
+    var d = p.desglose || {};
+    var envio = Number(p.cargoServicio) || Number(d.envio) || 0;
+    var subtotal = Number(d.subtotal) || 0;
+    var impuesto = Number(d.impuesto) || 0;
+    var descuento = Number(d.descuento) || 0;
+    var propina = Number(d.propina) || 0;
+    var total = Number(p.totalNum) || Number(d.total) || parseFloat(String(p.total||'').replace(/[^0-9.]/g,'')) || 0;
+
+    // Si no hay desglose detallado, mostrar solo el total (pedidos viejos)
+    if (!subtotal && !envio && !impuesto) {
+        return '<div class="pedido-total">' + (p.total || '') + '</div>';
+    }
+
+    var filas = '';
+    function fila(label, valor, color) {
+        return '<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.15rem 0;color:' + (color||'#bbb') + ';">' +
+               '<span>' + label + '</span><span>$' + valor.toFixed(2) + '</span></div>';
+    }
+    if (subtotal) filas += fila('Productos', subtotal);
+    if (descuento) filas += fila('Descuento', -descuento, '#FBB724');
+    if (envio) filas += fila('🛵 Envío a domicilio', envio, '#5B9BFF');
+    if (impuesto) {
+        var tasa = d.impuestoTasa ? ' (' + (d.impuestoTasa*100).toFixed(0) + '%)' : '';
+        filas += fila('Impuesto' + tasa, impuesto);
+    }
+    if (propina) filas += fila('Propina', propina);
+
+    return '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.7rem .8rem;margin-top:.4rem;">' +
+        filas +
+        '<div style="display:flex;justify-content:space-between;font-weight:900;font-size:1rem;color:#25D366;border-top:1px solid rgba(255,255,255,.1);margin-top:.4rem;padding-top:.4rem;">' +
+        '<span>Total</span><span>$' + total.toFixed(2) + '</span></div>' +
+    '</div>';
+}
+
 let _firmaRenderPedidos = '';
 function renderPedidos(pedidos) {
     const cont = document.getElementById('lista-pedidos');
@@ -232,7 +268,7 @@ function renderPedidos(pedidos) {
             ${fechaHora ? `<div class="pedido-fecha">🗓️ ${fechaHora}</div>` : ''}
             <div class="progreso">${pasos}</div>
             <div class="pedido-items">${(p.items || '').replace(/</g,'&lt;')}</div>
-            <div class="pedido-total">${p.total || ''}</div>
+            ${_desgloseCobro(p)}
             ${p.repartidorNombre ? `<div class="pedido-repartidor" style="display:flex;align-items:center;gap:.5rem;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:10px;padding:.6rem .8rem;margin:.5rem 0;font-size:.88rem;"><span style="font-size:1.2rem;">🛵</span><span>Tu repartidor: <b style="color:#25D366;">${p.repartidorNombre}</b></span></div>` : ''}
             ${btnUbic}
             ${bloqueMapa}
