@@ -107,6 +107,25 @@
         </div>
     </div>
 
+    <!-- Ubicación del cliente en tiempo real (para calcular tiempo y cobro) -->
+    <div class="prog-card">
+        <div class="prog-label">📍 Ubicación del cliente (para calcular envío)</div>
+        <div style="font-size:.78rem;color:#bbb;margin-bottom:.7rem;line-height:1.45;">Comparte la ubicación del cliente para calcular el tiempo de llegada y el costo del envío automáticamente.</div>
+
+        <!-- Resultado de la ubicación -->
+        <div id="prog-ubi-resultado" style="display:none;background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.3);border-radius:10px;padding:.8rem;margin-bottom:.7rem;">
+            <div id="prog-ubi-dir" style="font-size:.85rem;color:#fff;margin-bottom:.4rem;">🏠 —</div>
+            <div id="prog-ubi-tiempo" style="font-size:.85rem;color:#5B9BFF;margin-bottom:.3rem;">⏱️ —</div>
+            <div id="prog-ubi-cargo" style="font-size:.95rem;color:#25D366;font-weight:800;">💵 —</div>
+        </div>
+
+        <!-- Botones para obtener ubicación -->
+        <div id="prog-ubi-botones" style="display:flex;flex-direction:column;gap:.5rem;">
+            <button type="button" onclick="progCapturarUbicacion()" style="width:100%;padding:.8rem;background:linear-gradient(135deg,#FF7A33,#FF5A00);border:none;color:#fff;border-radius:10px;font-family:inherit;font-weight:800;font-size:.9rem;cursor:pointer;">📍 Capturar ubicación del cliente ahora</button>
+            <button type="button" onclick="progEnviarLinkUbicacion()" style="width:100%;padding:.8rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;border-radius:10px;font-family:inherit;font-weight:700;font-size:.88rem;cursor:pointer;">🔗 Enviar link al cliente para que la comparta</button>
+        </div>
+    </div>
+
     <!-- Ubicación / dirección -->
     <div class="prog-card">
         <div class="prog-label">📌 Dirección o referencia (opcional)</div>
