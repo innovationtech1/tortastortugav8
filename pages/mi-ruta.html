@@ -352,15 +352,42 @@ function _actualizarInterruptorUbi() {
     var activo = (_watchId !== null);
     var cont = document.getElementById('ubi-toggle-cont');
     if (!cont) return;
+
+    // Determinar icono, color y mensaje según el estado real
+    var icono, color, titulo, detalle;
+    if (!activo) {
+        icono = '📴'; color = '#888';
+        titulo = 'Ubicación desactivada';
+        detalle = 'Actívala para que el cliente te siga';
+    } else if (_ubiEstado === 'guardando') {
+        icono = '📡'; color = '#25D366';
+        titulo = 'Compartiendo ubicación ✓';
+        detalle = 'El cliente ve tu tortumóvil en tiempo real';
+    } else if (_ubiEstado === 'esperando') {
+        icono = '⏳'; color = '#FBB724';
+        titulo = 'Obteniendo tu ubicación…';
+        detalle = 'Espera un momento (asegúrate de dar permiso de GPS)';
+    } else if (_ubiEstado === 'error-gps') {
+        icono = '⚠️'; color = '#FF5A5A';
+        titulo = 'Sin acceso al GPS';
+        detalle = 'Da permiso de ubicación al navegador y toca ON de nuevo';
+    } else if (_ubiEstado === 'error-db') {
+        icono = '⚠️'; color = '#FF5A5A';
+        titulo = 'Error al guardar ubicación';
+        detalle = 'Revisa tu conexión a internet';
+    } else {
+        icono = '📡'; color = '#25D366';
+        titulo = 'Compartiendo ubicación';
+        detalle = 'El cliente ve tu tortumóvil en tiempo real';
+    }
+
     cont.innerHTML =
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;">' +
             '<div style="display:flex;align-items:center;gap:.5rem;">' +
-                '<span style="font-size:1.3rem;">' + (activo ? '📡' : '📴') + '</span>' +
+                '<span style="font-size:1.3rem;">' + icono + '</span>' +
                 '<div>' +
-                    '<div style="font-weight:800;font-size:.9rem;color:' + (activo ? '#25D366' : '#888') + ';">' +
-                        (activo ? 'Compartiendo ubicación' : 'Ubicación desactivada') + '</div>' +
-                    '<div style="font-size:.72rem;color:#888;">' +
-                        (activo ? 'El cliente ve tu tortumóvil en tiempo real' : 'Actívala para que el cliente te siga') + '</div>' +
+                    '<div style="font-weight:800;font-size:.9rem;color:' + color + ';">' + titulo + '</div>' +
+                    '<div style="font-size:.72rem;color:#888;">' + detalle + '</div>' +
                 '</div>' +
             '</div>' +
             '<button onclick="toggleCompartirUbicacion()" style="min-width:64px;height:34px;border-radius:20px;border:none;cursor:pointer;font-family:inherit;font-weight:800;font-size:.8rem;background:' +
