@@ -4396,5 +4396,127 @@ window.cartCompartirUbicacion = function() {
 })();
 </script>
 <script type="module" src="js/contador-disponibles.js?v=1787291222"></script>
+<script type="module">
+// ── MODO RÁPIDO: productos más vendidos con 1 toque ──
+import { db } from './js/firebase-config.js';
+import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// Solo mostrar a empleados
+function _esEmpleadoRapido() {
+    try {
+        var empId = sessionStorage.getItem('tt_emp_id') || localStorage.getItem('tt_emp_id') ||
+                    sessionStorage.getItem('tt_cajero_id') || localStorage.getItem('tt_cajero_id');
+        return !!empId;
+    } catch(e) { return false; }
+}
+
+window.toggleModoRapido = function() {
+    var botones = document.getElementById('modo-rapido-botones');
+    var toggle = document.getElementById('modo-rapido-toggle');
+    if (!botones) return;
+    if (botones.style.display === 'none') {
+        botones.style.display = 'grid';
+        if (toggle) toggle.textContent = 'Ocultar';
+    } else {
+        botones.style.display = 'none';
+        if (toggle) toggle.textContent = 'Mostrar';
+    }
+};
+
+// Agregar un producto al carrito con 1 toque (reutiliza _cuentasSys)
+window.agregarRapido = function(nombre, precio, categoria) {
+    if (!window._cuentasSys) {
+        window._cuentasSys = {
+            cuentas: [{ id: 1, nombre: 'Cuenta 1', items: [], color: '#FF5A00' }],
+            activa: 1, counter: 1
+        };
+    }
+    var CS = window._cuentasSys;
+    var ca = CS.cuentas.find(function(x){ return x.id === CS.activa; });
+    if (!ca) { ca = CS.cuentas[0]; CS.activa = ca.id; }
+    ca.items.push({
+        id: 'rapido_' + Date.now(),
+        nombre: nombre,
+        precio: precio,
+        precioBase: precio,
+        variante: '',
+        varianteIdx: 0,
+        variantesDisp: [],
+        categoria: categoria || 'tortas',
+        tipo: 'producto'
+    });
+    // Refrescar el carrito visualmente si existe la función
+    if (typeof window.renderCarrito === 'function') window.renderCarrito();
+    if (typeof window.actualizarBadgeCarrito === 'function') window.actualizarBadgeCarrito();
+    if (typeof window.renderCuentas === 'function') window.renderCuentas();
+    // Feedback visual
+    _feedbackRapido(nombre);
+};
+
+function _feedbackRapido(nombre) {
+    var t = document.createElement('div');
+    t.textContent = '✅ ' + nombre + ' agregado';
+    t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#25D366;color:#fff;padding:.6rem 1.2rem;border-radius:20px;font-size:.85rem;font-weight:700;z-index:10000;box-shadow:0 4px 12px rgba(0,0,0,.4);';
+    document.body.appendChild(t);
+    setTimeout(function(){ t.style.opacity='0'; t.style.transition='opacity .3s'; }, 1200);
+    setTimeout(function(){ t.remove(); }, 1600);
+}
+
+// Calcular los más vendidos desde la colección de pedidos/ventas
+async function _cargarMasVendidos() {
+    var panel = document.getElementById('modo-rapido-panel');
+    var cont = document.getElementById('modo-rapido-botones');
+    if (!panel || !cont) return;
+    if (!_esEmpleadoRapido()) { panel.style.display = 'none'; return; }
+    panel.style.display = 'block';
+
+    try {
+        var conteo = {};
+        // Contar productos vendidos en los pedidos
+        var snap = await getDocs(collection(db, 'pedidos'));
+        snap.forEach(function(doc){
+            var p = doc.data();
+            var items = p.itemsData || [];
+            if (Array.isArray(items)) {
+                items.forEach(function(it){
+                    var nom = it.nombre || it.producto || it.name;
+                    if (!nom) return;
+                    var prc = Number(it.precio) || Number(it.precioBase) || 0;
+                    if (!conteo[nom]) conteo[nom] = { nombre: nom, precio: prc, cant: 0, categoria: it.categoria || 'tortas' };
+                    conteo[nom].cant += (Number(it.cantidad) || 1);
+                    if (prc > 0) conteo[nom].precio = prc;
+                });
+            }
+        });
+
+        var top = Object.values(conteo).sort(function(a,b){ return b.cant - a.cant; }).slice(0, 6);
+
+        if (!top.length) {
+            cont.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#888;font-size:.8rem;padding:.5rem;">Aún no hay historial de ventas. Aquí aparecerán tus productos más vendidos.</div>';
+            return;
+        }
+
+        cont.innerHTML = top.map(function(t){
+            var nombreEsc = t.nombre.replace(/'/g, "\\'");
+            return '<button onclick="agregarRapido(\'' + nombreEsc + '\',' + t.precio + ',\'' + (t.categoria||'tortas') + '\')" ' +
+                   'style="padding:.8rem .6rem;background:#1E1E1E;border:1.5px solid rgba(255,90,0,.3);color:#fff;border-radius:12px;font-family:inherit;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:.2rem;">' +
+                   '<span style="font-size:.85rem;font-weight:800;line-height:1.2;">' + t.nombre + '</span>' +
+                   '<span style="font-size:.78rem;color:#25D366;font-weight:700;">$' + t.precio.toFixed(0) + '</span>' +
+                   '<span style="font-size:.68rem;color:#888;">🔥 ' + t.cant + ' vendidos</span>' +
+                   '</button>';
+        }).join('');
+    } catch(e) {
+        console.error('Error cargando más vendidos:', e);
+        cont.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#888;font-size:.8rem;padding:.5rem;">No se pudieron cargar los más vendidos.</div>';
+    }
+}
+
+// Cargar cuando la página esté lista
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(_cargarMasVendidos, 1500); });
+} else {
+    setTimeout(_cargarMasVendidos, 1500);
+}
+</script>
 </body>
 </html>
