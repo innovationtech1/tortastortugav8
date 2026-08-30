@@ -898,6 +898,9 @@ window.enviarRecuperacion = async function() {
                 if (pt && pc) {
                     pt.classList.remove('activo');
                     pc.classList.add('activo');
+                    // Revisar pedidos activos al restaurar la sesión
+                    var _telRestaurar = sessionStorage.getItem('tt_cliente_telefono') || localStorage.getItem('tt_cliente_telefono');
+                    if (_telRestaurar && typeof _revisarPedidosActivos === 'function') _revisarPedidosActivos(_telRestaurar);
                     // Restaurar la ubicación en el mapa si ya la tenía
                     var uStr = sessionStorage.getItem('tt_cliente_ubicacion') || localStorage.getItem('tt_cliente_ubicacion');
                     if (uStr) {
