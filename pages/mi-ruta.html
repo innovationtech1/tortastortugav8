@@ -273,31 +273,59 @@ function _distanciaMillasRuta(lat1, lng1, lat2, lng2) {
     const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
+// Estado del compartir ubicación (para mostrar al repartidor qué está pasando)
+var _ubiEstado = 'inactivo';  // inactivo | esperando | guardando | error-gps | error-db
+
+// Guardar una posición en Firestore
+async function _guardarUbicacion(pos) {
+    _miPosActual = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    if (window.render) window.render();
+    try {
+        await setDoc(doc(db, 'ubicaciones', String(miId)), {
+            repartidorId: String(miId),
+            nombre: miNombre || miId,
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            precision: pos.coords.accuracy || null,
+            actualizado: Date.now()
+        });
+        _ubiEstado = 'guardando';
+        _ultimoGuardado = Date.now();
+    } catch(e) {
+        console.error('Error al guardar ubicación en la base:', e);
+        _ubiEstado = 'error-db';
+    }
+    _actualizarInterruptorUbi();
+}
+
 function iniciarCompartirUbicacion() {
-    if (!navigator.geolocation || !miId) return;
+    if (!navigator.geolocation || !miId) { _ubiEstado = 'error-gps'; return; }
     if (_watchId !== null) return; // ya está activo
-    _watchId = navigator.geolocation.watchPosition(async function(pos){
-        const ahora = Date.now();
-        // Guardar posición actual para calcular distancias en las tarjetas
-        _miPosActual = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        if (window.render) window.render(); // refrescar distancias
-        // Guardar como máximo cada 5 segundos para no saturar la base de datos
-        if (ahora - _ultimoGuardado < 5000) return;
-        _ultimoGuardado = ahora;
-        try {
-            await setDoc(doc(db, 'ubicaciones', miId), {
-                repartidorId: miId,
-                nombre: miNombre || miId,
-                lat: pos.coords.latitude,
-                lng: pos.coords.longitude,
-                precision: pos.coords.accuracy || null,
-                actualizado: Date.now()
-            });
-        } catch(e) { /* si falla, se reintenta en el próximo movimiento */ }
+    _ubiEstado = 'esperando';
+    _actualizarInterruptorUbi();
+
+    // 1) Guardar la posición AHORA MISMO (no esperar a que el repartidor se mueva)
+    navigator.geolocation.getCurrentPosition(function(pos){
+        _guardarUbicacion(pos);
     }, function(err){
-        // Sin permiso GPS: no se puede compartir ubicación
+        console.warn('GPS inicial no disponible:', err.message);
+        _ubiEstado = 'error-gps';
+        _actualizarInterruptorUbi();
+    }, { enableHighAccuracy:true, maximumAge:0, timeout:15000 });
+
+    // 2) Seguir la posición conforme el repartidor se mueve
+    _watchId = navigator.geolocation.watchPosition(function(pos){
+        const ahora = Date.now();
+        _miPosActual = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        if (window.render) window.render();
+        // Guardar como máximo cada 5 segundos
+        if (ahora - _ultimoGuardado < 5000) return;
+        _guardarUbicacion(pos);
+    }, function(err){
         console.warn('GPS no disponible para compartir ubicación:', err.message);
-    }, { enableHighAccuracy:true, maximumAge:3000, timeout:10000 });
+        _ubiEstado = 'error-gps';
+        _actualizarInterruptorUbi();
+    }, { enableHighAccuracy:true, maximumAge:3000, timeout:15000 });
 }
 // Detener el seguimiento de ubicación
 function detenerCompartirUbicacion() {
