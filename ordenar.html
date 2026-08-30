@@ -3836,6 +3836,52 @@ window.initEntregaCarrito = function() {
     return;
 };
 
+// Detectar dirección legible y zona automáticamente (Nominatim) para el resumen del carrito
+async function _cartDetectarDireccionZona(lat, lng) {
+    try {
+        var url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng + '&zoom=18&addressdetails=1';
+        var resp = await fetch(url, { headers: { 'Accept-Language': 'es' } });
+        var data = await resp.json();
+        var a = data.address || {};
+        // Dirección legible
+        var partes = [];
+        var calle = (a.house_number ? a.house_number + ' ' : '') + (a.road || a.pedestrian || '');
+        if (calle.trim()) partes.push(calle.trim());
+        var barrio = a.neighbourhood || a.suburb || a.quarter || a.residential || '';
+        if (barrio) partes.push(barrio);
+        var ciudad = a.city || a.town || a.village || '';
+        if (ciudad) partes.push(ciudad);
+        var dir = partes.join(', ') || (data.display_name || '').split(',').slice(0,2).join(',');
+        // Zona automática
+        var zona = _cartDetectarZona(a);
+        // Actualizar la UI
+        var dirEl = document.getElementById('cart-dir-auto');
+        var zonaEl = document.getElementById('cart-zona-auto');
+        if (dirEl && dir) dirEl.textContent = dir;
+        if (zonaEl) zonaEl.textContent = zona ? zona.nombre : 'Tu área';
+        // Guardar en el carrito para que se envíe con la orden
+        window._entregaCarrito = window._entregaCarrito || {};
+        window._entregaCarrito.ubicacion = window._entregaCarrito.ubicacion || {};
+        window._entregaCarrito.ubicacion.lat = lat;
+        window._entregaCarrito.ubicacion.lng = lng;
+        window._entregaCarrito.ubicacion.direccion = dir;
+        if (zona) { window._entregaCarrito.zona = zona.id; window._entregaCarrito.zonaNombre = zona.nombre; }
+    } catch(e) { console.warn('No se pudo detectar dirección/zona:', e); }
+}
+
+function _cartDetectarZona(a) {
+    var ciudad = ((a.city || a.town || a.village || '') + '').toLowerCase();
+    var barrio = ((a.neighbourhood || a.suburb || a.quarter || '') + '').toLowerCase();
+    var cp = (a.postcode || '') + '';
+    if (ciudad.indexOf('converse') >= 0) return { id: 'converse', nombre: 'Converse' };
+    if (ciudad.indexOf('seguin') >= 0) return { id: 'seguin', nombre: 'Seguin' };
+    if (ciudad.indexOf('castroville') >= 0) return { id: 'castroville', nombre: 'Castroville' };
+    if (barrio.indexOf('culebra') >= 0) return { id: 'culebra', nombre: 'Culebra' };
+    if (cp.indexOf('78211') >= 0) return { id: '211', nombre: 'Zona 211' };
+    if (ciudad.indexOf('san antonio') >= 0) return { id: 'san-antonio', nombre: 'San Antonio' };
+    return null;
+}
+
 // Reabrir el overlay de pasos para cambiar la entrega
 window.eoReabrir = function() {
     sessionStorage.removeItem('tt_entrega_lista');
