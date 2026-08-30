@@ -2396,7 +2396,7 @@ console.log('✅ Gestión de cuentas cargada');
 // ═══════════════════════════════════════════════════════════
 
 window._POS_CONFIG = {
-    impuestoTasa:    0.0825,   // 8.25% — CONFIGURABLE, validar con contador
+    impuestoTasa:    0.04,   // 4% — tasa aplicada en Tortas Tortuga (sobre subtotal + envio)
     impuestoActivo:  true,
     impuestoNombre:  'Sales Tax',
     propinasSugeridas: [0.15, 0.18, 0.20],
@@ -2426,10 +2426,13 @@ window.calcularTotales = function(items, opciones) {
 
     var baseGravable = subtotal - descuento;
 
-    // Impuesto sobre la base ya con descuento
+    // Envío (cargo de servicio a domicilio) — el impuesto se calcula sobre subtotal + envío
+    var envio = parseFloat(opciones.envio || opciones.cargoServicio || 0) || 0;
+
+    // Impuesto sobre (base con descuento + envío)
     var impuesto = 0;
     if (cfg.impuestoActivo && opciones.aplicarImpuesto !== false) {
-        impuesto = baseGravable * cfg.impuestoTasa;
+        impuesto = (baseGravable + envio) * cfg.impuestoTasa;
     }
 
     // Propina (se calcula sobre el subtotal sin impuesto — practica comun)
@@ -2442,12 +2445,13 @@ window.calcularTotales = function(items, opciones) {
         }
     }
 
-    var total = baseGravable + impuesto + propina;
+    var total = baseGravable + envio + impuesto + propina;
 
     return {
         subtotal:     round2(subtotal),
         descuento:    round2(descuento),
         baseGravable: round2(baseGravable),
+        envio:        round2(envio),
         impuesto:     round2(impuesto),
         impuestoTasa: cfg.impuestoTasa,
         propina:      round2(propina),
