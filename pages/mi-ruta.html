@@ -280,15 +280,26 @@ var _ubiEstado = 'inactivo';  // inactivo | esperando | guardando | error-gps | 
 async async function _guardarUbicacion(pos) {
     _miPosActual = { lat: pos.coords.latitude, lng: pos.coords.longitude };
     if (window.render) window.render();
+    var datos = {
+        repartidorId: String(miId),
+        nombre: miNombre || miId,
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        precision: pos.coords.accuracy || null,
+        actualizado: Date.now()
+    };
+    // IDs bajo los que guardar la ubicación (para que el cliente siempre encuentre al repartidor,
+    // sin importar si el pedido guardó el empleadoId o el UID de Firebase)
+    var ids = [String(miId)];
+    var uid = _leer('tt_emp_docid');
+    if (uid && ids.indexOf(uid) < 0) ids.push(uid);
+    if (auth && auth.currentUser && auth.currentUser.uid && ids.indexOf(auth.currentUser.uid) < 0) {
+        ids.push(auth.currentUser.uid);
+    }
     try {
-        await setDoc(doc(db, 'ubicaciones', String(miId)), {
-            repartidorId: String(miId),
-            nombre: miNombre || miId,
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            precision: pos.coords.accuracy || null,
-            actualizado: Date.now()
-        });
+        await Promise.all(ids.map(function(id){
+            return setDoc(doc(db, 'ubicaciones', id), datos);
+        }));
         _ubiEstado = 'guardando';
         _ultimoGuardado = Date.now();
     } catch(e) {
