@@ -603,6 +603,65 @@ function distanciaKm(lat1, lng1, lat2, lng2) {
 }
 
 // Texto de distancia para un pedido (si hay ubicación del repartidor y del cliente)
+// ── Tiempo estimado de llegada (según distancia) ──
+function minutosEstimados(p) {
+    if (!_miPos) return null;
+    var lat = p.ubicacionCliente && p.ubicacionCliente.lat;
+    var lng = p.ubicacionCliente && p.ubicacionCliente.lng;
+    if (!lat || !lng) return null;
+    var km = distanciaKm(_miPos.lat, _miPos.lng, lat, lng);
+    var mi = km * 0.621371;
+    // Velocidad promedio urbana ~18.6 mph → minutos
+    var min = (mi / 18.6) * 60;
+    return Math.max(1, Math.round(min));
+}
+function textoTiempo(p) {
+    var min = minutosEstimados(p);
+    if (min == null) return '';
+    if (min < 60) return '~' + min + ' min';
+    var h = Math.floor(min/60), m = min%60;
+    return '~' + h + 'h' + (m ? ' ' + m + 'min' : '');
+}
+
+// ── Tarifa sugerida según tiempo de llegada ──
+// ≤15min $5 · ≤30min $10 · ≤1hr $20 · más: preguntar
+function tarifaSugerida(p) {
+    var min = minutosEstimados(p);
+    if (min == null) return null;
+    if (min <= 15) return 5;
+    if (min <= 30) return 10;
+    if (min <= 60) return 20;
+    return 'preguntar';
+}
+
+// ── Geocodificación inversa (Nominatim/OpenStreetMap) ──
+// Convierte lat/lng en dirección legible. Cachea para no repetir llamadas.
+window._cacheDirecciones = window._cacheDirecciones || {};
+async function obtenerDireccion(lat, lng) {
+    var clave = lat.toFixed(5) + ',' + lng.toFixed(5);
+    if (window._cacheDirecciones[clave]) return window._cacheDirecciones[clave];
+    try {
+        var url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng + '&zoom=18&addressdetails=1';
+        var resp = await fetch(url, { headers: { 'Accept-Language': 'es' } });
+        var data = await resp.json();
+        var a = data.address || {};
+        // Armar dirección corta: número + calle, colonia/barrio
+        var partes = [];
+        var calle = (a.house_number ? a.house_number + ' ' : '') + (a.road || a.pedestrian || '');
+        if (calle.trim()) partes.push(calle.trim());
+        var barrio = a.neighbourhood || a.suburb || a.quarter || a.residential || '';
+        if (barrio) partes.push(barrio);
+        var ciudad = a.city || a.town || a.village || '';
+        if (ciudad) partes.push(ciudad);
+        var texto = partes.join(', ') || (data.display_name || '').split(',').slice(0,2).join(',');
+        window._cacheDirecciones[clave] = texto;
+        return texto;
+    } catch(e) {
+        console.warn('No se pudo obtener dirección:', e);
+        return '';
+    }
+}
+
 function textoDistancia(p) {
     if (!_miPos) return '';
     const lat = p.ubicacionCliente && p.ubicacionCliente.lat;
