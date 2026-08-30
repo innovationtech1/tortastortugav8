@@ -3997,7 +3997,18 @@ window.cartCompartirUbicacion = function() {
     // en esta sesión. Se recuerda con sessionStorage para no repetir en cada
     // navegación dentro de la misma visita.
     window._mostrarOverlayEntrega = function() {
-        if (!esClientePuro()) return;
+        // CLIENTE: ya no se muestra esta pantalla. Se asume Domicilio por defecto
+        // y entra directo al menú (la validación de tipo ya se hizo antes en el flujo).
+        if (esClientePuro()) {
+            window._entregaCarrito = window._entregaCarrito || {};
+            window._entregaCarrito.tipoPedido = 'domicilio';
+            sessionStorage.setItem('tt_entrega_lista', '1');
+            sessionStorage.setItem('tt_tipo_pedido', 'domicilio');
+            var ovC = document.getElementById('entrega-overlay');
+            if (ovC) { ovC.style.display = 'none'; document.body.classList.remove('modal-open'); }
+            return;
+        }
+        // EMPLEADO: sigue viendo la pantalla de elección si la necesita
         if (sessionStorage.getItem('tt_entrega_lista') === '1') return;
         var ov = document.getElementById('entrega-overlay');
         if (ov) { ov.style.display = 'block'; document.body.classList.add('cart-abierto'); }
