@@ -277,7 +277,7 @@ function _distanciaMillasRuta(lat1, lng1, lat2, lng2) {
 var _ubiEstado = 'inactivo';  // inactivo | esperando | guardando | error-gps | error-db
 
 // Guardar una posición en Firestore
-async function _guardarUbicacion(pos) {
+async async function _guardarUbicacion(pos) {
     _miPosActual = { lat: pos.coords.latitude, lng: pos.coords.longitude };
     if (window.render) window.render();
     try {
