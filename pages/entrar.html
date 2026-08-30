@@ -62,6 +62,11 @@ html { -webkit-text-size-adjust: 100%; }
             <p class="logo-sub">Entra para ordenar</p>
         </div>
 
+        <!-- Botón Ver mi pedido (solo si el cliente ya ordenó) -->
+        <div id="ver-mi-pedido-wrap" style="display:none;margin-bottom:1rem;">
+            <button type="button" onclick="irAMiPedido()" style="width:100%;padding:.85rem;background:linear-gradient(135deg,#25D366,#18a849);border:none;color:#fff;border-radius:12px;font-family:inherit;font-weight:800;font-size:.95rem;cursor:pointer;box-shadow:0 4px 12px rgba(37,211,102,.3);">🛍️ Ver mi pedido</button>
+        </div>
+
         
 
         <div id="modo-telefono-wrap">
