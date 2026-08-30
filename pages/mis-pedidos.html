@@ -145,8 +145,13 @@ function hoyInicio() {
 }
 
 function parseItems(p) {
+    if (Array.isArray(p.itemsData) && p.itemsData.length) {
+        var grupos = window.agruparItems ? window.agruparItems(p.itemsData) : p.itemsData.map(function(i){ i.cantidad=i.cantidad||1; return i; });
+        return grupos.map(function(g){
+            return g.cantidad + '× ' + (g.nombre||'Producto') + (g.variante ? ' ('+g.variante+')' : '');
+        });
+    }
     if (typeof p.items === 'string') return p.items.split(' | ').filter(Boolean);
-    if (Array.isArray(p.itemsData)) return p.itemsData.map(i => (i.cantidad||1)+'x '+(i.nombre||i.producto||''));
     return [];
 }
 
