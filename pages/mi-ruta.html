@@ -578,7 +578,7 @@ function render(pedidos) {
 
     cont.innerHTML = pedidos.map(p => {
         const pago = metodoPagoInfo(p);
-        const folio = p.folioStr || (p.id ? p.id.slice(-4).toUpperCase() : '');
+        const folio = p.codigoOrden || (p.id ? p.id.slice(-4).toUpperCase() : (p.folioStr||''));
         const dir = p.ubicacionCliente && p.ubicacionCliente.direccion ? p.ubicacionCliente.direccion : '';
         const lat = p.ubicacionCliente && p.ubicacionCliente.lat;
         const lng = p.ubicacionCliente && p.ubicacionCliente.lng;
