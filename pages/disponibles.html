@@ -842,7 +842,7 @@ function render(disp) {
     _firmaRenderAnterior = firma;
 
     cont.innerHTML = visibles.map(p => {
-        const folio = p.folioStr || (p.id ? p.id.slice(-4).toUpperCase() : '');
+        const folio = p.codigoOrden || (p.id ? p.id.slice(-4).toUpperCase() : (p.folioStr||''));
         const zona = p.zonaEntregaNombre || 'Sin zona';
         return '<div class="pedido-nuevo">' +
             '<div class="pn-zona" id="pn-zona-' + p.id + '">📍 ' + zona + '</div>' +
