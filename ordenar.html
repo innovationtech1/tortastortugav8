@@ -1703,6 +1703,17 @@ html { -webkit-text-size-adjust: 100%; }
 </header>
 
 <main>
+    <!-- MODO RÁPIDO: productos más vendidos (solo empleados) -->
+    <div id="modo-rapido-panel" style="display:none;margin:.6rem 1rem 0;background:linear-gradient(135deg,rgba(255,90,0,.08),rgba(255,140,0,.04));border:1px solid rgba(255,90,0,.25);border-radius:14px;padding:.8rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;">
+            <span style="font-size:.85rem;font-weight:800;color:#FF7A33;">⚡ Modo rápido — más vendidos</span>
+            <button onclick="toggleModoRapido()" id="modo-rapido-toggle" style="background:none;border:none;color:#888;font-size:.8rem;cursor:pointer;font-family:inherit;">Ocultar</button>
+        </div>
+        <div id="modo-rapido-botones" style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+            <div style="grid-column:1/-1;text-align:center;color:#888;font-size:.8rem;padding:.5rem;">Calculando más vendidos…</div>
+        </div>
+    </div>
+
     <!-- TABS DE CATEGORÍAS -->
     <div id="menu-tabs-bar" style="
         display:flex;gap:.45rem;padding:.6rem 1rem;
