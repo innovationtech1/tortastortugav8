@@ -2686,6 +2686,12 @@ function enviarOrdenModal() {
       <div style="font-size:.78rem;color:#888;margin-top:.2rem;">Método: <span id="pago-confirm-metodo" style="color:#fff;font-weight:700;">Efectivo</span></div>
     </div>
 
+    <!-- Enviar ticket por WhatsApp (opcional, si el cliente lo pide) -->
+    <button onclick="enviarTicketPOS()" id="btn-ticket-pos"
+        style="width:100%;padding:.7rem;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.4);
+               color:#25D366;border-radius:12px;font-family:inherit;font-weight:700;font-size:.85rem;
+               cursor:pointer;margin-bottom:.6rem;">📱 Enviar ticket al cliente (WhatsApp)</button>
+
     <!-- Botones -->
     <button onclick="confirmarPagoSimulado()"
         style="width:100%;padding:.85rem;background:linear-gradient(135deg,#25D366,#18a849);
