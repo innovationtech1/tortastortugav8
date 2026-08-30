@@ -469,7 +469,14 @@ function render(pedidos) {
         const lng = p.ubicacionCliente && p.ubicacionCliente.lng;
         const mapsUrl = (lat && lng) ? 'https://www.google.com/maps?q='+lat+','+lng
                         : (dir ? 'https://www.google.com/maps/search/'+encodeURIComponent(dir) : '');
-        const itemsTxt = (typeof p.items === 'string' ? p.items : '').split(' | ').filter(Boolean);
+        var itemsTxt;
+        if (Array.isArray(p.itemsData) && p.itemsData.length && window.agruparItems) {
+            itemsTxt = window.agruparItems(p.itemsData).map(function(g){
+                return g.cantidad + '× ' + (g.nombre||'Producto') + (g.variante ? ' ('+g.variante+')' : '');
+            });
+        } else {
+            itemsTxt = (typeof p.items === 'string' ? p.items : '').split(' | ').filter(Boolean);
+        }
 
         return '<div class="pedido-card '+(p.entregado?'entregado':'')+'">' +
             '<div class="pc-top">' +
