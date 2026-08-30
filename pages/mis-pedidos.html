@@ -187,7 +187,7 @@ function render() {
     }
 
     cont.innerHTML = mios.map(p => {
-        const folio = p.folioStr || ('#' + (p.id||'').slice(-4).toUpperCase());
+        const folio = (p.codigoOrden ? '#'+p.codigoOrden : (p.folioStr || ('#' + (p.id||'').slice(-4).toUpperCase())));
         const hora = p.creado?.seconds ? new Date(p.creado.seconds*1000).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) : '';
         const items = parseItems(p);
         const estado = p.estado || 'Nuevo';
