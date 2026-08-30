@@ -140,6 +140,12 @@ html { -webkit-text-size-adjust: 100%; }
 
     if (!sesion) return;
 
+    // CLIENTE con sesión activa: ir DIRECTO al menú (no volver a pedir login)
+    if (sesion.tipo === 'cliente') {
+        window.location.replace('../ordenar.html');
+        return;
+    }
+
     if (sesion.tipo === 'empleado') {
         wbNom.textContent = 'Hola, ' + sesion.nombre.split(' ')[0] + '!';
         wbSub.textContent = 'Sesión de ' + (sesion.rol || 'empleado') + ' activa';
