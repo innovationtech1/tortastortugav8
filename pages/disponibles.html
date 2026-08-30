@@ -436,6 +436,21 @@ window._toggleFoto = function(pid) {
     }
 };
 
+// Mostrar la tarifa sugerida según el tiempo de llegada
+function _tarifaLinea(p) {
+    var tarifa = tarifaSugerida(p);
+    if (tarifa == null) return '';
+    if (tarifa === 'preguntar') {
+        return '<div class="pn-linea" style="color:#FBB724;font-weight:700;">💵 Envío: a convenir (más de 1 hora)</div>';
+    }
+    var actual = Number(p.cargoServicio) || 0;
+    var aviso = '';
+    if (actual && actual !== tarifa) {
+        aviso = ' <span style="color:#888;font-size:.8em;">(actual: $' + actual + ')</span>';
+    }
+    return '<div class="pn-linea" style="color:#25D366;font-weight:700;">💵 Envío sugerido: $' + tarifa + aviso + '</div>';
+}
+
 // Mostrar los productos ordenados (si la orden ya tiene items)
 function _listaProductos(p) {
     // No mostrar si aún es solicitud pendiente sin productos
@@ -773,6 +788,9 @@ function render(disp) {
               '<div class="pn-total">' + (p.total || '') + '</div>' +
             '</div>' +
             (p.telefono ? '<div class="pn-linea">📞 <a href="tel:'+p.telefono+'">'+p.telefono+'</a></div>' : '') +
+            (textoTiempo(p) ? '<div class="pn-linea" style="color:#5B9BFF;">⏱️ Llegada aprox: ' + textoTiempo(p) + '</div>' : '') +
+            ((p.ubicacionCliente && p.ubicacionCliente.lat) ? '<div class="pn-linea" id="pn-dir-' + p.id + '" style="color:#aaa;font-size:.8rem;">🏠 buscando dirección…</div>' : '') +
+            _tarifaLinea(p) +
             _listaProductos(p) +
             _fotoReferencia(p) +
             ((p.horarioAgendado || p.horarioEntregaEtiqueta) ? '<div class="pn-linea" style="color:#FBB724;font-weight:700;">🕐 Agendado: ' + (p.horarioAgendado || p.horarioEntregaEtiqueta) + '</div>' : '') +
