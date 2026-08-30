@@ -494,5 +494,22 @@ window.compartirUbicacion = function() {
     );
 };
 </script>
+<script>
+// Helper de agrupación de productos (para el resumen del pedido)
+window.agruparItems = function(items){
+    if (!Array.isArray(items) || !items.length) return [];
+    var g = {}, orden = [];
+    items.forEach(function(it){
+        var nom = it.nombre || it.producto || it.name || 'Producto';
+        var prc = Number(it.precio)||0, v = it.variante||'';
+        var mods = (it.modificaciones&&it.modificaciones.length) ? it.modificaciones.slice().sort().join('|') : '';
+        var k = nom+'|'+prc+'|'+v+'|'+mods;
+        var cant = Number(it.cantidad)||1;
+        if (!g[k]) { g[k] = { nombre:nom, precio:prc, variante:v, cantidad:0 }; orden.push(k); }
+        g[k].cantidad += cant;
+    });
+    return orden.map(function(k){ return g[k]; });
+};
+</script>
 </body>
 </html>
