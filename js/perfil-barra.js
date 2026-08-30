@@ -109,6 +109,7 @@
                 ['🗓️', 'Programar', _base() + 'programar.html', true],
                 ['🍳', 'Cocina', _base() + 'cocina.html', false],
                 ['📊', 'Reportes', _base() + 'reportes.html', true],
+                ['👥', 'Clientes', _base() + 'clientes.html', true],
                 ['⚙️', 'Admin', _base() + 'admin.html', true],
                 ['📋', 'Control', _base() + 'control.html', true],
                 ['🗺️', 'Mapa', _base() + 'mapa.html', true],
