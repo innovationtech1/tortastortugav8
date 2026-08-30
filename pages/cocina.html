@@ -632,10 +632,10 @@ function renderCard(p) {
             <div class="ktimer ${timerClass(secs)}" data-ts="${ts}"${terminado ? ` data-fin="${finTiempo}"` : ''} data-tid="ktimer-${p.id}">${timerTxt(secs)}</div>
         </div>
         <div class="kcard-items">
-            ${items.map(i=>`
+            ${(window.agruparItems ? window.agruparItems(items) : items.map(function(i){ i.cantidad=1; return i; })).map(g=>`
                 <div class="kitem">
-                    <div class="kitem-name">${nombreCorto(i)}</div>
-                    ${i.modificaciones?.length ? `<div class="kitem-mods">⚠️ ${i.modificaciones.join(' · ')}</div>` : ''}
+                    <div class="kitem-name">${g.cantidad > 1 ? `<span style="color:#FF7A33;font-weight:900;">${g.cantidad}×</span> ` : ''}${nombreCorto(g._original || g)}</div>
+                    ${g.modificaciones?.length ? `<div class="kitem-mods">⚠️ ${g.modificaciones.join(' · ')}</div>` : ''}
                 </div>`).join('')}
             ${(() => {
                 // Mostrar subtotal y total (si el pedido trae el desglose o el total)
