@@ -347,6 +347,33 @@ let _cancelarPedidoId = null;
 let _cancelarPedidoFolio = null;
 let _cancelarPedidoData = null;
 
+// ── Compartir/actualizar ubicación del cliente en tiempo real (sin abrir otra pantalla) ──
+window.compartirUbicacionAqui = function(pedidoId, btn) {
+    if (!navigator.geolocation) { alert('Tu dispositivo no permite ubicación.'); return; }
+    var textoOriginal = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '📍 Obteniendo tu ubicación…'; }
+    navigator.geolocation.getCurrentPosition(async function(pos) {
+        try {
+            await updateDoc(doc(db, 'pedidos', pedidoId), {
+                ubicacionCliente: {
+                    lat: pos.coords.latitude,
+                    lng: pos.coords.longitude,
+                    precision: pos.coords.accuracy || null,
+                    compartidaEn: Date.now()
+                }
+            });
+            if (btn) { btn.innerHTML = '✅ Ubicación actualizada'; btn.disabled = false; }
+        } catch(e) {
+            console.error('Error al guardar ubicación:', e);
+            if (btn) { btn.innerHTML = textoOriginal; btn.disabled = false; }
+            alert('No se pudo guardar tu ubicación. Intenta de nuevo.');
+        }
+    }, function(err) {
+        if (btn) { btn.innerHTML = textoOriginal; btn.disabled = false; }
+        alert('No se pudo obtener tu ubicación. Da permiso de GPS e intenta de nuevo.');
+    }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 });
+};
+
 window.abrirCancelar = function(pedidoId, folio) {
     _cancelarPedidoId = pedidoId;
     _cancelarPedidoFolio = folio || '';
