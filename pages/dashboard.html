@@ -236,6 +236,77 @@ function _calcular(pedidos) {
         'Actualizado ' + ahora.getHours() + ':' + String(ahora.getMinutes()).padStart(2,'0');
 }
 
+// ── Dibujar gráfica de barras (HTML puro) ──
+function _dibujarBarras(contId, datos, formato) {
+    var cont = document.getElementById(contId);
+    if (!cont) return;
+    if (!datos || !datos.length || datos.every(function(d){ return d.valor === 0; })) {
+        cont.innerHTML = '<div class="chart-vacio">Sin datos todavía.</div>';
+        return;
+    }
+    var max = Math.max.apply(null, datos.map(function(d){ return d.valor; })) || 1;
+    cont.innerHTML = datos.map(function(d){
+        var pct = Math.round((d.valor / max) * 100);
+        var val = formato === 'dinero' ? ('$' + d.valor.toFixed(0)) : d.valor;
+        return '<div class="barra-fila">' +
+               '<span class="barra-lbl">' + d.etiqueta + '</span>' +
+               '<span class="barra-track"><span class="barra-fill" style="width:' + pct + '%;"></span></span>' +
+               '<span class="barra-val">' + val + '</span>' +
+               '</div>';
+    }).join('');
+}
+
+// ── Calcular las gráficas ──
+function _calcularGraficas(pedidos) {
+    // 1. Ventas últimos 7 días
+    var dias = [];
+    var nombresDia = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    for (var i = 6; i >= 0; i--) {
+        var d = new Date();
+        d.setDate(d.getDate() - i);
+        dias.push({ fecha: d, etiqueta: nombresDia[d.getDay()] + ' ' + d.getDate(), valor: 0 });
+    }
+    pedidos.forEach(function(p){
+        if (!esVentaValida(p)) return;
+        var f = tsDe(p);
+        if (!f) return;
+        dias.forEach(function(dia){
+            if (f.getFullYear()===dia.fecha.getFullYear() && f.getMonth()===dia.fecha.getMonth() && f.getDate()===dia.fecha.getDate()) {
+                dia.valor += _num(p);
+            }
+        });
+    });
+    _dibujarBarras('chart-dias', dias, 'dinero');
+
+    // 2. Ventas por hora (hoy) - agrupadas en franjas
+    var horas = [];
+    for (var h = 8; h <= 21; h++) {
+        horas.push({ h: h, etiqueta: (h>12?h-12:h) + (h>=12?'pm':'am'), valor: 0 });
+    }
+    pedidos.forEach(function(p){
+        if (!esVentaValida(p) || !esHoy(tsDe(p))) return;
+        var f = tsDe(p);
+        if (!f) return;
+        var hr = f.getHours();
+        horas.forEach(function(hora){ if (hora.h === hr) hora.valor += _num(p); });
+    });
+    // Solo mostrar horas con ventas o el rango activo
+    var horasConVenta = horas.filter(function(h){ return h.valor > 0; });
+    _dibujarBarras('chart-horas', horasConVenta.length ? horas : [], 'dinero');
+
+    // 3. Ventas por zona (hoy)
+    var zonasMap = {};
+    pedidos.forEach(function(p){
+        if (!esVentaValida(p) || !esHoy(tsDe(p))) return;
+        var z = p.zonaEntregaNombre || p.zonaEntrega || 'Sin zona';
+        zonasMap[z] = (zonasMap[z] || 0) + _num(p);
+    });
+    var zonas = Object.keys(zonasMap).map(function(z){
+        return { etiqueta: z.length > 8 ? z.slice(0,8) : z, valor: zonasMap[z] };
+    }).sort(function(a,b){ return b.valor - a.valor; });
+    _dibujarBarras('chart-zonas', zonas, 'dinero');
+}
+
 // ── Escuchar pedidos en tiempo real ──
 onSnapshot(collection(db, 'pedidos'), function(snap){
     var pedidos = [];
@@ -243,6 +314,7 @@ onSnapshot(collection(db, 'pedidos'), function(snap){
         var d = doc.data(); d.id = doc.id; pedidos.push(d);
     });
     _calcular(pedidos);
+    _calcularGraficas(pedidos);
 }, function(err){
     console.error('Error dashboard:', err);
     document.getElementById('dash-loading').textContent = 'No se pudieron cargar los datos. Revisa tu conexión.';
