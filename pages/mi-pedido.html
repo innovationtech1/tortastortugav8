@@ -187,12 +187,13 @@ function renderPedidos(pedidos) {
                         ' · ' + cd.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
         }
         const yaCompartio = !!p.ubicacionCliente;
-        const btnUbic = `<a href="../ubicacion.html?pedido=${encodeURIComponent(p.id)}"
-            style="display:block;margin-top:.7rem;padding:.6rem;text-align:center;text-decoration:none;
-            border-radius:10px;font-size:.82rem;font-weight:700;
+        const btnUbic = `<button onclick="compartirUbicacionAqui('${p.id}', this)"
+            id="btn-ubi-${p.id}"
+            style="display:block;width:100%;margin-top:.7rem;padding:.6rem;text-align:center;
+            border-radius:10px;font-size:.82rem;font-weight:700;font-family:inherit;cursor:pointer;
             background:${yaCompartio ? 'rgba(37,211,102,.12)' : 'rgba(37,211,102,.15)'};
             border:1px solid rgba(37,211,102,.35);color:#25D366;">
-            ${yaCompartio ? '✅ Ubicación enviada — tocar para actualizar' : '📍 Enviar mi ubicación'}</a>`;
+            ${yaCompartio ? '✅ Ubicación enviada — tocar para actualizar' : '📍 Compartir mi ubicación'}</button>`;
 
         // Botón para cancelar el pedido — DESHABILITADO temporalmente
         // (El código se conserva para poder reactivarlo en el futuro)
