@@ -114,9 +114,13 @@ html { -webkit-text-size-adjust: 100%; }
                             <button type="button" onclick="quitarFotoRef()" style="position:absolute;top:.4rem;right:.4rem;background:rgba(0,0,0,.6);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:1rem;cursor:pointer;">✕</button>
                         </div>
                         <!-- Botones cámara y galería -->
-                        <div id="foto-ref-botones" style="display:flex;">
-                            <label style="flex:1;text-align:center;padding:.8rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;border-radius:10px;font-weight:700;font-size:.9rem;cursor:pointer;">
-                                🖼️ Subir foto de referencia
+                        <div id="foto-ref-botones" style="display:flex;gap:.5rem;">
+                            <label style="flex:1;text-align:center;padding:.8rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;border-radius:10px;font-weight:700;font-size:.88rem;cursor:pointer;">
+                                📷 Cámara
+                                <input type="file" accept="image/*" capture="environment" onchange="procesarFotoRef(this)" style="display:none;">
+                            </label>
+                            <label style="flex:1;text-align:center;padding:.8rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;border-radius:10px;font-weight:700;font-size:.88rem;cursor:pointer;">
+                                🖼️ Galería
                                 <input type="file" accept="image/*" onchange="procesarFotoRef(this)" style="display:none;">
                             </label>
                         </div>
@@ -381,7 +385,8 @@ window.procesarFotoRef = function(input) {
 function _restaurarBotonesFoto() {
     var botones = document.getElementById('foto-ref-botones');
     if (botones) botones.innerHTML =
-        '<label style="flex:1;text-align:center;padding:.8rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;border-radius:10px;font-weight:700;font-size:.9rem;cursor:pointer;">🖼️ Subir foto de referencia<input type="file" accept="image/*" onchange="procesarFotoRef(this)" style="display:none;"></label>';
+        '<label style="flex:1;text-align:center;padding:.8rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;border-radius:10px;font-weight:700;font-size:.88rem;cursor:pointer;">📷 Cámara<input type="file" accept="image/*" capture="environment" onchange="procesarFotoRef(this)" style="display:none;"></label>' +
+        '<label style="flex:1;text-align:center;padding:.8rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;border-radius:10px;font-weight:700;font-size:.88rem;cursor:pointer;">🖼️ Galería<input type="file" accept="image/*" onchange="procesarFotoRef(this)" style="display:none;"></label>';
 }
 function _resetBotonesFoto() { _restaurarBotonesFoto(); }
 
