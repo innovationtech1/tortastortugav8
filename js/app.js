@@ -1111,31 +1111,9 @@ window.renderCartItems = function() {
         return;
     }
 
-    // Contar cuántos items iguales hay (por nombre + variante) para mostrar encabezado "N×"
-    function _claveGrupoCarrito(it) {
-        return (it.nombre||'') + '||' + (it.variante||'') + '||' + ((it.modificaciones||[]).slice().sort().join('|'));
-    }
-    var _conteoGrupos = {};
-    items.forEach(function(it){ var k = _claveGrupoCarrito(it); _conteoGrupos[k] = (_conteoGrupos[k]||0) + 1; });
-    var _grupoVisto = {};
-
     el.innerHTML = items.map((item, idx) => {
         const precio  = parseFloat(item.precio) || 0;
         const modsArr = (item.modificaciones || []).filter(m => m && m.trim());
-
-        // Encabezado de grupo: solo antes del PRIMER item de cada tipo con cantidad > 1
-        let encabezadoGrupo = '';
-        const _kg = _claveGrupoCarrito(item);
-        if (!_grupoVisto[_kg]) {
-            _grupoVisto[_kg] = true;
-            const _cant = _conteoGrupos[_kg];
-            if (_cant > 1) {
-                encabezadoGrupo = `<div style="display:flex;align-items:center;gap:.5rem;padding:.5rem .9rem .2rem;">
-                    <span style="font-size:.9rem;font-weight:900;color:#FF7A33;">${_cant}× ${item.nombre||'Producto'}</span>
-                    ${item.variante ? `<span style="font-size:.72rem;color:#888;">${item.variante}</span>` : ''}
-                </div>`;
-            }
-        }
 
         // Variante en su propia linea
         const varHtml = item.variante
@@ -1156,7 +1134,7 @@ window.renderCartItems = function() {
               `</div>`
             : '';
 
-        return encabezadoGrupo + `
+        return `
         <div style="display:flex;align-items:flex-start;gap:.65rem;
                     padding:.85rem .9rem;border-bottom:1px solid rgba(255,255,255,.05);">
             <!-- Numero -->
