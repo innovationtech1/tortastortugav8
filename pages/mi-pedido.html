@@ -233,7 +233,21 @@ function activarMapasEnVivo() {
         var repId    = bloque.getAttribute('data-rep');
         var clat = parseFloat(bloque.getAttribute('data-clat'));
         var clng = parseFloat(bloque.getAttribute('data-clng'));
-        if (_ttMapas[pedidoId]) return;
+        // Si el mapa ya existe...
+        if (_ttMapas[pedidoId]) {
+            var est = _ttMapas[pedidoId];
+            // Si el repartidor NO cambió, no hacer nada (evita recrear el mapa)
+            if (est._repId === repId) return;
+            // El repartidor CAMBIÓ: cancelar la suscripción vieja y re-suscribir al nuevo
+            if (est.unsub) { try { est.unsub(); } catch(e){} }
+            if (est.repMarker) { try { est.map.removeLayer(est.repMarker); } catch(e){} est.repMarker = null; }
+            est._repId = repId;
+            var etaEl2 = bloque.querySelector('.tt-track-eta');
+            if (etaEl2) etaEl2.textContent = 'Buscando…';
+            var docRef2 = _ttDoc(db, 'ubicaciones', repId);
+            est.unsub = _ttOnSnapshot(docRef2, function(snap){ _ttActualizarMapa(pedidoId, snap, clat, clng, etaEl2); });
+            return;
+        }
 
         var cont  = bloque.querySelector('.tt-track-map');
         var etaEl = bloque.querySelector('.tt-track-eta');
