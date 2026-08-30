@@ -133,6 +133,10 @@ html { -webkit-text-size-adjust: 100%; }
       style="margin-top:1.2rem;padding:.8rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:#ccc;border-radius:12px;font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;width:100%;">
       &larr; Regresar a mi pedido
     </button>
+    <button onclick="cerrarUbicacion()"
+      style="margin-top:.6rem;padding:.8rem;background:rgba(255,90,0,.1);border:1px solid rgba(255,90,0,.3);color:#FF7A33;border-radius:12px;font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;width:100%;">
+      ✕ Cerrar
+    </button>
   </div>
 
 <script type="module">
@@ -210,6 +214,16 @@ window._pedidoActivoId = pedidoId;
         infoEl.textContent = 'Pedido a domicilio';
     }
 })();
+
+window.cerrarUbicacion = function() {
+    // Liberar cámara si está abierta
+    if (window._camaraStream) { try { window._camaraStream.getTracks().forEach(function(t){ t.stop(); }); } catch(e){} }
+    // Intentar cerrar la pestaña; si no se puede, ir a la vista del pedido
+    try { window.close(); } catch(e){}
+    setTimeout(function(){
+        if (!window.closed) { window.location.href = 'pages/mi-pedido.html'; }
+    }, 300);
+};
 
 window.regresarAMiPedido = function() {
     // Volver a la vista del cliente. Si venimos desde ahi (misma app),
