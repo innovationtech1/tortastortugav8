@@ -225,6 +225,37 @@ function _ttDistanciaMillas(lat1, lng1, lat2, lng2) {
             Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
+// Actualiza el mapa de un pedido con la posición del repartidor (reutilizable)
+function _ttActualizarMapa(pedidoId, snap, clat, clng, etaEl) {
+    var estado = _ttMapas[pedidoId];
+    if (!estado) return;
+    var map = estado.map;
+    if (!snap.exists()) { if(etaEl) etaEl.textContent = 'Sin señal'; return; }
+    var d = snap.data();
+    if (typeof d.lat !== 'number' || typeof d.lng !== 'number') return;
+
+    var iconoRep = L.divIcon({ html: '🛵', className: 'tt-emoji-icon', iconSize: [34,34], iconAnchor: [17,17] });
+    if (!estado.repMarker) {
+        estado.repMarker = L.marker([d.lat, d.lng], { icon: iconoRep }).addTo(map).bindPopup(d.nombre || 'Tortumóvil');
+    } else {
+        estado.repMarker.setLatLng([d.lat, d.lng]);
+        estado.repMarker.bindPopup(d.nombre || 'Tortumóvil');
+    }
+
+    if (estado.cliMarker && !isNaN(clat)) {
+        var grupo = L.featureGroup([estado.repMarker, estado.cliMarker]);
+        map.fitBounds(grupo.getBounds().pad(0.3));
+        if (estado.line) map.removeLayer(estado.line);
+        estado.line = L.polyline([[d.lat, d.lng], [clat, clng]], { color: '#FF7A33', weight: 3, dashArray: '6,8' }).addTo(map);
+        var millas = _ttDistanciaMillas(d.lat, d.lng, clat, clng);
+        var minutos = Math.max(1, Math.round((millas / 18.6) * 60));
+        if (etaEl) etaEl.textContent = millas.toFixed(1) + ' mi · ~' + minutos + ' min';
+    } else {
+        map.setView([d.lat, d.lng], 15);
+        if (etaEl) etaEl.textContent = 'En camino';
+    }
+}
+
 function activarMapasEnVivo() {
     if (!window.L) return;
     var bloques = document.querySelectorAll('.tt-track');
