@@ -305,6 +305,7 @@ setTimeout(function(){
 }, 8000);
 </script>
 
+<script src="js/estados.js?v=1788145000"></script>
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult,
@@ -603,8 +604,9 @@ async function cargarHistorial(){
     const fecha  = fFecha(p.creado);
     const total  = p.total || '$0';
     const items2 = (p.items||'').replace(/\n/g,'<br>');
-    const estado = p.estado || '—';
-    const estadoColor = estado.includes('Entregado')?'var(--ok)':estado.includes('preparación')?'var(--wa)':'var(--mu)';
+    const estado = TTEstados.etiqueta(p.estado);
+    const _kEst = TTEstados.normalizar(p.estado);
+    const estadoColor = _kEst==='ENTREGADO'?'var(--ok)':_kEst==='EN_COCINA'?'var(--wa)':'var(--mu)';
     return `<div class="hist-item">
       <div class="hi-top">
         <span class="hi-ticket">#${ticket}</span>

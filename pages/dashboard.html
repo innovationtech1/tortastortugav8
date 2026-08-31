@@ -132,6 +132,7 @@
     </div>
 </div>
 
+<script src="../js/estados.js?v=1788145000"></script>
 <script type="module">
 import { db } from '../js/firebase-config.js';
 import { collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
@@ -147,7 +148,7 @@ function esVentaValida(p) {
     if (_esDomicilioVenta(p)) {
         return !!p.repartidorId;
     } else {
-        return String(p.estado || '').toLowerCase().indexOf('entregad') >= 0;
+        return TTEstados.estaEntregado(p.estado);
     }
 }
 function tsDe(p) {
@@ -191,7 +192,8 @@ function _calcular(pedidos) {
     var programadas = 0;
 
     hoy.forEach(function(p){
-        var estado = String(p.estado || '').toLowerCase();
+        var claveEst = TTEstados.normalizar(p.estado);
+        var entregado = TTEstados.estaEntregado(p.estado);
 
         // Ventas válidas (pagadas y completadas)
         if (esVentaValida(p)) {
@@ -200,21 +202,21 @@ function _calcular(pedidos) {
         }
 
         // Entregados
-        if (estado.indexOf('entregad') >= 0) entregados++;
+        if (entregado) entregados++;
 
         // Efectivo a cobrar: domicilios asignados aún no pagados
-        if (_esDomicilioVenta(p) && p.estadoPago !== 'Pagado' && p.repartidorId && estado.indexOf('entregad') < 0) {
+        if (_esDomicilioVenta(p) && p.estadoPago !== 'Pagado' && p.repartidorId && !entregado) {
             efectivoCobrar += _num(p);
         }
 
         // En cocina / preparando
-        if (estado.indexOf('cocina') >= 0 || estado.indexOf('prepar') >= 0) enCocina++;
+        if (claveEst === 'EN_COCINA') enCocina++;
 
         // En ruta (asignado a repartidor, no entregado)
-        if (p.repartidorId && estado.indexOf('entregad') < 0 && estado.indexOf('program') < 0) enRuta++;
+        if (p.repartidorId && !entregado && claveEst !== 'PROGRAMADO') enRuta++;
 
         // Programadas
-        if (p.esOrdenProgramada || estado.indexOf('program') >= 0) programadas++;
+        if (p.esOrdenProgramada || claveEst === 'PROGRAMADO') programadas++;
     });
 
     var ticketProm = numVentas > 0 ? (ventasTotal / numVentas) : 0;

@@ -92,6 +92,7 @@ main{max-width:640px;margin:0 auto;padding:1.2rem 1rem 3rem;}
     </div>
 </main>
 
+<script src="../js/estados.js?v=1788145000"></script>
 <script type="module">
 import { db } from '../js/firebase-config.js';
 import { collection, onSnapshot, doc, deleteDoc, addDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
@@ -105,23 +106,20 @@ const miNombre = (_leer('tt_cliente_nombre') || '').trim().toLowerCase();
 
 const ORDEN_ESTADO = ['Nuevo', 'En preparación', 'Listo', 'En camino', 'Entregado'];
 
+// Clase CSS local (est-*) derivada de la clave canónica.
+const _CLASE_ESTADO = {
+    PROGRAMADO: 'est-nuevo', NUEVO: 'est-nuevo', EN_COCINA: 'est-cocina',
+    LISTO: 'est-listo', EN_CAMINO: 'est-camino', ENTREGADO: 'est-entregado',
+    CANCELADO: 'est-cancelado'
+};
 function claseEstado(estado) {
-    if (!estado) return 'est-nuevo';
-    if (estado.includes('Cancelado')) return 'est-cancelado';
-    if (estado.includes('Entregado')) return 'est-entregado';
-    if (estado.includes('camino')) return 'est-camino';
-    if (estado.includes('Listo')) return 'est-listo';
-    if (estado.includes('preparaci')) return 'est-cocina';
-    return 'est-nuevo';
+    return _CLASE_ESTADO[TTEstados.normalizar(estado)] || 'est-nuevo';
 }
 
+// Paso en la barra de progreso (0..4) = posición en el flujo del pedido.
 function pasoActual(estado) {
-    if (!estado) return 0;
-    if (estado.includes('Entregado')) return 4;
-    if (estado.includes('camino')) return 3;
-    if (estado.includes('Listo')) return 2;
-    if (estado.includes('preparaci')) return 1;
-    return 0;
+    const i = TTEstados.FLUJO.indexOf(TTEstados.normalizar(estado));
+    return i < 0 ? 0 : i;
 }
 
 function esMio(p) {
@@ -250,7 +248,7 @@ function renderPedidos(pedidos) {
         // Reusa la variable esDomicilio ya declarada arriba (L153).
         var _esDomMapa = esDomicilio || String(p.tipoEntrega || '').toLowerCase().indexOf('domicilio') >= 0;
         var repIdMapa = p.repartidorId || p.tortumovilId || '';
-        var entregadoMapa = String(p.estado || '').toLowerCase().indexOf('entregad') >= 0;
+        var entregadoMapa = TTEstados.estaEntregado(p.estado);
         var bloqueMapa = '';
         if (_esDomMapa && repIdMapa && !entregadoMapa) {
             bloqueMapa =
@@ -270,7 +268,7 @@ function renderPedidos(pedidos) {
         <div class="pedido-card">
             <div class="pedido-top">
                 <span class="pedido-folio">${p.folioStr || '#---'}</span>
-                <span class="pedido-estado ${claseEstado(p.estado)}">${(p.estado || 'Nuevo').replace(/[^\w\sáéíóúñ]/gi,'').trim()}</span>
+                <span class="pedido-estado ${claseEstado(p.estado)}">${TTEstados.corto(p.estado)}</span>
             </div>
             <div style="display:flex;align-items:center;justify-content:center;gap:.5rem;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:10px;padding:.6rem;margin:.4rem 0 .6rem;">
                 <span style="font-size:.72rem;color:#888;text-transform:uppercase;letter-spacing:.05em;">N° de orden:</span>
@@ -475,7 +473,7 @@ window.confirmarCancelar = async function() {
         //    así que primero lo marcamos archivado+cancelado y luego lo borramos.
         try {
             await updateDoc(doc(db, 'pedidos', _cancelarPedidoId), {
-                estado: 'Cancelado ❌', archivado: true,
+                estado: TTEstados.ESTADOS.CANCELADO.etiqueta, archivado: true,
                 canceladoMotivo: motivo, canceladoEn: new Date().toISOString()
             });
         } catch(e) { /* si no se puede actualizar, intentamos borrar directo */ }

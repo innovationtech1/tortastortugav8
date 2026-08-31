@@ -101,6 +101,7 @@
   <div class="vacio"><div class="emo">⏳</div>Cargando órdenes…</div>
 </div>
 
+<script src="../js/estados.js?v=1788145000"></script>
 <script type="module">
 import { db } from '../js/firebase-config.js';
 import { collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
@@ -119,10 +120,11 @@ function _esActiva(p) {
   return p.archivado !== true;
 }
 function _estadoBadge(p) {
-  var e = String(p.estado || '').toLowerCase();
-  if (p.entregado || e.indexOf('entregad') >= 0) return '<span class="badge" style="background:rgba(167,139,250,.15);color:#A78BFA;">Entregado</span>';
-  if (e.indexOf('listo') >= 0) return '<span class="badge" style="background:rgba(37,211,102,.15);color:#25D366;">Listo</span>';
-  if (e.indexOf('prepar') >= 0) return '<span class="badge" style="background:rgba(251,183,36,.15);color:#FBB724;">En prep.</span>';
+  var k = (p.entregado === true) ? 'ENTREGADO' : TTEstados.normalizar(p.estado);
+  if (k === 'ENTREGADO') return '<span class="badge" style="background:rgba(167,139,250,.15);color:#A78BFA;">Entregado</span>';
+  if (k === 'EN_CAMINO') return '<span class="badge" style="background:rgba(255,140,66,.15);color:#FF8C42;">En camino</span>';
+  if (k === 'LISTO')     return '<span class="badge" style="background:rgba(37,211,102,.15);color:#25D366;">Listo</span>';
+  if (k === 'EN_COCINA') return '<span class="badge" style="background:rgba(251,183,36,.15);color:#FBB724;">En prep.</span>';
   return '<span class="badge" style="background:rgba(91,155,255,.15);color:#5B9BFF;">Nuevo</span>';
 }
 function _pagoBadge(p) {
@@ -148,7 +150,7 @@ function render() {
   // Resumen global
   var totalGlobal = activas.reduce(function(s,p){ return s + _num(p); }, 0);
   var numGlobal = activas.length;
-  var entregadas = activas.filter(function(p){ return p.entregado || String(p.estado||'').toLowerCase().indexOf('entregad')>=0; }).length;
+  var entregadas = activas.filter(function(p){ return p.entregado === true || TTEstados.estaEntregado(p.estado); }).length;
   var resEl = document.getElementById('resumen-global');
   resEl.innerHTML =
     '<div class="stat"><div class="num" style="color:#FF7A33;">' + numGlobal + '</div><div class="lbl">Órdenes</div></div>' +

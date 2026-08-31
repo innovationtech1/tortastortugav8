@@ -278,6 +278,8 @@ window.normalizarRutaImagen = function(src) {
         .status-listo       { background: rgba(33,150,243,0.15); color: #2196F3; }
         .status-entregado   { background: rgba(156,39,176,0.15); color: #CE93D8; }
         .status-cancelado   { background: rgba(244,67,54,0.15);  color: #EF9A9A; }
+        .status-camino      { background: rgba(255,90,0,0.15);   color: #FF8C42; }
+        .status-programado  { background: rgba(120,120,120,0.15);color: #B0B0B0; }
 
         .tipo-badge { font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 6px; display: inline-block; margin-bottom: 0.3rem; }
         .tipo-delivery { background: rgba(33,150,243,0.15); color: #90CAF9; }
@@ -422,10 +424,10 @@ window.normalizarRutaImagen = function(src) {
 
     <div class="filters-bar">
         <button class="filter-btn active" data-filter="todos" >Todos</button>
-        <button class="filter-btn" data-filter="Nuevo">🆕 Nuevos</button>
-        <button class="filter-btn" data-filter="preparación">🧑‍🍳 En preparación</button>
-        <button class="filter-btn" data-filter="Listo">✅ Listos</button>
-        <button class="filter-btn" data-filter="Entregado">🎉 Entregados</button>
+        <button class="filter-btn" data-filter="NUEVO">🆕 Nuevos</button>
+        <button class="filter-btn" data-filter="EN_COCINA">🧑‍🍳 En preparación</button>
+        <button class="filter-btn" data-filter="LISTO">✅ Listos</button>
+        <button class="filter-btn" data-filter="ENTREGADO">🎉 Entregados</button>
         <button class="filter-btn" data-filter="archivados" style="border-color:rgba(167,139,250,.3);color:#A78BFA;">🗂️ Archivados</button>
     </div>
 
@@ -601,6 +603,7 @@ window.normalizarRutaImagen = function(src) {
 // inicio del <head> (exige rol gerente/supervisor autenticado de verdad).
 </script>
 
+<script src="../js/estados.js?v=1788145000"></script>
 <script type="module">
     import { db } from '../js/firebase-config.js';
 
@@ -687,9 +690,7 @@ window.normalizarRutaImagen = function(src) {
                 return tb - ta;
             });
             actualizarUI();
-            const hayNuevos = pedidosDB.some(p =>
-                (p.estado === 'Nuevo 🆕' || p.estado === 'Nuevo') || p.estado === 'Nuevo'
-            );
+            const hayNuevos = pedidosDB.some(p => TTEstados.es(p.estado, 'NUEVO'));
             if(hayNuevos) {
                 _playBell(false);
             }
@@ -732,12 +733,12 @@ window.normalizarRutaImagen = function(src) {
         if(clearBtn) clearBtn.style.display = searchText ? 'flex' : 'none';
         const activos = pedidosDB.filter(p => !p.archivado);
         document.getElementById('stat-total').textContent = activos.length;
-        document.getElementById('stat-nuevos').textContent = activos.filter(p => p.estado?.includes('Nuevo')).length;
-        document.getElementById('stat-prep').textContent = activos.filter(p => p.estado?.includes('preparación')).length;
-        document.getElementById('stat-entregados').textContent = activos.filter(p => p.estado?.includes('Entregado')).length;
+        document.getElementById('stat-nuevos').textContent = activos.filter(p => TTEstados.es(p.estado,'NUEVO')).length;
+        document.getElementById('stat-prep').textContent = activos.filter(p => TTEstados.es(p.estado,'EN_COCINA')).length;
+        document.getElementById('stat-entregados').textContent = activos.filter(p => TTEstados.es(p.estado,'ENTREGADO')).length;
         let filtrados = filtroActual === 'archivados' ? pedidosDB.filter(p => p.archivado)
                       : filtroActual === 'todos' ? activos
-                      : activos.filter(p => p.estado?.includes(filtroActual));
+                      : activos.filter(p => TTEstados.es(p.estado, filtroActual));
         const accionesArchivados = document.getElementById('acciones-archivados');
         if (accionesArchivados) accionesArchivados.style.display = (filtroActual === 'archivados') ? 'flex' : 'none';
         if (searchText) {
@@ -781,7 +782,7 @@ window.normalizarRutaImagen = function(src) {
             return;
         }
         tbody.innerHTML = pedidos.map(p => {
-            const estadoCls = p.estado?.includes('Nuevo') ? 'status-nuevo' : p.estado?.includes('preparación') ? 'status-prep' : p.estado?.includes('Listo') ? 'status-listo' : p.estado?.includes('Entregado') ? 'status-entregado' : 'status-cancelado';
+            const estadoCls = TTEstados.css(p.estado);
             const tipo = p.tipo === 'delivery' ? '<span style="color:#FF5A00;font-weight:700;">🛵 Delivery</span>' : 'Pickup 🏪';
             const tipoCls = p.tipo === 'delivery' ? 'tipo-delivery' : 'tipo-pickup';
             let hora = '—'; let timerHTML = '';
@@ -790,7 +791,7 @@ window.normalizarRutaImagen = function(src) {
                 const soloHora = creadoDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
                 const soloFecha = creadoDate.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
                 hora = `${soloFecha} · ${soloHora}`;
-                if (!p.estado?.includes('Entregado') && !p.estado?.includes('Cancelado')) {
+                if (TTEstados.estaActivo(p.estado)) {
                     const diffMs = new Date() - creadoDate; const diffMins = Math.floor(diffMs / 60000);
                     let color = 'var(--green)'; if (diffMins > 15) color = 'var(--yellow)'; if (diffMins > 25) color = '#F44336';
                     timerHTML = `<div style="color:${color}; font-weight:bold; font-size: 0.85rem; margin-top:2px;">⏱️ ${diffMins} min</div>`;
@@ -815,7 +816,7 @@ window.normalizarRutaImagen = function(src) {
             }
             else {
                 // ¿Ya está en cocina o más adelante? (para no mostrar "Enviar a cocina" de nuevo)
-                const yaEnCocina = (p.estado||'').includes('preparación') || (p.estado||'').includes('Listo') || (p.estado||'').includes('Entregado');
+                const yaEnCocina = ['EN_COCINA','LISTO','EN_CAMINO','ENTREGADO'].includes(TTEstados.normalizar(p.estado));
                 const esDomicilio = p.tipo === 'delivery' || p.tipoServicio === 'Domicilio';
                 pagoHTML = `<button class="btn-cobrar-grid" onclick="abrirCaja('${p.id}', '${ticketId}', '${p.total}')">🔴 Cobrar ${p.total}</button><br><span class="pay-badge" style="margin-top:4px;display:inline-block">Pide: ${p.metodoPago || '?'}</span>`;
                 // Para domicilio (o cualquier pedido sin cobrar que no esté en cocina):
@@ -928,10 +929,10 @@ window.normalizarRutaImagen = function(src) {
                     </div>
                 </td>
                 <td class="tt-detalle">${pagoHTML}</td>
-                <td class="tt-detalle"><select class="status-select ${estadoCls}" data-id="${p.id}" style="width:100%"><option ${p.estado?.includes('Nuevo') ? 'selected' : ''}>Nuevo 🆕</option><option ${p.estado?.includes('preparación') ? 'selected' : ''}>En preparación 🧑‍🍳</option><option ${p.estado?.includes('Listo') ? 'selected' : ''}>Listo ✅</option><option ${p.estado?.includes('camino') ? 'selected' : ''}>En camino 🛵</option><option ${p.estado?.includes('Entregado') ? 'selected' : ''}>Entregado 🎉</option><option ${p.estado?.includes('Cancelado') ? 'selected' : ''}>Cancelado ❌</option></select></td>
+                <td class="tt-detalle"><select class="status-select ${estadoCls}" data-id="${p.id}" style="width:100%">${TTEstados.opciones().map(o => `<option value="${o.clave}" ${TTEstados.normalizar(p.estado)===o.clave ? 'selected' : ''}>${o.etiqueta}</option>`).join('')}</select></td>
                 <td class="tt-detalle" style="text-align:center;padding-right:.75rem;">${p.archivado
                     ? `<button class="delete-btn restore-btn" data-id="${p.id}" title="Volver a mostrar en el panel" style="background:rgba(37,211,102,.15);color:#25D366;">↩️</button>`
-                    : `${(p.estado?.includes('Entregado') || p.estadoPago==='Pagado')
+                    : `${(TTEstados.estaEntregado(p.estado) || p.estadoPago==='Pagado')
                         ? `<label style="display:flex;align-items:center;justify-content:center;margin-bottom:.4rem;cursor:pointer;" title="Seleccionar para archivar">
                              <input type="checkbox" class="chk-archivar" data-id="${p.id}" style="width:20px;height:20px;accent-color:#A78BFA;cursor:pointer;">
                            </label>` : ''}
@@ -949,13 +950,16 @@ window.normalizarRutaImagen = function(src) {
         document.querySelectorAll('.status-select').forEach(select => {
             select.addEventListener('change', async (e) => {
                 const id = e.target.getAttribute('data-id');
-                const nuevoEstado = e.target.value;
+                // El value del <option> es la clave canónica (NUEVO, LISTO…);
+                // guardamos SIEMPRE la etiqueta legible correspondiente.
+                const claveNueva = TTEstados.normalizar(e.target.value);
+                const nuevoEstado = TTEstados.ESTADOS[claveNueva].etiqueta;
                 try {
                     const updates = { estado: nuevoEstado };
                     // Si se reactiva la orden a un estado activo (Nuevo/En preparación),
                     // guardar marca de reinicio para que el cronómetro de cocina
                     // empiece de 0 (la cocina la va a rehacer).
-                    if (nuevoEstado.includes('Nuevo') || nuevoEstado.includes('preparación')) {
+                    if (claveNueva === 'NUEVO' || claveNueva === 'EN_COCINA') {
                         updates['tiempos.reiniciado'] = Date.now();
                     }
                     await updateDoc(doc(db, 'pedidos', id), updates);
@@ -1002,12 +1006,13 @@ window.normalizarRutaImagen = function(src) {
                 : '<span class="tt-mini-badge" style="background:rgba(244,67,54,.15);color:#F44336;">🔴 Por cobrar</span>';
 
             // Badge de cocina (color según estado)
-            var cocinaTxt = cocina || 'Nuevo';
+            var cocinaTxt = TTEstados.etiqueta(cocina);
             var cocinaColor = 'rgba(59,130,246,.15)', cocinaText = '#3B82F6';
-            var cl = cocinaTxt.toLowerCase();
-            if (cl.indexOf('prepar') >= 0) { cocinaColor = 'rgba(251,183,36,.15)'; cocinaText = '#FBB724'; }
-            else if (cl.indexOf('listo') >= 0) { cocinaColor = 'rgba(37,211,102,.15)'; cocinaText = '#25D366'; }
-            else if (cl.indexOf('entregad') >= 0) { cocinaColor = 'rgba(167,139,250,.15)'; cocinaText = '#A78BFA'; }
+            var claveCocina = TTEstados.normalizar(cocina);
+            if (claveCocina === 'EN_COCINA') { cocinaColor = 'rgba(251,183,36,.15)'; cocinaText = '#FBB724'; }
+            else if (claveCocina === 'LISTO') { cocinaColor = 'rgba(37,211,102,.15)'; cocinaText = '#25D366'; }
+            else if (claveCocina === 'EN_CAMINO') { cocinaColor = 'rgba(255,140,66,.15)'; cocinaText = '#FF8C42'; }
+            else if (claveCocina === 'ENTREGADO') { cocinaColor = 'rgba(167,139,250,.15)'; cocinaText = '#A78BFA'; }
             var cocinaBadge = '<span class="tt-mini-badge" style="background:' + cocinaColor + ';color:' + cocinaText + ';">' + cocinaTxt + '</span>';
 
             // Barra de resumen (siempre visible)
@@ -1144,7 +1149,7 @@ window.normalizarRutaImagen = function(src) {
     window.cerrarCaja = () => { document.getElementById('caja-modal').classList.remove('active'); currentOrderId = null; };
     window.procesarPago = async (metodoReal) => {
         if(!currentOrderId) return;
-        try { var cobrador='admin';try{var cn=sessionStorage.getItem('tt_cajero_nombre');if(cn)cobrador=cn;}catch(e){} await updateDoc(doc(db, 'pedidos', currentOrderId), { estadoPago: 'Pagado', metodoPagoReal: metodoReal, estado: 'En preparación 🧑‍🍳', cobradoPor: cobrador, cobradoEn: new Date().toISOString() }); cerrarCaja(); } catch(e) { alert('Error procesando cobro.'); }
+        try { var cobrador='admin';try{var cn=sessionStorage.getItem('tt_cajero_nombre');if(cn)cobrador=cn;}catch(e){} await updateDoc(doc(db, 'pedidos', currentOrderId), { estadoPago: 'Pagado', metodoPagoReal: metodoReal, estado: TTEstados.ESTADOS.EN_COCINA.etiqueta, cobradoPor: cobrador, cobradoEn: new Date().toISOString() }); cerrarCaja(); } catch(e) { alert('Error procesando cobro.'); }
     };
 
     // Enviar a cocina SIN cobrar (para domicilio: se cobra al final, en la puerta)
@@ -1155,7 +1160,7 @@ window.normalizarRutaImagen = function(src) {
             : confirm('¿Enviar a cocina sin cobrar? Se cobrará al entregar.');
         if (!confirmar) return;
         try {
-            await updateDoc(doc(db, 'pedidos', id), { estado: 'En preparación 🧑‍🍳' });
+            await updateDoc(doc(db, 'pedidos', id), { estado: TTEstados.ESTADOS.EN_COCINA.etiqueta });
             if (window.ttAlert) window.ttAlert('🍳 Pedido enviado a cocina. Se cobrará al entregar.');
         } catch(e) {
             alert('Error al enviar a cocina.');
@@ -1172,7 +1177,7 @@ window.normalizarRutaImagen = function(src) {
         if (!confirmar) return;
         try {
             await updateDoc(doc(db, 'pedidos', id), {
-                estado: 'En preparación 🧑‍🍳',
+                estado: TTEstados.ESTADOS.EN_COCINA.etiqueta,
                 prioridad911: true,
                 'tiempos.reiniciado': Date.now()
             });
@@ -2369,7 +2374,7 @@ window.cargarReporte = function(periodo) {
     var total     = filtrados.reduce(function(s,p){ return s+totalDe(p); }, 0);
     var numOrds   = filtrados.length;
     var ticket    = numOrds > 0 ? total/numOrds : 0;
-    var entregados = filtrados.filter(function(p){ return p.estado?.includes('Entregado'); }).length;
+    var entregados = filtrados.filter(function(p){ return TTEstados.estaEntregado(p.estado); }).length;
     var delivery  = filtrados.filter(function(p){ return p.tipo==='delivery' || p.tipoServicio==='Domicilio'; }).length;
 
     // ── DESGLOSE DE DINERO (subtotal, impuesto, propina, descuento) ──

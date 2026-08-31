@@ -240,6 +240,7 @@ html { -webkit-text-size-adjust: 100%; }
 </div>
 
 <script src="../js/tt-alert.js"></script>
+<script src="../js/estados.js?v=1788145000"></script>
 <script type="module">
 import { db } from '../js/firebase-config.js';
 import { collection, onSnapshot, doc, updateDoc, setDoc, serverTimestamp, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
@@ -911,7 +912,7 @@ window.marcarEnCamino = async function() {
     if (!_pedidoAbierto) return;
     try {
         await updateDoc(doc(db, 'pedidos', _pedidoAbierto.id), {
-            estado: 'En camino 🛵',
+            estado: TTEstados.ESTADOS.EN_CAMINO.etiqueta,
             'tiempos.enCamino': Date.now()
         });
         if (window.ttAlert) window.ttAlert('🛵 Marcado en camino. El cliente ya puede verlo.');
@@ -1091,7 +1092,7 @@ window.marcarEntregadoDirecto = async function(pedidoId) {
     if (!confirmar) return;
     try {
         await updateDoc(doc(db, 'pedidos', pedidoId), {
-            estado: 'Entregado 🎉',
+            estado: TTEstados.ESTADOS.ENTREGADO.etiqueta,
             entregado: true,
             'tiempos.entregada': Date.now()
         });
@@ -1109,7 +1110,7 @@ window.marcarEntregado = async function() {
     if (!confirmar) return;
     try {
         await updateDoc(doc(db, 'pedidos', _pedidoAbierto.id), {
-            estado: 'Entregado 🎉',
+            estado: TTEstados.ESTADOS.ENTREGADO.etiqueta,
             entregado: true,
             'tiempos.entregada': Date.now()
         });

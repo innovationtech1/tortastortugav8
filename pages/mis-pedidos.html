@@ -120,6 +120,7 @@ html { -webkit-text-size-adjust: 100%; }
 
 <script src="../js/tt-alert.js"></script>
 <script src="../js/perfil-barra.js?v=1788059171"></script>
+<script src="../js/estados.js?v=1788145000"></script>
 <script type="module">
 import { db } from '../js/firebase-config.js';
 import { collection, onSnapshot, doc, updateDoc, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
@@ -155,12 +156,11 @@ function parseItems(p) {
     return [];
 }
 
+const _CLASE_ESTADO = {
+    ENTREGADO: 'est-entregado', LISTO: 'est-listo', EN_COCINA: 'est-prep'
+};
 function claseEstado(est) {
-    est = est || '';
-    if (est.includes('Entregado')) return 'est-entregado';
-    if (est.includes('Listo')) return 'est-listo';
-    if (est.includes('preparación')) return 'est-prep';
-    return 'est-nuevo';
+    return _CLASE_ESTADO[TTEstados.normalizar(est)] || 'est-nuevo';
 }
 
 function render() {
@@ -196,10 +196,11 @@ function render() {
 
         // Botones de preparación según estado
         let btnPrep = '';
-        if (estado.includes('Nuevo')) {
-            btnPrep = `<button class="mp-btn mp-btn-prep" onclick="cambiarEstado('${p.id}','En preparación 🧑‍🍳')">🍳 Preparar</button>`;
-        } else if (estado.includes('preparación')) {
-            btnPrep = `<button class="mp-btn mp-btn-listo" onclick="cambiarEstado('${p.id}','Listo ✅')">✅ Lista</button>`;
+        const claveEst = TTEstados.normalizar(estado);
+        if (claveEst === 'NUEVO') {
+            btnPrep = `<button class="mp-btn mp-btn-prep" onclick="cambiarEstado('${p.id}','${TTEstados.ESTADOS.EN_COCINA.etiqueta}')">🍳 Preparar</button>`;
+        } else if (claveEst === 'EN_COCINA') {
+            btnPrep = `<button class="mp-btn mp-btn-listo" onclick="cambiarEstado('${p.id}','${TTEstados.ESTADOS.LISTO.etiqueta}')">✅ Lista</button>`;
         }
 
         // Botón pedir ubicación al cliente por SMS
@@ -228,7 +229,7 @@ function render() {
                         ${(p.cajeroNombre || p.tortumovilNombre) ? `<div style="font-size:.72rem;color:#888;margin-top:2px;">📝 Tomó: ${p.cajeroNombre || p.tortumovilNombre}</div>` : ''}
                     ${esTortu ? '<span class="mp-badge" style="background:rgba(37,211,102,.15);color:#25D366;">🚐 Tortumóvil</span>' : ''}
                 </div>
-                <span class="mp-estado ${claseEstado(estado)}">${estado}</span>
+                <span class="mp-estado ${claseEstado(estado)}">${TTEstados.etiqueta(estado)}</span>
             </div>
             <div class="mp-items">${items.join('<br>')}</div>
             <div class="mp-total">${p.total || ''}</div>
@@ -288,9 +289,10 @@ window._armarTicketWA = function(p) {
 
 window.cambiarEstado = async function(id, estado) {
     try {
-        const updates = { estado };
-        if (estado.includes('preparación')) updates['tiempos.enCocina'] = Date.now();
-        else if (estado.includes('Listo')) updates['tiempos.lista'] = Date.now();
+        const clave = TTEstados.normalizar(estado);
+        const updates = { estado: TTEstados.ESTADOS[clave].etiqueta };
+        if (clave === 'EN_COCINA') updates['tiempos.enCocina'] = Date.now();
+        else if (clave === 'LISTO') updates['tiempos.lista'] = Date.now();
         await updateDoc(doc(db, 'pedidos', id), updates);
         if (window.ttAlert) window.ttAlert('Estado actualizado.');
     } catch(e) { alert('Error al cambiar estado.'); }

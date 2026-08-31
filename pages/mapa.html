@@ -51,6 +51,7 @@
   <div class="r"><div class="n" style="color:#25D366;" id="r-sinasig">0</div><div class="l">Sin asignar</div></div>
 </div>
 
+<script src="../js/estados.js?v=1788145000"></script>
 <script type="module">
 import { db } from '../js/firebase-config.js';
 import { collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
@@ -73,8 +74,7 @@ function _initMap() {
 
 function _esActiva(p) {
   if (p.archivado === true) return false;
-  var e = String(p.estado||'').toLowerCase();
-  if (p.entregado || e.indexOf('entregad') >= 0) return false; // no mostrar entregadas
+  if (p.entregado === true || TTEstados.estaEntregado(p.estado)) return false; // no mostrar entregadas
   return true;
 }
 function _nombreRep(p) {

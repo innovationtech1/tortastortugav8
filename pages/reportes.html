@@ -70,6 +70,7 @@
 
 <div id="contenido"><div class="loading">Cargando datos...</div></div>
 
+<script src="../js/estados.js?v=1788145000"></script>
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFirestore, collection, getDocs, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
@@ -111,7 +112,7 @@ function esVentaValida(p) {
         return !!p.repartidorId;
     } else {
         // Tortumóvil/otro: pagada + entregada
-        return String(p.estado || '').toLowerCase().indexOf('entregad') >= 0;
+        return TTEstados.estaEntregado(p.estado);
     }
 }
 
@@ -236,7 +237,7 @@ function render() {
   const total = ventas.reduce((s,x) => s+totalDe(x), 0);
   const num = ventas.length;
   const ticket = num > 0 ? total/num : 0;
-  const entregados = ventas.filter(x => x.estado?.includes('Entregado')).length;
+  const entregados = ventas.filter(x => TTEstados.estaEntregado(x.estado)).length;
   const pagados = ventas.length;
   const totalPendiente = pendientes.reduce((s,x) => s+totalDe(x), 0);
   const numPendiente = pendientes.length;

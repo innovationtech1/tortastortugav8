@@ -270,6 +270,7 @@ html { -webkit-text-size-adjust: 100%; }
   <div id="max-content"></div>
 </div>
 
+<script src="../js/estados.js?v=1788145000"></script>
 <script type="module">
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import {
@@ -411,14 +412,16 @@ let timerInterval;
 const KitchenAPI = {
     // Cambiar estado de un pedido (registra timestamp del cambio)
     setEstado: async (id, estado) => {
-        const updates = { estado };
+        // Guardar SIEMPRE la etiqueta canónica (evita textos inconsistentes)
+        const clave = TTEstados.normalizar(estado);
+        const updates = { estado: TTEstados.info(estado).etiqueta };
         // Registrar cuándo pasó a cada estado
-        if (estado.includes('preparación'))  updates['tiempos.enCocina']  = Date.now();
-        else if (estado.includes('Listo'))    updates['tiempos.lista']     = Date.now();
-        else if (estado.includes('camino'))   updates['tiempos.enCamino']  = Date.now();
-        else if (estado.includes('Entregado')) updates['tiempos.entregada'] = Date.now();
+        if (clave === 'EN_COCINA')      updates['tiempos.enCocina']  = Date.now();
+        else if (clave === 'LISTO')     updates['tiempos.lista']     = Date.now();
+        else if (clave === 'EN_CAMINO') updates['tiempos.enCamino']  = Date.now();
+        else if (clave === 'ENTREGADO') updates['tiempos.entregada'] = Date.now();
         // Al terminar (Listo/Entregado), quitar la prioridad 911 (ya se atendió)
-        if (estado.includes('Listo') || estado.includes('Entregado')) {
+        if (clave === 'LISTO' || clave === 'ENTREGADO') {
             updates.prioridad911 = false;
         }
         await updateDoc(doc(db,'pedidos',id), updates);
@@ -566,7 +569,8 @@ function nombreCorto(item) {
 function renderCard(p) {
     const ahora  = Date.now();
     const est    = p.estado || '';
-    const terminado = est.includes('Listo') || est.includes('Entregado') || est.includes('camino') || est.includes('Cancelado');
+    const claveEst = TTEstados.normalizar(est);
+    const terminado = TTEstados.fueraDeCocina(est);
     // Inicio del cronómetro: normalmente cuándo se creó la orden. PERO si la
     // orden fue reactivada/reenviada (tiempos.reiniciado, ej. como 911), el
     // reloj cuenta SIEMPRE desde ese reinicio — así el tiempo (tanto en vivo
@@ -595,9 +599,9 @@ function renderCard(p) {
                   : ahora;
     }
     const secs   = Math.max(0, (finTiempo - ts) / 1000);
-    const cls    = est.includes('preparación') ? 'prep'
-                 : est.includes('Listo')       ? 'listo'
-                 : est.includes('Entregado')   ? 'entregado'
+    const cls    = claveEst === 'EN_COCINA' ? 'prep'
+                 : claveEst === 'LISTO'     ? 'listo'
+                 : claveEst === 'ENTREGADO' ? 'entregado'
                  : 'nuevo';
     const ticket = p.folioStr || ('#' + (p.id||'').slice(-4).toUpperCase());
     const hora   = new Date(ts).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
@@ -608,9 +612,9 @@ function renderCard(p) {
     // la cocina). Los estados posteriores (En camino/Entregado) los manejan los
     // repartidores; aquí se muestran como solo lectura.
     const selectorCocina = `<select class="kbtn-estado" onchange="setEstado('${p.id}', this.value)" style="flex:1;padding:.5rem;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#111;color:#fff;font-family:inherit;font-size:.82rem;font-weight:700;cursor:pointer;">
-        <option ${est.includes('Nuevo') ? 'selected' : ''}>Nuevo 🆕</option>
-        <option ${est.includes('preparación') ? 'selected' : ''}>En preparación 🧑‍🍳</option>
-        <option ${est.includes('Listo') ? 'selected' : ''}>Listo ✅</option>
+        <option ${claveEst === 'NUEVO' ? 'selected' : ''}>Nuevo 🆕</option>
+        <option ${claveEst === 'EN_COCINA' ? 'selected' : ''}>En preparación 🧑‍🍳</option>
+        <option ${claveEst === 'LISTO' ? 'selected' : ''}>Listo ✅</option>
     </select>`;
     // Etiqueta de solo lectura para órdenes que ya salieron de cocina
     const soloLectura = `<div style="flex:1;padding:.5rem;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:#888;font-size:.82rem;font-weight:700;text-align:center;">${est || '—'}</div>`;
@@ -664,7 +668,7 @@ function renderGrid() {
     });
 
     if (tabActual === 'activas') {
-        pedidos = pedidos.filter(p => !p.estado?.includes('Entregado') && !p.estado?.includes('Listo') && !p.estado?.includes('Cancelado') && !p.estado?.includes('camino'));
+        pedidos = pedidos.filter(p => TTEstados.enColaCocina(p.estado));
         // Orden: primero las de PRIORIDAD 911 (urgentes), luego por turno de
         // llegada (la más antigua primero, para respetar el orden de entrada).
         pedidos.sort((a,b) => {
@@ -681,7 +685,7 @@ function renderGrid() {
         // Normalmente se ocultan los que se quitaron individualmente, PERO si
         // "verTodoHistorial" está activo, se muestran TODOS (para revisar dudas).
         pedidos = pedidos.filter(p =>
-            (p.estado?.includes('Listo') || p.estado?.includes('Entregado') || p.estado?.includes('camino') || p.estado?.includes('Cancelado'))
+            TTEstados.fueraDeCocina(p.estado)
             && (verTodoHistorial || !ocultosCocina.has(p.id))
         );
         pedidos.sort((a,b) => (b.creado?.seconds||0) - (a.creado?.seconds||0));
@@ -692,10 +696,10 @@ function renderGrid() {
         const ts = p.creado?.seconds ? new Date(p.creado.seconds*1000) : null;
         return !ts || (ts >= hoy && ts <= hoyFin);
     });
-    document.getElementById('cnt-n').textContent = todosHoy.filter(p=>p.estado?.includes('Nuevo')).length;
-    document.getElementById('cnt-p').textContent = todosHoy.filter(p=>p.estado?.includes('preparación')).length;
-    document.getElementById('cnt-l').textContent = todosHoy.filter(p=>p.estado?.includes('Listo')).length;
-    document.getElementById('cnt-e').textContent = todosHoy.filter(p=>p.estado?.includes('Entregado')).length;
+    document.getElementById('cnt-n').textContent = todosHoy.filter(p=>TTEstados.es(p.estado,'NUEVO')).length;
+    document.getElementById('cnt-p').textContent = todosHoy.filter(p=>TTEstados.es(p.estado,'EN_COCINA')).length;
+    document.getElementById('cnt-l').textContent = todosHoy.filter(p=>TTEstados.es(p.estado,'LISTO')).length;
+    document.getElementById('cnt-e').textContent = todosHoy.filter(p=>TTEstados.es(p.estado,'ENTREGADO')).length;
 
     // ── Promedio de tiempo de cocina en tiempo real ──
     // Mide el tiempo de PREPARACIÓN de cada orden terminada hoy: desde que
@@ -704,7 +708,7 @@ function renderGrid() {
     // tiempo — las 911 NO acumulan el tiempo del pedido original.
     const terminadasConTiempo = todosHoy.filter(function(p){
         const fin = p.tiempos && (p.tiempos.lista || p.tiempos.entregada);
-        return fin && (p.estado?.includes('Listo') || p.estado?.includes('Entregado') || p.estado?.includes('camino'));
+        return fin && (TTEstados.estaListo(p.estado) || TTEstados.estaEnCamino(p.estado) || TTEstados.estaEntregado(p.estado));
     });
     const promEl = document.getElementById('cnt-prom');
     if (terminadasConTiempo.length && promEl) {
@@ -808,7 +812,7 @@ function renderEditor() {
             <div style="font-size:.75rem;color:var(--muted);font-weight:700;margin-bottom:.4rem;">ESTADO DE LA ORDEN</div>
             <div class="status-grid">
                 ${statusOpts.map(s=>`
-                    <button class="status-opt ${est===s.val||est.includes(s.val.split(' ')[0])?'selected':''}"
+                    <button class="status-opt ${TTEstados.normalizar(est)===TTEstados.normalizar(s.val)?'selected':''}"
                         onclick="selectEstado('${s.val}',this)">${s.lbl}</button>
                 `).join('')}
             </div>
@@ -985,7 +989,7 @@ function iniciarKDS(){
     const hoy = new Date(); hoy.setHours(0,0,0,0);
     const nuevas = todos.filter(p => {
         const ts = p.creado?.seconds ? new Date(p.creado.seconds*1000) : null;
-        return ts && ts >= hoy && (p.estado?.includes('Nuevo'));
+        return ts && ts >= hoy && TTEstados.es(p.estado,'NUEVO');
     }).length;
 
     // En la PRIMERA carga solo fijamos la línea base, sin sonar la campana

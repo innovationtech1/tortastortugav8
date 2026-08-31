@@ -184,6 +184,7 @@ html { -webkit-text-size-adjust: 100%; }
     </div>
 </div>
 
+<script src="../js/estados.js?v=1788145000"></script>
 <script type="module">
 import { auth, db } from '../js/firebase-config.js';
 import { doc, setDoc, getDoc, getDocs, collection, query, where, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
@@ -295,7 +296,7 @@ window.enviarCodigo = async function() {
         snap.forEach(function(d){
             const p = d.data();
             // Cuenta como activo si no está archivado ni entregado
-            if (p.archivado !== true && !(p.estado || '').includes('Entregado')) activos++;
+            if (p.archivado !== true && !TTEstados.estaEntregado(p.estado)) activos++;
         });
         if (activos >= MAX_PEDIDOS_ACTIVOS) {
             showStatus('status-1', 'Tienes muchos pedidos en proceso. Espera a que se completen antes de pedir más.', 'error');
@@ -346,11 +347,8 @@ async function _revisarPedidosActivos(telefono) {
             var p = d.data();
             var t = String(p.telefono||'').replace(/[^0-9]/g,'');
             if (t !== tel) return;
-            var estado = String(p.estado||'').toLowerCase();
             // Activo = NO entregado y NO cancelado
-            var entregado = estado.indexOf('entregad') >= 0;
-            var cancelado = estado.indexOf('cancelad') >= 0;
-            if (!entregado && !cancelado) activos++;
+            if (TTEstados.estaActivo(p.estado)) activos++;
         });
         if (activos > 0) {
             var panel = document.getElementById('panel-tiene-pedidos');
