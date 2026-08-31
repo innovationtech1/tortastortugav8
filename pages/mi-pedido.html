@@ -149,7 +149,18 @@ function _desgloseCobro(p) {
     var propina = Number(d.propina) || 0;
     var total = Number(p.totalNum) || Number(d.total) || parseFloat(String(p.total||'').replace(/[^0-9.]/g,'')) || 0;
 
-    // Si no hay desglose detallado, mostrar solo el total (pedidos viejos)
+    // Si no hay subtotal guardado, calcularlo de los productos
+    if (!subtotal && Array.isArray(p.itemsData) && p.itemsData.length) {
+        subtotal = p.itemsData.reduce(function(s, it){
+            return s + (Number(it.precio)||0) * (Number(it.cantidad)||1);
+        }, 0);
+    }
+    // Si aún no hay subtotal pero sí total y envío, deducirlo
+    if (!subtotal && total && envio) {
+        subtotal = Math.max(0, total - envio - impuesto);
+    }
+
+    // Si de plano no hay nada que desglosar, mostrar solo el total
     if (!subtotal && !envio && !impuesto) {
         return '<div class="pedido-total">' + (p.total || '') + '</div>';
     }
