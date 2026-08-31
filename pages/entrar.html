@@ -630,8 +630,42 @@ window.compartirMiUbicacion = function() {
             showStatus('status-2', 'Elige el horario y confirma tu solicitud.', 'info');
         },
         function(err) {
-            if (estadoEl) estadoEl.innerHTML = '<div style="font-size:.85rem;color:#F44336;font-weight:700;">No pudimos obtener tu ubicación</div>';
-            showStatus('status-2', 'No se pudo obtener tu ubicación. Puedes continuar sin ella y darla después.', 'error');
+            // Detectar el tipo de dispositivo para dar instrucciones específicas
+            var esIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+            var esAndroid = /Android/i.test(navigator.userAgent);
+            var permisoDenegado = (err && err.code === 1); // PERMISSION_DENIED
+
+            var titulo = '📍 Necesitamos tu ubicación';
+            var instrucciones = '';
+
+            if (permisoDenegado) {
+                if (esIOS) {
+                    instrucciones = 'Tu ubicación está bloqueada. Para activarla:<br><br>' +
+                        '1️⃣ Abre <b>Ajustes</b> del iPhone<br>' +
+                        '2️⃣ Busca <b>Safari</b> (o tu navegador)<br>' +
+                        '3️⃣ Toca <b>Ubicación</b> → <b>Permitir</b><br>' +
+                        '4️⃣ Vuelve aquí y toca "Compartir mi ubicación"<br><br>' +
+                        '<span style="color:#888;">También revisa: Ajustes → Privacidad → Localización (que esté activada).</span>';
+                } else if (esAndroid) {
+                    instrucciones = 'Tu ubicación está bloqueada. Para activarla:<br><br>' +
+                        '1️⃣ Toca el 🔒 o ⓘ junto a la dirección web (arriba)<br>' +
+                        '2️⃣ Toca <b>Permisos</b> → <b>Ubicación</b> → <b>Permitir</b><br>' +
+                        '3️⃣ Vuelve aquí y toca "Compartir mi ubicación"<br><br>' +
+                        '<span style="color:#888;">Y revisa que el GPS del teléfono esté encendido.</span>';
+                } else {
+                    instrucciones = 'Activa el permiso de ubicación en tu navegador (toca el candado 🔒 junto a la dirección web) y vuelve a intentar.';
+                }
+            } else {
+                // Error no de permiso (GPS apagado, señal, timeout)
+                instrucciones = 'Asegúrate de tener el <b>GPS encendido</b> y buena señal, luego intenta de nuevo.<br><br>' +
+                    '<span style="color:#888;">Si no puedes, continúa sin ubicación y compártela después.</span>';
+            }
+
+            if (estadoEl) {
+                estadoEl.innerHTML = '<div style="font-size:.9rem;color:#F44336;font-weight:800;margin-bottom:.6rem;">' + titulo + '</div>' +
+                    '<div style="font-size:.82rem;color:#ddd;line-height:1.6;text-align:left;">' + instrucciones + '</div>';
+            }
+            showStatus('status-2', permisoDenegado ? 'Activa el permiso de ubicación siguiendo los pasos de arriba.' : 'No se pudo obtener tu ubicación. Revisa tu GPS.', 'error');
             if (btnEl) btnEl.disabled = false;
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
