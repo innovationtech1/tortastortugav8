@@ -483,11 +483,32 @@ window.compartirUbicacion = function() {
             }
         },
         function(err) {
-            var msg = 'No pudimos obtener tu ubicacion.';
-            if (err.code === 1) msg = 'Debes permitir el acceso a tu ubicacion. Toca el candado en la barra y activa Ubicacion.';
-            else if (err.code === 2) msg = 'Ubicacion no disponible. Activa el GPS de tu telefono.';
-            else if (err.code === 3) msg = 'Tardo demasiado. Intenta de nuevo.';
-            statusEl.innerHTML = '<span class="error">' + msg + '</span>';
+            var esIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+            var esAndroid = /Android/i.test(navigator.userAgent);
+            var msg = '';
+            if (err.code === 1) {
+                // Permiso denegado
+                if (esIOS) {
+                    msg = '<b>📍 Activa tu ubicación</b><br><br>' +
+                        '1. Abre <b>Ajustes</b> del iPhone<br>' +
+                        '2. Busca <b>Safari</b> (o tu navegador)<br>' +
+                        '3. Toca <b>Ubicación</b> → <b>Permitir</b><br>' +
+                        '4. Vuelve y toca "Compartir mi ubicación"<br><br>' +
+                        'También: Ajustes → Privacidad → Localización (activada).';
+                } else if (esAndroid) {
+                    msg = '<b>📍 Activa tu ubicación</b><br><br>' +
+                        '1. Toca el 🔒 junto a la dirección web (arriba)<br>' +
+                        '2. Permisos → Ubicación → Permitir<br>' +
+                        '3. Vuelve y toca "Compartir mi ubicación"<br><br>' +
+                        'Y revisa que el GPS esté encendido.';
+                } else {
+                    msg = 'Debes permitir el acceso a tu ubicación. Toca el candado 🔒 en la barra y activa Ubicación.';
+                }
+            }
+            else if (err.code === 2) msg = 'Ubicación no disponible. Activa el <b>GPS</b> de tu teléfono e intenta de nuevo.';
+            else if (err.code === 3) msg = 'Tardó demasiado. Revisa tu señal e intenta de nuevo.';
+            else msg = 'No pudimos obtener tu ubicación. Intenta de nuevo.';
+            statusEl.innerHTML = '<div class="error" style="text-align:left;line-height:1.6;font-size:.85rem;">' + msg + '</div>';
             btnEl.disabled = false;
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
