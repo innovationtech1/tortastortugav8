@@ -24,6 +24,40 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ═══ HELPERS DE IDENTIDAD DEL EQUIPO (Fase 2) ═══
+    // El rol de cada empleado vive en staff/{uid}, donde uid es el UID de
+    // Firebase Auth. Las reglas NO pueden hacer queries, solo get()/exists()
+    // por id de documento — por eso el mapeo es uid -> rol.
+    // (Estos helpers YA quedan disponibles; se APLICAN a las colecciones
+    //  existentes en un paso posterior, para no romper la app mientras se
+    //  migran las cuentas del equipo.)
+    function estaAutenticado() {
+      return request.auth != null;
+    }
+    function esStaff() {
+      return request.auth != null
+             && exists(/databases/$(database)/documents/staff/$(request.auth.uid));
+    }
+    function rolStaff() {
+      return get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.rol;
+    }
+    function esGerente() {
+      return esStaff() && (rolStaff() == 'gerente' || rolStaff() == 'supervisor');
+    }
+
+    // ── STAFF (mapeo uid -> rol del empleado; fuente de verdad de permisos) ──
+    // Lectura: el propio empleado (para saber su rol al entrar) o cualquier
+    //   staff (para paneles de gestión).
+    // Escritura: solo gerente/supervisor (asignar/cambiar roles). El PRIMER
+    //   gerente se crea a mano en la consola (bootstrap), lo que habilita al
+    //   resto. Un empleado NUNCA puede auto-asignarse un rol.
+    match /staff/{uid} {
+      allow read:   if request.auth != null && (request.auth.uid == uid || esStaff());
+      allow create: if esGerente();
+      allow update: if esGerente();
+      allow delete: if esGerente();
+    }
+
     // ── PRODUCTOS ──
     // Lectura pública (el menú debe verse sin login).
     // Escritura pública (gerente edita en modo PIN), pero validando que
