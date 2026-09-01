@@ -44,7 +44,7 @@
 </head>
 <body>
   <h1>🔐 Migrar <span class="o">accesos seguros</span></h1>
-  <div class="sub">Herramienta de un solo uso (Fase 2). Crea/repara la cuenta Firebase de cada empleado y escribe su rol en <code style="font-size:.85em;">staff/{uid}</code>, para poder cerrar las lecturas públicas.</div>
+  <div class="sub">Herramienta de un solo uso (Fase 2). Crea/repara la cuenta Firebase de cada empleado, <b>estandariza su PIN a 123456</b> (6 dígitos) y escribe su rol en <code style="font-size:.85em;">staff/{uid}</code>, para poder cerrar las lecturas públicas.</div>
 
   <div class="aviso">
     <b>Antes de usar, en la consola de Firebase:</b><br>
@@ -68,7 +68,7 @@
   <div class="card hide" id="card-migrar">
     <h2>2 · Migrar empleados</h2>
     <div class="msg m-in on" id="quien"></div>
-    <button class="bp" id="btn-migrar" onclick="migrarTodos()">🔐 Crear / reparar accesos de todos</button>
+    <button class="bp" id="btn-migrar" onclick="migrarTodos()">🔐 Crear / reparar accesos + PIN 123456 para todos</button>
     <div class="msg" id="msg-migrar"></div>
     <div id="resultados"></div>
   </div>
@@ -150,9 +150,9 @@ window.migrarTodos = async function(){
     const snap = await getDocs(collection(db,'empleados'));
     snap.forEach(d=>{
       const x = d.data();
-      if(x.empleadoId && x.pin) emps.push({
+      if(x.empleadoId) emps.push({
+        docId: d.id,
         empId: String(x.empleadoId).toUpperCase(),
-        pin: String(x.pin),
         rol: x.rol || 'empleado',
         nombre: [x.nombre,x.apellido].filter(Boolean).join(' ') || x.empleadoId,
         activo: x.estado !== 'inactivo'
@@ -162,7 +162,10 @@ window.migrarTodos = async function(){
     msg('msg-migrar','er','No se pudo leer la lista de empleados: '+(e.code||e.message));
     el('btn-migrar').disabled = false; return;
   }
-  if(!emps.length){ msg('msg-migrar','er','No se encontraron empleados con PIN.'); el('btn-migrar').disabled=false; return; }
+  if(!emps.length){ msg('msg-migrar','er','No se encontraron empleados.'); el('btn-migrar').disabled=false; return; }
+
+  // PIN estándar para TODOS (seguro y conocido durante la transición).
+  const PIN_DEFAULT = '123456';
 
   // App secundaria: crear/verificar cuentas SIN tocar la sesión del gerente.
   let sec = getApps().find(a=>a.name==='prov') || initializeApp(FB,'prov');
@@ -176,27 +179,31 @@ window.migrarTodos = async function(){
     el('resultados').appendChild(fila);
     const est = fila.querySelector('.est');
     try{
-      const email = emailDe(emp.empId), pw = pwDe(emp.empId, emp.pin);
+      const email = emailDe(emp.empId), pw = pwDe(emp.empId, PIN_DEFAULT);
       let uid;
       try{
         const c = await createUserWithEmailAndPassword(secAuth, email, pw);
-        uid = c.user.uid;                    // cuenta nueva
+        uid = c.user.uid;                    // cuenta nueva con PIN 123456
       }catch(ce){
         if(ce.code==='auth/email-already-in-use'){
-          const c = await signInWithEmailAndPassword(secAuth, email, pw); // ya existía
+          // Ya existía: solo entra si su contraseña YA es EMPID+123456.
+          const c = await signInWithEmailAndPassword(secAuth, email, pw);
           uid = c.user.uid;
         }else{ throw ce; }
       }
-      // Escribir el rol en staff/{uid} con la sesión del GERENTE (db principal)
+      // Rol en staff/{uid} (sesión del GERENTE, db principal)
       await setDoc(doc(db,'staff', uid), {
         empId: emp.empId, rol: emp.rol, nombre: emp.nombre,
         activo: emp.activo, migradoEn: serverTimestamp()
       }, { merge:true });
+      // Estandarizar el PIN guardado en empleados a 123456
+      try{ await setDoc(doc(db,'empleados', emp.docId), { pin: PIN_DEFAULT }, { merge:true }); }catch(e){}
       await signOut(secAuth);
-      est.textContent='✓'; est.className='est ok'; okN++;
+      est.textContent='✓ PIN 123456'; est.className='est ok'; okN++;
     }catch(e){
       let t = e.code || 'error';
-      if(e.code==='auth/wrong-password' || e.code==='auth/invalid-credential') t='PIN no coincide con cuenta';
+      if(e.code==='auth/wrong-password' || e.code==='auth/invalid-credential')
+        t='cuenta existe con otra contraseña → bórrala en Authentication y reintenta';
       est.textContent='✗ '+t; est.className='est er'; erN++;
     }
   }
