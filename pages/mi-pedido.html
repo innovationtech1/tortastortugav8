@@ -432,6 +432,43 @@ function activarMapasEnVivo() {
     });
 }
 
+// ── Seguimiento POR-ID (Fase 2b) ──────────────────────────────────
+// Cuando la lectura masiva de 'pedidos' está cerrada a staff, el cliente
+// sigue sus pedidos por el id guardado en este dispositivo (no adivinable).
+function _misIdsLocales() {
+    try {
+        var l = JSON.parse(localStorage.getItem('tt_mis_pedidos') || '[]');
+        return Array.isArray(l) ? l.map(function(x){ return x && x.id; }).filter(Boolean) : [];
+    } catch(e) { return []; }
+}
+var _porIdUnsubs = [];
+var _porIdMapa = {};
+function seguirPorId() {
+    _porIdUnsubs.forEach(function(u){ try{ u(); }catch(e){} });
+    _porIdUnsubs = []; _porIdMapa = {};
+    var ids = _misIdsLocales();
+    if (!ids.length) {
+        document.getElementById('lista-pedidos').innerHTML =
+            '<div class="vacio">Aún no tienes pedidos en este dispositivo.</div>';
+        return;
+    }
+    ids.forEach(function(id){
+        var u = onSnapshot(doc(db, 'pedidos', id), function(s){
+            if (s.exists()) _porIdMapa[id] = Object.assign({ id: s.id }, s.data());
+            else delete _porIdMapa[id];
+            var mios = Object.keys(_porIdMapa).map(function(k){ return _porIdMapa[k]; })
+                .filter(function(p){ return p.archivado !== true; });
+            mios.sort(function(a,b){ return ((b.creado&&b.creado.seconds)||0) - ((a.creado&&a.creado.seconds)||0); });
+            window._ultimosPedidos = mios;
+            renderPedidos(mios);
+        }, function(e){ /* un id inaccesible: se ignora */ });
+        _porIdUnsubs.push(u);
+    });
+}
+
+// Intento normal: lectura de la colección (funciona con reglas abiertas y
+// mantiene el match por teléfono cross-device). Si se DENIEGA (reglas
+// cerradas en Fase 2b), caemos a seguimiento por-id automáticamente.
 onSnapshot(collection(db, 'pedidos'), snap => {
     const todos = [];
     snap.forEach(d => todos.push({ id: d.id, ...d.data() }));
@@ -439,9 +476,14 @@ onSnapshot(collection(db, 'pedidos'), snap => {
     window._ultimosPedidos = mios;  // para la cancelación
     renderPedidos(mios);
 }, err => {
-    document.getElementById('lista-pedidos').innerHTML =
-        '<div class="vacio">No se pudieron cargar tus pedidos. Intenta de nuevo más tarde.</div>';
-    console.error(err);
+    if (err && err.code === 'permission-denied') {
+        console.warn('Lectura masiva cerrada → seguimiento por-id (Fase 2b).');
+        seguirPorId();
+    } else {
+        document.getElementById('lista-pedidos').innerHTML =
+            '<div class="vacio">No se pudieron cargar tus pedidos. Intenta de nuevo más tarde.</div>';
+        console.error(err);
+    }
 });
 
 // ── CANCELACIÓN DE PEDIDO (motivo obligatorio + registro + borrado) ──
