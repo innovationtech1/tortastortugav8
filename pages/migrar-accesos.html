@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Migrar accesos — Tortas Tortuga</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<style>
+  :root{ --bg:#0D0D0D; --sf:#1A1A1A; --sf2:#242424; --pri:#FF5A00; --ok:#25D366;
+         --er:#F44336; --wa:#FBB724; --tx:#EEE; --mu:#8a8a8a; --bd:rgba(255,255,255,.1); }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,sans-serif;
+       line-height:1.5;padding:1.1rem;max-width:640px;margin:0 auto;}
+  h1{font-size:1.3rem;font-weight:900;margin-bottom:.2rem;}
+  h1 .o{color:var(--pri);}
+  .sub{color:var(--mu);font-size:.85rem;margin-bottom:1.2rem;}
+  .card{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:1.1rem;margin-bottom:1rem;}
+  .card h2{font-size:.95rem;font-weight:800;margin-bottom:.7rem;display:flex;align-items:center;gap:.4rem;}
+  label{display:block;font-size:.75rem;color:var(--mu);font-weight:700;margin:.6rem 0 .25rem;text-transform:uppercase;letter-spacing:.04em;}
+  input{width:100%;background:var(--sf2);border:1.5px solid var(--bd);border-radius:9px;color:var(--tx);
+        font-family:inherit;font-size:1rem;padding:.6rem .8rem;outline:none;}
+  input:focus{border-color:var(--pri);}
+  button{width:100%;border:none;border-radius:10px;font-family:inherit;font-size:.95rem;font-weight:800;
+         padding:.8rem;cursor:pointer;margin-top:.9rem;transition:.15s;}
+  .bp{background:linear-gradient(135deg,var(--pri),#FF8C00);color:#fff;}
+  .bp:disabled{opacity:.5;cursor:not-allowed;}
+  .bp:active:not(:disabled){transform:scale(.98);}
+  .aviso{background:rgba(251,183,36,.1);border:1px solid rgba(251,183,36,.35);color:#FBD24A;
+         border-radius:10px;padding:.8rem;font-size:.8rem;line-height:1.55;margin-bottom:1rem;}
+  .aviso b{color:#fff;}
+  .aviso code{background:rgba(0,0,0,.35);padding:.05rem .35rem;border-radius:5px;font-size:.9em;}
+  .msg{border-radius:9px;padding:.6rem .8rem;font-size:.85rem;font-weight:700;margin-top:.7rem;display:none;}
+  .msg.on{display:block;}
+  .m-ok{background:rgba(37,211,102,.12);color:var(--ok);border:1px solid rgba(37,211,102,.3);}
+  .m-er{background:rgba(244,67,54,.12);color:#ef9a9a;border:1px solid rgba(244,67,54,.3);}
+  .m-in{background:rgba(255,255,255,.05);color:var(--mu);border:1px solid var(--bd);}
+  #resultados{margin-top:.6rem;font-size:.83rem;}
+  .fila{display:flex;align-items:center;gap:.5rem;padding:.5rem .1rem;border-bottom:1px solid var(--bd);}
+  .fila .est{margin-left:auto;font-weight:800;font-size:.8rem;}
+  .est.ok{color:var(--ok);} .est.er{color:#ef9a9a;} .est.pend{color:var(--mu);}
+  .hide{display:none!important;}
+  a.volver{color:var(--mu);font-size:.82rem;text-decoration:none;display:inline-block;margin-top:1rem;}
+</style>
+</head>
+<body>
+  <h1>🔐 Migrar <span class="o">accesos seguros</span></h1>
+  <div class="sub">Herramienta de un solo uso (Fase 2). Crea/repara la cuenta Firebase de cada empleado y escribe su rol en <code style="font-size:.85em;">staff/{uid}</code>, para poder cerrar las lecturas públicas.</div>
+
+  <div class="aviso">
+    <b>Antes de usar, en la consola de Firebase:</b><br>
+    1. <b>Publica</b> las reglas nuevas (incluyen la colección <code>staff</code>).<br>
+    2. <b>Bootstrap del gerente:</b> crea su cuenta en <b>Authentication</b> (email <code>emp-gerente@tortuga.local</code>) y su documento <code>staff/&lt;uid-del-gerente&gt;</code> con <code>{ rol: "gerente" }</code>.<br>
+    Sin esos dos pasos, la migración no tendrá permiso para escribir.
+  </div>
+
+  <!-- PASO 1: LOGIN DEL GERENTE -->
+  <div class="card" id="card-login">
+    <h2>1 · Entra como gerente</h2>
+    <label>Número de empleado</label>
+    <input id="g-id" placeholder="EMP-GERENTE" autocomplete="off" oninput="this.value=this.value.toUpperCase()">
+    <label>PIN</label>
+    <input id="g-pin" type="password" inputmode="numeric" maxlength="6" placeholder="••••">
+    <button class="bp" id="btn-login" onclick="entrar()">Entrar</button>
+    <div class="msg" id="msg-login"></div>
+  </div>
+
+  <!-- PASO 2: MIGRAR -->
+  <div class="card hide" id="card-migrar">
+    <h2>2 · Migrar empleados</h2>
+    <div class="msg m-in on" id="quien"></div>
+    <button class="bp" id="btn-migrar" onclick="migrarTodos()">🔐 Crear / reparar accesos de todos</button>
+    <div class="msg" id="msg-migrar"></div>
+    <div id="resultados"></div>
+  </div>
+
+  <a class="volver" href="empleados.html">← Volver a Empleados</a>
+
+<script type="module">
+import { initializeApp, deleteApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc, serverTimestamp }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const FB = {
+  apiKey:"AIzaSyAQPpVvqUJ_F8-zZiCNfg77vFbu5UKPz5k",
+  authDomain:"tortas-tortuga.firebaseapp.com",
+  projectId:"tortas-tortuga",
+  storageBucket:"tortas-tortuga.firebasestorage.app",
+  messagingSenderId:"828578668114",
+  appId:"1:828578668114:web:747331efe534341d97098b"
+};
+const app  = initializeApp(FB);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+// Mismo esquema que ya usa empleados.html (NO cambiar):
+//   email    = empId.toLowerCase() + '@tortuga.local'
+//   password = empId(MAYÚS) + pin
+const emailDe = (empId) => String(empId||'').trim().toLowerCase() + '@tortuga.local';
+const pwDe     = (empId, pin) => String(empId||'').trim().toUpperCase() + String(pin||'');
+const ROLES_GERENTE = ['gerente','supervisor'];
+
+function el(id){ return document.getElementById(id); }
+function msg(id, tipo, html){
+  const m = el(id);
+  m.className = 'msg on ' + (tipo==='ok'?'m-ok':tipo==='er'?'m-er':'m-in');
+  m.innerHTML = html;
+}
+
+// ── PASO 1: login del gerente + verificación de rol ──
+window.entrar = async function(){
+  const empId = el('g-id').value.trim().toUpperCase();
+  const pin   = el('g-pin').value.replace(/\D/g,'');
+  if(!empId.startsWith('EMP-') || pin.length<4){ msg('msg-login','er','Revisa el número y el PIN.'); return; }
+  el('btn-login').disabled = true;
+  msg('msg-login','in','⏳ Entrando…');
+  try{
+    const cred = await signInWithEmailAndPassword(auth, emailDe(empId), pwDe(empId, pin));
+    // Verificar que sea gerente/supervisor leyendo su propio staff/{uid}
+    const snap = await getDoc(doc(db,'staff', cred.user.uid));
+    if(!snap.exists() || !ROLES_GERENTE.includes(snap.data().rol)){
+      msg('msg-login','er','Tu cuenta entró, pero no está registrada como gerente en <code>staff/'+cred.user.uid+'</code>. Haz el <b>bootstrap</b> en la consola (ver aviso arriba).');
+      await signOut(auth);
+      el('btn-login').disabled = false;
+      return;
+    }
+    el('card-login').classList.add('hide');
+    el('card-migrar').classList.remove('hide');
+    msg('quien','in','Sesión de <b>'+(snap.data().nombre||empId)+'</b> ('+snap.data().rol+'). Listo para migrar.');
+  }catch(e){
+    let m = 'No se pudo entrar.';
+    if(e.code==='auth/invalid-credential' || e.code==='auth/wrong-password' || e.code==='auth/user-not-found')
+      m = 'Número o PIN incorrecto, o la cuenta del gerente aún no existe en Authentication (haz el bootstrap).';
+    else if(e.code==='auth/too-many-requests') m = 'Demasiados intentos. Espera un momento.';
+    msg('msg-login','er', m + '<br><small>'+(e.code||e.message||'')+'</small>');
+    el('btn-login').disabled = false;
+  }
+};
+
+// ── PASO 2: migrar todos los empleados ──
+window.migrarTodos = async function(){
+  el('btn-migrar').disabled = true;
+  msg('msg-migrar','in','⏳ Leyendo empleados…');
+  el('resultados').innerHTML = '';
+
+  // Leer la lista de empleados (colección pública por ahora)
+  let emps = [];
+  try{
+    const snap = await getDocs(collection(db,'empleados'));
+    snap.forEach(d=>{
+      const x = d.data();
+      if(x.empleadoId && x.pin) emps.push({
+        empId: String(x.empleadoId).toUpperCase(),
+        pin: String(x.pin),
+        rol: x.rol || 'empleado',
+        nombre: [x.nombre,x.apellido].filter(Boolean).join(' ') || x.empleadoId,
+        activo: x.estado !== 'inactivo'
+      });
+    });
+  }catch(e){
+    msg('msg-migrar','er','No se pudo leer la lista de empleados: '+(e.code||e.message));
+    el('btn-migrar').disabled = false; return;
+  }
+  if(!emps.length){ msg('msg-migrar','er','No se encontraron empleados con PIN.'); el('btn-migrar').disabled=false; return; }
+
+  // App secundaria: crear/verificar cuentas SIN tocar la sesión del gerente.
+  let sec = getApps().find(a=>a.name==='prov') || initializeApp(FB,'prov');
+  const secAuth = getAuth(sec);
+
+  let okN=0, erN=0;
+  for(const emp of emps){
+    const fila = document.createElement('div');
+    fila.className='fila';
+    fila.innerHTML = '<span>'+emp.empId+' · '+emp.nombre+'</span><span class="est pend">…</span>';
+    el('resultados').appendChild(fila);
+    const est = fila.querySelector('.est');
+    try{
+      const email = emailDe(emp.empId), pw = pwDe(emp.empId, emp.pin);
+      let uid;
+      try{
+        const c = await createUserWithEmailAndPassword(secAuth, email, pw);
+        uid = c.user.uid;                    // cuenta nueva
+      }catch(ce){
+        if(ce.code==='auth/email-already-in-use'){
+          const c = await signInWithEmailAndPassword(secAuth, email, pw); // ya existía
+          uid = c.user.uid;
+        }else{ throw ce; }
+      }
+      // Escribir el rol en staff/{uid} con la sesión del GERENTE (db principal)
+      await setDoc(doc(db,'staff', uid), {
+        empId: emp.empId, rol: emp.rol, nombre: emp.nombre,
+        activo: emp.activo, migradoEn: serverTimestamp()
+      }, { merge:true });
+      await signOut(secAuth);
+      est.textContent='✓'; est.className='est ok'; okN++;
+    }catch(e){
+      let t = e.code || 'error';
+      if(e.code==='auth/wrong-password' || e.code==='auth/invalid-credential') t='PIN no coincide con cuenta';
+      est.textContent='✗ '+t; est.className='est er'; erN++;
+    }
+  }
+  try{ await deleteApp(sec); }catch(e){}
+  msg('msg-migrar', erN?'er':'ok', `Listo: ${okN} migrados`+(erN?`, ${erN} con error (revisa arriba)`:'.')
+    + (erN?'':'<br>Ya puedes avanzar al siguiente paso (voltear el login y cerrar las reglas).'));
+  el('btn-migrar').disabled = false;
+};
+</script>
+</body>
+</html>
