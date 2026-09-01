@@ -606,7 +606,7 @@ window.normalizarRutaImagen = function(src) {
 
 <script src="../js/estados.js?v=1788145000"></script>
 <script type="module">
-    import { db } from '../js/firebase-config.js';
+    import { db, authReady } from '../js/firebase-config.js';
 
     function _playBell(doble) {
         try {
@@ -673,10 +673,14 @@ window.normalizarRutaImagen = function(src) {
     window._adminDeleteDoc = (col, id)   => import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js').then(({deleteDoc, doc}) => deleteDoc(doc(db, col, id)));
     window._adminGetDocs   = (col)       => import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js').then(({getDocs, collection}) => getDocs(collection(db, col)));
 
-    function iniciarFirebaseEnVivo() {
+    async function iniciarFirebaseEnVivo() {
         // Limpiar listener anterior si existe
         if (_unsubscribePedidos) { try { _unsubscribePedidos(); } catch(e) {} }
         if (_reconnectTimer)     { clearTimeout(_reconnectTimer); }
+
+        // Fase 2b: esperar la sesión Firebase antes de LISTAR pedidos
+        // (list = staff). Evita permission-denied por carrera de tiempos.
+        await authReady;
 
         const q = collection(db, 'pedidos');
         _unsubscribePedidos = onSnapshot(q, (snapshot) => {

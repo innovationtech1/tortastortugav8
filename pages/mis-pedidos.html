@@ -123,7 +123,7 @@ html { -webkit-text-size-adjust: 100%; }
 <script src="../js/perfil-barra.js?v=1788059171"></script>
 <script src="../js/estados.js?v=1788145000"></script>
 <script type="module">
-import { db } from '../js/firebase-config.js';
+import { db, authReady } from '../js/firebase-config.js';
 import { collection, onSnapshot, doc, updateDoc, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 function leer(k){ return localStorage.getItem(k) || sessionStorage.getItem(k); }
@@ -327,7 +327,8 @@ window.confirmarCobro = async function(metodo) {
     } catch(e) { alert('Error al cobrar.'); }
 };
 
-// Escuchar pedidos en vivo
+// Escuchar pedidos en vivo (Fase 2b: esperar sesión)
+await authReady;
 onSnapshot(collection(db, 'pedidos'), snap => {
     _pedidos = [];
     snap.forEach(d => _pedidos.push({ id: d.id, ...d.data() }));

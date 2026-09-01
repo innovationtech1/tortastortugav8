@@ -274,6 +274,7 @@ html { -webkit-text-size-adjust: 100%; }
 <script src="../js/estados.js?v=1788145000"></script>
 <script type="module">
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import {
     getFirestore, collection, onSnapshot, updateDoc, deleteDoc,
     doc, addDoc, serverTimestamp, query, orderBy, limit, getDocs
@@ -289,6 +290,14 @@ const FB_CONFIG = {
 };
 const app = getApps().length ? getApps()[0] : initializeApp(FB_CONFIG);
 const db  = getFirestore(app);
+// Auth: inicializar para que Firestore use la sesión persistida del staff
+// (Fase 2b: list de 'pedidos' = solo staff). authReady resuelve tras el
+// primer estado de sesión, antes de listar.
+const auth = getAuth(app);
+const authReady = new Promise((res) => {
+    let done = false;
+    onAuthStateChanged(auth, (u) => { if (!done) { done = true; res(u || null); } });
+});
 
 /* ── Estado global ─────────────────────────────────────────── */
 function _playBell(doble) {
@@ -973,8 +982,9 @@ window.confirmarEliminar = async (id) => {
 
 /* ── onSnapshot ─────────────────────────────────────────────── */
 let _kdsUnsub = null;
-function iniciarKDS(){
+async function iniciarKDS(){
   if(_kdsUnsub) try{_kdsUnsub();}catch(e){}
+  await authReady;   // Fase 2b: esperar sesión antes de listar pedidos
   _primeraCarga = true;  // cada (re)conexión: la 1a instantánea solo fija base
   // Optimización: en vez de traer TODA la colección (que crece sin límite),
   // traemos solo los 150 pedidos más recientes por fecha. La cocina solo

@@ -243,7 +243,7 @@ html { -webkit-text-size-adjust: 100%; }
 <script src="../js/tt-alert.js"></script>
 <script src="../js/estados.js?v=1788145000"></script>
 <script type="module">
-import { db } from '../js/firebase-config.js';
+import { db, authReady } from '../js/firebase-config.js';
 import { collection, onSnapshot, doc, updateDoc, setDoc, serverTimestamp, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // Guarda los pedidos actuales para abrirlos en la vista de entrega
@@ -747,7 +747,8 @@ function mostrarToastRuta(txt) {
     setTimeout(function(){ toast.remove(); }, 2500);
 }
 
-function escucharRuta() {
+async function escucharRuta() {
+    await authReady;
     onSnapshot(collection(db, 'pedidos'), snap => {
       try {
         const todos = snap.docs.map(d => ({ id:d.id, ...d.data() }));

@@ -74,6 +74,7 @@
 <script src="../js/estados.js?v=1788145000"></script>
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { getFirestore, collection, getDocs, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const app = initializeApp({
@@ -85,6 +86,13 @@ const app = initializeApp({
   appId: "1:828578668114:web:747331efe534341d97098b"
 });
 const db = getFirestore(app);
+// Auth para que Firestore use la sesión persistida del staff (Fase 2b:
+// list de 'pedidos' = solo staff).
+const auth = getAuth(app);
+const authReady = new Promise((res) => {
+  let done = false;
+  onAuthStateChanged(auth, (u) => { if (!done) { done = true; res(u || null); } });
+});
 
 let _todosPedidos = [];
 let _filtrados = [];
@@ -157,6 +165,7 @@ function totalDe(p) {
 
 async function cargar() {
   try {
+    await authReady;   // Fase 2b: esperar sesión antes de listar pedidos
     _todosPedidos = [];
     // 1. Pedidos activos (aun no cerrados)
     const snapPed = await getDocs(collection(db, 'pedidos'));

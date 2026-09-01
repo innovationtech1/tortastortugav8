@@ -2,7 +2,7 @@
 //  Contador en tiempo real de PEDIDOS DISPONIBLES
 //  Actualiza la insignia del botón "Disponibles" en la barra
 // ═══════════════════════════════════════════════════════════
-import { db } from './firebase-config.js';
+import { db, authReady } from './firebase-config.js';
 import { collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // Misma lógica que disponibles.html para contar igual
@@ -31,8 +31,9 @@ function actualizarBadge(n) {
     });
 }
 
-function iniciar() {
+async function iniciar() {
     if (!haySesionEmpleado()) return;
+    await authReady;   // Fase 2b: esperar sesión antes de listar pedidos
     try {
         onSnapshot(collection(db, 'pedidos'), function(snap) {
             var count = 0;

@@ -54,7 +54,7 @@
 
 <script src="../js/estados.js?v=1788145000"></script>
 <script type="module">
-import { db } from '../js/firebase-config.js';
+import { db, authReady } from '../js/firebase-config.js';
 import { collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 var map, _pedidos = [], _ubicaciones = {}, _filtro = '__todos__';
@@ -194,7 +194,8 @@ window.aplicarFiltroMapa = function() {
 // Inicializar
 _initMap();
 
-// Escuchar pedidos
+// Escuchar pedidos (Fase 2b: esperar sesión)
+await authReady;
 onSnapshot(collection(db, 'pedidos'), function(snap){
   _pedidos = [];
   snap.forEach(function(d){ _pedidos.push({ id:d.id, ...d.data() }); });

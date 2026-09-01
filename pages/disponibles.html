@@ -160,7 +160,7 @@ html { -webkit-text-size-adjust: 100%; }
 
 <script src="../js/tt-alert.js"></script>
 <script type="module">
-import { db } from '../js/firebase-config.js';
+import { db, authReady } from '../js/firebase-config.js';
 import { collection, onSnapshot, doc, runTransaction, getDocs, updateDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 function _leer(clave) { return sessionStorage.getItem(clave) || localStorage.getItem(clave); }
@@ -785,7 +785,8 @@ function pintarClientes(disp) {
     });
 }
 
-function escuchar() {
+async function escuchar() {
+    await authReady;
     onSnapshot(collection(db, 'pedidos'), snap => {
         const todos = snap.docs.map(d => ({ id:d.id, ...d.data() }));
         const disp = todos.filter(esDisponible);

@@ -23,9 +23,12 @@ rules_version = '2';
 //     los empleados estén migrados (ver pages/migrar-accesos.html). Si no,
 //     un empleado sin cuenta Firebase quedaría fuera.
 //
-//  ── PENDIENTE FASE 2b ──
-//   • pedidos: LECTURA sigue pública (el seguimiento del cliente la necesita
-//     y el cliente por teléfono/invitado aún no tiene identidad Firebase).
+//  ── FASE 2b (lectura de pedidos por capacidad) ──
+//   • pedidos: get (por id, no adivinable) PÚBLICO; list (volcado masivo)
+//     solo staff. El cliente sigue su pedido por el id guardado en su
+//     dispositivo (mi-pedido cae a seguimiento por-id si el list se cierra).
+//   ⚠️ Los paneles de staff ya esperan la sesión Firebase antes de listar
+//     (authReady). Publicar junto con ese código desplegado.
 // ═══════════════════════════════════════════════════════════
 
 service cloud.firestore {
@@ -77,14 +80,20 @@ service cloud.firestore {
       allow delete: if true;
     }
 
-    // ── PEDIDOS ──
-    // Crear: cualquiera puede enviar una orden, PERO debe traer los
-    // campos esenciales y un total numérico >= 0 (evita pedidos basura
-    // o con totales negativos/manipulados).
-    // Leer/actualizar: cocina y admin necesitan acceso (modo PIN).
-    // Borrar: SOLO si ya está archivado (nunca un pedido activo).
+    // ── PEDIDOS ──  (FASE 2b: lectura por capacidad)
+    // Crear: cualquiera puede enviar una orden (incluye invitado sin auth),
+    //   PERO debe traer los campos esenciales y un total numérico >= 0.
+    // LECTURA dividida:
+    //   • get  (un pedido por su id): PÚBLICO. El id es un identificador de
+    //     Firestore no adivinable (~120 bits) que solo tiene quien creó el
+    //     pedido (guardado en su dispositivo) — así el cliente sigue su
+    //     pedido sin exponer la colección.
+    //   • list (enumerar/consultar TODA la colección): SOLO staff. Bloquea
+    //     el volcado masivo de datos (nombres, teléfonos, direcciones, GPS).
+    // Actualizar/Borrar: igual que antes.
     match /pedidos/{pedidoId} {
-      allow read:   if true;
+      allow get:    if true;
+      allow list:   if esStaff();
       allow create: if request.resource.data.keys().hasAll(['cliente', 'total', 'totalNum'])
                     && request.resource.data.totalNum is number
                     && request.resource.data.totalNum >= 0

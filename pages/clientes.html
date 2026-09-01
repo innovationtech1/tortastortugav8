@@ -87,7 +87,7 @@
 </div>
 
 <script type="module">
-import { db } from '../js/firebase-config.js';
+import { db, authReady } from '../js/firebase-config.js';
 import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 let _clientes = [];       // lista consolidada
@@ -109,6 +109,7 @@ function _fechaBonita(p) {
 
 async function _cargar() {
     try {
+        await authReady;
         // 1. Cargar pedidos y agruparlos por teléfono
         var snapP = await getDocs(collection(db, 'pedidos'));
         var mapa = {};   // tel -> { nombre, tel, pedidos:[], total, visitas, ultimo }
