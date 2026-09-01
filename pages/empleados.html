@@ -1969,45 +1969,72 @@ window.loginEmp = async function(){
   if(!ok) return;
   btnLd('btn-login',true);
   try{
-    // 1. Verificar primero contra Firestore — rápido y confiable, no
-    //    depende de Firebase Auth ni de sus límites de intentos fallidos.
-    //    Antes esto intentaba Firebase Auth PRIMERO, y como esta cuenta
-    //    usa un correo distinto al esquema actual, siempre fallaba —
-    //    acumulando intentos fallidos hasta que Firebase bloqueaba
-    //    temporalmente ("Demasiados intentos") aunque el PIN fuera correcto.
-    const qPin = query(collection(db,'empleados'),
-      where('empleadoId','==', empId),
-      where('pin','==', pin));
-    const snapPin = await getDocs(qPin);
-    if (snapPin.empty) {
-      msg('msg-login','er','❌ Número o PIN incorrecto.');
-      return;
+    // ── Fase 2: Firebase Auth PRIMERO (identidad real), con el PIN por
+    //    Firestore como RESPALDO para empleados aún no migrados.
+    //    Autenticar con Firebase NO requiere leer la colección 'empleados',
+    //    así que este orden sigue funcionando cuando se cierre la lectura
+    //    pública (los PINs dejan de ser legibles). ──
+    let empDoc = null;
+    let firebaseAuthOk = false;
+    const emailInterno = `${empId.toLowerCase()}@tortuga.local`;
+    const pwAuto = `${empId}${pin}`;
+
+    // 1) Firebase Auth (real). skipAuthChange evita que onAuthStateChanged
+    //    corra en paralelo: esta función es la que muestra el panel.
+    skipAuthChange = true;
+    try {
+      const cred = await signInWithEmailAndPassword(auth, emailInterno, pwAuto);
+      user = cred.user;
+      firebaseAuthOk = true;
+    } catch(eAuth) {
+      // No migrado, PIN cambiado o rate-limit → caemos al respaldo por PIN.
+      // (No bloqueamos aquí: mientras la lectura pública siga abierta, el
+      //  respaldo por PIN debe poder resolver el login de los no migrados.)
     }
-    const empDoc = snapPin.docs[0];
-    empData = { ...empDoc.data(), id: empDoc.id };
+
+    // 2) Datos y rol del empleado.
+    if (firebaseAuthOk) {
+      // Rol desde staff/{uid} (lo que leen las reglas). Datos completos por
+      // número de empleado (permitido al estar YA autenticado, incluso con
+      // la lectura pública cerrada).
+      let rolStaff = null, nombreStaff = null;
+      try {
+        const s = await getDoc(doc(db, 'staff', user.uid));
+        if (s.exists()) { rolStaff = s.data().rol; nombreStaff = s.data().nombre; }
+      } catch(e) {}
+      try {
+        const qEmp = query(collection(db,'empleados'), where('empleadoId','==', empId));
+        const snapEmp = await getDocs(qEmp);
+        if (!snapEmp.empty) { empDoc = snapEmp.docs[0]; empData = { ...empDoc.data(), id: empDoc.id }; }
+      } catch(e) {}
+      if (!empData) empData = { nombre: nombreStaff || empId, rol: rolStaff || 'empleado' };
+      if (rolStaff) empData.rol = rolStaff;
+    } else {
+      // RESPALDO por PIN (requiere lectura pública de 'empleados'; solo para
+      // empleados aún no migrados, mientras dure la transición).
+      const qPin = query(collection(db,'empleados'),
+        where('empleadoId','==', empId),
+        where('pin','==', pin));
+      let snapPin;
+      try { snapPin = await getDocs(qPin); }
+      catch(ePin) {
+        msg('msg-login','er','❌ No se pudo verificar. Revisa tu conexión e intenta de nuevo.');
+        return;
+      }
+      if (snapPin.empty) {
+        msg('msg-login','er','❌ Número o PIN incorrecto.');
+        return;
+      }
+      empDoc = snapPin.docs[0];
+      empData = { ...empDoc.data(), id: empDoc.id };
+    }
+
     if (empData.estado === 'inactivo') {
       msg('msg-login','er','❌ Cuenta desactivada. Contacta a tu supervisor.');
       return;
     }
     rolActual   = empData.rol || 'empleado';
     nivelActual = ROLES[rolActual]?.nivel || 1;
-
-    // 2. Intentar TAMBIÉN Firebase Auth como mejora opcional (sesión más
-    //    fuerte). Si falla por cualquier motivo (cuenta legacy, rate
-    //    limit, etc.) no pasa nada — ya tenemos acceso válido por PIN.
-    let firebaseAuthOk = false;
-    try {
-      const emailInterno = `${empId.toLowerCase()}@tortuga.local`;
-      const pwAuto = `${empId}${pin}`;
-      skipAuthChange = true;
-      const cred = await signInWithEmailAndPassword(auth, emailInterno, pwAuto);
-      user = cred.user;
-      firebaseAuthOk = true;
-      skipAuthChange = false;
-    } catch(eAuth) {
-      skipAuthChange = false;
-      /* seguimos en modo PIN-only, sin problema */
-    }
 
     localStorage.setItem('tt_emp_id',   empId);
     localStorage.setItem('tt_emp_pin',  pin);
@@ -2046,7 +2073,7 @@ window.loginEmp = async function(){
       'auth/network-request-failed':'Sin conexión. Verifica tu internet.',
     };
     msg('msg-login','er','❌ '+(m[e.code]||'Error al iniciar sesión. Intenta de nuevo.'));
-  } finally { btnLd('btn-login',false); }
+  } finally { btnLd('btn-login',false); skipAuthChange = false; }
 };
 
 /* auto-registro eliminado — solo admin puede crear empleados */
