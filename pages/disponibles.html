@@ -905,7 +905,7 @@ function render(disp) {
 
 <script type="module">
 import { db } from '../js/firebase-config.js';
-import { collection, doc, updateDoc, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { collection, doc, getDocs, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 let _repPedidoId = null;
 
@@ -943,16 +943,41 @@ window.abrirAsignarRepartidor = async function(id, ticket) {
 window.asignarRepartidor = async function(repId, repNombre) {
     if (!_repPedidoId) return;
     try {
-        await updateDoc(doc(db, 'pedidos', _repPedidoId), {
-            repartidorId: String(repId),
-            repartidorNombre: repNombre,
-            repartidorAsignadoEn: new Date().toISOString(),
-            aceptadoPorRepartidor: true
+        // Transacción atómica: si otra persona ya asignó un repartidor a este
+        // pedido entre que se abrió el modal y ahora, NO lo pisamos. Evita que
+        // dos gerentes/repartidores tomen el mismo pedido a la vez.
+        await runTransaction(db, async (tx) => {
+            const ref = doc(db, 'pedidos', _repPedidoId);
+            const snap = await tx.get(ref);
+            if (!snap.exists()) throw new Error('no-existe');
+            const p = snap.data();
+            // Ya tiene repartidor y es OTRO → conflicto (si es el mismo, es idempotente)
+            if (p.repartidorId && String(p.repartidorId) !== String(repId)) {
+                const e = new Error('ya-tomado');
+                e.repartidorActual = p.repartidorNombre || p.repartidorId;
+                throw e;
+            }
+            tx.update(ref, {
+                repartidorId: String(repId),
+                repartidorNombre: repNombre,
+                repartidorAsignadoEn: new Date().toISOString(),
+                aceptadoPorRepartidor: true
+            });
         });
         document.getElementById('rep-modal').style.display = 'none';
         if (window.ttAlert) window.ttAlert('✅ Repartidor asignado: ' + repNombre);
     } catch(err) {
-        alert('Error asignando repartidor.');
+        document.getElementById('rep-modal').style.display = 'none';
+        if (err && err.message === 'ya-tomado') {
+            const quien = err.repartidorActual ? (' (' + err.repartidorActual + ')') : '';
+            if (window.ttAlert) window.ttAlert('⚠️ Ese pedido ya fue tomado por otro repartidor' + quien + '. Se actualizó la lista.');
+            else alert('Ese pedido ya fue tomado por otro repartidor' + quien + '.');
+        } else if (err && err.message === 'no-existe') {
+            if (window.ttAlert) window.ttAlert('⚠️ Ese pedido ya no existe.');
+            else alert('Ese pedido ya no existe.');
+        } else {
+            alert('Error asignando repartidor.');
+        }
     }
 };
 </script>
