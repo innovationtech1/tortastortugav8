@@ -72,6 +72,25 @@ main{max-width:640px;margin:0 auto;padding:1.2rem 1rem 3rem;}
 .progreso{display:flex;gap:.3rem;margin:.7rem 0;}
 .progreso .paso{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.08);}
 .progreso .paso.activo{background:var(--orange);}
+/* ── Stepper de seguimiento en vivo ── */
+.tt-stepper{position:relative;display:flex;margin:1rem 0 .4rem;}
+.tt-stepper .tt-track-bg,.tt-stepper .tt-track-fill{position:absolute;top:15px;height:3px;border-radius:3px;z-index:0;}
+.tt-stepper .tt-track-bg{background:rgba(255,255,255,.10);}
+.tt-stepper .tt-track-fill{background:var(--orange);transition:width .5s ease;}
+.tt-step{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;align-items:center;gap:.3rem;}
+.tt-step-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:.95rem;background:#242424;border:2px solid rgba(255,255,255,.15);color:#888;transition:all .3s ease;}
+.tt-step.done .tt-step-dot{background:var(--orange);border-color:var(--orange);color:#fff;}
+.tt-step.current .tt-step-dot{background:var(--orange);border-color:#fff;color:#fff;
+  box-shadow:0 0 0 4px rgba(255,90,0,.28);animation:ttStepPulse 1.4s infinite;}
+.tt-step-lbl{font-size:.58rem;font-weight:800;text-align:center;color:#777;line-height:1.15;max-width:64px;
+  text-transform:uppercase;letter-spacing:.02em;}
+.tt-step.done .tt-step-lbl{color:#bbb;}
+.tt-step.current .tt-step-lbl{color:var(--orange);}
+@keyframes ttStepPulse{0%,100%{box-shadow:0 0 0 4px rgba(255,90,0,.28);}50%{box-shadow:0 0 0 8px rgba(255,90,0,.10);}}
+.tt-cancelado{display:flex;align-items:center;gap:.5rem;justify-content:center;margin:.9rem 0 .3rem;
+  background:rgba(244,67,54,.12);border:1px solid rgba(244,67,54,.4);color:#EF9A9A;
+  border-radius:10px;padding:.6rem;font-size:.85rem;font-weight:800;}
 </style>
 <style>
 .tt-emoji-icon { font-size: 26px; text-align: center; line-height: 1; background: none; border: none; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
@@ -104,8 +123,6 @@ const uid = _leer('tt_cliente_uid') || null;
 const telefono = (_leer('tt_cliente_telefono') || '').replace(/\D/g,'');
 const miNombre = (_leer('tt_cliente_nombre') || '').trim().toLowerCase();
 
-const ORDEN_ESTADO = ['Nuevo', 'En preparación', 'Listo', 'En camino', 'Entregado'];
-
 // Clase CSS local (est-*) derivada de la clave canónica.
 const _CLASE_ESTADO = {
     PROGRAMADO: 'est-nuevo', NUEVO: 'est-nuevo', EN_COCINA: 'est-cocina',
@@ -116,10 +133,50 @@ function claseEstado(estado) {
     return _CLASE_ESTADO[TTEstados.normalizar(estado)] || 'est-nuevo';
 }
 
-// Paso en la barra de progreso (0..4) = posición en el flujo del pedido.
-function pasoActual(estado) {
-    const i = TTEstados.FLUJO.indexOf(TTEstados.normalizar(estado));
-    return i < 0 ? 0 : i;
+// ── Stepper de seguimiento en vivo ───────────────────────────────────
+// Muestra al cliente EN QUÉ ETAPA va su pedido, con íconos y etiquetas,
+// resaltando la etapa actual. Se re-renderiza solo con cada onSnapshot.
+// Domicilio incluye "En camino"; pickup lo omite.
+function renderProgreso(estado, esDomicilio) {
+    // Si el pedido se canceló, no tiene sentido el avance: aviso claro.
+    if (TTEstados.estaCancelado(estado)) {
+        return '<div class="tt-cancelado">❌ Pedido cancelado</div>';
+    }
+    // Cada paso: [claveEstado, icono, etiqueta]
+    var pasos = [
+        ['NUEVO',     '📝', 'Recibido'],
+        ['EN_COCINA', '🧑‍🍳', 'Preparando'],
+        ['LISTO',     '✅', 'Listo']
+    ];
+    if (esDomicilio) pasos.push(['EN_CAMINO', '🛵', 'En camino']);
+    pasos.push(['ENTREGADO', '🎉', 'Entregado']);
+
+    var ordRango = TTEstados.rango(estado);
+    // Índice de la etapa ACTUAL = la última cuyo rango ya se alcanzó.
+    var actual = -1;
+    pasos.forEach(function(p, i) {
+        if (TTEstados.ESTADOS[p[0]].rango <= ordRango) actual = i;
+    });
+
+    var N = pasos.length;
+    var trackLeft = 50 / N;              // centro del primer punto (%)
+    var trackWidth = 100 - 100 / N;     // del primer al último punto (%)
+    var fillFrac = (N > 1 && actual > 0) ? (actual / (N - 1)) : 0;
+    var fillWidth = trackWidth * fillFrac;
+
+    var html = '<div class="tt-stepper">' +
+        '<div class="tt-track-bg" style="left:' + trackLeft + '%;width:' + trackWidth + '%;"></div>' +
+        '<div class="tt-track-fill" style="left:' + trackLeft + '%;width:' + fillWidth + '%;"></div>';
+    pasos.forEach(function(p, i) {
+        var cls = i < actual ? 'done' : (i === actual ? 'current' : '');
+        var ico = i < actual ? '✓' : p[1];   // pasos completados muestran ✓
+        html += '<div class="tt-step ' + cls + '">' +
+                    '<div class="tt-step-dot">' + ico + '</div>' +
+                    '<div class="tt-step-lbl">' + p[2] + '</div>' +
+                '</div>';
+    });
+    html += '</div>';
+    return html;
 }
 
 function esMio(p) {
@@ -216,14 +273,9 @@ function renderPedidos(pedidos) {
     } catch(e){}
 
     cont.innerHTML = pedidos.map(p => {
-        const paso = pasoActual(p.estado);
-        // Para domicilio el flujo tiene 5 pasos (incluye "En camino").
-        // Para pickup son 4 (no hay repartidor en camino).
+        // Para domicilio el flujo incluye "En camino"; pickup lo omite.
         const esDomicilio = p.tipo === 'delivery' || p.tipoServicio === 'Domicilio' || p.tipoEntrega === 'Domicilio';
-        const totalPasos = esDomicilio ? 5 : 4;
-        const pasosArr = [];
-        for (let i = 0; i < totalPasos; i++) pasosArr.push(i);
-        const pasos = pasosArr.map(i => `<div class="paso ${i <= paso ? 'activo' : ''}"></div>`).join('');
+        const pasos = renderProgreso(p.estado, esDomicilio);
         // Fecha y hora del pedido (desde el timestamp de creación)
         let fechaHora = '';
         const cd = p.creado?.toDate ? p.creado.toDate() : (p.creado?.seconds ? new Date(p.creado.seconds * 1000) : (p.tomadaEn ? new Date(p.tomadaEn) : null));
@@ -275,7 +327,7 @@ function renderPedidos(pedidos) {
                 <span style="font-size:1.1rem;font-weight:900;color:#25D366;letter-spacing:.05em;">#${codigoRef}</span>
             </div>
             ${fechaHora ? `<div class="pedido-fecha">🗓️ ${fechaHora}</div>` : ''}
-            <div class="progreso">${pasos}</div>
+            ${pasos}
             <div class="pedido-items">${(p.items || '').replace(/</g,'&lt;')}</div>
             ${_desgloseCobro(p)}
             ${p.repartidorNombre ? `<div class="pedido-repartidor" style="display:flex;align-items:center;gap:.5rem;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:10px;padding:.6rem .8rem;margin:.5rem 0;font-size:.88rem;"><span style="font-size:1.2rem;">🛵</span><span>Tu repartidor: <b style="color:#25D366;">${p.repartidorNombre}</b></span></div>` : ''}
