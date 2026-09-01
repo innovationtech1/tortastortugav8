@@ -10,15 +10,22 @@ rules_version = '2';
 //  a escritura, pero ahora con VALIDACIONES que evitan datos basura o
 //  maliciosos. Para cerrar del todo se necesita migrar a Firebase Auth.
 //
-//  ── FASE 1 (endurecimiento SIN romper la app, sin auth) ──
-//  Cambios verificados como seguros contra el código actual:
-//   • clientes/ubicaciones: se cierra 'delete' (la app NUNCA los borra).
-//   • pedidos update: se bloquean totales negativos/no numéricos.
-//   • clientes create/update: límite de tamaño más estricto.
-//  PENDIENTE FASE 2 (requiere identidad real del equipo/cliente):
-//   • Cerrar LECTURA de pedidos/clientes/empleados (hoy siguen públicas
-//     porque sin Firebase Auth no se puede distinguir staff de atacante).
-//     Los PIN de empleados siguen siendo legibles hasta migrar a Auth.
+//  ── FASE 1 (endurecimiento sin auth) ──
+//   • clientes/ubicaciones: 'delete' cerrado. pedidos update: sin totales
+//     negativos. clientes create/update: tamaño estricto.
+//
+//  ── FASE 2 (identidad real del equipo vía Firebase Auth) ──
+//   • Helpers esStaff()/esGerente() sobre staff/{uid} (uid = Firebase Auth).
+//   • empleados: LECTURA cerrada a staff/propio → los PINs dejan de ser
+//     públicos. Escritura a gerente o al propio empleado.
+//   • clientes: LECTURA cerrada a staff (protege nombre/teléfono).
+//   ⚠️ PUBLICAR SOLO cuando: (1) el gerente esté en staff/{uid}, y (2) todos
+//     los empleados estén migrados (ver pages/migrar-accesos.html). Si no,
+//     un empleado sin cuenta Firebase quedaría fuera.
+//
+//  ── PENDIENTE FASE 2b ──
+//   • pedidos: LECTURA sigue pública (el seguimiento del cliente la necesita
+//     y el cliente por teléfono/invitado aún no tiene identidad Firebase).
 // ═══════════════════════════════════════════════════════════
 
 service cloud.firestore {
@@ -148,25 +155,29 @@ service cloud.firestore {
       allow write: if true;
     }
 
-    // ── EMPLEADOS ──
-    // Leer sin auth (fallback del login por PIN).
-    // Escribir (crear/editar/borrar empleados y PINs) requiere Firebase Auth.
+    // ── EMPLEADOS ──  (FASE 2: cerrado)
+    // Los docs se guardan con id = UID de Firebase Auth (empleadoId == uid).
+    // Leer: solo staff (mata la exposición pública de PINs) o el propio
+    //   empleado su documento. Ya NO es público.
+    // Crear/editar: gerente/supervisor, o el propio empleado su documento
+    //   (crearEmpAdmin escribe empleados/{uid} estando autenticado como ese
+    //   uid recién creado; el cambio de PIN propio edita empleados/{uid}).
+    // Borrar: solo gerente/supervisor.
     match /empleados/{empleadoId} {
-      allow read:  if true;
-      allow write: if request.auth != null;
+      allow read:   if esStaff() || (request.auth != null && request.auth.uid == empleadoId);
+      allow create, update: if esGerente() || (request.auth != null && request.auth.uid == empleadoId);
+      allow delete: if esGerente();
     }
 
-    // ── CLIENTES (login rápido por teléfono, sin Firebase Auth) ──
-    // Público a propósito (login demo). Se valida tamaño para evitar
-    // que llenen la base con documentos gigantes.
+    // ── CLIENTES (login rápido por teléfono) ──  (FASE 2: lectura cerrada)
+    // Lectura: solo staff (los clientes tienen nombre y teléfono = PII).
+    //   entrar.html ya NO lee esta colección (escribe con increment).
+    // Escritura: pública a propósito (el login por teléfono guarda el
+    //   cliente SIN autenticación), pero con forma pequeña y validada.
     match /clientes/{clienteId} {
-      allow read:  if true;
-      // La app escribe una forma pequeña y fija (nombre, telefono,
-      // ultimoAcceso, visitas). Límite estricto para bloquear documentos
-      // basura o gigantes.
+      allow read:  if esStaff();
       allow create, update: if request.resource.data.size() < 20;
-      // La app NUNCA borra clientes → cerrado (antes: if true, abierto a
-      // que cualquiera borrara registros de clientes).
+      // La app NUNCA borra clientes → cerrado.
       allow delete: if false;
     }
 

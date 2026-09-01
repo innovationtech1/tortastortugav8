@@ -187,7 +187,7 @@ html { -webkit-text-size-adjust: 100%; }
 <script src="../js/estados.js?v=1788145000"></script>
 <script type="module">
 import { auth, db } from '../js/firebase-config.js';
-import { doc, setDoc, getDoc, getDocs, collection, query, where, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { doc, setDoc, getDoc, getDocs, collection, query, where, addDoc, serverTimestamp, increment } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import {
     createUserWithEmailAndPassword, signInWithEmailAndPassword,
     sendPasswordResetEmail, updateProfile
@@ -307,18 +307,18 @@ window.enviarCodigo = async function() {
         console.warn('No se pudo verificar límite de pedidos:', e);
     }
 
-    // ── Guardar/actualizar cliente y reconocer si ya existía ──
+    // ── Guardar/actualizar cliente SIN leer primero ──
+    // La colección 'clientes' pasa a lectura solo-staff en Fase 2 (privacidad),
+    // así que ya no hacemos getDoc aquí. El contador de visitas se lleva con
+    // increment(1), que no requiere leer el documento antes.
     let clienteConocido = false;
     try {
         const clienteId = 'cliente_' + soloDigitos;
-        const ref = doc(db, 'clientes', clienteId);
-        const existente = await getDoc(ref);
-        if (existente.exists()) clienteConocido = true;
-        await setDoc(ref, {
+        await setDoc(doc(db, 'clientes', clienteId), {
             nombre: nombre,
             telefono: soloDigitos,
             ultimoAcceso: new Date().toISOString(),
-            visitas: ((existente.exists() && existente.data().visitas) || 0) + 1,
+            visitas: increment(1),
         }, { merge: true });
     } catch(e) {
         console.warn('No se pudo guardar el cliente:', e);
