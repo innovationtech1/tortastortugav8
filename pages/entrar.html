@@ -730,7 +730,7 @@ window.confirmarUbicacionYHorario = async function() {
         // Obtener un folio secuencial simple (contador por fecha)
         var folioNum = Date.now() % 100000; // folio simple único
         // Crear la SOLICITUD de tortumóvil en 'pedidos'
-        await addDoc(collection(db, 'pedidos'), {
+        var _solRef = await addDoc(collection(db, 'pedidos'), {
             cliente: nombre,
             nombre: nombre,
             telefono: telefono,
@@ -754,6 +754,17 @@ window.confirmarUbicacionYHorario = async function() {
             creado: serverTimestamp(),
             tiempos: { recibida: Date.now() }
         });
+
+        // Recordar el id de la solicitud en este dispositivo (seguimiento
+        // por-id cuando se cierre la lectura masiva de 'pedidos' — Fase 2b).
+        try {
+            var _mp = JSON.parse(localStorage.getItem('tt_mis_pedidos') || '[]');
+            if (!Array.isArray(_mp)) _mp = [];
+            _mp = _mp.filter(function(x){ return x && x.id !== _solRef.id; });
+            _mp.unshift({ id: _solRef.id, folio: '#' + String(folioNum).slice(-4), ts: Date.now() });
+            if (_mp.length > 25) _mp = _mp.slice(0, 25);
+            localStorage.setItem('tt_mis_pedidos', JSON.stringify(_mp));
+        } catch(e) {}
 
         showStatus('status-2', '✅ ¡Solicitud enviada! Un repartidor te llamará pronto para confirmar tu orden. 🐢', 'success');
         // Limpiar la foto y el paso guardado (ya se envió)

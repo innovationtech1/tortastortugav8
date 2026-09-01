@@ -35,6 +35,26 @@ let clientLocation = null;
 let currentPaymentMethod = null;
 let lastOrderId = null;
 
+// ── Registro local de los pedidos hechos en ESTE dispositivo ──────
+// Clave de acceso "por capacidad": guardamos el id (no adivinable) del
+// pedido para poder seguirlo por-id aunque la lectura masiva de 'pedidos'
+// esté cerrada a staff (Fase 2b). Lista corta, más reciente primero.
+const TT_MIS_PEDIDOS_KEY = 'tt_mis_pedidos';
+window._recordarPedidoLocal = function(id, folio) {
+    if (!id) return;
+    let lista = [];
+    try { lista = JSON.parse(localStorage.getItem(TT_MIS_PEDIDOS_KEY) || '[]'); } catch(e) { lista = []; }
+    if (!Array.isArray(lista)) lista = [];
+    lista = lista.filter(function(x){ return x && x.id !== id; });   // sin duplicados
+    lista.unshift({ id: id, folio: folio || '', ts: Date.now() });
+    if (lista.length > 25) lista = lista.slice(0, 25);               // cap
+    try { localStorage.setItem(TT_MIS_PEDIDOS_KEY, JSON.stringify(lista)); } catch(e) {}
+};
+window._misPedidosLocales = function() {
+    try { var l = JSON.parse(localStorage.getItem(TT_MIS_PEDIDOS_KEY) || '[]'); return Array.isArray(l) ? l : []; }
+    catch(e) { return []; }
+};
+
 // ─── DOM ─────────────────────────────────────────────────────────
 const cartModal     = document.getElementById('cart-modal');
 const cartIcon      = document.getElementById('cart-icon');
@@ -358,6 +378,12 @@ async function guardarPedidoFirebase(data, metodoPago) {
 
         const ticketId = formatearFolio(folio);
         console.log('✅ Pedido guardado:', ref.id);
+
+        // ── RECORDAR EL PEDIDO EN ESTE DISPOSITIVO ──────────
+        // Guarda el id (y folio) del pedido en localStorage para poder
+        // seguirlo por-id cuando se cierre la lectura masiva de 'pedidos'
+        // (Fase 2b: get por id público, list solo staff). Aditivo.
+        try { window._recordarPedidoLocal && window._recordarPedidoLocal(ref.id, ticketId); } catch(e) {}
 
         // ── SUMAR PUNTOS AL CLIENTE REGISTRADO ──────────────
         const uid = window._firebaseUser?.uid;
