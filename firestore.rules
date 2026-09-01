@@ -9,6 +9,16 @@ rules_version = '2';
 //  sesión de Firebase Auth. Por eso varias colecciones siguen abiertas
 //  a escritura, pero ahora con VALIDACIONES que evitan datos basura o
 //  maliciosos. Para cerrar del todo se necesita migrar a Firebase Auth.
+//
+//  ── FASE 1 (endurecimiento SIN romper la app, sin auth) ──
+//  Cambios verificados como seguros contra el código actual:
+//   • clientes/ubicaciones: se cierra 'delete' (la app NUNCA los borra).
+//   • pedidos update: se bloquean totales negativos/no numéricos.
+//   • clientes create/update: límite de tamaño más estricto.
+//  PENDIENTE FASE 2 (requiere identidad real del equipo/cliente):
+//   • Cerrar LECTURA de pedidos/clientes/empleados (hoy siguen públicas
+//     porque sin Firebase Auth no se puede distinguir staff de atacante).
+//     Los PIN de empleados siguen siendo legibles hasta migrar a Auth.
 // ═══════════════════════════════════════════════════════════
 
 service cloud.firestore {
@@ -38,7 +48,13 @@ service cloud.firestore {
                     && request.resource.data.totalNum is number
                     && request.resource.data.totalNum >= 0
                     && request.resource.data.size() < 60;
-      allow update: if true;
+      // Update sigue abierto (staff por PIN, sin auth), PERO se bloquea
+      // manipular el total a valores negativos o no numéricos. Los flujos
+      // legítimos (cambiar estado, cobro, asignar repartidor) mantienen
+      // totalNum >= 0, así que no se ven afectados.
+      allow update: if !('totalNum' in request.resource.data)
+                    || (request.resource.data.totalNum is number
+                        && request.resource.data.totalNum >= 0);
       allow delete: if resource.data.archivado == true;
     }
 
@@ -111,8 +127,13 @@ service cloud.firestore {
     // que llenen la base con documentos gigantes.
     match /clientes/{clienteId} {
       allow read:  if true;
-      allow create, update: if request.resource.data.size() < 30;
-      allow delete: if true;
+      // La app escribe una forma pequeña y fija (nombre, telefono,
+      // ultimoAcceso, visitas). Límite estricto para bloquear documentos
+      // basura o gigantes.
+      allow create, update: if request.resource.data.size() < 20;
+      // La app NUNCA borra clientes → cerrado (antes: if true, abierto a
+      // que cualquiera borrara registros de clientes).
+      allow delete: if false;
     }
 
     // ── SLOTS DE ENTREGA (sistema de colas por zona/horario) ──
@@ -132,7 +153,8 @@ service cloud.firestore {
       allow create, update: if request.resource.data.lat is number
                             && request.resource.data.lng is number
                             && request.resource.data.size() < 15;
-      allow delete: if true;
+      // La app NUNCA borra ubicaciones → cerrado (antes: if true).
+      allow delete: if false;
     }
 
     // Todo lo demás: denegado
