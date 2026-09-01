@@ -155,7 +155,7 @@ window.textoItemAgrupado = function(g, opts) {
             // Menú de EMPLEADO — cada item: [icono, etiqueta, url, soloGerente]
             items = [
                 ['📊', 'Dashboard', _base() + 'dashboard.html', true],
-                ['🏪', 'Ordenar', _raiz() + 'ordenar.html', false],
+                ['🏬', 'Ordenar', _raiz() + 'ordenar.html', false],
                 ['🧾', 'Mis Pedidos', _base() + 'mis-pedidos.html', false],
                 ['🔔', 'Disponibles', _base() + 'disponibles.html', false],
                 ['🛵', 'Mis Rutas', _base() + 'mi-ruta.html', false],
@@ -190,7 +190,7 @@ window.textoItemAgrupado = function(g, opts) {
             // Insignia de contador para "Disponibles"
             var esBadge = it[2].indexOf('disponibles.html') >= 0;
             var badgeHtml = esBadge
-                ? '<span id="pb-badge-disponibles" style="display:none;position:absolute;top:2px;right:8px;' +
+                ? '<span id="pb-badge-disponibles" class="tt-badge-disp" style="display:none;position:absolute;top:2px;right:8px;' +
                   'background:#F44336;color:#fff;font-size:.62rem;font-weight:900;min-width:17px;height:17px;' +
                   'border-radius:9px;align-items:center;justify-content:center;padding:0 4px;' +
                   'box-shadow:0 0 0 2px #141414;animation:pbBadgePulse 1.5s infinite;">0</span>'
@@ -222,6 +222,54 @@ window.textoItemAgrupado = function(g, opts) {
         var m = document.getElementById('pb-menu');
         if (m) m.classList.toggle('abierto');
     };
+
+    // ── BARRA INFERIOR FIJA (solo empleados) ─────────────────────────────
+    // Acceso rápido y SIEMPRE visible a los paneles operativos clave, con la
+    // página actual resaltada ("estás aquí") y la insignia de pendientes.
+    // z-index bajo (150) a propósito: queda DEBAJO de los overlays a pantalla
+    // completa (vista de entrega, modales POS/cocina) para no tapar sus botones.
+    function crearBarraInferior(sesion) {
+        var vieja = document.getElementById('tt-navbar');
+        if (vieja) vieja.remove();
+        if (!sesion || sesion.tipo !== 'empleado') return;
+
+        var rol = (sesion.rol || '').toLowerCase();
+        var esGerente = rol.indexOf('gerente') >= 0 || rol.indexOf('supervisor') >= 0 ||
+                        rol.indexOf('admin') >= 0 || rol.indexOf('dueñ') >= 0;
+
+        // [icono, etiqueta, url, esDisponibles]
+        var items = [
+            ['🏬', 'Tienda',      _raiz() + 'ordenar.html',      false],
+            ['🍳', 'Cocina',      _base() + 'cocina.html',       false],
+            ['🔔', 'Disponibles', _base() + 'disponibles.html',  true ],
+            ['🛵', 'Mi Ruta',     _base() + 'mi-ruta.html',      false],
+        ];
+        if (esGerente) items.push(['⚙️', 'Admin', _base() + 'admin.html', false]);
+
+        var pagActual = window.location.pathname.split('/').pop().split('?')[0] || 'index.html';
+
+        var html = '';
+        items.forEach(function(it) {
+            var destino = it[2].split('/').pop().split('?')[0];
+            var activo = (destino === pagActual) ? ' activo' : '';
+            var badge = it[3]
+                ? '<span class="tt-badge-disp tt-navbar-badge" style="display:none;">0</span>'
+                : '';
+            html += '<a href="' + it[2] + '" class="tt-nav-item' + activo + '">' +
+                        '<span class="tt-nav-i">' + it[0] + badge + '</span>' +
+                        '<span class="tt-nav-t">' + it[1] + '</span>' +
+                    '</a>';
+        });
+
+        var nav = document.createElement('nav');
+        nav.id = 'tt-navbar';
+        nav.setAttribute('aria-label', 'Navegación del equipo');
+        nav.innerHTML = html;
+        document.body.appendChild(nav);
+
+        // Reservar espacio para que la barra no tape el contenido al final.
+        try { document.body.style.paddingBottom = 'calc(62px + env(safe-area-inset-bottom, 0px))'; } catch(e) {}
+    }
 
     function crearBarra(sesion) {
         // Quitar barra previa si existe
@@ -270,6 +318,9 @@ window.textoItemAgrupado = function(g, opts) {
 
         document.body.insertBefore(barra, document.body.firstChild);
 
+        // Barra inferior fija de navegación del equipo (solo empleados)
+        crearBarraInferior(sesion);
+
         // Empujar el contenido hacia abajo para que no lo tape la barra
         if (!document.getElementById('perfil-barra-estilo')) {
             var st = document.createElement('style');
@@ -311,7 +362,24 @@ window.textoItemAgrupado = function(g, opts) {
                 '.pb-nav-lbl { font-size:.6rem; font-weight:700; white-space:nowrap; }' +
                 '@keyframes pbBadgePulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.15);} }' +
                 '.pb-nav-ico { font-size:1.25rem; line-height:1; }' +
-                '@media (max-width:480px){ .pb-badge{display:none;} .pb-nombre{font-size:.85rem;} .pb-nav-btn{min-width:46px; padding:.4rem .3rem;} .pb-nav-ico{font-size:1.15rem;} .pb-nav-lbl{font-size:.55rem;} .pb-menu{gap:.25rem; padding:.5rem .5rem;} }';
+                '@media (max-width:480px){ .pb-badge{display:none;} .pb-nombre{font-size:.85rem;} .pb-nav-btn{min-width:46px; padding:.4rem .3rem;} .pb-nav-ico{font-size:1.15rem;} .pb-nav-lbl{font-size:.55rem;} .pb-menu{gap:.25rem; padding:.5rem .5rem;} }' +
+                // ── Barra inferior de navegación del equipo ──
+                '#tt-navbar{ position:fixed; left:0; right:0; bottom:0; z-index:150; display:flex;' +
+                    'background:linear-gradient(0deg,#0f0f0f,#1a1a1a); border-top:1px solid rgba(255,255,255,.1);' +
+                    'box-shadow:0 -4px 16px rgba(0,0,0,.45); padding-bottom:env(safe-area-inset-bottom,0px); }' +
+                '.tt-nav-item{ flex:1; min-width:0; display:flex; flex-direction:column; align-items:center;' +
+                    'justify-content:center; gap:.16rem; padding:.5rem .2rem .55rem; text-decoration:none;' +
+                    'color:#9a9a9a; font-family:system-ui,sans-serif; position:relative; transition:color .15s; }' +
+                '.tt-nav-item:active{ transform:scale(.93); }' +
+                '.tt-nav-item.activo{ color:#FF5A00; }' +
+                '.tt-nav-item.activo::before{ content:""; position:absolute; top:0; left:24%; right:24%;' +
+                    'height:3px; background:#FF5A00; border-radius:0 0 4px 4px; }' +
+                '.tt-nav-i{ font-size:1.4rem; line-height:1; position:relative; }' +
+                '.tt-nav-t{ font-size:.62rem; font-weight:800; letter-spacing:.01em; white-space:nowrap; }' +
+                '.tt-navbar-badge{ position:absolute; top:-6px; right:-11px; background:#F44336; color:#fff;' +
+                    'font-size:.6rem; font-weight:900; min-width:16px; height:16px; border-radius:8px;' +
+                    'align-items:center; justify-content:center; padding:0 4px; box-shadow:0 0 0 2px #141414;' +
+                    'animation:pbBadgePulse 1.5s infinite; }';
             document.head.appendChild(st);
         }
     }

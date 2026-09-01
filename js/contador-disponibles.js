@@ -18,14 +18,17 @@ function haySesionEmpleado() {
 }
 
 function actualizarBadge(n) {
-    var badge = document.getElementById('pb-badge-disponibles');
-    if (!badge) return;
-    if (n > 0) {
-        badge.textContent = n;
-        badge.style.display = 'flex';
-    } else {
-        badge.style.display = 'none';
-    }
+    // Actualiza TODAS las insignias de pendientes (menú superior + barra inferior).
+    var badges = document.querySelectorAll('.tt-badge-disp');
+    if (!badges.length) return;
+    badges.forEach(function(badge) {
+        if (n > 0) {
+            badge.textContent = n;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    });
 }
 
 function iniciar() {
