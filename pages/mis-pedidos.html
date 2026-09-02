@@ -208,14 +208,26 @@ function render() {
         const _tel = (p.telefono || p.cliente_telefono || p.telefonoCliente || '').toString().replace(/'/g,'');
         const _nomCli = (p.cliente || p.nombre || '').toString().replace(/'/g,'');
         const _tieneUbi = (p.ubicacionCliente && p.ubicacionCliente.lat) || (p.ubicacion && p.ubicacion.lat);
+        // Tortumóvil: la orden se tomó en persona desde la unidad, así que
+        // NO tiene sentido "Pedir ubicación". Solo se muestra "Ver ubicación
+        // en vivo" si el cliente ya compartió una (caso raro en tortumóvil).
         let btnUbicacion = _tieneUbi
             ? `<button class="mp-btn" style="background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.4);color:#25D366;" onclick="verUbicacionCliente('${p.id}')">🗺️ Ver ubicación en vivo</button>`
-            : `<button class="mp-btn" style="background:rgba(255,90,0,.15);border:1px solid rgba(255,90,0,.4);color:#FF7A33;" onclick="pedirUbicacionCliente('${p.id}','${_tel}','${_nomCli}')">📍 Pedir ubicación</button>`;
+            : (esTortu ? '' : `<button class="mp-btn" style="background:rgba(255,90,0,.15);border:1px solid rgba(255,90,0,.4);color:#FF7A33;" onclick="pedirUbicacionCliente('${p.id}','${_tel}','${_nomCli}')">📍 Pedir ubicación</button>`);
 
-        // Etiqueta informativa del repartidor asignado (la asignación se hace en Mis Rutas)
-        let btnRepartidor = p.repartidorNombre
-            ? `<div class="mp-btn" style="background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.3);color:#25D366;cursor:default;">🛵 Reparte: ${p.repartidorNombre}</div>`
-            : `<div class="mp-btn" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:#888;cursor:default;">🛵 Sin repartidor asignado</div>`;
+        // Etiqueta informativa del repartidor (la asignación se hace en Mis Rutas).
+        // En un pedido Tortumóvil sin repartidor asignado aparte, quien lo tomó
+        // (desde la unidad) ES quien lo reparte → mostrar su nombre en vez de
+        // "Sin repartidor asignado".
+        let btnRepartidor;
+        if (p.repartidorNombre) {
+            btnRepartidor = `<div class="mp-btn" style="background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.3);color:#25D366;cursor:default;">🛵 Reparte: ${p.repartidorNombre}</div>`;
+        } else if (esTortu) {
+            const _quienTomo = p.cajeroNombre || p.tortumovilNombre || 'Tortumóvil';
+            btnRepartidor = `<div class="mp-btn" style="background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.3);color:#25D366;cursor:default;">🚐 Reparte: ${_quienTomo}</div>`;
+        } else {
+            btnRepartidor = `<div class="mp-btn" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:#888;cursor:default;">🛵 Sin repartidor asignado</div>`;
+        }
 
         // Botón de cobro
         let btnCobro = pagado
