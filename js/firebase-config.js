@@ -1,6 +1,6 @@
 // firebase-config.js — Configuración de Firebase para Tortas Tortuga
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -28,3 +28,6 @@ let _authResuelto = false;
 onAuthStateChanged(auth, (u) => {
     if (!_authResuelto) { _authResuelto = true; _resolveAuthReady(u || null); }
 });
+
+// Cerrar la sesión de Firebase (Google) desde código clásico (perfil-barra.js).
+try { window.TT_signOutGoogle = function () { return signOut(auth).catch(function () {}); }; } catch (e) {}

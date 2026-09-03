@@ -67,7 +67,20 @@ html { -webkit-text-size-adjust: 100%; }
             <button type="button" onclick="irAMiPedido()" style="width:100%;padding:.85rem;background:linear-gradient(135deg,#25D366,#18a849);border:none;color:#fff;border-radius:12px;font-family:inherit;font-weight:800;font-size:.95rem;cursor:pointer;box-shadow:0 4px 12px rgba(37,211,102,.3);">🛍️ Ver mi pedido</button>
         </div>
 
-        
+        <!-- ENTRAR CON GOOGLE (usa el perfil de la cuenta: nombre + foto + puntos) -->
+        <div id="google-login-wrap" style="margin-bottom:1rem;">
+            <button type="button" id="btn-google-entrar" onclick="entrarConGoogle()"
+                style="width:100%;display:flex;align-items:center;justify-content:center;gap:.6rem;padding:.9rem;background:#fff;border:none;border-radius:12px;font-family:inherit;font-weight:800;font-size:.95rem;color:#3c4043;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25);">
+                <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                Continuar con Google
+            </button>
+            <div id="google-status" class="auth-message" style="display:none;margin-top:.6rem;"></div>
+            <div style="display:flex;align-items:center;gap:.7rem;margin:1rem 0 .2rem;">
+                <div style="flex:1;height:1px;background:rgba(255,255,255,.12);"></div>
+                <span style="font-size:.72rem;color:#777;font-weight:700;">o</span>
+                <div style="flex:1;height:1px;background:rgba(255,255,255,.12);"></div>
+            </div>
+        </div>
 
         <div id="modo-telefono-wrap">
         <div style="text-align:center;">
@@ -190,11 +203,14 @@ import { auth, db } from '../js/firebase-config.js';
 import { doc, setDoc, getDoc, getDocs, collection, query, where, addDoc, serverTimestamp, increment } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import {
     createUserWithEmailAndPassword, signInWithEmailAndPassword,
-    sendPasswordResetEmail, updateProfile
+    sendPasswordResetEmail, updateProfile,
+    GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 let _codigoGenerado = null;
 let _datosCliente = null;
+let _googleUser = null;          // datos de la cuenta de Google si entró con ella
+const _gProvider = new GoogleAuthProvider();
 
 function showStatus(id, msg, tipo) {
     var el = document.getElementById(id);
@@ -224,7 +240,7 @@ window.cambiarCuentaTab = function(tab) {
 window.mostrarRecuperar = function() { window.cambiarCuentaTab('recuperar'); };
 
 /* ── Guardar sesion de cliente (comun a telefono y cuenta) ──── */
-function guardarSesionCliente(nombre, telefono, uid) {
+function guardarSesionCliente(nombre, telefono, uid, foto, email) {
     sessionStorage.setItem('tt_cliente_nombre', nombre);
     sessionStorage.setItem('tt_cliente_telefono', telefono || '');
     sessionStorage.setItem('tt_cliente_ts', Date.now().toString());
@@ -237,6 +253,105 @@ function guardarSesionCliente(nombre, telefono, uid) {
     localStorage.setItem('tt_cliente_ts', Date.now().toString());
     if (uid) localStorage.setItem('tt_cliente_uid', uid);
     else localStorage.removeItem('tt_cliente_uid');
+    // Foto y correo de la cuenta de Google (para la barra de perfil y Mis Puntos)
+    if (foto) { sessionStorage.setItem('tt_cliente_foto', foto); localStorage.setItem('tt_cliente_foto', foto); }
+    else { sessionStorage.removeItem('tt_cliente_foto'); localStorage.removeItem('tt_cliente_foto'); }
+    if (email) { sessionStorage.setItem('tt_cliente_email', email); localStorage.setItem('tt_cliente_email', email); }
+    else { sessionStorage.removeItem('tt_cliente_email'); localStorage.removeItem('tt_cliente_email'); }
+}
+
+/* ── ENTRAR CON GOOGLE ──────────────────────────────────────
+   Mismo flujo de ordenar: valida con la cuenta de Google, guarda/lee el
+   perfil del cliente en 'usuarios/{uid}' (nombre, foto, puntos) y continúa
+   con el paso de UBICACIÓN igual que la entrada por teléfono. Si es la
+   primera vez (no hay teléfono guardado) pedimos solo el teléfono, porque
+   el repartidor lo necesita para llamar. */
+window.entrarConGoogle = async function() {
+    showStatus('google-status', 'Abriendo Google…', 'info');
+    try {
+        const result = await signInWithPopup(auth, _gProvider);
+        if (result && result.user) await _procesarClienteGoogle(result.user);
+    } catch(err) {
+        const code = err && err.code;
+        if (code === 'auth/popup-blocked' ||
+            code === 'auth/operation-not-supported-in-this-environment' ||
+            code === 'auth/cancelled-popup-request') {
+            // El navegador bloqueó el popup → caer a redirect
+            try { await signInWithRedirect(auth, _gProvider); } catch(_){}
+        } else if (code === 'auth/popup-closed-by-user') {
+            hideMsgGoogle();
+        } else {
+            console.warn('entrarConGoogle:', code);
+            showStatus('google-status', 'No se pudo entrar con Google. Intenta de nuevo o usa tu nombre y teléfono.', 'error');
+        }
+    }
+};
+
+function hideMsgGoogle() {
+    var e = document.getElementById('google-status');
+    if (e) e.style.display = 'none';
+}
+
+// Si el popup cayó a redirect, recogemos el resultado al volver.
+getRedirectResult(auth).then(function(result) {
+    if (result && result.user) return _procesarClienteGoogle(result.user);
+}).catch(function(e) { if (e && e.code !== 'auth/no-auth-event') console.warn(e.code); });
+
+async function _procesarClienteGoogle(user) {
+    showStatus('google-status', 'Entrando…', 'info');
+    var nombre = user.displayName || 'Cliente';
+    var foto = user.photoURL || null;
+    var email = user.email || '';
+    var telefonoGuardado = '';
+    try {
+        var snap = await getDoc(doc(db, 'usuarios', user.uid));
+        if (snap.exists()) {
+            var d = snap.data();
+            nombre = d.nombre || nombre;
+            telefonoGuardado = d.telefono || '';
+        } else {
+            // Crear el perfil del cliente (rol 'cliente' obligatorio por reglas)
+            await setDoc(doc(db, 'usuarios', user.uid), {
+                uid: user.uid,
+                nombre: nombre,
+                email: email,
+                foto: foto,
+                telefono: '',
+                direccion: '',
+                rol: 'cliente',
+                puntos: 0, puntosGanados: 0, puntosCanje: 0,
+                nivel: 'bronze',
+                totalPedidos: 0, totalGastado: 0,
+                metodo: 'google',
+                creado: serverTimestamp()
+            });
+        }
+    } catch(e) { console.warn('perfil google:', e); }
+
+    _googleUser = { uid: user.uid, foto: foto, email: email, nombre: nombre };
+
+    if (telefonoGuardado) {
+        // Ya tenemos su teléfono → entrar directo al paso de ubicación
+        guardarSesionCliente(nombre, telefonoGuardado, user.uid, foto, email);
+        _datosCliente = { nombre: nombre, telefono: telefonoGuardado, conocido: true };
+        // Ocultar solo el botón de Google (el paso de ubicación vive DENTRO de
+        // #modo-telefono-wrap, así que ese wrapper NO se debe ocultar).
+        var gw = document.getElementById('google-login-wrap');
+        if (gw) gw.style.display = 'none';
+        document.getElementById('paso-telefono').classList.remove('activo');
+        document.getElementById('paso-ubicacion').classList.add('activo');
+        try { sessionStorage.setItem('tt_paso_activo', 'ubicacion'); } catch(e){}
+        _revisarPedidosActivos(telefonoGuardado);
+    } else {
+        // Primera vez: pedimos solo el teléfono (prellenamos el nombre de Google)
+        guardarSesionCliente(nombre, '', user.uid, foto, email);
+        var inpNombre = document.getElementById('nombre');
+        var inpTel = document.getElementById('telefono');
+        if (inpNombre) { inpNombre.value = nombre; inpNombre.setAttribute('readonly', 'readonly'); inpNombre.style.opacity = '.75'; }
+        hideMsgGoogle();
+        showStatus('status-1', '¡Hola ' + nombre.split(' ')[0] + '! 🐢 Solo confirma tu teléfono para que el repartidor te ubique.', 'info');
+        if (inpTel) inpTel.focus();
+    }
 }
 
 /* ── LOGIN POR TELEFONO (verificacion por codigo) ──────── */
@@ -326,7 +441,12 @@ window.enviarCodigo = async function() {
 
     // ── Guardar datos y pasar al paso de UBICACIÓN ──
     // (Sin SMS). Guardamos la sesión ya; la ubicación es el siguiente paso.
-    guardarSesionCliente(nombre, soloDigitos, null);
+    var _g = _googleUser;
+    guardarSesionCliente(nombre, soloDigitos, _g ? _g.uid : null, _g ? _g.foto : null, _g ? _g.email : null);
+    // Si entró con Google, recordar su teléfono en el perfil para la próxima vez
+    if (_g && _g.uid) {
+        try { await setDoc(doc(db, 'usuarios', _g.uid), { telefono: soloDigitos }, { merge: true }); } catch(e){}
+    }
     _datosCliente = { nombre: nombre, telefono: soloDigitos, conocido: clienteConocido };
     // Pasar al paso de ubicación
     document.getElementById('paso-telefono').classList.remove('activo');

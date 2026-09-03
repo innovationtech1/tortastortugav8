@@ -114,6 +114,7 @@ window.textoItemAgrupado = function(g, opts) {
                 nombre: cliNombre,
                 telefono: leer('tt_cliente_telefono') || '',
                 uid: leer('tt_cliente_uid') || null,
+                foto: leer('tt_cliente_foto') || null,
             };
         }
 
@@ -297,9 +298,15 @@ window.textoItemAgrupado = function(g, opts) {
                 '<div class="pb-badge" style="background:' + est.color + '22;color:' + est.color + ';border:1px solid ' + est.color + '55;">EMPLEADO</div>';
         } else {
             colorBorde = '#3B82F6';
+            // Si entró con Google, mostramos su foto de perfil; si no, el carrito.
+            var avatarInterno = sesion.foto
+                ? '<img src="' + sesion.foto + '" alt="" referrerpolicy="no-referrer" ' +
+                  'style="width:100%;height:100%;object-fit:cover;border-radius:50%;" ' +
+                  'onerror="this.parentNode.innerHTML=\'<span>🛒</span>\';">'
+                : '<span>🛒</span>';
             contenido =
-                '<div class="pb-avatar" style="background:#3B82F633;border:2px solid #3B82F6;">' +
-                    '<span>🛒</span>' +
+                '<div class="pb-avatar" style="background:#3B82F633;border:2px solid #3B82F6;overflow:hidden;">' +
+                    avatarInterno +
                 '</div>' +
                 '<div class="pb-info">' +
                     '<div class="pb-nombre">' + sesion.nombre + '</div>' +
@@ -387,9 +394,13 @@ window.textoItemAgrupado = function(g, opts) {
     window._perfilCerrarSesion = function() {
         function _hacerLogout() {
             ['tt_cliente_nombre','tt_cliente_telefono','tt_cliente_ts','tt_cliente_uid',
+             'tt_cliente_foto','tt_cliente_email',
              'tt_cajero_id','tt_cajero_nombre','tt_cajero_rol','tt_cajero_ts',
              'tt_emp_id','tt_emp_pin','tt_emp_ts','tt_emp_docid','tt_emp_nombre','tt_emp_rol'
             ].forEach(function(k){ sessionStorage.removeItem(k); localStorage.removeItem(k); });
+            // Cerrar también la sesión de Firebase (Google) si la app la expuso,
+            // para que "Mis Puntos" no siga mostrando el perfil tras salir.
+            try { if (window.TT_signOutGoogle) window.TT_signOutGoogle(); } catch(e){}
             var barra = document.getElementById('perfil-barra');
             if (barra) barra.remove();
             var base = location.pathname.indexOf('/pages/') >= 0 ? '../index.html' : 'index.html';
