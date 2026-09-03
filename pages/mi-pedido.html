@@ -43,12 +43,12 @@
 
     var puedeVer = hayCliente || tienePedidosLocales;
 
+    // Solo redirigimos a un STAFF sin contexto de cliente (tiene su tablero).
+    // A un cliente NUNCA lo rebotamos: si no tiene pedidos, la propia página
+    // muestra "Aún no tienes pedidos" — antes rebotaba a bienvenida y parecía
+    // que "no dejaba entrar".
     if (esStaff && !puedeVer) {
-        // Staff que llega aquí por error (sin contexto de cliente) → a su tablero.
         window.location.replace('cocina.html');
-    } else if (!puedeVer) {
-        // No hay sesión ni pedidos que mostrar → al inicio.
-        window.location.replace('bienvenida.html');
     }
 })();
 </script>
