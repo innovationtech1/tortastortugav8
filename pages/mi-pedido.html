@@ -12,7 +12,10 @@
 // Si no hay sesion de cliente (ni de staff, que tiene su propio tablero
 // completo en cocina.html), no hay nada que mostrar aqui: al login.
 (function() {
-    var VEINTE_MIN = 20 * 60 * 1000;
+    // Ventana de 12h, IGUAL que la barra de perfil. Antes eran 20 min, y por
+    // eso el cliente que navegaba más de 20 minutos era expulsado a
+    // "bienvenida" al tocar Mi Orden (parecía que "solo se actualizaba").
+    var VENTANA = 12 * 60 * 60 * 1000;
     // sessionStorage NO se comparte entre pestañas — y "Ver mi pedido"
     // se abre en pestaña nueva. Por eso leemos también de localStorage
     // (que sí se comparte) como respaldo.
@@ -26,16 +29,26 @@
     var cajNombre = leer('tt_cajero_nombre');
     var cajTs = parseInt(leer('tt_cajero_ts') || '0');
 
-    var hayCliente = cliNombre && (Date.now() - cliTs < VEINTE_MIN);
-    var esStaff = (empId && (Date.now() - empTs < VEINTE_MIN)) ||
-                  (cajNombre && (Date.now() - cajTs < VEINTE_MIN));
+    var hayCliente = cliNombre && (Date.now() - cliTs < VENTANA);
+    var esStaff = (empId && (Date.now() - empTs < VENTANA)) ||
+                  (cajNombre && (Date.now() - cajTs < VENTANA));
 
-    if (!hayCliente && !esStaff) {
-        window.location.replace('bienvenida.html');
-    }
-    // Si es staff y llega aqui por error, mandarlo a su tablero de verdad
-    if (esStaff) {
+    // Fase 2b: el cliente puede seguir su pedido por el id guardado en este
+    // dispositivo aunque no tenga sesión con nombre.
+    var tienePedidosLocales = false;
+    try {
+        var _mp = JSON.parse(localStorage.getItem('tt_mis_pedidos') || '[]');
+        tienePedidosLocales = Array.isArray(_mp) && _mp.length > 0;
+    } catch(e) {}
+
+    var puedeVer = hayCliente || tienePedidosLocales;
+
+    if (esStaff && !puedeVer) {
+        // Staff que llega aquí por error (sin contexto de cliente) → a su tablero.
         window.location.replace('cocina.html');
+    } else if (!puedeVer) {
+        // No hay sesión ni pedidos que mostrar → al inicio.
+        window.location.replace('bienvenida.html');
     }
 })();
 </script>
