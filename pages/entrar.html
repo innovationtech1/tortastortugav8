@@ -83,7 +83,7 @@ html { -webkit-text-size-adjust: 100%; }
         </div>
 
         <div id="modo-telefono-wrap">
-        <div style="text-align:center;">
+        <div id="intro-badge-wrap" style="text-align:center;">
             <span class="intro-badge" style="display:inline-block;background:rgba(255,90,0,.12);border:1px solid rgba(255,90,0,.25);color:#FF7A33;font-size:.8rem;font-weight:600;padding:.4rem .9rem;border-radius:20px;">🐢 Entra con tu nombre y teléfono</span>
         </div>
 
@@ -108,6 +108,15 @@ html { -webkit-text-size-adjust: 100%; }
 
                 <!-- PASO 2: Ubicación -->
                 <div id="paso-ubicacion" class="paso">
+                    <!-- Identidad del cliente (nombre + foto de Google) -->
+                    <div id="cliente-ident" style="display:none;align-items:center;gap:.7rem;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:14px;padding:.7rem .9rem;margin-bottom:1rem;">
+                        <div id="cliente-ident-avatar" style="width:44px;height:44px;border-radius:50%;overflow:hidden;flex-shrink:0;background:rgba(59,130,246,.2);display:flex;align-items:center;justify-content:center;font-size:1.3rem;">🛒</div>
+                        <div style="min-width:0;flex:1;">
+                            <div id="cliente-ident-nombre" style="font-size:.95rem;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">—</div>
+                            <div style="font-size:.75rem;color:#3B82F6;font-weight:700;">Cliente · Tortas Tortuga</div>
+                        </div>
+                    </div>
+
                     <!-- Panel de opciones si el cliente YA tiene pedidos activos -->
                     <div id="panel-tiene-pedidos" style="display:none;margin-bottom:1rem;">
                         <div style="text-align:center;margin-bottom:1rem;">
@@ -127,6 +136,13 @@ html { -webkit-text-size-adjust: 100%; }
                         <div style="font-size:.82rem;color:#aaa;margin-top:.3rem;">
                             Compártenos tu ubicación para llevarte tu orden más rápido.
                         </div>
+                    </div>
+
+                    <!-- Teléfono (solo si entró con Google y aún no lo tenemos) -->
+                    <div id="ubi-telefono-wrap" style="display:none;margin-bottom:1rem;">
+                        <label class="field-label" style="display:block;margin-bottom:.35rem;">📞 Tu teléfono <span style="color:#888;font-weight:400;">(para que el repartidor te llame)</span></label>
+                        <input type="tel" id="ubi-telefono" class="field-input" inputmode="tel" placeholder="210-555-1234" autocomplete="off">
+                        <div id="ubi-tel-status" class="auth-message" style="display:none;margin-top:.4rem;"></div>
                     </div>
 
                     <div id="ubi-estado" style="background:rgba(255,90,0,.08);border:1px solid rgba(255,90,0,.25);border-radius:12px;padding:1rem;text-align:center;margin-bottom:1rem;">
@@ -329,29 +345,50 @@ async function _procesarClienteGoogle(user) {
     } catch(e) { console.warn('perfil google:', e); }
 
     _googleUser = { uid: user.uid, foto: foto, email: email, nombre: nombre };
+    hideMsgGoogle();
+
+    // Entrar SIEMPRE directo al paso de ubicación con el perfil de Google
+    // (nombre + foto). No se vuelve a mostrar el registro.
+    guardarSesionCliente(nombre, telefonoGuardado || '', user.uid, foto, email);
+    _datosCliente = { nombre: nombre, telefono: telefonoGuardado || '', conocido: !!telefonoGuardado };
+    _mostrarPasoUbicacion(nombre, foto);
 
     if (telefonoGuardado) {
-        // Ya tenemos su teléfono → entrar directo al paso de ubicación
-        guardarSesionCliente(nombre, telefonoGuardado, user.uid, foto, email);
-        _datosCliente = { nombre: nombre, telefono: telefonoGuardado, conocido: true };
-        // Ocultar solo el botón de Google (el paso de ubicación vive DENTRO de
-        // #modo-telefono-wrap, así que ese wrapper NO se debe ocultar).
-        var gw = document.getElementById('google-login-wrap');
-        if (gw) gw.style.display = 'none';
-        document.getElementById('paso-telefono').classList.remove('activo');
-        document.getElementById('paso-ubicacion').classList.add('activo');
-        try { sessionStorage.setItem('tt_paso_activo', 'ubicacion'); } catch(e){}
         _revisarPedidosActivos(telefonoGuardado);
     } else {
-        // Primera vez: pedimos solo el teléfono (prellenamos el nombre de Google)
-        guardarSesionCliente(nombre, '', user.uid, foto, email);
-        var inpNombre = document.getElementById('nombre');
-        var inpTel = document.getElementById('telefono');
-        if (inpNombre) { inpNombre.value = nombre; inpNombre.setAttribute('readonly', 'readonly'); inpNombre.style.opacity = '.75'; }
-        hideMsgGoogle();
-        showStatus('status-1', '¡Hola ' + nombre.split(' ')[0] + '! 🐢 Solo confirma tu teléfono para que el repartidor te ubique.', 'info');
-        if (inpTel) inpTel.focus();
+        // Primera vez sin teléfono: mostrar el campo de teléfono dentro del
+        // mismo paso de ubicación (el repartidor lo necesita para llamar).
+        var tw = document.getElementById('ubi-telefono-wrap');
+        if (tw) tw.style.display = 'block';
     }
+}
+
+/* ── Mostrar el paso de UBICACIÓN ocultando las opciones de entrada ──
+   Se usa tanto para Google como para la entrada por teléfono, así que la
+   pantalla de "registro" (botón de Google + nombre/teléfono) desaparece y
+   se muestra la identidad del cliente (nombre + foto si entró con Google). */
+function _mostrarPasoUbicacion(nombre, foto) {
+    var gw = document.getElementById('google-login-wrap');
+    if (gw) gw.style.display = 'none';
+    var badge = document.getElementById('intro-badge-wrap');
+    if (badge) badge.style.display = 'none';
+    var pt = document.getElementById('paso-telefono');
+    var pu = document.getElementById('paso-ubicacion');
+    if (pt) pt.classList.remove('activo');
+    if (pu) pu.classList.add('activo');
+    // Cabecera de identidad del cliente
+    if (nombre) {
+        var ident = document.getElementById('cliente-ident');
+        var nom = document.getElementById('cliente-ident-nombre');
+        var av = document.getElementById('cliente-ident-avatar');
+        if (nom) nom.textContent = nombre;
+        if (av) {
+            if (foto) av.innerHTML = '<img src="' + foto + '" alt="" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentNode.textContent=\'🛒\';">';
+            else av.textContent = '🛒';
+        }
+        if (ident) ident.style.display = 'flex';
+    }
+    try { sessionStorage.setItem('tt_paso_activo', 'ubicacion'); } catch(e){}
 }
 
 /* ── LOGIN POR TELEFONO (verificacion por codigo) ──────── */
@@ -448,10 +485,8 @@ window.enviarCodigo = async function() {
         try { await setDoc(doc(db, 'usuarios', _g.uid), { telefono: soloDigitos }, { merge: true }); } catch(e){}
     }
     _datosCliente = { nombre: nombre, telefono: soloDigitos, conocido: clienteConocido };
-    // Pasar al paso de ubicación
-    document.getElementById('paso-telefono').classList.remove('activo');
-    document.getElementById('paso-ubicacion').classList.add('activo');
-                try { sessionStorage.setItem('tt_paso_activo', 'ubicacion'); } catch(e){}
+    // Pasar al paso de ubicación (oculta el registro y muestra la identidad)
+    _mostrarPasoUbicacion(nombre, _g ? _g.foto : null);
     // Revisar si el cliente ya tiene pedidos ACTIVOS para mostrar opciones
     _revisarPedidosActivos(soloDigitos);
 }
@@ -835,11 +870,37 @@ window.confirmarUbicacionYHorario = async function() {
     } catch(e) {}
 
     var btnEl = document.getElementById('btn-ubicacion');
-    if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '<span class="btn-text">Enviando solicitud…</span>'; }
 
     // Leer datos del cliente y ubicación
     var nombre = (_datosCliente && _datosCliente.nombre) || sessionStorage.getItem('tt_cliente_nombre') || '';
     var telefono = (_datosCliente && _datosCliente.telefono) || sessionStorage.getItem('tt_cliente_telefono') || '';
+
+    // Cliente de Google que aún no dio su teléfono → tomarlo del campo inline
+    if (!telefono) {
+        var tinp = document.getElementById('ubi-telefono');
+        var tel = ((tinp && tinp.value) || '').replace(/[^0-9]/g, '');
+        if (tel.length !== 10 || tel[0] === '0' || tel[0] === '1' || TELEFONOS_FALSOS.indexOf(tel) >= 0) {
+            showStatus('ubi-tel-status', '📱 Escribe un teléfono válido de 10 dígitos para que el repartidor te llame.', 'error');
+            var tw = document.getElementById('ubi-telefono-wrap');
+            if (tw) tw.style.display = 'block';
+            if (tinp) tinp.focus();
+            return;
+        }
+        telefono = tel;
+        var uidG = sessionStorage.getItem('tt_cliente_uid');
+        var fotoG = sessionStorage.getItem('tt_cliente_foto');
+        var emailG = sessionStorage.getItem('tt_cliente_email');
+        guardarSesionCliente(nombre, telefono, uidG, fotoG, emailG);
+        if (_datosCliente) _datosCliente.telefono = telefono;
+        // Guardar el teléfono en el perfil (usuarios) y en clientes
+        if (uidG) { try { await setDoc(doc(db, 'usuarios', uidG), { telefono: telefono }, { merge: true }); } catch(e){} }
+        try { await setDoc(doc(db, 'clientes', 'cliente_' + telefono), { nombre: nombre, telefono: telefono, ultimoAcceso: new Date().toISOString(), visitas: increment(1) }, { merge: true }); } catch(e){}
+        var twh = document.getElementById('ubi-telefono-wrap');
+        if (twh) twh.style.display = 'none';
+    }
+
+    if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '<span class="btn-text">Enviando solicitud…</span>'; }
+
     var ubi = null;
     try {
         var u = sessionStorage.getItem('tt_cliente_ubicacion') || localStorage.getItem('tt_cliente_ubicacion');
@@ -1059,11 +1120,15 @@ window.enviarRecuperacion = async function() {
                 var pt = document.getElementById('paso-telefono');
                 var pc = document.getElementById('paso-ubicacion');
                 if (pt && pc) {
-                    pt.classList.remove('activo');
-                    pc.classList.add('activo');
+                    // Ocultar el registro y mostrar la identidad del cliente
+                    var _fotoRest = sessionStorage.getItem('tt_cliente_foto') || localStorage.getItem('tt_cliente_foto');
+                    if (typeof _mostrarPasoUbicacion === 'function') _mostrarPasoUbicacion(nombre, _fotoRest);
+                    else { pt.classList.remove('activo'); pc.classList.add('activo'); }
                     // Revisar pedidos activos al restaurar la sesión
                     var _telRestaurar = sessionStorage.getItem('tt_cliente_telefono') || localStorage.getItem('tt_cliente_telefono');
                     if (_telRestaurar && typeof _revisarPedidosActivos === 'function') _revisarPedidosActivos(_telRestaurar);
+                    // Si aún no hay teléfono (cliente de Google), mostrar el campo
+                    if (!_telRestaurar) { var _tw = document.getElementById('ubi-telefono-wrap'); if (_tw) _tw.style.display = 'block'; }
                     // Restaurar la ubicación en el mapa si ya la tenía
                     var uStr = sessionStorage.getItem('tt_cliente_ubicacion') || localStorage.getItem('tt_cliente_ubicacion');
                     if (uStr) {
