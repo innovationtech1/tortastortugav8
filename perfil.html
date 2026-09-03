@@ -404,7 +404,12 @@ setTimeout(() => {
 }, 6000);
 
 onAuthStateChanged(auth, async user => {
-  if(user){
+  // Los puntos (lealtad) son SOLO para cuentas de CLIENTE reales. Ignorar
+  // las cuentas de EMPLEADO (esquema empid@tortuga.local) y las anónimas —
+  // si no, la sesión Firebase del empleado se mostraría como si fuera el
+  // perfil del cliente (ej. "emp-075@tortuga.local").
+  var esCuentaEmpleado = user && user.email && /@tortuga\.local$/i.test(user.email);
+  if(user && !esCuentaEmpleado && !user.isAnonymous){
     currentUser = user;
     try {
       await cargarPerfil();
