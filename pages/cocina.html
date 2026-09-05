@@ -187,6 +187,22 @@ body.compacto .kcard-items{padding:.5rem .7rem;}
 .cancel-btn{width:100%;padding:.68rem;background:transparent;
   border:1px solid var(--border);color:var(--muted);
   border-radius:11px;font-family:inherit;font-size:.85rem;cursor:pointer;margin-top:.4rem;}
+/* ── Stepper de seguimiento (círculos de estado), igual que "Mi Orden" ── */
+.tt-stepper{position:relative;display:flex;margin:.5rem 0 .6rem;}
+.tt-stepper .tt-track-bg,.tt-stepper .tt-track-fill{position:absolute;top:13px;height:3px;border-radius:3px;z-index:0;}
+.tt-stepper .tt-track-bg{background:rgba(255,255,255,.10);}
+.tt-stepper .tt-track-fill{background:var(--primary,#FF5A00);transition:width .5s ease;}
+.tt-step{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;align-items:center;gap:.25rem;}
+.tt-step-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:.85rem;background:#242424;border:2px solid rgba(255,255,255,.15);color:#888;transition:all .3s ease;}
+.tt-step.done .tt-step-dot{background:var(--primary,#FF5A00);border-color:var(--primary,#FF5A00);color:#fff;}
+.tt-step.current .tt-step-dot{background:var(--primary,#FF5A00);border-color:#fff;color:#fff;
+  box-shadow:0 0 0 4px rgba(255,90,0,.28);animation:ttStepPulse 1.4s infinite;}
+.tt-step-lbl{font-size:.5rem;font-weight:800;text-align:center;color:#777;line-height:1.1;max-width:56px;
+  text-transform:uppercase;letter-spacing:.02em;}
+.tt-step.done .tt-step-lbl{color:#bbb;}
+.tt-step.current .tt-step-lbl{color:var(--primary,#FF5A00);}
+@keyframes ttStepPulse{0%,100%{box-shadow:0 0 0 4px rgba(255,90,0,.28);}50%{box-shadow:0 0 0 8px rgba(255,90,0,.10);}}
 </style>
 
 <style id="ios-compat">
@@ -576,6 +592,33 @@ function nombreCorto(item) {
 }
 
 /* ── Render card ────────────────────────────────────────────── */
+// Stepper de seguimiento (círculos de estado), idéntico al de "Mi Orden".
+function _progresoCocina(estado, esDomicilio) {
+    if (typeof TTEstados === 'undefined') return '';
+    if (TTEstados.estaCancelado(estado)) {
+        return '<div style="text-align:center;color:#EF9A9A;font-weight:800;font-size:.8rem;margin:.4rem 0;">❌ Cancelado</div>';
+    }
+    var pasos = [['NUEVO','📝','Recibido'],['EN_COCINA','🧑‍🍳','Preparando'],['LISTO','✅','Listo']];
+    if (esDomicilio) pasos.push(['EN_CAMINO','🛵','En camino']);
+    pasos.push(['ENTREGADO','🎉','Entregado']);
+    var ordRango = TTEstados.rango(estado);
+    var actual = -1;
+    pasos.forEach(function(p,i){ if (TTEstados.ESTADOS[p[0]].rango <= ordRango) actual = i; });
+    var N = pasos.length;
+    var trackLeft = 50 / N, trackWidth = 100 - 100 / N;
+    var fillFrac = (N > 1 && actual > 0) ? (actual / (N - 1)) : 0;
+    var fillWidth = trackWidth * fillFrac;
+    var html = '<div class="tt-stepper">' +
+        '<div class="tt-track-bg" style="left:'+trackLeft+'%;width:'+trackWidth+'%;"></div>' +
+        '<div class="tt-track-fill" style="left:'+trackLeft+'%;width:'+fillWidth+'%;"></div>';
+    pasos.forEach(function(p,i){
+        var cls = i < actual ? 'done' : (i === actual ? 'current' : '');
+        var ico = i < actual ? '✓' : p[1];
+        html += '<div class="tt-step '+cls+'"><div class="tt-step-dot">'+ico+'</div><div class="tt-step-lbl">'+p[2]+'</div></div>';
+    });
+    return html + '</div>';
+}
+
 function renderCard(p) {
     const ahora  = Date.now();
     const est    = p.estado || '';
@@ -645,6 +688,7 @@ function renderCard(p) {
             </div>
             <div class="ktimer ${timerClass(secs)}" data-ts="${ts}"${terminado ? ` data-fin="${finTiempo}"` : ''} data-tid="ktimer-${p.id}">${timerTxt(secs)}</div>
         </div>
+        ${_progresoCocina(est, /domicilio/i.test((p.tipoEntrega||'')) || !!(p.ubicacionCliente && p.ubicacionCliente.lat) || p.esSolicitudUnidad === true)}
         <div class="kcard-items">
             ${(window.agruparItems ? window.agruparItems(items) : items.map(function(i){ i.cantidad=1; return i; })).map(g=>`
                 <div class="kitem">
