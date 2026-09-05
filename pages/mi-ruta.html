@@ -696,7 +696,13 @@ function render(pedidos) {
               :
               '<div style="text-align:center;font-size:.75rem;color:#25D366;margin-bottom:.5rem;font-weight:600;">✅ Cliente compartió su ubicación</div>'
             ) +
-            '<button class="btn-maps" style="width:100%;border:1px solid rgba(66,133,244,.4);cursor:pointer;" onclick="abrirEntrega(\''+p.id+'\')">🗺️ Cómo llegar y cobrar</button>' +
+            // Dos botones separados: uno para la RUTA (cómo llegar) y otro solo para COBRAR
+            '<div style="display:flex;gap:.5rem;margin-top:.6rem;">' +
+              (mapsUrl
+                ? '<a class="btn-maps" href="'+mapsUrl+'" target="_blank" rel="noopener" style="flex:1;margin-top:0;cursor:pointer;">🧭 Cómo llegar</a>'
+                : '<button class="btn-maps" style="flex:1;margin-top:0;border:1px solid rgba(66,133,244,.4);cursor:pointer;" onclick="abrirEntrega(\''+p.id+'\')">🧭 Cómo llegar</button>') +
+              '<button style="flex:1;text-align:center;background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.45);color:#25D366;border-radius:10px;padding:.6rem;font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer;" onclick="abrirEntrega(\''+p.id+'\')">💵 Cobrar'+(p.total?(' '+p.total):'')+'</button>' +
+            '</div>' +
             '<button onclick="enviarTicketWA(\''+p.id+'\')" style="width:100%;margin-top:.5rem;padding:.55rem;background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.4);color:#25D366;border-radius:8px;font-family:inherit;font-weight:700;font-size:.8rem;cursor:pointer;">📱 Enviar ticket por WhatsApp</button>' +
             (p.fotoReferencia ? '<button onclick="_toggleFotoRuta(\''+p.id+'\')" style="width:100%;margin-top:.5rem;padding:.55rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;border-radius:8px;font-family:inherit;font-weight:700;font-size:.8rem;cursor:pointer;">📸 <span id="fotor-txt-'+p.id+'">Ver foto de referencia</span></button><div id="fotor-cont-'+p.id+'" style="display:none;margin-top:.5rem;"><img src="'+p.fotoReferencia+'" style="width:100%;border-radius:8px;" onclick="window.open(this.src)"></div>' : '') +
 
