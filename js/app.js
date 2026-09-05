@@ -426,6 +426,21 @@ async function guardarEnSheets(data) {
     } catch(e) {}
 }
 
+// ¿El que está tomando el pedido es un EMPLEADO (no un cliente)? Si hay sesión
+// de empleado/cajero, la confirmación debe ofrecer acciones de equipo (ver
+// cocina / tomar otra orden), NO "ver estado de mi pedido" (eso es de cliente).
+function _operadorEsEmpleado() {
+    try {
+        var s = (window.TT_getSesion && window.TT_getSesion());
+        if (s && s.tipo === 'empleado') return true;
+    } catch(e) {}
+    try {
+        return !!(localStorage.getItem('tt_emp_id') || localStorage.getItem('tt_cajero_id') ||
+                  localStorage.getItem('tt_cajero_nombre') || sessionStorage.getItem('tt_emp_id') ||
+                  sessionStorage.getItem('tt_cajero_id') || sessionStorage.getItem('tt_cajero_nombre'));
+    } catch(e) { return false; }
+}
+
 function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waUrl, ubicacionPrevia, itemsResumen, totalResumen) {
     const ov = document.createElement('div');
     ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;' +
@@ -451,13 +466,21 @@ function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waU
             </div>`
             : `<div style="font-size:.78rem;color:#888;margin-bottom:1.2rem;">Guarda tu número de orden para seguir el estado de tu pedido.</div>`}
             <div style="display:flex;flex-direction:column;gap:.6rem;">
-                ${window._clienteActivo ? `<a href="pages/mi-pedido.html" target="_blank" style="background:rgba(59,130,246,.15);
-                    border:1px solid rgba(59,130,246,.3);color:#3B82F6;padding:.7rem;border-radius:10px;
-                    font-size:.85rem;font-weight:700;text-decoration:none;">📦 Ver estado de mi pedido</a>` : ''}
-
-                <button id="btn-cerrar-confirmacion" style="background:rgba(255,255,255,.06);
-                    border:1px solid rgba(255,255,255,.12);color:#ccc;padding:.7rem;border-radius:10px;
-                    font-size:.85rem;font-weight:700;cursor:pointer;">Cerrar</button>
+                ${_operadorEsEmpleado()
+                    ? // ── MODO EMPLEADO: acciones de equipo ──
+                      `<a href="pages/cocina.html" style="background:rgba(251,183,36,.15);
+                          border:1px solid rgba(251,183,36,.35);color:#FBB724;padding:.7rem;border-radius:10px;
+                          font-size:.85rem;font-weight:700;text-decoration:none;">🍳 Ver cocina</a>
+                       <button id="btn-cerrar-confirmacion" style="background:linear-gradient(135deg,#FF7A33,#FF5A00);
+                          border:none;color:#fff;padding:.75rem;border-radius:10px;
+                          font-size:.9rem;font-weight:800;cursor:pointer;">🐢 Tomar nueva orden</button>`
+                    : // ── MODO CLIENTE: seguir su pedido ──
+                      `${window._clienteActivo ? `<a href="pages/mi-pedido.html" target="_blank" style="background:rgba(59,130,246,.15);
+                          border:1px solid rgba(59,130,246,.3);color:#3B82F6;padding:.7rem;border-radius:10px;
+                          font-size:.85rem;font-weight:700;text-decoration:none;">📦 Ver estado de mi pedido</a>` : ''}
+                       <button id="btn-cerrar-confirmacion" style="background:rgba(255,255,255,.06);
+                          border:1px solid rgba(255,255,255,.12);color:#ccc;padding:.7rem;border-radius:10px;
+                          font-size:.85rem;font-weight:700;cursor:pointer;">Cerrar</button>`}
             </div>
         </div>`;
     document.body.appendChild(ov);
