@@ -750,15 +750,27 @@ function render(pedidos) {
             'background:rgba(91,155,255,.12);color:#5B9BFF;border-radius:10px;font-family:inherit;' +
             'font-weight:700;font-size:.85rem;cursor:pointer;">🛵 Cambiar repartidor</button>' +
 
-            // ── Botón marcar entregado (o sello si ya está entregado) ──
+            // ── Botones de estado: En camino (paso previo) y Entregado ──
             (p.entregado
               ? '<div style="margin-top:.7rem;text-align:center;background:rgba(37,211,102,.12);' +
                 'border:1px solid rgba(37,211,102,.35);color:#25D366;border-radius:10px;padding:.7rem;' +
                 'font-weight:800;font-size:.9rem;">🎉 Orden Entregada</div>'
-              : '<button onclick="marcarEntregadoDirecto(\''+p.id+'\')" ' +
-                'style="width:100%;margin-top:.7rem;padding:.8rem;border:none;border-radius:10px;' +
-                'background:linear-gradient(135deg,#25D366,#1DA851);color:#fff;font-family:inherit;' +
-                'font-size:.9rem;font-weight:800;cursor:pointer;">✅ Marcar como Entregado</button>'
+              : (
+                  // Botón "En camino" solo si aún NO va en camino
+                  ((typeof TTEstados !== 'undefined' && !TTEstados.estaEnCamino(p.estado))
+                    ? '<button onclick="marcarEnCaminoDirecto(\''+p.id+'\')" ' +
+                      'style="width:100%;margin-top:.7rem;padding:.8rem;border:none;border-radius:10px;' +
+                      'background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;font-family:inherit;' +
+                      'font-size:.9rem;font-weight:800;cursor:pointer;">🛵 Marcar en camino</button>'
+                    : '<div style="margin-top:.7rem;text-align:center;background:rgba(59,130,246,.12);' +
+                      'border:1px solid rgba(59,130,246,.35);color:#5B9BFF;border-radius:10px;padding:.6rem;' +
+                      'font-weight:800;font-size:.85rem;">🛵 En camino al cliente</div>') +
+                  // Botón "Marcar como Entregado"
+                  '<button onclick="marcarEntregadoDirecto(\''+p.id+'\')" ' +
+                  'style="width:100%;margin-top:.5rem;padding:.8rem;border:none;border-radius:10px;' +
+                  'background:linear-gradient(135deg,#25D366,#1DA851);color:#fff;font-family:inherit;' +
+                  'font-size:.9rem;font-weight:800;cursor:pointer;">✅ Marcar como Entregado</button>'
+                )
             ) +
         '</div>';
     }).join('');
@@ -1247,6 +1259,20 @@ window._confirmarAsignarRep = async function(repId, repNom) {
     } catch(e) {
         console.error(e);
         alert('No se pudo asignar. Intenta de nuevo.');
+    }
+};
+
+// Marcar EN CAMINO desde la tarjeta (paso previo a Entregado).
+window.marcarEnCaminoDirecto = async function(pedidoId) {
+    if (!pedidoId) return;
+    try {
+        await updateDoc(doc(db, 'pedidos', pedidoId), {
+            estado: TTEstados.ESTADOS.EN_CAMINO.etiqueta,
+            'tiempos.enCamino': Date.now()
+        });
+        if (window.ttAlert) window.ttAlert('🛵 Orden marcada EN CAMINO. El cliente ya lo ve.');
+    } catch(err) {
+        alert('Error al marcar en camino. Revisa tu conexión.');
     }
 };
 
