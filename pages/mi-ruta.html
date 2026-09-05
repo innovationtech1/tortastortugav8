@@ -69,6 +69,22 @@
   .pc-orden-lbl { font-size:.72rem; color:#888; text-transform:uppercase; letter-spacing:.05em; }
   .pc-orden-val { font-size:1.1rem; font-weight:900; color:#25D366; letter-spacing:.05em; }
   .pc-fecha { font-size:.75rem; color:#888; margin-bottom:.5rem; }
+  /* ── Stepper de seguimiento (círculos de estado), igual que "Mi Orden" ── */
+  .tt-stepper{position:relative;display:flex;margin:.8rem 0 .6rem;}
+  .tt-stepper .tt-track-bg,.tt-stepper .tt-track-fill{position:absolute;top:15px;height:3px;border-radius:3px;z-index:0;}
+  .tt-stepper .tt-track-bg{background:rgba(255,255,255,.10);}
+  .tt-stepper .tt-track-fill{background:var(--primary,#FF5A00);transition:width .5s ease;}
+  .tt-step{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;align-items:center;gap:.3rem;}
+  .tt-step-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:.95rem;background:#242424;border:2px solid rgba(255,255,255,.15);color:#888;transition:all .3s ease;}
+  .tt-step.done .tt-step-dot{background:var(--primary,#FF5A00);border-color:var(--primary,#FF5A00);color:#fff;}
+  .tt-step.current .tt-step-dot{background:var(--primary,#FF5A00);border-color:#fff;color:#fff;
+    box-shadow:0 0 0 4px rgba(255,90,0,.28);animation:ttStepPulse 1.4s infinite;}
+  .tt-step-lbl{font-size:.56rem;font-weight:800;text-align:center;color:#777;line-height:1.15;max-width:64px;
+    text-transform:uppercase;letter-spacing:.02em;}
+  .tt-step.done .tt-step-lbl{color:#bbb;}
+  .tt-step.current .tt-step-lbl{color:var(--primary,#FF5A00);}
+  @keyframes ttStepPulse{0%,100%{box-shadow:0 0 0 4px rgba(255,90,0,.28);}50%{box-shadow:0 0 0 8px rgba(255,90,0,.10);}}
   .pc-linea { font-size:.82rem; color:#ccc; margin:.2rem 0; display:flex; gap:.4rem; }
   .pc-pago {
     display:inline-block; font-size:.78rem; font-weight:800; padding:.35rem .7rem;
@@ -210,6 +226,7 @@ html { -webkit-text-size-adjust: 100%; }
   <div id="mapa-entrega"></div>
   <div class="ve-body">
     <div class="ve-orden">
+      <div id="ve-stepper"></div>
       <div class="ve-dato" id="ve-dir-row">📍 <span id="ve-dir">—</span></div>
       <div class="ve-dato" id="ve-tel-row">📞 <span id="ve-tel">—</span></div>
       <div class="ve-dato" id="ve-hora-row">🕐 <span id="ve-hora">—</span></div>
@@ -489,6 +506,33 @@ function _fechaMiOrden(p) {
            ' · ' + cd.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
 }
 
+// Stepper de seguimiento (círculos de estado), idéntico al de "Mi Orden".
+function _progresoRuta(estado, esDomicilio) {
+    if (typeof TTEstados === 'undefined') return '';
+    if (TTEstados.estaCancelado(estado)) {
+        return '<div style="text-align:center;color:#EF9A9A;font-weight:800;font-size:.85rem;margin:.6rem 0;">❌ Pedido cancelado</div>';
+    }
+    var pasos = [['NUEVO','📝','Recibido'],['EN_COCINA','🧑‍🍳','Preparando'],['LISTO','✅','Listo']];
+    if (esDomicilio) pasos.push(['EN_CAMINO','🛵','En camino']);
+    pasos.push(['ENTREGADO','🎉','Entregado']);
+    var ordRango = TTEstados.rango(estado);
+    var actual = -1;
+    pasos.forEach(function(p,i){ if (TTEstados.ESTADOS[p[0]].rango <= ordRango) actual = i; });
+    var N = pasos.length;
+    var trackLeft = 50 / N, trackWidth = 100 - 100 / N;
+    var fillFrac = (N > 1 && actual > 0) ? (actual / (N - 1)) : 0;
+    var fillWidth = trackWidth * fillFrac;
+    var html = '<div class="tt-stepper">' +
+        '<div class="tt-track-bg" style="left:'+trackLeft+'%;width:'+trackWidth+'%;"></div>' +
+        '<div class="tt-track-fill" style="left:'+trackLeft+'%;width:'+fillWidth+'%;"></div>';
+    pasos.forEach(function(p,i){
+        var cls = i < actual ? 'done' : (i === actual ? 'current' : '');
+        var ico = i < actual ? '✓' : p[1];
+        html += '<div class="tt-step '+cls+'"><div class="tt-step-dot">'+ico+'</div><div class="tt-step-lbl">'+p[2]+'</div></div>';
+    });
+    return html + '</div>';
+}
+
 function esMiPedido(p) {
     if (p.repartidorId && miId && p.repartidorId === miId) return true;
     // Respaldo por nombre (por si el id no coincide exactamente)
@@ -634,6 +678,8 @@ function render(pedidos) {
             // N° de orden (caja verde) + fecha + zona, mismo formato que "Mi Orden"
             '<div class="pc-orden-box"><span class="pc-orden-lbl">N° de orden:</span><span class="pc-orden-val">#'+folio+'</span></div>' +
             (_fechaMiOrden(p)?'<div class="pc-fecha">🗓️ '+_fechaMiOrden(p)+(p.zonaEntregaNombre?(' · 📍 '+p.zonaEntregaNombre):'')+'</div>':'') +
+            // Círculos de seguimiento del estado
+            _progresoRuta(p.estado, true) +
             (p.telefono ? '<div class="pc-linea">📞 <a href="tel:'+p.telefono+'" style="color:#5B9BFF;">'+p.telefono+'</a></div>' : '') +
             (dir ? '<div class="pc-linea">📍 '+dir+'</div>' : '') +
             (p.horarioEntregaEtiqueta ? '<div class="pc-linea">🕐 '+p.horarioEntregaEtiqueta+'</div>' : '') +
@@ -934,6 +980,8 @@ window.abrirEntrega = function(pedidoId) {
         '<span class="pc-folio-chip">' + folio + '</span>' +
         '<span style="margin-left:.5rem;color:#888;font-size:.8rem;">N° de orden: #' + codigoOrd +
         (p.zonaEntregaNombre ? (' · 📍 ' + p.zonaEntregaNombre) : '') + '</span>';
+    var _veStep = document.getElementById('ve-stepper');
+    if (_veStep) _veStep.innerHTML = _progresoRuta(p.estado, true);
     document.getElementById('ve-dir').textContent = dir || 'Sin dirección';
     document.getElementById('ve-dir-row').style.display = dir ? 'flex' : 'none';
     document.getElementById('ve-tel').innerHTML = p.telefono ? '<a href="tel:'+p.telefono+'" style="color:#5B9BFF;">'+p.telefono+'</a>' : '—';
