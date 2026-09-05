@@ -239,6 +239,10 @@ let descartados = new Set(); // pedidos que este repartidor descartó (solo en s
 // Variables del mapa (declaradas temprano para que initMapaDisp pueda usarlas)
 let _mapa = null, _capaClientes = null, _marcadorYo = null;
 let _miPos = null; // {lat, lng} del repartidor
+// Origen BASE (tienda / centro de operación en San Antonio). Se usa como
+// respaldo para estimar distancia/tiempo cuando el GPS del repartidor aún no
+// está activo, así la tarjeta SIEMPRE muestra un aproximado.
+const _ORIGEN_BASE = { lat: 29.4241, lng: -98.4936 };
 
 if (!miId && !miNombre) {
     document.getElementById('lista-disp').innerHTML =
@@ -702,23 +706,26 @@ function distanciaKm(lat1, lng1, lat2, lng2) {
 
 // Texto de distancia para un pedido (si hay ubicación del repartidor y del cliente)
 // ── Tiempo estimado de llegada (según distancia) ──
-function minutosEstimados(p) {
-    if (!_miPos) return null;
+function minutosEstimados(p, permitirBase) {
+    // Origen: GPS del repartidor si está activo; si no, la base (aproximado).
+    var origen = _miPos || (permitirBase ? _ORIGEN_BASE : null);
+    if (!origen) return null;
     var lat = p.ubicacionCliente && p.ubicacionCliente.lat;
     var lng = p.ubicacionCliente && p.ubicacionCliente.lng;
     if (!lat || !lng) return null;
-    var km = distanciaKm(_miPos.lat, _miPos.lng, lat, lng);
+    var km = distanciaKm(origen.lat, origen.lng, lat, lng);
     var mi = km * 0.621371;
     // Velocidad promedio urbana ~18.6 mph → minutos
     var min = (mi / 18.6) * 60;
     return Math.max(1, Math.round(min));
 }
 function textoTiempo(p) {
-    var min = minutosEstimados(p);
+    var min = minutosEstimados(p, true);   // permitir la base como respaldo
     if (min == null) return '';
-    if (min < 60) return '~' + min + ' min';
+    var suf = _miPos ? '' : ' aprox';       // sin GPS en vivo → marcar aprox
+    if (min < 60) return '~' + min + ' min' + suf;
     var h = Math.floor(min/60), m = min%60;
-    return '~' + h + 'h' + (m ? ' ' + m + 'min' : '');
+    return '~' + h + 'h' + (m ? ' ' + m + 'min' : '') + suf;
 }
 
 // ── Tarifa sugerida según tiempo de llegada ──
@@ -785,13 +792,15 @@ function _detectarZona(a) {
 }
 
 function textoDistancia(p) {
-    if (!_miPos) return '';
+    // Origen: GPS del repartidor si está activo; si no, la base (aproximado).
+    const origen = _miPos || _ORIGEN_BASE;
     const lat = p.ubicacionCliente && p.ubicacionCliente.lat;
     const lng = p.ubicacionCliente && p.ubicacionCliente.lng;
     if (!lat || !lng) return '';
-    const km = distanciaKm(_miPos.lat, _miPos.lng, lat, lng);
+    const km = distanciaKm(origen.lat, origen.lng, lat, lng);
     const mi = km * 0.621371; // a millas (San Antonio, TX)
-    return mi < 0.2 ? 'muy cerca' : ('~' + mi.toFixed(1) + ' mi');
+    const suf = _miPos ? '' : ' aprox';
+    return (mi < 0.2 && _miPos) ? 'muy cerca' : ('~' + mi.toFixed(1) + ' mi' + suf);
 }
 
 // Pinta los pines de los clientes con pedidos disponibles
