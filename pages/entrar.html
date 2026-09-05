@@ -140,8 +140,9 @@ html { -webkit-text-size-adjust: 100%; }
 
                     <!-- Teléfono (solo si entró con Google y aún no lo tenemos) -->
                     <div id="ubi-telefono-wrap" style="display:none;margin-bottom:1rem;">
-                        <label class="field-label" style="display:block;margin-bottom:.35rem;">📞 Tu teléfono <span style="color:#888;font-weight:400;">(para que el repartidor te llame)</span></label>
-                        <input type="tel" id="ubi-telefono" class="field-input" inputmode="tel" placeholder="210-555-1234" autocomplete="off">
+                        <label class="field-label" style="display:block;margin-bottom:.35rem;">📞 Tu teléfono <span style="color:#F44336;font-weight:700;">*</span> <span style="color:#888;font-weight:400;">(obligatorio, para que el repartidor te llame)</span></label>
+                        <input type="tel" id="ubi-telefono" class="field-input" inputmode="tel" placeholder="210-555-1234" autocomplete="off" required
+                               oninput="var s=document.getElementById('ubi-tel-status'); if(s) s.style.display='none'; this.style.borderColor='';">
                         <div id="ubi-tel-status" class="auth-message" style="display:none;margin-top:.4rem;"></div>
                     </div>
 
@@ -745,9 +746,53 @@ window.quitarFotoRef = function() {
     if (botones) botones.style.display = 'flex';
 };
 
-window.compartirMiUbicacion = function() {
+// ── Teléfono OBLIGATORIO para clientes de Google sin teléfono guardado ──
+// Devuelve true si ya hay teléfono (o no se requiere aquí). Si el campo está
+// visible y el número es inválido, muestra el error, enfoca el campo y
+// devuelve false para BLOQUEAR que se avance con el pedido.
+async function _requerirTelefonoInline() {
+    var wrap = document.getElementById('ubi-telefono-wrap');
+    // Si el campo no está visible, es que ya tenemos teléfono (entrada por
+    // teléfono, o cliente de Google con teléfono guardado). Nada que validar.
+    if (!wrap || wrap.style.display === 'none') return true;
+
+    var tinp = document.getElementById('ubi-telefono');
+    var tel = ((tinp && tinp.value) || '').replace(/[^0-9]/g, '');
+
+    if (!tel) {
+        showStatus('ubi-tel-status', '📱 Tu teléfono es obligatorio para que el repartidor te llame.', 'error');
+        if (tinp) { tinp.focus(); tinp.style.borderColor = '#F44336'; }
+        return false;
+    }
+    if (tel.length !== 10 || tel[0] === '0' || tel[0] === '1' || TELEFONOS_FALSOS.indexOf(tel) >= 0) {
+        showStatus('ubi-tel-status', '📱 Escribe un teléfono válido de 10 dígitos.', 'error');
+        if (tinp) { tinp.focus(); tinp.style.borderColor = '#F44336'; }
+        return false;
+    }
+
+    // Válido → guardarlo en la sesión y en el perfil para no volver a pedirlo.
+    var nombre = (_datosCliente && _datosCliente.nombre) || sessionStorage.getItem('tt_cliente_nombre') || '';
+    var uidG = sessionStorage.getItem('tt_cliente_uid');
+    var fotoG = sessionStorage.getItem('tt_cliente_foto');
+    var emailG = sessionStorage.getItem('tt_cliente_email');
+    guardarSesionCliente(nombre, tel, uidG, fotoG, emailG);
+    if (_datosCliente) _datosCliente.telefono = tel;
+    // Guardar en el perfil sin bloquear la UI (fire-and-forget).
+    if (uidG) { try { setDoc(doc(db, 'usuarios', uidG), { telefono: tel }, { merge: true }).catch(function(){}); } catch(e){} }
+    try { setDoc(doc(db, 'clientes', 'cliente_' + tel), { nombre: nombre, telefono: tel, ultimoAcceso: new Date().toISOString(), visitas: increment(1) }, { merge: true }).catch(function(){}); } catch(e){}
+    if (tinp) tinp.style.borderColor = '';
+    hideMsg('ubi-tel-status');
+    if (wrap) wrap.style.display = 'none';
+    return true;
+}
+
+function hideMsg(id) { var e = document.getElementById(id); if (e) e.style.display = 'none'; }
+
+window.compartirMiUbicacion = async function() {
     var estadoEl = document.getElementById('ubi-estado');
     var btnEl = document.getElementById('btn-ubicacion');
+    // El teléfono es obligatorio ANTES de compartir ubicación / avanzar.
+    if (!(await _requerirTelefonoInline())) return;
     if (!navigator.geolocation) {
         showStatus('status-2', 'Tu navegador no soporta ubicación. Puedes continuar sin ella.', 'error');
         return;
@@ -871,33 +916,13 @@ window.confirmarUbicacionYHorario = async function() {
 
     var btnEl = document.getElementById('btn-ubicacion');
 
-    // Leer datos del cliente y ubicación
+    // El teléfono es OBLIGATORIO: si el campo sigue visible y no es válido,
+    // no se puede crear la solicitud.
+    if (!(await _requerirTelefonoInline())) return;
+
+    // Leer datos del cliente y ubicación (ya con el teléfono garantizado)
     var nombre = (_datosCliente && _datosCliente.nombre) || sessionStorage.getItem('tt_cliente_nombre') || '';
     var telefono = (_datosCliente && _datosCliente.telefono) || sessionStorage.getItem('tt_cliente_telefono') || '';
-
-    // Cliente de Google que aún no dio su teléfono → tomarlo del campo inline
-    if (!telefono) {
-        var tinp = document.getElementById('ubi-telefono');
-        var tel = ((tinp && tinp.value) || '').replace(/[^0-9]/g, '');
-        if (tel.length !== 10 || tel[0] === '0' || tel[0] === '1' || TELEFONOS_FALSOS.indexOf(tel) >= 0) {
-            showStatus('ubi-tel-status', '📱 Escribe un teléfono válido de 10 dígitos para que el repartidor te llame.', 'error');
-            var tw = document.getElementById('ubi-telefono-wrap');
-            if (tw) tw.style.display = 'block';
-            if (tinp) tinp.focus();
-            return;
-        }
-        telefono = tel;
-        var uidG = sessionStorage.getItem('tt_cliente_uid');
-        var fotoG = sessionStorage.getItem('tt_cliente_foto');
-        var emailG = sessionStorage.getItem('tt_cliente_email');
-        guardarSesionCliente(nombre, telefono, uidG, fotoG, emailG);
-        if (_datosCliente) _datosCliente.telefono = telefono;
-        // Guardar el teléfono en el perfil (usuarios) y en clientes
-        if (uidG) { try { await setDoc(doc(db, 'usuarios', uidG), { telefono: telefono }, { merge: true }); } catch(e){} }
-        try { await setDoc(doc(db, 'clientes', 'cliente_' + telefono), { nombre: nombre, telefono: telefono, ultimoAcceso: new Date().toISOString(), visitas: increment(1) }, { merge: true }); } catch(e){}
-        var twh = document.getElementById('ubi-telefono-wrap');
-        if (twh) twh.style.display = 'none';
-    }
 
     if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '<span class="btn-text">Enviando solicitud…</span>'; }
 
