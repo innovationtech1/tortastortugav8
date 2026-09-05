@@ -92,11 +92,11 @@
     display:block; text-align:center; margin-top:1rem; color:#FF5A00;
     font-weight:700; font-size:.85rem; text-decoration:none;
   }
-  /* ── Ticket + Stepper de seguimiento (igual que "Mi Orden") ── */
-  .pn-ticket{background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:10px;
-    padding:.5rem .7rem;margin:.5rem 0;display:flex;align-items:center;justify-content:space-between;gap:.5rem;}
-  .pn-ticket .pn-tk-lbl{font-size:.68rem;color:#888;text-transform:uppercase;letter-spacing:.05em;}
-  .pn-ticket .pn-tk-val{font-size:1.05rem;font-weight:900;color:#25D366;letter-spacing:.04em;}
+  /* ── Ticket (folio) arriba a la izquierda + Stepper (igual que "Mi Orden") ── */
+  .pn-folio-top{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.5rem;}
+  .pn-folio{font-size:1.05rem;font-weight:900;color:var(--primary,#FF5A00);letter-spacing:.02em;}
+  .pn-folio-estado{font-size:.62rem;font-weight:800;padding:.25rem .6rem;border-radius:20px;text-transform:uppercase;
+    letter-spacing:.03em;background:rgba(91,155,255,.15);color:#5B9BFF;flex-shrink:0;}
   .tt-stepper{position:relative;display:flex;margin:.9rem 0 .5rem;}
   .tt-stepper .tt-track-bg,.tt-stepper .tt-track-fill{position:absolute;top:15px;height:3px;border-radius:3px;z-index:0;}
   .tt-stepper .tt-track-bg{background:rgba(255,255,255,.10);}
@@ -906,6 +906,11 @@ function render(disp) {
         const folio = p.codigoOrden || (p.id ? p.id.slice(-4).toUpperCase() : (p.folioStr||''));
         const zona = p.zonaEntregaNombre || 'Sin zona';
         return '<div class="pedido-nuevo">' +
+            // Ticket (folio) arriba a la izquierda + estado, igual que "Mi Orden"
+            '<div class="pn-folio-top">' +
+              '<span class="pn-folio">' + (p.folioStr || ('#' + folio)) + '</span>' +
+              (typeof TTEstados !== 'undefined' ? '<span class="pn-folio-estado">' + TTEstados.corto(p.estado) + '</span>' : '') +
+            '</div>' +
             '<div class="pn-zona" id="pn-zona-' + p.id + '">📍 ' + zona + '</div>' +
             (textoDistancia(p) ? '<span class="pn-distancia">🚗 ' + textoDistancia(p) + '</span>' : '') +
             '<div class="pn-top">' +
@@ -919,8 +924,6 @@ function render(disp) {
             _listaProductos(p) +
             _fotoReferencia(p) +
             ((p.horarioAgendado || p.horarioEntregaEtiqueta) ? '<div class="pn-linea" style="color:#FBB724;font-weight:700;">🕐 Agendado: ' + (p.horarioAgendado || p.horarioEntregaEtiqueta) + '</div>' : '') +
-            // Ticket (folio) + N° de orden, como en "Mi Orden" del cliente
-            '<div class="pn-ticket"><span class="pn-tk-lbl">🎟️ Ticket</span><span class="pn-tk-val">' + (p.folioStr || ('#' + folio)) + '</span></div>' +
             '<div class="pn-linea" style="color:#888;">N° de orden: #' + folio + '</div>' +
             (_fechaIngreso(p) ? '<div class="pn-linea" style="color:#888;font-size:.75rem;">🕐 Ingresó: ' + _fechaIngreso(p) + '</div>' : '') +
             // Barra de seguimiento (círculos de estado)
