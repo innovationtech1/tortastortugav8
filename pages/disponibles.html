@@ -243,6 +243,9 @@ let _miPos = null; // {lat, lng} del repartidor
 // respaldo para estimar distancia/tiempo cuando el GPS del repartidor aún no
 // está activo, así la tarjeta SIEMPRE muestra un aproximado.
 const _ORIGEN_BASE = { lat: 29.4241, lng: -98.4936 };
+// Posiciones recientes de tortumóviles (colección 'ubicaciones').
+let _tortumoviles = [];                       // [{id, lat, lng, actualizado}]
+const _TORTU_VIGENCIA_MS = 15 * 60 * 1000;    // 15 min de vigencia
 
 if (!miId && !miNombre) {
     document.getElementById('lista-disp').innerHTML =
@@ -699,6 +702,7 @@ function iniciarUbicacion() {
         est.className = 'mapa-estado ok';
         est.innerHTML = '🚚 Tu tortumóvil está en el mapa · ubicación activa';
         render(_ultimaLista);
+        _actualizarEtas();   // refrescar distancia/tiempo con la nueva posición
         if (_mapa) _mapa.invalidateSize();
     }, function(err){
         // Mensaje claro según el tipo de error
@@ -753,11 +757,30 @@ function distanciaKm(lat1, lng1, lat2, lng2) {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-// Texto de distancia para un pedido (si hay ubicación del repartidor y del cliente)
-// ── Tiempo estimado de llegada (según distancia) ──
+// Origen para estimar la llegada: la TORTUMÓVIL más cercana al cliente; si no
+// hay tortumóviles activas, el GPS de este equipo; y si tampoco, la base.
+function _origenParaPedido(p, permitirBase) {
+    var clat = p.ubicacionCliente && p.ubicacionCliente.lat;
+    var clng = p.ubicacionCliente && p.ubicacionCliente.lng;
+    var ahora = Date.now();
+    var vivos = _tortumoviles.filter(function(t){
+        return (!t.actualizado || (ahora - t.actualizado) < _TORTU_VIGENCIA_MS);
+    });
+    if (clat && clng && vivos.length) {
+        var mejor = null, mejorKm = Infinity;
+        vivos.forEach(function(t){
+            var km = distanciaKm(t.lat, t.lng, clat, clng);
+            if (km < mejorKm) { mejorKm = km; mejor = t; }
+        });
+        if (mejor) return { lat: mejor.lat, lng: mejor.lng };
+    }
+    if (_miPos) return { lat: _miPos.lat, lng: _miPos.lng };
+    return permitirBase ? { lat: _ORIGEN_BASE.lat, lng: _ORIGEN_BASE.lng } : null;
+}
+
+// ── Tiempo estimado de llegada (según distancia desde la tortumóvil más cercana) ──
 function minutosEstimados(p, permitirBase) {
-    // Origen: GPS del repartidor si está activo; si no, la base (aproximado).
-    var origen = _miPos || (permitirBase ? _ORIGEN_BASE : null);
+    var origen = _origenParaPedido(p, permitirBase);
     if (!origen) return null;
     var lat = p.ubicacionCliente && p.ubicacionCliente.lat;
     var lng = p.ubicacionCliente && p.ubicacionCliente.lng;
@@ -769,9 +792,9 @@ function minutosEstimados(p, permitirBase) {
     return Math.max(1, Math.round(min));
 }
 function textoTiempo(p) {
-    var min = minutosEstimados(p, true);   // permitir la base como respaldo
+    var min = minutosEstimados(p, true);   // desde la tortumóvil más cercana
     if (min == null) return '';
-    var suf = _miPos ? '' : ' aprox';       // sin GPS en vivo → marcar aprox
+    var suf = ' aprox';                     // estimado (distancia en línea recta)
     if (min < 60) return '~' + min + ' min' + suf;
     var h = Math.floor(min/60), m = min%60;
     return '~' + h + 'h' + (m ? ' ' + m + 'min' : '') + suf;
@@ -841,15 +864,14 @@ function _detectarZona(a) {
 }
 
 function textoDistancia(p) {
-    // Origen: GPS del repartidor si está activo; si no, la base (aproximado).
-    const origen = _miPos || _ORIGEN_BASE;
+    // Origen: la tortumóvil más cercana al cliente (o GPS/base como respaldo).
+    const origen = _origenParaPedido(p, true);
     const lat = p.ubicacionCliente && p.ubicacionCliente.lat;
     const lng = p.ubicacionCliente && p.ubicacionCliente.lng;
-    if (!lat || !lng) return '';
+    if (!origen || !lat || !lng) return '';
     const km = distanciaKm(origen.lat, origen.lng, lat, lng);
     const mi = km * 0.621371; // a millas (San Antonio, TX)
-    const suf = _miPos ? '' : ' aprox';
-    return (mi < 0.2 && _miPos) ? 'muy cerca' : ('~' + mi.toFixed(1) + ' mi' + suf);
+    return '~' + mi.toFixed(1) + ' mi aprox';
 }
 
 // Pinta los pines de los clientes con pedidos disponibles
@@ -916,6 +938,29 @@ async function escuchar() {
     }, err => {
         document.getElementById('lista-disp').innerHTML =
             '<div class="vacio"><div class="emo">⚠️</div>No se pudo conectar. Revisa tu internet.</div>';
+    });
+
+    // Posiciones de las tortumóviles (para estimar distancia/tiempo con la más
+    // cercana al cliente). Se re-renderiza al actualizarse para refrescar los ETAs.
+    onSnapshot(collection(db, 'ubicaciones'), snap => {
+        _tortumoviles = snap.docs.map(d => {
+            var u = d.data() || {};
+            return { id: d.id, lat: u.lat, lng: u.lng, actualizado: u.actualizado || 0 };
+        }).filter(function(t){ return typeof t.lat === 'number' && typeof t.lng === 'number'; });
+        _actualizarEtas();   // refresca distancia/tiempo sin reconstruir la tarjeta
+    }, function(){ /* si falla, se usa la base como respaldo */ });
+}
+
+// Actualiza la distancia y el tiempo estimado de cada tarjeta en su lugar
+// (sin re-render, para no cerrar la foto abierta ni parpadear).
+function _actualizarEtas() {
+    (_ultimaLista || []).forEach(function(p){
+        var d = textoDistancia(p);
+        var elD = document.getElementById('pn-dist-' + p.id);
+        if (elD) { elD.style.display = d ? '' : 'none'; elD.innerHTML = '🚗 ' + d; }
+        var t = textoTiempo(p);
+        var elT = document.getElementById('pn-eta-' + p.id);
+        if (elT) { elT.style.display = t ? '' : 'none'; elT.innerHTML = '⏱️ Llegada aprox: ' + t; }
     });
 }
 
@@ -995,13 +1040,13 @@ function render(disp) {
             '<div class="pn-orden-box"><span class="pn-orden-lbl">N° de orden:</span><span class="pn-orden-val">#' + folio + '</span></div>' +
             (_fechaMiOrden(p) ? '<div class="pn-fecha">🗓️ ' + _fechaMiOrden(p) + '</div>' : '') +
             '<div class="pn-zona" id="pn-zona-' + p.id + '">📍 ' + zona + '</div>' +
-            (textoDistancia(p) ? '<span class="pn-distancia">🚗 ' + textoDistancia(p) + '</span>' : '') +
+            '<span class="pn-distancia" id="pn-dist-' + p.id + '"' + (textoDistancia(p) ? '' : ' style="display:none;"') + '>🚗 ' + textoDistancia(p) + '</span>' +
             '<div class="pn-top">' +
               '<div class="pn-cliente">' + (p.cliente || p.nombre || 'Cliente') + '</div>' +
               '<div class="pn-total">' + (p.total || '') + '</div>' +
             '</div>' +
             (p.telefono ? '<div class="pn-linea">📞 <a href="tel:'+p.telefono+'">'+p.telefono+'</a></div>' : '') +
-            (textoTiempo(p) ? '<div class="pn-linea" style="color:#5B9BFF;">⏱️ Llegada aprox: ' + textoTiempo(p) + '</div>' : '') +
+            '<div class="pn-linea" id="pn-eta-' + p.id + '" style="color:#5B9BFF;' + (textoTiempo(p) ? '' : 'display:none;') + '">⏱️ Llegada aprox: ' + textoTiempo(p) + '</div>' +
             ((p.ubicacionCliente && p.ubicacionCliente.lat) ? '<div class="pn-linea" id="pn-dir-' + p.id + '" style="color:#aaa;font-size:.8rem;">🏠 buscando dirección…</div>' : '') +
             _tarifaLinea(p) +
             _listaProductos(p) +
