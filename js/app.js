@@ -352,7 +352,7 @@ async function guardarPedidoFirebase(data, metodoPago) {
                 // confirmación, igual que en el seguimiento del cliente).
                 var _folioSol = '';
                 try { var _snapSol = await getDoc(doc(db, 'pedidos', _solId)); if (_snapSol.exists()) _folioSol = _snapSol.data().folioStr || ''; } catch(e){}
-                return { id: _solId, ticket: (_folioSol || _solId.slice(-4)), folioStr: _folioSol };
+                return { id: _solId, ticket: (_folioSol || _solId.slice(-4)), folioStr: _folioSol, totalFinal: totalConCargo, cargoServicio: 5 };
             } catch(errSol) {
                 console.error('Error actualizando solicitud, se creará pedido normal:', errSol);
                 // Si falla, sigue el flujo normal (crear pedido nuevo)
@@ -410,7 +410,7 @@ async function guardarPedidoFirebase(data, metodoPago) {
             } catch(e){ console.warn('Puntos no actualizados:', e.message); }
         }
 
-        return { id: ref.id, ticket: ticketId, folioStr: ticketId };
+        return { id: ref.id, ticket: ticketId, folioStr: ticketId, totalFinal: (data.totalNum || 0) };
     } catch(e) {
         console.warn('Firebase save error:', e);
         return null;
@@ -490,6 +490,7 @@ function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waU
             ${itemsResumen ? `<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:.9rem;margin-bottom:1rem;text-align:left;">
                 <div style="font-size:.72rem;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">🛍️ Tu pedido</div>
                 ${(window.agruparItems ? window.agruparItems((itemsResumen||'').split(' | ').filter(Boolean).map(function(t){ return { nombre: t.replace(/ - \$[\d.]+$/, '').replace(/^\d+x?\s*/, ''), precio: 0, cantidad: (t.match(/^(\d+)x/) ? parseInt(t.match(/^(\d+)x/)[1]) : 1) }; })).map(function(g){ return '<div style=\'font-size:.85rem;color:#ddd;padding:.15rem 0;\'>• <b style=\'color:#FF7A33;\'>' + g.cantidad + '×</b> ' + g.nombre + '</div>'; }).join('') : (itemsResumen||'').split(' | ').filter(Boolean).map(function(t){ return '<div style=\'font-size:.85rem;color:#ddd;padding:.15rem 0;\'>• ' + t + '</div>'; }).join(''))}
+                ${(opts && opts.cargoServicio > 0) ? `<div style="display:flex;justify-content:space-between;font-size:.8rem;color:#FBB724;margin-top:.4rem;"><span>🛵 Envío a domicilio</span><span>$${Number(opts.cargoServicio).toFixed(2)}</span></div>` : ''}
                 ${totalResumen ? `<div style="border-top:1px solid rgba(255,255,255,.1);margin-top:.5rem;padding-top:.5rem;display:flex;justify-content:space-between;font-weight:800;"><span style="color:#fff;">Total</span><span style="color:#25D366;">$${Number(totalResumen).toFixed(2)}</span></div>` : ''}
             </div>`
             : `<div style="font-size:.78rem;color:#888;margin-bottom:1.2rem;">Guarda tu número de orden para seguir el estado de tu pedido.</div>`}
@@ -1835,8 +1836,9 @@ window.enviarTodasLasCuentas = async function() {
         // Confirmación en pantalla: pasa la URL de WhatsApp y el tipo para
         // que el modal decida si habilita el botón de una vez (pickup) o
         // solo tras compartir ubicación (domicilio).
-        mostrarConfirmacionTicket(ticket, nombre, result ? result.id : null, tipo, waUrl, data.ubicacionCliente || null, itemsStr, totalGen,
-            { ubicacionPendiente: _ubicPendiente, telefonoCliente: telefono, folioStr: (result && result.folioStr) || '' });
+        var _totalMostrar = (result && result.totalFinal != null) ? result.totalFinal : totalGen;
+        mostrarConfirmacionTicket(ticket, nombre, result ? result.id : null, tipo, waUrl, data.ubicacionCliente || null, itemsStr, _totalMostrar,
+            { ubicacionPendiente: _ubicPendiente, telefonoCliente: telefono, folioStr: (result && result.folioStr) || '', cargoServicio: (result && result.cargoServicio) || 0 });
     } catch (e) {
         console.error('Error al enviar orden:', e);
         alert('❌ Error al enviar la orden:\n' + (e.message || e) + '\n\nRevisa que tengas conexión a internet.');
