@@ -397,11 +397,60 @@ function detenerAlarma() {
 }
 
 // ── Descartar (solo lo oculta en la pantalla de este repartidor) ──
+// Descartar: antes de quitar el pedido de la lista, ofrecemos avisarle al
+// cliente por WhatsApp (muchas órdenes / sin servicio en su zona).
 window.descartarPedido = function(id) {
-    descartados.add(id);
     detenerAlarma();
-    render(_ultimaLista);
+    var p = (_ultimaLista || []).find(function(x){ return x.id === id; }) || {};
+    var tel = String(p.telefono || '').replace(/[^0-9]/g, '');
+    var nombre = (p.cliente || p.nombre || '').toString();
+    _mostrarModalDescartar(id, tel, nombre);
 };
+
+function _finalizarDescartar(id) {
+    descartados.add(id);
+    var ov = document.getElementById('descartar-modal');
+    if (ov) ov.remove();
+    render(_ultimaLista);
+}
+
+// Envía el mensaje al cliente por WhatsApp (si hay teléfono) y descarta.
+window._descartarConMensaje = function(id, tel, nombre, tipo) {
+    var saludo = nombre ? ('Hola ' + nombre.split(' ')[0] + '! ') : 'Hola! ';
+    var msg;
+    if (tipo === 'ocupados') {
+        msg = saludo + 'Gracias por tu pedido en Tortas Tortuga 🐢. En este momento tenemos muchas órdenes y no podemos tomar la tuya. Por favor intenta ordenar más tarde. ¡Gracias por tu paciencia! 🙏';
+    } else {
+        msg = saludo + 'Gracias por tu pedido en Tortas Tortuga 🐢. Por el momento tu ubicación no cuenta con servicio de entrega. Por favor intenta más tarde. ¡Disculpa las molestias!';
+    }
+    var num = String(tel || '').replace(/[^0-9]/g, '');
+    if (num.length === 10) num = '1' + num;
+    if (num) window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank');
+    else if (window.ttAlert) window.ttAlert('Este pedido no tiene teléfono para avisar al cliente.');
+    _finalizarDescartar(id);
+};
+
+function _mostrarModalDescartar(id, tel, nombre) {
+    var prev = document.getElementById('descartar-modal');
+    if (prev) prev.remove();
+    var ov = document.createElement('div');
+    ov.id = 'descartar-modal';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:10060;background:rgba(0,0,0,.78);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:1.2rem;';
+    var nm = String(nombre || '').replace(/'/g, '');
+    ov.innerHTML =
+        '<div style="background:#1a1a1a;border:1px solid rgba(255,90,0,.35);border-radius:18px;max-width:400px;width:100%;padding:1.3rem;box-shadow:0 12px 40px rgba(0,0,0,.6);">' +
+            '<div style="text-align:center;font-size:2rem;margin-bottom:.3rem;">📤</div>' +
+            '<div style="text-align:center;font-size:1.02rem;font-weight:900;color:#fff;margin-bottom:.3rem;">Avisar al cliente</div>' +
+            '<div style="text-align:center;font-size:.82rem;color:#aaa;margin-bottom:1rem;line-height:1.5;">Elige un mensaje para enviarle al cliente por WhatsApp antes de descartar el pedido.</div>' +
+            '<button onclick="window._descartarConMensaje(\'' + id + '\',\'' + tel + '\',\'' + nm + '\',\'ocupados\')" style="width:100%;margin-bottom:.6rem;padding:.85rem;border:1px solid rgba(251,183,36,.4);background:rgba(251,183,36,.12);color:#FBB724;border-radius:12px;font-family:inherit;font-weight:800;font-size:.88rem;cursor:pointer;">🕐 Estamos con muchas órdenes — que intente más tarde</button>' +
+            '<button onclick="window._descartarConMensaje(\'' + id + '\',\'' + tel + '\',\'' + nm + '\',\'sinservicio\')" style="width:100%;margin-bottom:.6rem;padding:.85rem;border:1px solid rgba(91,155,255,.4);background:rgba(91,155,255,.12);color:#5B9BFF;border-radius:12px;font-family:inherit;font-weight:800;font-size:.88rem;cursor:pointer;">📍 Tu ubicación no cuenta con servicio ahora</button>' +
+            '<button onclick="_finalizarDescartar(\'' + id + '\')" style="width:100%;margin-bottom:.6rem;padding:.7rem;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.05);color:#ccc;border-radius:12px;font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer;">Descartar sin avisar</button>' +
+            '<button onclick="var m=document.getElementById(\'descartar-modal\'); if(m)m.remove();" style="width:100%;padding:.6rem;border:none;background:transparent;color:#777;font-family:inherit;font-weight:700;font-size:.82rem;cursor:pointer;">Cancelar</button>' +
+        '</div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function(e){ if (e.target === ov) ov.remove(); });
+}
+window._finalizarDescartar = _finalizarDescartar;
 
 // ── Aceptar (atómico: solo uno se lo queda) ──
 window.tomarOrdenSolicitud = function(pedidoId) {
@@ -960,13 +1009,17 @@ function render(disp) {
             ((p.horarioAgendado || p.horarioEntregaEtiqueta) ? '<div class="pn-linea" style="color:#FBB724;font-weight:700;">🕐 Agendado: ' + (p.horarioAgendado || p.horarioEntregaEtiqueta) + '</div>' : '') +
             // Barra de seguimiento (círculos de estado)
             _progresoDisp(p.estado, /domicilio/i.test((p.tipoEntrega || '') + ' ' + (p.tipoServicio || '')) || p.esSolicitudUnidad === true || !!(p.ubicacionCliente && p.ubicacionCliente.lat)) +
+            // 1) Tomar orden (abrir menú)
             (p.esSolicitudUnidad ? '<button onclick="tomarOrdenSolicitud(\'' + p.id + '\')" style="width:100%;margin-bottom:.5rem;padding:.85rem;border:none;background:linear-gradient(135deg,#FF7A33,#FF5A00);color:#fff;border-radius:12px;font-family:inherit;font-weight:800;font-size:.95rem;cursor:pointer;box-shadow:0 4px 12px rgba(255,90,0,.3);">📝 Tomar orden (abrir menú)</button>' : '') +
-            '<button class="btn-aceptar" onclick="aceptarPedido(\'' + p.id + '\')">✅ Aceptar este pedido</button>' +
-            '<button class="btn-descartar" onclick="descartarPedido(\'' + p.id + '\')">Ahora no (descartar)</button>' +
+            // 2) Asignar a otro repartidor
             '<button onclick="abrirAsignarRepartidor(\'' + p.id + '\',\'' + folio + '\')" ' +
-              'style="width:100%;margin-top:.5rem;padding:.7rem;border:1px solid rgba(91,155,255,.4);' +
+              'style="width:100%;margin-bottom:.5rem;padding:.7rem;border:1px solid rgba(91,155,255,.4);' +
               'background:rgba(91,155,255,.12);color:#5B9BFF;border-radius:10px;font-family:inherit;' +
               'font-weight:700;font-size:.85rem;cursor:pointer;">🛵 Asignar a otro repartidor</button>' +
+            // 3) Aceptar este pedido
+            '<button class="btn-aceptar" onclick="aceptarPedido(\'' + p.id + '\')">✅ Aceptar este pedido</button>' +
+            // 4) Ahora no (descartar)
+            '<button class="btn-descartar" onclick="descartarPedido(\'' + p.id + '\')">Ahora no (descartar)</button>' +
         '</div>';
     }).join('');
 
@@ -999,6 +1052,7 @@ function render(disp) {
       <div style="font-size:1.05rem;font-weight:800;color:#fff;">🛵 Asignar repartidor <span id="rep-ticket" style="color:#FF7A33;"></span></div>
       <button onclick="document.getElementById('rep-modal').style.display='none'" style="background:none;border:none;color:#888;font-size:1.4rem;cursor:pointer;">✕</button>
     </div>
+    <div style="font-size:.78rem;color:#888;margin-bottom:.8rem;">Repartidores disponibles — toca uno para asignarle el pedido.</div>
     <div id="rep-lista" style="display:flex;flex-direction:column;gap:.5rem;max-height:50vh;overflow-y:auto;"></div>
   </div>
 </div>
@@ -1019,8 +1073,10 @@ window.abrirAsignarRepartidor = async function(id, ticket) {
         var snap = await getDocs(collection(db, 'empleados'));
         var empleados = [];
         snap.forEach(function(d){ var e = d.data(); e._docId = d.id; empleados.push(e); });
+        // Solo repartidores DISPONIBLES (activos). Se excluyen los inactivos.
+        empleados = empleados.filter(function(e){ return String(e.estado||'').toLowerCase() !== 'inactivo'; });
         if (!empleados.length) {
-            lista.innerHTML = '<div style="color:#888;font-size:.82rem;text-align:center;padding:1rem;">No hay empleados registrados.</div>';
+            lista.innerHTML = '<div style="color:#888;font-size:.82rem;text-align:center;padding:1rem;">No hay repartidores disponibles.</div>';
             return;
         }
         lista.innerHTML = empleados.map(function(e){
