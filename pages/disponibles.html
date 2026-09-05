@@ -1009,6 +1009,8 @@ function render(disp) {
             ((p.horarioAgendado || p.horarioEntregaEtiqueta) ? '<div class="pn-linea" style="color:#FBB724;font-weight:700;">🕐 Agendado: ' + (p.horarioAgendado || p.horarioEntregaEtiqueta) + '</div>' : '') +
             // Barra de seguimiento (círculos de estado)
             _progresoDisp(p.estado, /domicilio/i.test((p.tipoEntrega || '') + ' ' + (p.tipoServicio || '')) || p.esSolicitudUnidad === true || !!(p.ubicacionCliente && p.ubicacionCliente.lat)) +
+            // Repartidor preseleccionado (el cliente ya lo ve en el mapa; sigue disponible)
+            ((p.repartidorSeleccionado && p.repartidorSeleccionado.nombre) ? '<div class="pn-linea" style="color:#25D366;font-weight:700;">🛵 Preseleccionado: ' + p.repartidorSeleccionado.nombre + ' <span style="color:#888;font-weight:400;">(el cliente ya lo ve en el mapa)</span></div>' : '') +
             // 1) Tomar orden (abrir menú)
             (p.esSolicitudUnidad ? '<button onclick="tomarOrdenSolicitud(\'' + p.id + '\')" style="width:100%;margin-bottom:.5rem;padding:.85rem;border:none;background:linear-gradient(135deg,#FF7A33,#FF5A00);color:#fff;border-radius:12px;font-family:inherit;font-weight:800;font-size:.95rem;cursor:pointer;box-shadow:0 4px 12px rgba(255,90,0,.3);">📝 Tomar orden (abrir menú)</button>' : '') +
             // 2) Asignar a otro repartidor
@@ -1099,41 +1101,23 @@ window.abrirAsignarRepartidor = async function(id, ticket) {
 window.asignarRepartidor = async function(repId, repNombre) {
     if (!_repPedidoId) return;
     try {
-        // Transacción atómica: si otra persona ya asignó un repartidor a este
-        // pedido entre que se abrió el modal y ahora, NO lo pisamos. Evita que
-        // dos gerentes/repartidores tomen el mismo pedido a la vez.
-        await runTransaction(db, async (tx) => {
-            const ref = doc(db, 'pedidos', _repPedidoId);
-            const snap = await tx.get(ref);
-            if (!snap.exists()) throw new Error('no-existe');
-            const p = snap.data();
-            // Ya tiene repartidor y es OTRO → conflicto (si es el mismo, es idempotente)
-            if (p.repartidorId && String(p.repartidorId) !== String(repId)) {
-                const e = new Error('ya-tomado');
-                e.repartidorActual = p.repartidorNombre || p.repartidorId;
-                throw e;
+        // PRESELECCIÓN (no acepta la orden ni la manda a Mi Ruta): solo marca
+        // qué repartidor va, para que el CLIENTE ya lo pueda ver en el mapa en
+        // vivo. La orden SIGUE en Disponibles hasta que alguien la acepte.
+        // No tocamos repartidorId ni aceptadoPorRepartidor.
+        await updateDoc(doc(db, 'pedidos', _repPedidoId), {
+            repartidorSeleccionado: {
+                id: String(repId),
+                nombre: repNombre,
+                en: new Date().toISOString()
             }
-            tx.update(ref, {
-                repartidorId: String(repId),
-                repartidorNombre: repNombre,
-                repartidorAsignadoEn: new Date().toISOString(),
-                aceptadoPorRepartidor: true
-            });
         });
         document.getElementById('rep-modal').style.display = 'none';
-        if (window.ttAlert) window.ttAlert('✅ Repartidor asignado: ' + repNombre);
+        if (window.ttAlert) window.ttAlert('✅ ' + repNombre + ' preseleccionado. El cliente ya puede verlo en el mapa. La orden sigue disponible hasta que se acepte.');
     } catch(err) {
         document.getElementById('rep-modal').style.display = 'none';
-        if (err && err.message === 'ya-tomado') {
-            const quien = err.repartidorActual ? (' (' + err.repartidorActual + ')') : '';
-            if (window.ttAlert) window.ttAlert('⚠️ Ese pedido ya fue tomado por otro repartidor' + quien + '. Se actualizó la lista.');
-            else alert('Ese pedido ya fue tomado por otro repartidor' + quien + '.');
-        } else if (err && err.message === 'no-existe') {
-            if (window.ttAlert) window.ttAlert('⚠️ Ese pedido ya no existe.');
-            else alert('Ese pedido ya no existe.');
-        } else {
-            alert('Error asignando repartidor.');
-        }
+        console.warn('preseleccion repartidor:', err);
+        alert('No se pudo preseleccionar el repartidor. Intenta de nuevo.');
     }
 };
 </script>
