@@ -43,13 +43,18 @@
 
     var puedeVer = hayCliente || tienePedidosLocales;
 
-    // Solo redirigimos a un STAFF sin contexto de cliente (tiene su tablero).
+    // Esta pantalla es EXCLUSIVA del CLIENTE (rastreo de su pedido). En modo
+    // EMPLEADO no debe existir: el equipo tiene sus propias vistas (Mis Pedidos,
+    // Mi Ruta, Cocina). Si hay una sesión de staff activa, la mandamos a su
+    // tablero de pedidos aunque también tenga contexto de cliente en el mismo
+    // dispositivo — así no se mezclan las dos interfaces ni se duplican barras.
+    if (esStaff) {
+        window.location.replace('mis-pedidos.html');
+        return;
+    }
     // A un cliente NUNCA lo rebotamos: si no tiene pedidos, la propia página
     // muestra "Aún no tienes pedidos" — antes rebotaba a bienvenida y parecía
     // que "no dejaba entrar".
-    if (esStaff && !puedeVer) {
-        window.location.replace('cocina.html');
-    }
 })();
 </script>
 <style>
@@ -339,11 +344,11 @@ function renderPedidos(pedidos) {
                 <span style="font-size:.72rem;color:#888;text-transform:uppercase;letter-spacing:.05em;">N° de orden:</span>
                 <span style="font-size:1.1rem;font-weight:900;color:#25D366;letter-spacing:.05em;">#${codigoRef}</span>
             </div>
+            ${p.repartidorNombre ? `<div class="pedido-repartidor" style="display:flex;align-items:center;gap:.5rem;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:10px;padding:.55rem .8rem;margin:0 0 .6rem;font-size:.88rem;"><span style="font-size:1.2rem;">🛵</span><span>Tu repartidor: <b style="color:#25D366;">${p.repartidorNombre}</b></span></div>` : ''}
             ${fechaHora ? `<div class="pedido-fecha">🗓️ ${fechaHora}</div>` : ''}
             ${pasos}
             <div class="pedido-items">${(p.items || '').replace(/</g,'&lt;')}</div>
             ${_desgloseCobro(p)}
-            ${p.repartidorNombre ? `<div class="pedido-repartidor" style="display:flex;align-items:center;gap:.5rem;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:10px;padding:.6rem .8rem;margin:.5rem 0;font-size:.88rem;"><span style="font-size:1.2rem;">🛵</span><span>Tu repartidor: <b style="color:#25D366;">${p.repartidorNombre}</b></span></div>` : ''}
             ${btnUbic}
             ${bloqueMapa}
             ${btnCancelar}
