@@ -97,6 +97,11 @@
   .pn-folio{font-size:1.05rem;font-weight:900;color:var(--primary,#FF5A00);letter-spacing:.02em;}
   .pn-folio-estado{font-size:.62rem;font-weight:800;padding:.25rem .6rem;border-radius:20px;text-transform:uppercase;
     letter-spacing:.03em;background:rgba(91,155,255,.15);color:#5B9BFF;flex-shrink:0;}
+  .pn-orden-box{display:flex;align-items:center;justify-content:center;gap:.5rem;
+    background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:10px;padding:.6rem;margin:.4rem 0 .5rem;}
+  .pn-orden-lbl{font-size:.72rem;color:#888;text-transform:uppercase;letter-spacing:.05em;}
+  .pn-orden-val{font-size:1.1rem;font-weight:900;color:#25D366;letter-spacing:.05em;}
+  .pn-fecha{font-size:.75rem;color:#888;margin-bottom:.6rem;}
   .tt-stepper{position:relative;display:flex;margin:.9rem 0 .5rem;}
   .tt-stepper .tt-track-bg,.tt-stepper .tt-track-fill{position:absolute;top:15px;height:3px;border-radius:3px;z-index:0;}
   .tt-stepper .tt-track-bg{background:rgba(255,255,255,.10);}
@@ -547,6 +552,19 @@ function _fechaIngreso(p) {
     return d.toLocaleString('es-MX', opts);
 }
 
+// Fecha en el MISMO formato que "Mi Orden" del cliente:
+// "04 sep 2026 · 11:30 p. m."
+function _fechaMiOrden(p) {
+    var cd = null;
+    if (p.creado && p.creado.toDate) cd = p.creado.toDate();
+    else if (p.creado && p.creado.seconds) cd = new Date(p.creado.seconds * 1000);
+    else if (p.tomadaEn) cd = new Date(p.tomadaEn);
+    else if (p.tiempos && p.tiempos.recibida) cd = new Date(p.tiempos.recibida);
+    if (!cd) return '';
+    return cd.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) +
+           ' · ' + cd.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+}
+
 function esDisponible(p) {
     // Domicilio, sin repartidor, no archivado
     const esDomicilio = (p.tipoEntrega === 'Domicilio') || (p.tipo === 'domicilio') || !!p.zonaEntregaNombre;
@@ -911,6 +929,9 @@ function render(disp) {
               '<span class="pn-folio">' + (p.folioStr || ('#' + folio)) + '</span>' +
               (typeof TTEstados !== 'undefined' ? '<span class="pn-folio-estado">' + TTEstados.corto(p.estado) + '</span>' : '') +
             '</div>' +
+            // N° de orden (caja verde) + fecha, mismo formato que "Mi Orden"
+            '<div class="pn-orden-box"><span class="pn-orden-lbl">N° de orden:</span><span class="pn-orden-val">#' + folio + '</span></div>' +
+            (_fechaMiOrden(p) ? '<div class="pn-fecha">🗓️ ' + _fechaMiOrden(p) + '</div>' : '') +
             '<div class="pn-zona" id="pn-zona-' + p.id + '">📍 ' + zona + '</div>' +
             (textoDistancia(p) ? '<span class="pn-distancia">🚗 ' + textoDistancia(p) + '</span>' : '') +
             '<div class="pn-top">' +
@@ -924,8 +945,6 @@ function render(disp) {
             _listaProductos(p) +
             _fotoReferencia(p) +
             ((p.horarioAgendado || p.horarioEntregaEtiqueta) ? '<div class="pn-linea" style="color:#FBB724;font-weight:700;">🕐 Agendado: ' + (p.horarioAgendado || p.horarioEntregaEtiqueta) + '</div>' : '') +
-            '<div class="pn-linea" style="color:#888;">N° de orden: #' + folio + '</div>' +
-            (_fechaIngreso(p) ? '<div class="pn-linea" style="color:#888;font-size:.75rem;">🕐 Ingresó: ' + _fechaIngreso(p) + '</div>' : '') +
             // Barra de seguimiento (círculos de estado)
             _progresoDisp(p.estado, /domicilio/i.test((p.tipoEntrega || '') + ' ' + (p.tipoServicio || '')) || p.esSolicitudUnidad === true || !!(p.ubicacionCliente && p.ubicacionCliente.lat)) +
             (p.esSolicitudUnidad ? '<button onclick="tomarOrdenSolicitud(\'' + p.id + '\')" style="width:100%;margin-bottom:.5rem;padding:.85rem;border:none;background:linear-gradient(135deg,#FF7A33,#FF5A00);color:#fff;border-radius:12px;font-family:inherit;font-weight:800;font-size:.95rem;cursor:pointer;box-shadow:0 4px 12px rgba(255,90,0,.3);">📝 Tomar orden (abrir menú)</button>' : '') +
