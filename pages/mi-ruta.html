@@ -682,10 +682,81 @@ function render(pedidos) {
 
 // ── PEDIR UBICACIÓN AL CLIENTE (compartir GPS) ──
 window.pedirUbicacionRuta = function(pedidoId, telefono, nombre) {
-    // Link interno de Tortas Tortuga que el cliente abre para compartir su GPS + foto
+    // Misma lógica que el panel Admin en vivo: si hay teléfono, se manda el
+    // enlace directo por WhatsApp; si no, se pide el teléfono, se guarda en el
+    // pedido y se envía. El cliente abre el enlace y comparte su GPS + foto.
+    var tel = String(telefono || '').replace(/[^0-9]/g, '');
+    if (tel.length >= 10) {
+        _enviarUbicacionWA(pedidoId, tel, nombre);
+    } else {
+        _mostrarModalPedirUbicacion(pedidoId, nombre);
+    }
+};
+
+// Construye el mensaje y abre WhatsApp con el enlace de auto-ubicación
+function _enviarUbicacionWA(pedidoId, telefono, nombre) {
+    var num = String(telefono || '').replace(/[^0-9]/g, '');
+    if (num.length === 10) num = '1' + num;  // asumir USA
     var base = window.location.origin + window.location.pathname.replace(/pages\/mi-ruta\.html$/, '');
     var link = base + 'ubicacion.html?pedido=' + pedidoId;
-    _mostrarModalLinkUbicacion(link, nombre);
+    var saludo = nombre ? ('Hola ' + nombre + '!') : 'Hola!';
+    var mensaje =
+        saludo + ' Gracias por tu pedido en Tortas Tortuga 🐢\n\n' +
+        'Para llevártelo a domicilio necesitamos tu ubicación exacta.\n\n' +
+        'Es muy fácil, solo 2 pasos:\n\n' +
+        '1️⃣ Abre este link:\n' + link + '\n\n' +
+        '2️⃣ Toca el botón verde "Compartir mi ubicación" y acepta el permiso.\n\n' +
+        '¡Listo! Con eso tu repartidor sabrá exactamente dónde llegar. 🛵💨';
+    window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(mensaje), '_blank');
+}
+
+// Modal para capturar el teléfono cuando el pedido no lo tiene (igual que admin)
+function _mostrarModalPedirUbicacion(pedidoId, nombre) {
+    var base = window.location.origin + window.location.pathname.replace(/pages\/mi-ruta\.html$/, '');
+    var link = base + 'ubicacion.html?pedido=' + pedidoId;
+    window._linkUbiActual = link;
+    var modal = document.getElementById('link-ubi-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'link-ubi-modal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:1.2rem;';
+        document.body.appendChild(modal);
+    }
+    var quien = nombre ? (' de ' + nombre) : '';
+    modal.innerHTML =
+        '<div style="background:#1a1a1a;border:1px solid rgba(255,90,0,.35);border-radius:20px;max-width:400px;width:100%;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.6);">' +
+            '<div style="background:linear-gradient(135deg,#FF7A33,#FF5A00);padding:1.2rem;text-align:center;">' +
+                '<div style="font-size:2.2rem;">📍</div>' +
+                '<div style="font-size:1.05rem;font-weight:900;color:#fff;margin-top:.2rem;">Pedir ubicación' + quien + '</div>' +
+            '</div>' +
+            '<div style="padding:1.2rem;">' +
+                '<div style="font-size:.85rem;color:#ddd;line-height:1.5;margin-bottom:.8rem;">Escribe el WhatsApp del cliente para enviarle el enlace. Al abrirlo compartirá su ubicación exacta y una foto de referencia.</div>' +
+                '<input id="ruta-ubi-tel" type="tel" inputmode="tel" autocomplete="off" placeholder="Teléfono del cliente (210-555-1234)" ' +
+                    'style="width:100%;box-sizing:border-box;background:#0e0e0e;border:1.5px solid rgba(37,211,102,.45);color:#fff;border-radius:10px;padding:.75rem;font-family:inherit;font-size:.9rem;margin-bottom:.4rem;">' +
+                '<div id="ruta-ubi-tel-err" style="font-size:.76rem;color:#FF6666;margin-bottom:.6rem;display:none;"></div>' +
+                '<button onclick="_enviarUbiRutaConTel(\'' + pedidoId + '\',\'' + String(nombre||'').replace(/['\\]/g,'') + '\')" style="width:100%;padding:.85rem;border:none;background:linear-gradient(135deg,#25D366,#1DA851);color:#fff;border-radius:12px;font-family:inherit;font-weight:800;font-size:.9rem;cursor:pointer;margin-bottom:.5rem;">💬 Enviar por WhatsApp</button>' +
+                '<button onclick="_copiarLinkUbi()" style="width:100%;padding:.7rem;border:1px solid rgba(91,155,255,.3);background:rgba(91,155,255,.08);color:#5B9BFF;border-radius:12px;font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer;margin-bottom:.5rem;">📋 Solo copiar el link</button>' +
+                '<button onclick="_cerrarModalLinkUbi()" style="width:100%;padding:.7rem;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.05);color:#aaa;border-radius:12px;font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer;">Cerrar</button>' +
+            '</div>' +
+        '</div>';
+    modal.style.display = 'flex';
+    setTimeout(function(){ var f = document.getElementById('ruta-ubi-tel'); if (f) f.focus(); }, 100);
+}
+
+// Guarda el teléfono en el pedido y manda el WhatsApp
+window._enviarUbiRutaConTel = async function(pedidoId, nombre) {
+    var f = document.getElementById('ruta-ubi-tel');
+    var err = document.getElementById('ruta-ubi-tel-err');
+    var tel = ((f && f.value) || '').replace(/[^0-9]/g, '');
+    if (tel.length !== 10 || tel[0] === '0' || tel[0] === '1') {
+        if (err) { err.style.display = 'block'; err.textContent = '📱 Escribe un teléfono válido de 10 dígitos.'; }
+        if (f) f.focus();
+        return;
+    }
+    // Guardar el teléfono en el pedido para la próxima vez (best-effort)
+    try { await updateDoc(doc(db, 'pedidos', pedidoId), { telefono: tel }); } catch(e) { console.warn('No se pudo guardar el teléfono:', e); }
+    _enviarUbicacionWA(pedidoId, tel, nombre);
+    _cerrarModalLinkUbi();
 };
 
 // Modal bonito con el link para copiar y compartir con el cliente
