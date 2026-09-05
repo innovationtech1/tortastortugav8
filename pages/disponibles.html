@@ -92,6 +92,26 @@
     display:block; text-align:center; margin-top:1rem; color:#FF5A00;
     font-weight:700; font-size:.85rem; text-decoration:none;
   }
+  /* ── Ticket + Stepper de seguimiento (igual que "Mi Orden") ── */
+  .pn-ticket{background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:10px;
+    padding:.5rem .7rem;margin:.5rem 0;display:flex;align-items:center;justify-content:space-between;gap:.5rem;}
+  .pn-ticket .pn-tk-lbl{font-size:.68rem;color:#888;text-transform:uppercase;letter-spacing:.05em;}
+  .pn-ticket .pn-tk-val{font-size:1.05rem;font-weight:900;color:#25D366;letter-spacing:.04em;}
+  .tt-stepper{position:relative;display:flex;margin:.9rem 0 .5rem;}
+  .tt-stepper .tt-track-bg,.tt-stepper .tt-track-fill{position:absolute;top:15px;height:3px;border-radius:3px;z-index:0;}
+  .tt-stepper .tt-track-bg{background:rgba(255,255,255,.10);}
+  .tt-stepper .tt-track-fill{background:var(--primary,#FF5A00);transition:width .5s ease;}
+  .tt-step{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;align-items:center;gap:.3rem;}
+  .tt-step-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:.95rem;background:#242424;border:2px solid rgba(255,255,255,.15);color:#888;transition:all .3s ease;}
+  .tt-step.done .tt-step-dot{background:var(--primary,#FF5A00);border-color:var(--primary,#FF5A00);color:#fff;}
+  .tt-step.current .tt-step-dot{background:var(--primary,#FF5A00);border-color:#fff;color:#fff;
+    box-shadow:0 0 0 4px rgba(255,90,0,.28);animation:ttStepPulse 1.4s infinite;}
+  .tt-step-lbl{font-size:.56rem;font-weight:800;text-align:center;color:#777;line-height:1.15;max-width:64px;
+    text-transform:uppercase;letter-spacing:.02em;}
+  .tt-step.done .tt-step-lbl{color:#bbb;}
+  .tt-step.current .tt-step-lbl{color:var(--primary,#FF5A00);}
+  @keyframes ttStepPulse{0%,100%{box-shadow:0 0 0 4px rgba(255,90,0,.28);}50%{box-shadow:0 0 0 8px rgba(255,90,0,.10);}}
 </style>
 
 <style id="ios-compat">
@@ -159,6 +179,7 @@ html { -webkit-text-size-adjust: 100%; }
 </div>
 
 <script src="../js/tt-alert.js"></script>
+<script src="../js/estados.js?v=1788145000"></script>
 <script type="module">
 import { db, authReady } from '../js/firebase-config.js';
 import { collection, onSnapshot, doc, runTransaction, getDocs, updateDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
@@ -818,6 +839,44 @@ async function escuchar() {
     });
 }
 
+// ── Stepper de seguimiento (RECIBIDO → PREPARANDO → LISTO → EN CAMINO →
+//    ENTREGADO), idéntico al de "Mi Orden" del cliente. ──
+function _progresoDisp(estado, esDomicilio) {
+    if (typeof TTEstados === 'undefined') return '';
+    if (TTEstados.estaCancelado(estado)) {
+        return '<div style="text-align:center;color:#EF9A9A;font-weight:800;font-size:.85rem;margin:.6rem 0;">❌ Pedido cancelado</div>';
+    }
+    var pasos = [
+        ['NUEVO',     '📝', 'Recibido'],
+        ['EN_COCINA', '🧑‍🍳', 'Preparando'],
+        ['LISTO',     '✅', 'Listo']
+    ];
+    if (esDomicilio) pasos.push(['EN_CAMINO', '🛵', 'En camino']);
+    pasos.push(['ENTREGADO', '🎉', 'Entregado']);
+
+    var ordRango = TTEstados.rango(estado);
+    var actual = -1;
+    pasos.forEach(function(p, i) { if (TTEstados.ESTADOS[p[0]].rango <= ordRango) actual = i; });
+
+    var N = pasos.length;
+    var trackLeft = 50 / N;
+    var trackWidth = 100 - 100 / N;
+    var fillFrac = (N > 1 && actual > 0) ? (actual / (N - 1)) : 0;
+    var fillWidth = trackWidth * fillFrac;
+
+    var html = '<div class="tt-stepper">' +
+        '<div class="tt-track-bg" style="left:' + trackLeft + '%;width:' + trackWidth + '%;"></div>' +
+        '<div class="tt-track-fill" style="left:' + trackLeft + '%;width:' + fillWidth + '%;"></div>';
+    pasos.forEach(function(p, i) {
+        var cls = i < actual ? 'done' : (i === actual ? 'current' : '');
+        var ico = i < actual ? '✓' : p[1];
+        html += '<div class="tt-step ' + cls + '"><div class="tt-step-dot">' + ico + '</div>' +
+                '<div class="tt-step-lbl">' + p[2] + '</div></div>';
+    });
+    html += '</div>';
+    return html;
+}
+
 let _firmaRenderAnterior = '';
 function render(disp) {
     const cont = document.getElementById('lista-disp');
@@ -860,8 +919,12 @@ function render(disp) {
             _listaProductos(p) +
             _fotoReferencia(p) +
             ((p.horarioAgendado || p.horarioEntregaEtiqueta) ? '<div class="pn-linea" style="color:#FBB724;font-weight:700;">🕐 Agendado: ' + (p.horarioAgendado || p.horarioEntregaEtiqueta) + '</div>' : '') +
-            '<div class="pn-linea" style="color:#888;">Orden #' + folio + '</div>' +
+            // Ticket (folio) + N° de orden, como en "Mi Orden" del cliente
+            '<div class="pn-ticket"><span class="pn-tk-lbl">🎟️ Ticket</span><span class="pn-tk-val">' + (p.folioStr || ('#' + folio)) + '</span></div>' +
+            '<div class="pn-linea" style="color:#888;">N° de orden: #' + folio + '</div>' +
             (_fechaIngreso(p) ? '<div class="pn-linea" style="color:#888;font-size:.75rem;">🕐 Ingresó: ' + _fechaIngreso(p) + '</div>' : '') +
+            // Barra de seguimiento (círculos de estado)
+            _progresoDisp(p.estado, /domicilio/i.test((p.tipoEntrega || '') + ' ' + (p.tipoServicio || '')) || p.esSolicitudUnidad === true || !!(p.ubicacionCliente && p.ubicacionCliente.lat)) +
             (p.esSolicitudUnidad ? '<button onclick="tomarOrdenSolicitud(\'' + p.id + '\')" style="width:100%;margin-bottom:.5rem;padding:.85rem;border:none;background:linear-gradient(135deg,#FF7A33,#FF5A00);color:#fff;border-radius:12px;font-family:inherit;font-weight:800;font-size:.95rem;cursor:pointer;box-shadow:0 4px 12px rgba(255,90,0,.3);">📝 Tomar orden (abrir menú)</button>' : '') +
             '<button class="btn-aceptar" onclick="aceptarPedido(\'' + p.id + '\')">✅ Aceptar este pedido</button>' +
             '<button class="btn-descartar" onclick="descartarPedido(\'' + p.id + '\')">Ahora no (descartar)</button>' +
