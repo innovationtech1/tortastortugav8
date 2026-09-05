@@ -738,10 +738,14 @@ function render(pedidos) {
                 : '') +
 
             // ── Botón CAMBIAR/ASIGNAR repartidor ──
-            '<button onclick="cambiarRepartidorRuta(\''+p.id+'\',\''+String(p.cliente||p.nombre||'').replace(/\x27/g,'')+'\')" ' +
-            'style="width:100%;margin-top:.5rem;padding:.75rem;border:1px solid rgba(91,155,255,.4);' +
-            'background:rgba(91,155,255,.12);color:#5B9BFF;border-radius:10px;font-family:inherit;' +
-            'font-weight:700;font-size:.85rem;cursor:pointer;">🛵 Cambiar repartidor</button>' +
+            // REGLA: una vez EN CAMINO (o entregado) ya NO se puede cambiar el
+            // repartidor ni cancelar. Se oculta el botón y se muestra un aviso.
+            ((typeof TTEstados !== 'undefined' && (TTEstados.estaEnCamino(p.estado) || TTEstados.estaEntregado(p.estado) || p.entregado))
+              ? '<div style="width:100%;margin-top:.5rem;padding:.6rem;text-align:center;border:1px dashed rgba(255,255,255,.12);border-radius:10px;color:#888;font-size:.78rem;">🔒 En camino: no se puede cambiar repartidor ni cancelar</div>'
+              : '<button onclick="cambiarRepartidorRuta(\''+p.id+'\',\''+String(p.cliente||p.nombre||'').replace(/\x27/g,'')+'\')" ' +
+                'style="width:100%;margin-top:.5rem;padding:.75rem;border:1px solid rgba(91,155,255,.4);' +
+                'background:rgba(91,155,255,.12);color:#5B9BFF;border-radius:10px;font-family:inherit;' +
+                'font-weight:700;font-size:.85rem;cursor:pointer;">🛵 Cambiar repartidor</button>') +
 
             // ── Botones de estado: En camino (paso previo) y Entregado ──
             (p.entregado
@@ -1137,6 +1141,12 @@ window.tomarOrdenPorCliente = function(pedidoId) {
 
 // ── CAMBIAR / ASIGNAR repartidor ──
 window.cambiarRepartidorRuta = async function(pedidoId, clienteNombre) {
+    // REGLA: una vez EN CAMINO (o entregado) no se puede cambiar el repartidor.
+    var _p = (_pedidosActuales || []).find(function(x){ return x.id === pedidoId; }) || {};
+    if (typeof TTEstados !== 'undefined' && (TTEstados.estaEnCamino(_p.estado) || TTEstados.estaEntregado(_p.estado) || _p.entregado)) {
+        if (window.ttAlert) window.ttAlert('🔒 La orden ya va EN CAMINO: no se puede cambiar de repartidor.');
+        return;
+    }
     var modal = document.getElementById('rep-modal-tt');
     var lista = document.getElementById('rep-modal-lista');
     var cliEl = document.getElementById('rep-modal-cliente');
@@ -1283,6 +1293,13 @@ window.marcarEnCaminoDirecto = async function(pedidoId) {
 
 window.marcarEntregadoDirecto = async function(pedidoId) {
     if (!pedidoId) return;
+    // REGLA: primero se cobra. No se puede entregar un pedido no pagado.
+    var _p = (_pedidosActuales || []).find(function(x){ return x.id === pedidoId; }) || {};
+    if (_p.estadoPago !== 'Pagado') {
+        if (window.ttAlert) window.ttAlert('💵 Primero cobra el pedido. No se puede marcar como entregado sin cobrar.');
+        else alert('Primero cobra el pedido antes de marcarlo como entregado.');
+        return;
+    }
     const confirmar = window.ttConfirm
         ? await window.ttConfirm('¿Marcar esta orden como ENTREGADA?')
         : confirm('¿Marcar como entregada?');
@@ -1301,6 +1318,12 @@ window.marcarEntregadoDirecto = async function(pedidoId) {
 
 window.marcarEntregado = async function() {
     if (!_pedidoAbierto) return;
+    // REGLA: primero se cobra. No se puede entregar un pedido no pagado.
+    if (_pedidoAbierto.estadoPago !== 'Pagado') {
+        if (window.ttAlert) window.ttAlert('💵 Primero cobra el pedido. No se puede marcar como entregado sin cobrar.');
+        else alert('Primero cobra el pedido antes de marcarlo como entregado.');
+        return;
+    }
     const confirmar = window.ttConfirm
         ? await window.ttConfirm('¿Marcar esta orden como ENTREGADA?')
         : confirm('¿Marcar como entregada?');
