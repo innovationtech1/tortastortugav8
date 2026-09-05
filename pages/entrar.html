@@ -354,17 +354,13 @@ async function _procesarClienteGoogle(user) {
     _datosCliente = { nombre: nombre, telefono: telefonoGuardado || '', conocido: !!telefonoGuardado };
     _mostrarPasoUbicacion(nombre, foto);
 
-    if (_tienePedidosLocales()) {
-        // Ya tiene pedidos en este dispositivo → ofrecer "Ver mi pedido /
-        // Volver a hacer un pedido" en vez del flujo de ubicación.
-        _revisarPedidosActivos(telefonoGuardado || '');
-    } else if (!telefonoGuardado) {
-        // Primera vez sin teléfono: mostrar el campo de teléfono dentro del
-        // mismo paso de ubicación (el repartidor lo necesita para llamar).
+    // Revisar pedidos ACTIVOS (lee el estado real por id). Si hay, muestra el
+    // panel "Ver mi pedido / Volver a pedir"; si no, seguimos el flujo normal.
+    var _mostroPanel = await _revisarPedidosActivos(telefonoGuardado || '');
+    if (!_mostroPanel && !telefonoGuardado) {
+        // Sin pedidos activos y sin teléfono → pedir el teléfono (obligatorio).
         var tw = document.getElementById('ubi-telefono-wrap');
         if (tw) tw.style.display = 'block';
-    } else {
-        _revisarPedidosActivos(telefonoGuardado);
     }
 }
 
@@ -496,10 +492,11 @@ window.enviarCodigo = async function() {
     _revisarPedidosActivos(soloDigitos);
 }
 
-// ── ¿El cliente ya tiene pedidos en ESTE dispositivo? (Fase 2b) ──
-// Los pedidos del cliente se guardan por id en localStorage 'tt_mis_pedidos'.
-// Esto NO requiere listar 'pedidos' (cerrado a staff) y PERSISTE aunque el
-// cliente cierre sesión, así que al volver a entrar seguimos detectándolos.
+// ── ¿El cliente tiene IDs de pedidos guardados en ESTE dispositivo? ──
+// (Fase 2b) Los pedidos se guardan por id en localStorage 'tt_mis_pedidos'.
+// OJO: tener ids NO significa tener pedidos ACTIVOS — pueden estar archivados
+// o entregados. Por eso la detección real lee el estado de cada uno (get por
+// id está permitido) y solo cuenta los que están por entregar.
 function _tienePedidosLocales() {
     try {
         var mp = JSON.parse(localStorage.getItem('tt_mis_pedidos') || '[]');
@@ -516,31 +513,65 @@ function _mostrarPanelPedidos(txt) {
     if (seccion) seccion.style.display = 'none';
 }
 
-// ── Detectar pedidos del cliente y ofrecer "Ver mi pedido / Volver a pedir" ──
+// Deja en tt_mis_pedidos solo los ids indicados (los que existen y NO están
+// archivados). Así la lista local se mantiene igual que "Mi Orden".
+function _podarMisPedidos(idsMantener) {
+    try {
+        var mp = JSON.parse(localStorage.getItem('tt_mis_pedidos') || '[]');
+        if (!Array.isArray(mp)) return;
+        var set = {}; idsMantener.forEach(function(id){ set[id] = true; });
+        localStorage.setItem('tt_mis_pedidos', JSON.stringify(mp.filter(function(x){ return x && x.id && set[x.id]; })));
+    } catch(e){}
+}
+
+// ── Detectar pedidos ACTIVOS del cliente (por entregar) y ofrecer opciones ──
+// Devuelve true si mostró el panel (hay pedidos activos), false si no.
 async function _revisarPedidosActivos(telefono) {
-    // 1) Detección LOCAL (la que aplica a clientes reales).
-    if (_tienePedidosLocales()) {
-        var mp = [];
-        try { mp = JSON.parse(localStorage.getItem('tt_mis_pedidos') || '[]'); } catch(e){}
-        var n = Array.isArray(mp) ? mp.length : 0;
-        _mostrarPanelPedidos('Ya tienes ' + n + (n === 1 ? ' pedido' : ' pedidos') + '. ¿Qué quieres hacer?');
-        return;
+    // 1) Detección LOCAL por id (la que aplica a clientes reales).
+    var ids = [];
+    try {
+        var mp = JSON.parse(localStorage.getItem('tt_mis_pedidos') || '[]');
+        ids = Array.isArray(mp) ? mp.map(function(x){ return x && x.id; }).filter(Boolean) : [];
+    } catch(e){}
+    if (ids.length) {
+        var activos = 0;
+        var idsMantener = [];  // existen y NO archivados = lo que muestra "Mi Orden"
+        await Promise.all(ids.map(async function(id){
+            try {
+                var s = await getDoc(doc(db, 'pedidos', id));
+                if (s.exists()) {
+                    var p = s.data();
+                    if (p.archivado !== true) {
+                        idsMantener.push(id);
+                        // Solo cuentan los que están por entregar (activos).
+                        if (TTEstados.estaActivo(p.estado)) activos++;
+                    }
+                }
+            } catch(e) {}
+        }));
+        _podarMisPedidos(idsMantener);   // quitar archivados/entregados/no-existentes
+        if (activos > 0) {
+            _mostrarPanelPedidos('Ya tienes ' + activos + (activos === 1 ? ' pedido en camino' : ' pedidos en camino') + '. ¿Qué quieres hacer?');
+            return true;
+        }
+        return false;
     }
     // 2) Respaldo por teléfono (solo funciona con sesión de staff; para el
     //    cliente la lectura masiva de 'pedidos' está cerrada y falla en silencio).
     try {
         var tel = String(telefono || '').replace(/[^0-9]/g,'');
-        if (!tel) return;
+        if (!tel) return false;
         var qs = await getDocs(collection(db, 'pedidos'));
-        var activos = 0;
+        var act2 = 0;
         qs.forEach(function(d){
             var p = d.data();
             var t = String(p.telefono||'').replace(/[^0-9]/g,'');
             if (t !== tel) return;
-            if (TTEstados.estaActivo(p.estado)) activos++;
+            if (p.archivado !== true && TTEstados.estaActivo(p.estado)) act2++;
         });
-        if (activos > 0) _mostrarPanelPedidos('Tienes ' + activos + (activos === 1 ? ' pedido activo' : ' pedidos activos') + '. ¿Qué quieres hacer?');
+        if (act2 > 0) { _mostrarPanelPedidos('Tienes ' + act2 + (act2 === 1 ? ' pedido activo' : ' pedidos activos') + '. ¿Qué quieres hacer?'); return true; }
     } catch(e) { console.warn('No se pudo revisar pedidos activos:', e); }
+    return false;
 }
 
 // Ver mis pedidos → ir a mi-pedido.html
