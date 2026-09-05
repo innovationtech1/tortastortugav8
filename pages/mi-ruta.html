@@ -237,14 +237,7 @@ html { -webkit-text-size-adjust: 100%; }
       </div>
     </div>
 
-    <button class="btn-en-camino" id="ve-btn-camino" onclick="marcarEnCamino()"
-        style="width:100%;padding:.85rem;margin-bottom:.6rem;border:none;border-radius:12px;
-               background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;
-               font-family:inherit;font-size:.95rem;font-weight:800;cursor:pointer;">
-        🛵 Marcar "En camino" (avisar al cliente)
-    </button>
-
-    <a class="btn-navegar" id="ve-navegar" href="#" target="_blank" rel="noopener">🧭 Navegar con Google Maps (voz)</a>
+    <!-- (Los botones "En camino" y "Navegar" viven en la tarjeta de Mi Ruta) -->
 
     <!-- Zona de cobro (cambia según estado de pago) -->
     <div id="ve-cobro-zona">
@@ -1013,25 +1006,37 @@ window.abrirEntrega = function(pedidoId) {
         ? itemsTxt.map(function(it){ return '<div>• '+it+'</div>'; }).join('')
         : '';
 
-    // Botón de navegación externa (por si quiere voz)
-    const navBtn = document.getElementById('ve-navegar');
-    if (lat && lng) navBtn.href = 'https://www.google.com/maps/dir/?api=1&destination=' + lat + ',' + lng;
-    else if (dir) navBtn.href = 'https://www.google.com/maps/search/' + encodeURIComponent(dir);
-    else navBtn.style.display = 'none';
-
     refrescarZonaCobro(p);
 
     document.getElementById('vista-entrega').classList.add('abierta');
+    // Empujar un estado para que el botón "atrás" del teléfono cierre esta
+    // vista (regrese a Mi Ruta) en vez de salir de la página.
+    try { history.pushState({ ve: true }, ''); } catch(e){}
 
     // Inicializar el mapa después de que la vista sea visible
     setTimeout(function(){ initMapaEntrega(lat, lng, p.cliente || 'Cliente', dir); }, 100);
 };
 
-window.cerrarEntrega = function() {
-    document.getElementById('vista-entrega').classList.remove('abierta');
+function _cerrarEntregaVista() {
+    var v = document.getElementById('vista-entrega');
+    if (v) v.classList.remove('abierta');
     _pedidoAbierto = null;
     if (_mapaLeaflet) { _mapaLeaflet.remove(); _mapaLeaflet = null; }
+}
+
+// Botón ← del encabezado: cierra la vista y regresa a Mi Ruta.
+window.cerrarEntrega = function() {
+    _cerrarEntregaVista();
+    // Consumir el estado que empujamos al abrir (deja limpio el historial).
+    try { if (history.state && history.state.ve) history.back(); } catch(e){}
 };
+
+// Botón "atrás" del teléfono: si la vista de entrega está abierta, ciérrala
+// (regresa a Mi Ruta) en vez de salir de la app.
+window.addEventListener('popstate', function() {
+    var v = document.getElementById('vista-entrega');
+    if (v && v.classList.contains('abierta')) _cerrarEntregaVista();
+});
 
 function initMapaEntrega(lat, lng, nombre, dir) {
     const cont = document.getElementById('mapa-entrega');
