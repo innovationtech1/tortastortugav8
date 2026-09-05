@@ -348,7 +348,11 @@ async function guardarPedidoFirebase(data, metodoPago) {
                 window._solicitudActiva = null;
                 sessionStorage.removeItem('tt_solicitud_activa');
                 console.log('✅ Orden tomada sobre solicitud:', _solId);
-                return { id: _solId, ticket: (data.folioStr || _solId.slice(-4)) };
+                // Leer el folio real de la solicitud (para mostrarlo en la
+                // confirmación, igual que en el seguimiento del cliente).
+                var _folioSol = '';
+                try { var _snapSol = await getDoc(doc(db, 'pedidos', _solId)); if (_snapSol.exists()) _folioSol = _snapSol.data().folioStr || ''; } catch(e){}
+                return { id: _solId, ticket: (_folioSol || _solId.slice(-4)), folioStr: _folioSol };
             } catch(errSol) {
                 console.error('Error actualizando solicitud, se creará pedido normal:', errSol);
                 // Si falla, sigue el flujo normal (crear pedido nuevo)
@@ -406,7 +410,7 @@ async function guardarPedidoFirebase(data, metodoPago) {
             } catch(e){ console.warn('Puntos no actualizados:', e.message); }
         }
 
-        return { id: ref.id, ticket: ticketId };
+        return { id: ref.id, ticket: ticketId, folioStr: ticketId };
     } catch(e) {
         console.warn('Firebase save error:', e);
         return null;
@@ -476,6 +480,7 @@ function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waU
         <div style="background:#1A1A1A;border:1px solid rgba(37,211,102,.4);border-radius:20px;
                     padding:2rem 1.5rem;text-align:center;max-width:360px;width:100%;
                     box-shadow:0 20px 60px rgba(0,0,0,.5);max-height:90vh;overflow-y:auto;">
+            ${(opts && opts.folioStr) ? `<div style="text-align:left;margin-bottom:.3rem;"><span style="font-size:1.1rem;font-weight:900;color:#FF7A33;">${'#' + String(opts.folioStr).replace(/^#+/, '')}</span></div>` : ''}
             <div style="font-size:2.5rem;margin-bottom:.5rem;">✅</div>
             <div style="font-size:1rem;color:#ccc;margin-bottom:1rem;">¡Gracias${nombreCliente ? ', ' + nombreCliente.split(' ')[0] : ''}! Tu pedido fue registrado.</div>
             <div style="background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:14px;padding:1rem;margin-bottom:1rem;">
@@ -1831,7 +1836,7 @@ window.enviarTodasLasCuentas = async function() {
         // que el modal decida si habilita el botón de una vez (pickup) o
         // solo tras compartir ubicación (domicilio).
         mostrarConfirmacionTicket(ticket, nombre, result ? result.id : null, tipo, waUrl, data.ubicacionCliente || null, itemsStr, totalGen,
-            { ubicacionPendiente: _ubicPendiente, telefonoCliente: telefono });
+            { ubicacionPendiente: _ubicPendiente, telefonoCliente: telefono, folioStr: (result && result.folioStr) || '' });
     } catch (e) {
         console.error('Error al enviar orden:', e);
         alert('❌ Error al enviar la orden:\n' + (e.message || e) + '\n\nRevisa que tengas conexión a internet.');

@@ -347,7 +347,7 @@ function renderPedidos(pedidos) {
             ${p.repartidorNombre ? `<div class="pedido-repartidor" style="display:flex;align-items:center;gap:.5rem;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:10px;padding:.55rem .8rem;margin:0 0 .6rem;font-size:.88rem;"><span style="font-size:1.2rem;">🛵</span><span>Tu repartidor: <b style="color:#25D366;">${p.repartidorNombre}</b></span></div>` : ''}
             ${fechaHora ? `<div class="pedido-fecha">🗓️ ${fechaHora}</div>` : ''}
             ${pasos}
-            <div class="pedido-items">${(p.items || '').replace(/</g,'&lt;')}</div>
+            ${_fmtItemsPedido(p)}
             ${_desgloseCobro(p)}
             ${btnUbic}
             ${bloqueMapa}
@@ -355,6 +355,28 @@ function renderPedidos(pedidos) {
         </div>`;
     }).join('');
     setTimeout(activarMapasEnVivo, 100);
+}
+
+// Formatea los productos del pedido como una lista con cantidades y
+// modificaciones (mismo estilo que la confirmación del empleado), en vez de
+// un texto corrido separado por " | ".
+function _fmtItemsPedido(p) {
+    function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    var lineas = [];
+    if (Array.isArray(p.itemsData) && p.itemsData.length) {
+        var grupos = window.agruparItems ? window.agruparItems(p.itemsData) : p.itemsData.map(function(i){ i.cantidad = i.cantidad || 1; return i; });
+        grupos.forEach(function(g){
+            var mods = (g.modificaciones && g.modificaciones.length) ? ' (' + g.modificaciones.join(', ') + ')' : '';
+            var precio = g.precio ? ' — $' + Number(g.precio).toFixed(2) : '';
+            lineas.push('<b style="color:#FF7A33;">' + (g.cantidad || 1) + '×</b> ' + esc(g.nombre) + (g.variante ? ' (' + esc(g.variante) + ')' : '') + esc(mods) + esc(precio));
+        });
+    } else if (typeof p.items === 'string' && p.items) {
+        p.items.split(' | ').filter(Boolean).forEach(function(t){ lineas.push(esc(t)); });
+    }
+    if (!lineas.length) return '<div class="pedido-items">—</div>';
+    return '<div class="pedido-items">' +
+        lineas.map(function(l){ return '<div style="padding:.22rem 0;line-height:1.45;">• ' + l + '</div>'; }).join('') +
+        '</div>';
 }
 
 // ── Mapas en vivo de la tortumóvil (tiempo real + distancia + ETA) ──
