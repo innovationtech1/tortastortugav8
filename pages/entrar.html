@@ -124,8 +124,8 @@ html { -webkit-text-size-adjust: 100%; }
                             <div style="font-size:.95rem;color:#fff;font-weight:700;" id="ptp-saludo">¡Hola de nuevo!</div>
                             <div style="font-size:.82rem;color:#aaa;margin-top:.3rem;" id="ptp-sub">Tienes pedidos activos. ¿Qué quieres hacer?</div>
                         </div>
-                        <button type="button" onclick="irAVerMisPedidos()" style="width:100%;padding:.9rem;margin-bottom:.6rem;background:linear-gradient(135deg,#3B82F6,#2563EB);border:none;color:#fff;border-radius:12px;font-family:inherit;font-weight:800;font-size:.92rem;cursor:pointer;">📦 Ver mis pedidos</button>
-                        <button type="button" onclick="hacerNuevoPedido()" style="width:100%;padding:.9rem;background:linear-gradient(135deg,#FF7A33,#FF5A00);border:none;color:#fff;border-radius:12px;font-family:inherit;font-weight:800;font-size:.92rem;cursor:pointer;">📍 Hacer nuevo pedido</button>
+                        <button type="button" onclick="irAVerMisPedidos()" style="width:100%;padding:.9rem;margin-bottom:.6rem;background:linear-gradient(135deg,#3B82F6,#2563EB);border:none;color:#fff;border-radius:12px;font-family:inherit;font-weight:800;font-size:.92rem;cursor:pointer;">🛍️ Ver mi pedido</button>
+                        <button type="button" onclick="hacerNuevoPedido()" style="width:100%;padding:.9rem;background:linear-gradient(135deg,#FF7A33,#FF5A00);border:none;color:#fff;border-radius:12px;font-family:inherit;font-weight:800;font-size:.92rem;cursor:pointer;">➕ Volver a hacer un pedido</button>
                     </div>
 
                     <!-- Sección normal de compartir ubicación (se oculta si hay panel de pedidos) -->
@@ -354,13 +354,17 @@ async function _procesarClienteGoogle(user) {
     _datosCliente = { nombre: nombre, telefono: telefonoGuardado || '', conocido: !!telefonoGuardado };
     _mostrarPasoUbicacion(nombre, foto);
 
-    if (telefonoGuardado) {
-        _revisarPedidosActivos(telefonoGuardado);
-    } else {
+    if (_tienePedidosLocales()) {
+        // Ya tiene pedidos en este dispositivo → ofrecer "Ver mi pedido /
+        // Volver a hacer un pedido" en vez del flujo de ubicación.
+        _revisarPedidosActivos(telefonoGuardado || '');
+    } else if (!telefonoGuardado) {
         // Primera vez sin teléfono: mostrar el campo de teléfono dentro del
         // mismo paso de ubicación (el repartidor lo necesita para llamar).
         var tw = document.getElementById('ubi-telefono-wrap');
         if (tw) tw.style.display = 'block';
+    } else {
+        _revisarPedidosActivos(telefonoGuardado);
     }
 }
 
@@ -492,8 +496,38 @@ window.enviarCodigo = async function() {
     _revisarPedidosActivos(soloDigitos);
 }
 
-// ── Detectar pedidos activos del cliente (no entregados) ──
+// ── ¿El cliente ya tiene pedidos en ESTE dispositivo? (Fase 2b) ──
+// Los pedidos del cliente se guardan por id en localStorage 'tt_mis_pedidos'.
+// Esto NO requiere listar 'pedidos' (cerrado a staff) y PERSISTE aunque el
+// cliente cierre sesión, así que al volver a entrar seguimos detectándolos.
+function _tienePedidosLocales() {
+    try {
+        var mp = JSON.parse(localStorage.getItem('tt_mis_pedidos') || '[]');
+        return Array.isArray(mp) && mp.length > 0;
+    } catch(e) { return false; }
+}
+
+function _mostrarPanelPedidos(txt) {
+    var panel = document.getElementById('panel-tiene-pedidos');
+    var seccion = document.getElementById('seccion-compartir-ubi');
+    var sub = document.getElementById('ptp-sub');
+    if (sub && txt) sub.textContent = txt;
+    if (panel) panel.style.display = 'block';
+    if (seccion) seccion.style.display = 'none';
+}
+
+// ── Detectar pedidos del cliente y ofrecer "Ver mi pedido / Volver a pedir" ──
 async function _revisarPedidosActivos(telefono) {
+    // 1) Detección LOCAL (la que aplica a clientes reales).
+    if (_tienePedidosLocales()) {
+        var mp = [];
+        try { mp = JSON.parse(localStorage.getItem('tt_mis_pedidos') || '[]'); } catch(e){}
+        var n = Array.isArray(mp) ? mp.length : 0;
+        _mostrarPanelPedidos('Ya tienes ' + n + (n === 1 ? ' pedido' : ' pedidos') + '. ¿Qué quieres hacer?');
+        return;
+    }
+    // 2) Respaldo por teléfono (solo funciona con sesión de staff; para el
+    //    cliente la lectura masiva de 'pedidos' está cerrada y falla en silencio).
     try {
         var tel = String(telefono || '').replace(/[^0-9]/g,'');
         if (!tel) return;
@@ -503,17 +537,9 @@ async function _revisarPedidosActivos(telefono) {
             var p = d.data();
             var t = String(p.telefono||'').replace(/[^0-9]/g,'');
             if (t !== tel) return;
-            // Activo = NO entregado y NO cancelado
             if (TTEstados.estaActivo(p.estado)) activos++;
         });
-        if (activos > 0) {
-            var panel = document.getElementById('panel-tiene-pedidos');
-            var seccion = document.getElementById('seccion-compartir-ubi');
-            var sub = document.getElementById('ptp-sub');
-            if (sub) sub.textContent = 'Tienes ' + activos + (activos === 1 ? ' pedido activo' : ' pedidos activos') + '. ¿Qué quieres hacer?';
-            if (panel) panel.style.display = 'block';
-            if (seccion) seccion.style.display = 'none';
-        }
+        if (activos > 0) _mostrarPanelPedidos('Tienes ' + activos + (activos === 1 ? ' pedido activo' : ' pedidos activos') + '. ¿Qué quieres hacer?');
     } catch(e) { console.warn('No se pudo revisar pedidos activos:', e); }
 }
 
@@ -522,12 +548,15 @@ window.irAVerMisPedidos = function() {
     window.location.href = 'mi-pedido.html';
 };
 
-// Hacer nuevo pedido → mostrar la sección de compartir ubicación
+// Volver a hacer un pedido → mostrar la sección de compartir ubicación
 window.hacerNuevoPedido = function() {
     var panel = document.getElementById('panel-tiene-pedidos');
     var seccion = document.getElementById('seccion-compartir-ubi');
     if (panel) panel.style.display = 'none';
     if (seccion) seccion.style.display = 'block';
+    // Si aún no tenemos teléfono (cliente de Google), mostrar el campo obligatorio
+    var _tel = sessionStorage.getItem('tt_cliente_telefono') || localStorage.getItem('tt_cliente_telefono');
+    if (!_tel) { var tw = document.getElementById('ubi-telefono-wrap'); if (tw) tw.style.display = 'block'; }
 };
 
 // ── Compartir ubicación GPS y entrar ──
