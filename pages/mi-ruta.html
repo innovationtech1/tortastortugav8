@@ -55,6 +55,20 @@
   .pc-cliente { font-size:1rem; font-weight:800; }
   .pc-folio { font-size:.72rem; color:var(--muted); }
   .pc-total { font-size:1.1rem; font-weight:900; color:#25D366; }
+  /* ── Ticket (folio) + N° de orden, mismo formato que "Mi Orden" ── */
+  .pc-folio-top { display:flex; align-items:center; justify-content:space-between; gap:.5rem; margin-bottom:.5rem; }
+  .pc-folio-chip { display:inline-flex; align-items:center; gap:.35rem; font-size:1rem; font-weight:900;
+    color:#FF7A33; background:linear-gradient(135deg,rgba(255,122,51,.16),rgba(255,90,0,.10));
+    border:1px solid rgba(255,90,0,.4); border-radius:10px; padding:.32rem .72rem; letter-spacing:.04em;
+    box-shadow:0 2px 8px rgba(255,90,0,.12); }
+  .pc-folio-chip::before { content:"🎟️"; font-size:.95rem; filter:drop-shadow(0 1px 1px rgba(0,0,0,.4)); }
+  .pc-estado-badge { font-size:.62rem; font-weight:800; padding:.25rem .6rem; border-radius:20px; text-transform:uppercase;
+    letter-spacing:.03em; background:rgba(91,155,255,.15); color:#5B9BFF; flex-shrink:0; }
+  .pc-orden-box { display:flex; align-items:center; justify-content:center; gap:.5rem;
+    background:rgba(37,211,102,.1); border:1px solid rgba(37,211,102,.3); border-radius:10px; padding:.6rem; margin:.4rem 0 .5rem; }
+  .pc-orden-lbl { font-size:.72rem; color:#888; text-transform:uppercase; letter-spacing:.05em; }
+  .pc-orden-val { font-size:1.1rem; font-weight:900; color:#25D366; letter-spacing:.05em; }
+  .pc-fecha { font-size:.75rem; color:#888; margin-bottom:.5rem; }
   .pc-linea { font-size:.82rem; color:#ccc; margin:.2rem 0; display:flex; gap:.4rem; }
   .pc-pago {
     display:inline-block; font-size:.78rem; font-weight:800; padding:.35rem .7rem;
@@ -463,6 +477,18 @@ function _fechaIngreso(p) {
     return d.toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
+// Fecha en el MISMO formato que "Mi Orden": "04 sep 2026 · 11:30 p. m."
+function _fechaMiOrden(p) {
+    var cd = null;
+    if (p.creado && p.creado.toDate) cd = p.creado.toDate();
+    else if (p.creado && p.creado.seconds) cd = new Date(p.creado.seconds * 1000);
+    else if (p.tomadaEn) cd = new Date(p.tomadaEn);
+    else if (p.tiempos && p.tiempos.recibida) cd = new Date(p.tiempos.recibida);
+    if (!cd) return '';
+    return cd.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) +
+           ' · ' + cd.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+}
+
 function esMiPedido(p) {
     if (p.repartidorId && miId && p.repartidorId === miId) return true;
     // Respaldo por nombre (por si el id no coincide exactamente)
@@ -596,11 +622,18 @@ function render(pedidos) {
         }
 
         return '<div class="pedido-card '+(p.entregado?'entregado':'')+'">' +
+            // Ticket (folio) arriba a la izquierda + estado, igual que "Mi Orden"
+            '<div class="pc-folio-top">' +
+              '<span class="pc-folio-chip">'+(p.folioStr||('#'+folio))+'</span>' +
+              (typeof TTEstados!=='undefined'?'<span class="pc-estado-badge">'+TTEstados.corto(p.estado)+'</span>':'') +
+            '</div>' +
             '<div class="pc-top">' +
-              '<div><div class="pc-cliente">'+(p.cliente||p.nombre||'Cliente')+'</div>' +
-              '<div class="pc-folio">Orden #'+folio+(p.zonaEntregaNombre?(' · '+p.zonaEntregaNombre):'')+(_fechaIngreso(p)?(' · 🕐 '+_fechaIngreso(p)):'')+'</div></div>' +
+              '<div class="pc-cliente">'+(p.cliente||p.nombre||'Cliente')+'</div>' +
               '<div class="pc-total">'+(p.total||'')+'</div>' +
             '</div>' +
+            // N° de orden (caja verde) + fecha + zona, mismo formato que "Mi Orden"
+            '<div class="pc-orden-box"><span class="pc-orden-lbl">N° de orden:</span><span class="pc-orden-val">#'+folio+'</span></div>' +
+            (_fechaMiOrden(p)?'<div class="pc-fecha">🗓️ '+_fechaMiOrden(p)+(p.zonaEntregaNombre?(' · 📍 '+p.zonaEntregaNombre):'')+'</div>':'') +
             (p.telefono ? '<div class="pc-linea">📞 <a href="tel:'+p.telefono+'" style="color:#5B9BFF;">'+p.telefono+'</a></div>' : '') +
             (dir ? '<div class="pc-linea">📍 '+dir+'</div>' : '') +
             (p.horarioEntregaEtiqueta ? '<div class="pc-linea">🕐 '+p.horarioEntregaEtiqueta+'</div>' : '') +
@@ -890,12 +923,17 @@ window.abrirEntrega = function(pedidoId) {
     _pedidoAbierto = p;
 
     const folio = p.folioStr || (p.id ? p.id.slice(-4).toUpperCase() : '');
+    const codigoOrd = p.codigoOrden || (p.id ? p.id.slice(-4).toUpperCase() : '');
     const dir = p.ubicacionCliente && p.ubicacionCliente.direccion ? p.ubicacionCliente.direccion : '';
     const lat = p.ubicacionCliente && p.ubicacionCliente.lat;
     const lng = p.ubicacionCliente && p.ubicacionCliente.lng;
 
     document.getElementById('ve-cliente').textContent = p.cliente || p.nombre || 'Cliente';
-    document.getElementById('ve-folio').textContent = 'Orden #' + folio + (p.zonaEntregaNombre ? (' · ' + p.zonaEntregaNombre) : '');
+    // Ticket (folio) + N° de orden, mismo formato que "Mi Orden"
+    document.getElementById('ve-folio').innerHTML =
+        '<span class="pc-folio-chip">' + folio + '</span>' +
+        '<span style="margin-left:.5rem;color:#888;font-size:.8rem;">N° de orden: #' + codigoOrd +
+        (p.zonaEntregaNombre ? (' · 📍 ' + p.zonaEntregaNombre) : '') + '</span>';
     document.getElementById('ve-dir').textContent = dir || 'Sin dirección';
     document.getElementById('ve-dir-row').style.display = dir ? 'flex' : 'none';
     document.getElementById('ve-tel').innerHTML = p.telefono ? '<a href="tel:'+p.telefono+'" style="color:#5B9BFF;">'+p.telefono+'</a>' : '—';
