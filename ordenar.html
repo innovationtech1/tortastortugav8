@@ -1578,6 +1578,8 @@ html { -webkit-text-size-adjust: 100%; }
           <span>📌 4. Tu ubicación</span><span id="eo-ubicacion-val" style="color:#888;font-weight:600;font-size:.78rem;">—</span>
         </button>
         <div id="eo-ubicacion-body" style="display:none;padding:.6rem 0;">
+          <!-- ── CLIENTE: dirección + GPS propio (se oculta en modo empleado) ── -->
+          <div id="eo-ubic-cliente">
           <p style="font-size:.76rem;color:#888;margin:0 0 .5rem;">Escribe tu dirección y elígela de la lista:</p>
           <input id="eo-dir-input" type="text" autocomplete="off" placeholder="Ej: 123 Main St, San Antonio TX"
             oninput="window.eoBuscarDireccion(this.value)"
@@ -1595,6 +1597,20 @@ html { -webkit-text-size-adjust: 100%; }
           <p style="font-size:.76rem;color:#888;margin:0 0 .5rem;">Si no sabes tu dirección exacta:</p>
           <button type="button" id="eo-btn-ubic" onclick="window.eoCompartirUbicacion()" style="width:100%;padding:.8rem;background:rgba(167,139,250,.15);border:1.5px solid rgba(167,139,250,.4);color:#A78BFA;border-radius:10px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">📍 Compartir mi ubicación (GPS)</button>
           <div id="eo-ubic-status" style="font-size:.78rem;margin-top:.5rem;"></div>
+          </div>
+
+          <!-- ── EMPLEADO: pedir la ubicación al cliente (no usar GPS del equipo) ── -->
+          <div id="eo-ubic-empleado" style="display:none;">
+            <p style="font-size:.78rem;color:#25D366;margin:0 0 .5rem;font-weight:700;">📲 Contacta al cliente para que comparta su ubicación</p>
+            <p style="font-size:.74rem;color:#888;margin:0 0 .6rem;">Escribe el WhatsApp del cliente. Al crear la orden le enviaremos un enlace para que comparta su ubicación exacta (misma lógica que "Pedir ubicación" del panel Admin).</p>
+            <input id="eo-tel-cliente" type="tel" inputmode="tel" autocomplete="off" placeholder="Teléfono del cliente (210-555-1234)"
+              oninput="var s=document.getElementById('eo-tel-status'); if(s) s.style.display='none'; this.style.borderColor='';"
+              style="width:100%;background:#111;border:1.5px solid rgba(37,211,102,.4);color:#fff;
+                     border-radius:10px;padding:.7rem;font-family:inherit;font-size:.85rem;box-sizing:border-box;">
+            <button type="button" id="eo-btn-pedir-ubic" onclick="window.eoPedirUbicacionCliente()"
+              style="width:100%;margin-top:.6rem;padding:.8rem;background:linear-gradient(135deg,#25D366,#18a849);border:none;color:#fff;border-radius:10px;font-family:inherit;font-size:.85rem;font-weight:800;cursor:pointer;">📍 Guardar y pedir ubicación al cliente</button>
+            <div id="eo-tel-status" class="auth-message" style="display:none;font-size:.78rem;margin-top:.5rem;"></div>
+          </div>
         </div>
       </div>
 
@@ -2226,7 +2242,7 @@ html { -webkit-text-size-adjust: 100%; }
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1788256900"></script>
+<script type="module" src="js/app.js?v=1788259000"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -4104,6 +4120,21 @@ window.cartCompartirUbicacion = function() {
             document.getElementById('eo-tipo').style.display = 'none';
             document.getElementById('eo-pasos').style.display = 'block';
             document.getElementById('eo-saludo').textContent = 'Completa estos pasos para tu entrega a domicilio.';
+            // En modo EMPLEADO el paso 4 no usa el GPS del equipo: se le pide la
+            // ubicación al cliente (contactarlo por WhatsApp).
+            var _esEmpEO = !!(leerSes('tt_emp_id') || leerSes('tt_cajero_nombre'));
+            var bloqueCli = document.getElementById('eo-ubic-cliente');
+            var bloqueEmp = document.getElementById('eo-ubic-empleado');
+            var tituloUbic = document.querySelector('#eo-ubicacion-head span');
+            if (_esEmpEO) {
+                if (bloqueCli) bloqueCli.style.display = 'none';
+                if (bloqueEmp) bloqueEmp.style.display = 'block';
+                if (tituloUbic) tituloUbic.textContent = '📲 4. Pedir ubicación al cliente';
+            } else {
+                if (bloqueCli) bloqueCli.style.display = 'block';
+                if (bloqueEmp) bloqueEmp.style.display = 'none';
+                if (tituloUbic) tituloUbic.textContent = '📌 4. Tu ubicación';
+            }
             eoRenderZonas();
             window.eoToggle('zona');
         }
@@ -4265,9 +4296,29 @@ window.cartCompartirUbicacion = function() {
         }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
     };
 
+    // EMPLEADO: en vez del GPS propio, guarda el teléfono del cliente y marca
+    // que su ubicación se pedirá por WhatsApp al crear la orden.
+    window.eoPedirUbicacionCliente = function() {
+        var inp = document.getElementById('eo-tel-cliente');
+        var status = document.getElementById('eo-tel-status');
+        var tel = ((inp && inp.value) || '').replace(/[^0-9]/g, '');
+        function err(m){ if(status){ status.style.display='block'; status.style.color='#FF4444'; status.textContent=m; } if(inp){ inp.style.borderColor='#FF4444'; inp.focus(); } }
+        if (!tel) { err('📱 Escribe el teléfono del cliente.'); return; }
+        if (tel.length !== 10 || tel[0] === '0' || tel[0] === '1') { err('📱 Teléfono inválido. Deben ser 10 dígitos.'); return; }
+        window._entregaCarrito = window._entregaCarrito || {};
+        window._entregaCarrito.ubicacion = { pendiente: true, telefono: tel, tipo: 'pedir_cliente', direccion: 'El cliente enviará su ubicación por WhatsApp' };
+        window._entregaCarrito.telefonoCliente = tel;
+        try { localStorage.setItem('tt_pedir_ubic_tel', tel); } catch(e){}
+        if (status) { status.style.display='block'; status.style.color='#25D366'; status.innerHTML = '✅ Listo. Al crear la orden podrás enviarle el enlace por WhatsApp.'; }
+        var v = document.getElementById('eo-ubicacion-val'); if (v) { v.textContent = 'Se pedirá al cliente ✓'; v.style.color = '#25D366'; }
+        eoActualizarBoton();
+        setTimeout(function(){ window.eoToggle('ubicacion'); }, 800);
+    };
+
     function eoCompleto() {
         var e = window._entregaCarrito || {};
-        return !!(e.zona && e.fecha && e.horario && e.ubicacion && e.ubicacion.lat);
+        var ubicOk = e.ubicacion && (e.ubicacion.lat || e.ubicacion.pendiente);
+        return !!(e.zona && e.fecha && e.horario && ubicOk);
     }
 
     function eoActualizarBoton() {

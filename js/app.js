@@ -441,7 +441,29 @@ function _operadorEsEmpleado() {
     } catch(e) { return false; }
 }
 
-function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waUrl, ubicacionPrevia, itemsResumen, totalResumen) {
+// Enviar al cliente el enlace para que comparta su ubicación (misma lógica que
+// el botón "Pedir ubicación" del panel Admin en vivo). Necesita el id del
+// pedido ya creado para armar el enlace ubicacion.html?pedido=ID.
+window._pedirUbicacionClienteWA = function(pedidoId, telefono, nombre, ticket) {
+    var num = String(telefono || '').replace(/[^0-9]/g, '');
+    if (num.length === 10) num = '1' + num;  // asumir USA si son 10 dígitos
+    var base = window.location.origin + window.location.pathname.replace(/[^\/]*$/, '');
+    var link = base + 'ubicacion.html?pedido=' + (pedidoId || '');
+    var saludo = nombre ? ('Hola ' + nombre + '!') : 'Hola!';
+    var mensaje =
+        saludo + ' Gracias por tu pedido en Tortas Tortuga 🐢\n\n' +
+        (ticket ? ('Pedido: ' + ticket + '\n') : '') +
+        'Para llevártelo a domicilio necesitamos tu ubicación exacta.\n\n' +
+        'Es muy fácil, solo 2 pasos:\n\n' +
+        '1️⃣ Abre este link:\n' + link + '\n\n' +
+        '2️⃣ Toca el botón verde "Compartir mi ubicación" y acepta el permiso.\n\n' +
+        '¡Listo! Con eso tu repartidor sabrá exactamente dónde llegar. 🛵💨';
+    var url = 'https://wa.me/' + num + '?text=' + encodeURIComponent(mensaje);
+    window.open(url, '_blank');
+    try { localStorage.removeItem('tt_pedir_ubic_tel'); } catch(e){}
+};
+
+function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waUrl, ubicacionPrevia, itemsResumen, totalResumen, opts) {
     const ov = document.createElement('div');
     ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;' +
         'display:flex;align-items:center;justify-content:center;padding:1rem;';
@@ -468,7 +490,11 @@ function mostrarConfirmacionTicket(ticketStr, nombreCliente, pedidoId, tipo, waU
             <div style="display:flex;flex-direction:column;gap:.6rem;">
                 ${_operadorEsEmpleado()
                     ? // ── MODO EMPLEADO: acciones de equipo ──
-                      `<a href="pages/cocina.html" style="background:rgba(251,183,36,.15);
+                      `${(opts && opts.ubicacionPendiente && opts.telefonoCliente && pedidoId)
+                          ? `<button onclick="window._pedirUbicacionClienteWA('${pedidoId}','${String(opts.telefonoCliente).replace(/[^0-9]/g,'')}','${String(nombreCliente||'').replace(/['\\]/g,'')}','#${String(ticketStr).replace(/^#+/, '')}')"
+                              style="background:linear-gradient(135deg,#25D366,#18a849);border:none;color:#fff;padding:.75rem;border-radius:10px;
+                              font-size:.9rem;font-weight:800;cursor:pointer;">📲 Pedir ubicación al cliente</button>` : ''}
+                       <a href="pages/cocina.html" style="background:rgba(251,183,36,.15);
                           border:1px solid rgba(251,183,36,.35);color:#FBB724;padding:.7rem;border-radius:10px;
                           font-size:.85rem;font-weight:700;text-decoration:none;">🍳 Ver cocina</a>
                        <button id="btn-cerrar-confirmacion" style="background:linear-gradient(135deg,#FF7A33,#FF5A00);
@@ -1544,6 +1570,11 @@ window.enviarTodasLasCuentas = async function() {
     // Para CLIENTES: el tipo (pickup/domicilio) viene del overlay de pasos.
     var esClientePuro = !!(window._clienteActivo && !window._cajeroActivo);
     var entregaCli = window._entregaCarrito || {};
+    // EMPLEADO a domicilio: en vez de GPS, se pidió el teléfono del cliente para
+    // solicitarle su ubicación por WhatsApp al crear la orden (paso 4).
+    var _ubicPendiente = !!(entregaCli.ubicacion && entregaCli.ubicacion.pendiente);
+    var _telPendiente = _ubicPendiente ? (entregaCli.ubicacion.telefono || entregaCli.telefonoCliente || '') : '';
+    if (_telPendiente && (!telefono || String(telefono).replace(/\D/g,'').length < 10)) telefono = _telPendiente;
     function _leerTipo(){ return sessionStorage.getItem('tt_tipo_pedido') || localStorage.getItem('tt_tipo_pedido') || entregaCli.tipoPedido; }
     if (esClientePuro) {
         var tp = _leerTipo();
@@ -1707,6 +1738,8 @@ window.enviarTodasLasCuentas = async function() {
         horarioEntregaEtiqueta: esClientePuro ? (entregaCli.horarioEtiqueta || null) : ((cuentaPrincipal && cuentaPrincipal.horarioEntregaEtiqueta) || null),
         // Ubicación compartida en el acordeón del carrito (si la hay)
         ubicacionCliente:     (esClientePuro && entregaCli.ubicacion && entregaCli.ubicacion.lat) ? entregaCli.ubicacion : null,
+        // Empleado a domicilio que aún debe pedir la ubicación al cliente
+        ubicacionPendiente:   _ubicPendiente,
         tomadaEn:     new Date().toISOString(),
     };
 
@@ -1796,7 +1829,8 @@ window.enviarTodasLasCuentas = async function() {
         // Confirmación en pantalla: pasa la URL de WhatsApp y el tipo para
         // que el modal decida si habilita el botón de una vez (pickup) o
         // solo tras compartir ubicación (domicilio).
-        mostrarConfirmacionTicket(ticket, nombre, result ? result.id : null, tipo, waUrl, data.ubicacionCliente || null, itemsStr, totalGen);
+        mostrarConfirmacionTicket(ticket, nombre, result ? result.id : null, tipo, waUrl, data.ubicacionCliente || null, itemsStr, totalGen,
+            { ubicacionPendiente: _ubicPendiente, telefonoCliente: telefono });
     } catch (e) {
         console.error('Error al enviar orden:', e);
         alert('❌ Error al enviar la orden:\n' + (e.message || e) + '\n\nRevisa que tengas conexión a internet.');
