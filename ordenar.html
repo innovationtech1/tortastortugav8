@@ -1552,10 +1552,10 @@ html { -webkit-text-size-adjust: 100%; }
           <div id="eo-zona-botones" style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;"></div>
         </div>
       </div>
-      <!-- Paso día -->
-      <div class="eo-acc" style="margin-bottom:.5rem;">
+      <!-- Paso día (OCULTO: la entrega es el mismo día, lo antes posible) -->
+      <div class="eo-acc" id="eo-acc-fecha" style="margin-bottom:.5rem;display:none;">
         <button type="button" onclick="window.eoToggle('fecha')" id="eo-fecha-head" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:.75rem;background:rgba(59,130,246,.08);border:1.5px solid rgba(59,130,246,.3);border-radius:12px;font-family:inherit;cursor:pointer;color:#3B82F6;font-size:.85rem;font-weight:800;opacity:.5;">
-          <span>🗓️ 2. Día de entrega</span><span id="eo-fecha-val" style="color:#888;font-weight:600;font-size:.78rem;">—</span>
+          <span>🗓️ Día de entrega</span><span id="eo-fecha-val" style="color:#888;font-weight:600;font-size:.78rem;">—</span>
         </button>
         <div id="eo-fecha-body" style="display:none;padding:.6rem 0;">
           <div id="eo-fecha-botones" style="display:flex;gap:.4rem;overflow-x:auto;padding-bottom:.3rem;"></div>
@@ -1564,9 +1564,10 @@ html { -webkit-text-size-adjust: 100%; }
       <!-- Paso horario -->
       <div class="eo-acc" style="margin-bottom:.5rem;">
         <button type="button" onclick="window.eoToggle('horario')" id="eo-horario-head" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:.75rem;background:rgba(37,211,102,.08);border:1.5px solid rgba(37,211,102,.3);border-radius:12px;font-family:inherit;cursor:pointer;color:#25D366;font-size:.85rem;font-weight:800;opacity:.5;">
-          <span>🕐 3. Horario</span><span id="eo-horario-val" style="color:#888;font-weight:600;font-size:.78rem;">—</span>
+          <span>🕐 2. Horario</span><span id="eo-horario-val" style="color:#888;font-weight:600;font-size:.78rem;">—</span>
         </button>
         <div id="eo-horario-body" style="display:none;padding:.6rem 0;max-height:34vh;overflow-y:auto;">
+          <div style="background:rgba(255,90,0,.08);border:1px solid rgba(255,90,0,.25);border-radius:10px;padding:.6rem .7rem;margin-bottom:.6rem;font-size:.75rem;color:#FF9A5A;line-height:1.5;">🛵 <b>Entrega lo más pronto posible.</b> La hora puede variar según la cantidad de productos, el tráfico y otras órdenes adelante.</div>
           <div id="eo-horario-loading" style="font-size:.78rem;color:#888;padding:.3rem 0;">Cargando horarios…</div>
           <div id="eo-horario-botones" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;"></div>
           <div id="eo-horario-vacio" style="display:none;font-size:.78rem;color:#FF4444;padding:.3rem 0;"></div>
@@ -1575,7 +1576,7 @@ html { -webkit-text-size-adjust: 100%; }
       <!-- Paso ubicación -->
       <div class="eo-acc" style="margin-bottom:1rem;">
         <button type="button" onclick="window.eoToggle('ubicacion')" id="eo-ubicacion-head" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:.75rem;background:rgba(167,139,250,.08);border:1.5px solid rgba(167,139,250,.3);border-radius:12px;font-family:inherit;cursor:pointer;color:#A78BFA;font-size:.85rem;font-weight:800;opacity:.5;">
-          <span>📌 4. Tu ubicación</span><span id="eo-ubicacion-val" style="color:#888;font-weight:600;font-size:.78rem;">—</span>
+          <span>📌 3. Tu ubicación</span><span id="eo-ubicacion-val" style="color:#888;font-weight:600;font-size:.78rem;">—</span>
         </button>
         <div id="eo-ubicacion-body" style="display:none;padding:.6rem 0;">
           <!-- ── CLIENTE: dirección + GPS propio (se oculta en modo empleado) ── -->
@@ -2242,7 +2243,7 @@ html { -webkit-text-size-adjust: 100%; }
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1788259000"></script>
+<script type="module" src="js/app.js?v=1788262000"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -4129,11 +4130,11 @@ window.cartCompartirUbicacion = function() {
             if (_esEmpEO) {
                 if (bloqueCli) bloqueCli.style.display = 'none';
                 if (bloqueEmp) bloqueEmp.style.display = 'block';
-                if (tituloUbic) tituloUbic.textContent = '📲 4. Pedir ubicación al cliente';
+                if (tituloUbic) tituloUbic.textContent = '📲 3. Pedir ubicación al cliente';
             } else {
                 if (bloqueCli) bloqueCli.style.display = 'block';
                 if (bloqueEmp) bloqueEmp.style.display = 'none';
-                if (tituloUbic) tituloUbic.textContent = '📌 4. Tu ubicación';
+                if (tituloUbic) tituloUbic.textContent = '📌 3. Tu ubicación';
             }
             eoRenderZonas();
             window.eoToggle('zona');
@@ -4175,18 +4176,11 @@ window.cartCompartirUbicacion = function() {
             b.style.borderColor = on ? '#FF5A00' : 'rgba(255,90,0,.25)';
         });
         var v = document.getElementById('eo-zona-val'); if (v) { v.textContent = zonaNombre + ' ✓'; v.style.color = '#25D366'; }
-        eoActivar('fecha', true);
-        document.getElementById('eo-fecha-val').textContent = 'Elegir ▾';
-        // Render fechas
-        var fc = document.getElementById('eo-fecha-botones');
-        if (fc) {
-            var dias = fechasDisponibles(7);
-            fc.innerHTML = dias.map(function(d){
-                return '<button type="button" class="eo-fecha-btn" data-fecha="'+d.fecha+'" onclick="window.eoFecha(\''+d.fecha+'\',\''+d.etiqueta+'\')" style="flex:0 0 auto;padding:.6rem .8rem;border-radius:10px;font-family:inherit;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap;background:rgba(59,130,246,.1);border:1.5px solid rgba(59,130,246,.3);color:#3B82F6;">'+d.etiqueta+'</button>';
-            }).join('');
-        }
-        window.eoToggle('fecha');
-        eoActualizarBoton();
+        // Ya no se pregunta el día: la entrega es HOY, lo antes posible.
+        // Se asigna la fecha en curso automáticamente y se pasa al horario.
+        var _dias = fechasDisponibles(7);
+        var _hoy = (_dias && _dias.length) ? _dias[0] : { fecha: 'hoy', etiqueta: 'Hoy' };
+        window.eoFecha(_hoy.fecha, _hoy.etiqueta);
     };
 
     window.eoFecha = async function(fecha, etiqueta) {
