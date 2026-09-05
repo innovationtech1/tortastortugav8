@@ -94,7 +94,11 @@
   }
   /* ── Ticket (folio) arriba a la izquierda + Stepper (igual que "Mi Orden") ── */
   .pn-folio-top{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.5rem;}
-  .pn-folio{font-size:1.05rem;font-weight:900;color:var(--primary,#FF5A00);letter-spacing:.02em;}
+  .pn-folio{display:inline-flex;align-items:center;gap:.35rem;font-size:1rem;font-weight:900;
+    color:#FF7A33;background:linear-gradient(135deg,rgba(255,122,51,.16),rgba(255,90,0,.10));
+    border:1px solid rgba(255,90,0,.4);border-radius:10px;padding:.32rem .72rem;letter-spacing:.04em;
+    box-shadow:0 2px 8px rgba(255,90,0,.12);}
+  .pn-folio::before{content:"🎟️";font-size:.95rem;filter:drop-shadow(0 1px 1px rgba(0,0,0,.4));}
   .pn-folio-estado{font-size:.62rem;font-weight:800;padding:.25rem .6rem;border-radius:20px;text-transform:uppercase;
     letter-spacing:.03em;background:rgba(91,155,255,.15);color:#5B9BFF;flex-shrink:0;}
   .pn-orden-box{display:flex;align-items:center;justify-content:center;gap:.5rem;

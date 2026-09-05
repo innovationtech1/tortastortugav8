@@ -75,7 +75,11 @@ main{max-width:640px;margin:0 auto;padding:1.2rem 1rem 3rem;}
 .pedido-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;
   padding:1.1rem;margin-bottom:1rem;}
 .pedido-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;}
-.pedido-folio{font-size:1.05rem;font-weight:900;color:var(--orange);}
+.pedido-folio{display:inline-flex;align-items:center;gap:.35rem;font-size:1rem;font-weight:900;
+  color:#FF7A33;background:linear-gradient(135deg,rgba(255,122,51,.16),rgba(255,90,0,.10));
+  border:1px solid rgba(255,90,0,.4);border-radius:10px;padding:.32rem .72rem;letter-spacing:.04em;
+  box-shadow:0 2px 8px rgba(255,90,0,.12);}
+.pedido-folio::before{content:"🎟️";font-size:.95rem;filter:drop-shadow(0 1px 1px rgba(0,0,0,.4));}
 .pedido-estado{font-size:.72rem;font-weight:800;padding:.3rem .7rem;border-radius:20px;text-transform:uppercase;letter-spacing:.03em;}
 .est-nuevo{background:rgba(59,130,246,.15);color:var(--blue);}
 .est-cocina{background:rgba(251,183,36,.15);color:var(--yellow);}
