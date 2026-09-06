@@ -157,17 +157,24 @@ window._pendingItem = window._pendingItem || null;
     // vuelva a escribir.
     if (hayCliente && !hayStaff) {
         window._clienteActivo = { nombre: cliNombre, telefono: sessionStorage.getItem('tt_cliente_telefono') || '' };
-        // Poner el nombre y teléfono del cliente en la Cuenta 1 por defecto,
-        // para que aparezca su nombre (no "Cuenta 1") y no tenga que
-        // reescribir sus datos al ordenar.
-        try {
-            var _cs = window._cuentasSys;
-            if (_cs && _cs.cuentas && _cs.cuentas[0]) {
-                var c0 = _cs.cuentas[0];
-                if (!c0.nombre || c0.nombre === 'Cuenta 1') c0.nombre = cliNombre;
-                if (!c0.telefono) c0.telefono = window._clienteActivo.telefono;
-            }
-        } catch(e) {}
+        // Poner el nombre y teléfono del cliente en la cuenta activa por defecto,
+        // para que el botón muestre AUTOMÁTICAMENTE su nombre (no "Asignar mesa /
+        // nombre") y no tenga que reescribir sus datos. El sistema de cuentas
+        // (app.js) carga como módulo al final: reintentar hasta que exista.
+        (function() {
+            var _aplicarClienteCuenta = function() {
+                var _cs = window._cuentasSys;
+                if (!_cs || !_cs.cuentas || !_cs.cuentas.length) return false;
+                var c0 = _cs.cuentas.find(function(x){ return x.id === _cs.activa; }) || _cs.cuentas[0];
+                if (!c0) return false;
+                if (!c0.nombre || /^Cuenta \d+$/.test(c0.nombre)) c0.nombre = cliNombre;
+                if (!c0.telefono) c0.telefono = window._clienteActivo.telefono || '';
+                if (window.renderCuentasTabs) window.renderCuentasTabs();
+                return true;
+            };
+            var _n = 0;
+            var _tmr = setInterval(function(){ _n++; if (_aplicarClienteCuenta() || _n > 25) clearInterval(_tmr); }, 200);
+        })();
 function precargarCliente() {
             var n = document.getElementById('customer-name');
             var t = document.getElementById('customer-phone');
