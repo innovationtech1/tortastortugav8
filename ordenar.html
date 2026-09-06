@@ -3911,9 +3911,30 @@ function _renderEntregaEmpleadoCarrito(sec) {
     '</div>';
 
     if (esDom) {
+        // ── Acordeón compacto: cada sección se colapsa mostrando su valor ──
+        // Estado de qué panel está abierto (uno a la vez) para ganar visibilidad.
+        var open = window._empAccOpen;
+        if (open === undefined) open = !e.zona ? 'zona' : null;
+        var ubiOk = !!(e.ubicacion && e.ubicacion.pendiente);
+
+        // Fila de acordeón reutilizable
+        function accFila(which, color, titulo, valorHtml, valorOk, cuerpoHtml, habil) {
+            var abierto = (open === which) && habil;
+            var head = '<button type="button" ' + (habil ? 'onclick="window.cartEmpAcc(\'' + which + '\')"' : 'disabled') +
+                ' style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:.5rem;' +
+                'padding:.6rem .7rem;background:rgba(' + color + ',.08);border:1.5px solid rgba(' + color + ',.3);' +
+                'border-radius:10px;font-family:inherit;cursor:' + (habil ? 'pointer' : 'default') + ';' +
+                'color:rgb(' + color + ');font-size:.8rem;font-weight:800;opacity:' + (habil ? '1' : '.5') + ';">' +
+                '<span>' + titulo + '</span>' +
+                '<span style="font-weight:600;font-size:.74rem;color:' + (valorOk ? '#25D366' : '#888') + ';white-space:nowrap;">' +
+                    valorHtml + ' ' + (abierto ? '▴' : '▾') + '</span>' +
+                '</button>';
+            var body = abierto ? '<div style="padding:.5rem 0 .1rem;">' + cuerpoHtml + '</div>' : '';
+            return '<div style="margin-bottom:.4rem;">' + head + body + '</div>';
+        }
+
         // Zona
-        html += '<div style="font-size:.66rem;color:#888;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin:.4rem 0 .3rem;">📍 Zona de entrega' + (e.zonaNombre ? ' · <span style="color:#25D366;">' + e.zonaNombre + ' ✓</span>' : '') + '</div>';
-        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.35rem;margin-bottom:.5rem;">' +
+        var zonaCuerpo = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.35rem;">' +
             CONFIG_COLAS.zonas.map(function(z){
                 var on = e.zona === z.id;
                 return '<button type="button" onclick="window.cartEmpZona(\'' + z.id + '\',\'' + z.nombre + '\')" ' +
@@ -3921,31 +3942,41 @@ function _renderEntregaEmpleadoCarrito(sec) {
                     (on ? 'background:rgba(255,90,0,.22);border:1.5px solid #FF5A00;color:#FF5A00;'
                         : 'background:rgba(255,90,0,.06);border:1.5px solid rgba(255,90,0,.22);color:#FF5A00;') + '">' + z.nombre + '</button>';
             }).join('') + '</div>';
+        html += accFila('zona', '255,90,0', '📍 Zona de entrega',
+            (e.zonaNombre ? e.zonaNombre + ' ✓' : 'Elegir'), !!e.zonaNombre, zonaCuerpo, true);
 
-        // Horario (solo tras elegir zona)
-        if (e.zona) {
-            html += '<div style="font-size:.66rem;color:#888;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin:.4rem 0 .3rem;">🕐 Horario' + (e.horarioEtiqueta ? ' · <span style="color:#25D366;">' + e.horarioEtiqueta + ' ✓</span>' : '') + '</div>';
-            html += '<div id="cartemp-horario-loading" style="font-size:.72rem;color:#888;padding:.2rem 0;">Cargando horarios…</div>';
-            html += '<div id="cartemp-horario-cont" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem;margin-bottom:.5rem;"></div>';
-        }
+        // Horario (habilitado solo tras elegir zona)
+        var horarioCuerpo = '<div id="cartemp-horario-loading" style="font-size:.72rem;color:#888;padding:.2rem 0;">Cargando horarios…</div>' +
+            '<div id="cartemp-horario-cont" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem;"></div>';
+        html += accFila('horario', '37,211,102', '🕐 Horario',
+            (e.horarioEtiqueta ? e.horarioEtiqueta + ' ✓' : (e.zona ? 'Elegir' : '—')), !!e.horarioEtiqueta, horarioCuerpo, !!e.zona);
 
         // Pedir ubicación al cliente (WhatsApp)
-        var ubiOk = !!(e.ubicacion && e.ubicacion.pendiente);
-        html += '<div style="font-size:.66rem;color:#888;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin:.4rem 0 .3rem;">📲 Pedir ubicación al cliente</div>';
-        html += '<div style="display:flex;gap:.35rem;">' +
+        var ubicCuerpo = '<div style="display:flex;gap:.35rem;">' +
             '<input id="cartemp-tel" type="tel" inputmode="tel" placeholder="WhatsApp del cliente (10 dígitos)" value="' + (tel || '') + '" ' +
             'style="flex:1;min-width:0;box-sizing:border-box;padding:.55rem .6rem;background:#0d0d0d;border:1.5px solid rgba(37,211,102,.4);color:#fff;border-radius:9px;font-family:inherit;font-size:.8rem;outline:none;">' +
             '<button onclick="window.cartEmpGuardarTel()" style="flex-shrink:0;background:rgba(37,211,102,.15);border:1.5px solid rgba(37,211,102,.45);color:#25D366;border-radius:9px;padding:.4rem .7rem;font-family:inherit;font-size:.75rem;font-weight:800;cursor:pointer;">Guardar</button>' +
-        '</div>';
-        html += '<div id="cartemp-tel-status" style="font-size:.7rem;margin-top:.35rem;' + (ubiOk ? 'color:#25D366;display:block;' : 'display:none;') + '">' + (ubiOk ? '✅ Se pedirá la ubicación al cliente por WhatsApp al crear la orden.' : '') + '</div>';
-        html += '<div style="font-size:.66rem;color:#888;margin-top:.3rem;line-height:1.35;">Al crear la orden podrás enviarle el enlace por WhatsApp. La entrega es lo antes posible.</div>';
+            '</div>' +
+            '<div id="cartemp-tel-status" style="font-size:.7rem;margin-top:.35rem;' + (ubiOk ? 'color:#25D366;display:block;' : 'display:none;') + '">' + (ubiOk ? '✅ Se pedirá la ubicación al cliente por WhatsApp al crear la orden.' : '') + '</div>' +
+            '<div style="font-size:.66rem;color:#888;margin-top:.3rem;line-height:1.35;">Al crear la orden podrás enviarle el enlace por WhatsApp. La entrega es lo antes posible.</div>';
+        html += accFila('ubic', '167,139,250', '📲 Pedir ubicación al cliente',
+            (ubiOk ? (tel || 'Listo') + ' ✓' : (tel || '—')), ubiOk, ubicCuerpo, true);
     }
 
     html += '</div>';
     sec.innerHTML = html;
 
-    if (esDom && e.zona) { setTimeout(function(){ window._cartEmpCargarHorarios(); }, 0); }
+    // Cargar horarios solo cuando el panel de horario está abierto
+    if (esDom && e.zona && window._empAccOpen === 'horario') {
+        setTimeout(function(){ window._cartEmpCargarHorarios(); }, 0);
+    }
 }
+
+// Abrir/cerrar un panel del acordeón de entrega (empleado)
+window.cartEmpAcc = function(which) {
+    window._empAccOpen = (window._empAccOpen === which) ? null : which;
+    window.initEntregaCarrito();
+};
 
 // Cambiar tipo de pedido del empleado (Tortumóvil / Domicilio) para la cuenta activa
 window.cartSetTipoEmpleado = function(tipo) {
@@ -3954,6 +3985,8 @@ window.cartSetTipoEmpleado = function(tipo) {
     if (tipo === 'domicilio') {
         if (c) { c.tipoServicio = 'Domicilio'; c.ordenoEnTortumovil = false; }
         window._entregaCarrito.tipoPedido = 'domicilio';
+        // Abrir el panel de zona si aún no hay zona elegida (guiar el flujo)
+        window._empAccOpen = window._entregaCarrito.zona ? null : 'zona';
         try { sessionStorage.setItem('tt_tipo_pedido', 'domicilio'); } catch(e){}
     } else {
         if (c) {
@@ -3985,6 +4018,8 @@ window.cartEmpZona = function(id, nombre) {
     window._entregaCarrito.fechaEtiqueta = 'Hoy';
     window._entregaCarrito.horario = null;
     window._entregaCarrito.horarioEtiqueta = null;
+    // Auto-avanzar: colapsar zona y abrir horario
+    window._empAccOpen = 'horario';
     if (window.guardarEntregaLocal) window.guardarEntregaLocal();
     window.initEntregaCarrito();
 };
@@ -4020,6 +4055,9 @@ window.cartEmpHorario = function(hora, etiqueta) {
     window._entregaCarrito.horario = hora;
     window._entregaCarrito.horarioEtiqueta = etiqueta;
     if (!window._entregaCarrito.fecha) { window._entregaCarrito.fecha = 'hoy'; window._entregaCarrito.fechaEtiqueta = 'Hoy'; }
+    // Auto-avanzar: si falta pedir la ubicación, abrir ese panel; si no, colapsar
+    var _ub = window._entregaCarrito.ubicacion;
+    window._empAccOpen = (_ub && _ub.pendiente) ? null : 'ubic';
     if (window.guardarEntregaLocal) window.guardarEntregaLocal();
     window.initEntregaCarrito();
 };
@@ -4037,6 +4075,8 @@ window.cartEmpGuardarTel = function() {
     window._entregaCarrito.ubicacion = { pendiente: true, telefono: tel, tipo: 'pedir_cliente', direccion: 'El cliente enviará su ubicación por WhatsApp' };
     window._entregaCarrito.telefonoCliente = tel;
     try { localStorage.setItem('tt_pedir_ubic_tel', tel); } catch(e){}
+    // Listo: colapsar el acordeón para dar visibilidad a los productos
+    window._empAccOpen = null;
     if (window.guardarEntregaLocal) window.guardarEntregaLocal();
     if (window.renderCuentasTabs) window.renderCuentasTabs();
     window.initEntregaCarrito();
