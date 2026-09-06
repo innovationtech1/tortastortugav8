@@ -31,8 +31,11 @@ import {
 
 // ── Configuración ────────────────────────────────────────────────
 export const CONFIG_COLAS = {
-    horaInicio: 10,       // 10:00 AM
-    horaFin: 18,          // 6:00 PM (exclusivo: el último slot es 17:30)
+    // ⚠️ MODO PRUEBAS: horario extendido a todo el día (00:00–24:00) y todos
+    // los días (ver fechasDisponibles). Para revertir a producción, regresar
+    // horaInicio: 10 y horaFin: 18, y restaurar el salto de domingos abajo.
+    horaInicio: 0,        // PRUEBAS: 12:00 AM (producción: 10 = 10:00 AM)
+    horaFin: 24,          // PRUEBAS: medianoche (producción: 18 = 6:00 PM)
     intervaloMin: 30,     // minutos por slot
     capacidadPorSlot: 3,  // entregas por horario/zona
     zonas: [
@@ -99,7 +102,9 @@ export function fechasDisponibles(diasAdelante) {
     for (let i = 0; i <= diasAdelante; i++) {
         const d = new Date(hoy);
         d.setDate(hoy.getDate() + i);
-        if (d.getDay() === 0) continue; // domingo cerrado
+        // ⚠️ MODO PRUEBAS: abierto todos los días (lunes a domingo).
+        // Producción: descomentar la línea siguiente para cerrar los domingos.
+        // if (d.getDay() === 0) continue; // domingo cerrado
         const fecha = d.getFullYear() + '-' +
                       String(d.getMonth() + 1).padStart(2, '0') + '-' +
                       String(d.getDate()).padStart(2, '0');
