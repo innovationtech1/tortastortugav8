@@ -922,6 +922,32 @@ function mostrarToastRuta(txt) {
     setTimeout(function(){ toast.remove(); }, 2500);
 }
 
+// ── Auto-archivar órdenes ENTREGADAS a los 5 segundos ──────────────
+// Cuando una orden pasa a "Entregado", se programa su archivado (archivado:true)
+// 5s después: así desaparece de "Mi Ruta" del repartidor. Queda en el historial
+// (reportes/admin), solo se retira de las vistas activas.
+var _archivarProgramado = {};
+function _programarArchivadoEntregados(lista) {
+    (lista || []).forEach(function(p){
+        if (!p || !p.id || p.archivado === true) return;
+        var entregada = !!p.entregado || (typeof TTEstados !== 'undefined' && TTEstados.estaEntregado(p.estado));
+        if (entregada && !_archivarProgramado[p.id]) {
+            _archivarProgramado[p.id] = setTimeout(function(){
+                updateDoc(doc(db, 'pedidos', p.id), {
+                    archivado: true,
+                    archivadoEn: new Date().toISOString(),
+                    archivadoPor: 'auto-entregado'
+                }).catch(function(e){ console.warn('No se pudo archivar la orden entregada', p.id, e); });
+                delete _archivarProgramado[p.id];
+                // Si la vista de entrega de esa orden está abierta, cerrarla
+                if (_pedidoAbierto && _pedidoAbierto.id === p.id && typeof window.cerrarEntrega === 'function') {
+                    try { window.cerrarEntrega(); } catch(err){}
+                }
+            }, 5000);
+        }
+    });
+}
+
 async function escucharRuta() {
     await authReady;
     onSnapshot(collection(db, 'pedidos'), snap => {
@@ -934,6 +960,8 @@ async function escucharRuta() {
         const mios = _filtrarPedidosRuta(window._todosPedidosRuta);
         _pedidosActuales = mios;
         render(mios);
+        // Auto-archivar las órdenes ENTREGADAS a los 5s (desaparecen de Mi Ruta)
+        _programarArchivadoEntregados(mios);
       } catch(errRender) {
         console.error('Error al mostrar la ruta:', errRender);
         var c = document.getElementById('lista-ruta');
