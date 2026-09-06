@@ -1589,6 +1589,20 @@ window.enviarTodasLasCuentas = async function() {
         tipoServ = (tp === 'pickup') ? 'Para llevar' : 'Domicilio';
     }
 
+    // EMPLEADO a DOMICILIO: si el empleado eligió "domicilio" en el overlay de
+    // pasos (zona/horario/pedir-ubicación), la orden es una ENTREGA REAL que debe
+    // ir a "Disponibles / Mis Rutas" para que un repartidor la tome — NO es una
+    // orden de tortumóvil que se prepara al instante en la unidad.
+    var esEmpleadoDomicilio = false;
+    if (!esClientePuro) {
+        var _tpEmp = _leerTipo();
+        if (_tpEmp === 'domicilio' || (entregaCli && entregaCli.tipoPedido === 'domicilio' && entregaCli.zona)) {
+            esEmpleadoDomicilio = true;
+            tipo = 'domicilio';
+            tipoServ = 'Domicilio';
+        }
+    }
+
     // Validar que haya productos
     const hayProductos = CS.cuentas.some(c => c.items.length > 0);
     if (!hayProductos) {
@@ -1602,11 +1616,11 @@ window.enviarTodasLasCuentas = async function() {
     // prepara al instante. No se pide teléfono, y si no hay nombre se asigna
     // "Cliente N" automático. Solo el cliente desde su teléfono sigue el flujo
     // normal (pickup/domicilio con sus datos).
-    var ordenoEnTortumovil = !esClientePuro;
+    var ordenoEnTortumovil = !esClientePuro && !esEmpleadoDomicilio;
     var telDigitos = (telefono || '').replace(/\D/g, '');
     var faltaNombre = !nombre || nombre === 'Cliente' || /^Cuenta \d+$/.test(nombre);
 
-    if (faltaNombre && ordenoEnTortumovil) {
+    if (faltaNombre && (ordenoEnTortumovil || esEmpleadoDomicilio)) {
         // Generar nombre automático "Cliente N" (contador diario en el navegador)
         var hoyKey = 'tt_cliente_contador_' + new Date().toISOString().slice(0,10);
         var n = parseInt(localStorage.getItem(hoyKey) || '0', 10) + 1;
@@ -1737,12 +1751,12 @@ window.enviarTodasLasCuentas = async function() {
         cajeroRol:    (window._cajeroActivo ? window._cajeroActivo.rol : ''),
         clienteUid:   sessionStorage.getItem('tt_cliente_uid') || null,
         // Zona y horario de entrega (sistema de colas — solo domicilio)
-        zonaEntrega:          esClientePuro ? (entregaCli.zona || null) : ((cuentaPrincipal && cuentaPrincipal.zonaEntrega) || null),
-        zonaEntregaNombre:    esClientePuro ? (entregaCli.zonaNombre || null) : ((cuentaPrincipal && cuentaPrincipal.zonaEntregaNombre) || null),
-        fechaEntrega:         esClientePuro ? (entregaCli.fecha || null) : ((cuentaPrincipal && cuentaPrincipal.fechaEntrega) || null),
-        fechaEntregaEtiqueta: esClientePuro ? (entregaCli.fechaEtiqueta || null) : ((cuentaPrincipal && cuentaPrincipal.fechaEntregaEtiqueta) || null),
-        horarioEntrega:       esClientePuro ? (entregaCli.horario || null) : ((cuentaPrincipal && cuentaPrincipal.horarioEntrega) || null),
-        horarioEntregaEtiqueta: esClientePuro ? (entregaCli.horarioEtiqueta || null) : ((cuentaPrincipal && cuentaPrincipal.horarioEntregaEtiqueta) || null),
+        zonaEntrega:          (esClientePuro || esEmpleadoDomicilio) ? (entregaCli.zona || null) : ((cuentaPrincipal && cuentaPrincipal.zonaEntrega) || null),
+        zonaEntregaNombre:    (esClientePuro || esEmpleadoDomicilio) ? (entregaCli.zonaNombre || null) : ((cuentaPrincipal && cuentaPrincipal.zonaEntregaNombre) || null),
+        fechaEntrega:         (esClientePuro || esEmpleadoDomicilio) ? (entregaCli.fecha || null) : ((cuentaPrincipal && cuentaPrincipal.fechaEntrega) || null),
+        fechaEntregaEtiqueta: (esClientePuro || esEmpleadoDomicilio) ? (entregaCli.fechaEtiqueta || null) : ((cuentaPrincipal && cuentaPrincipal.fechaEntregaEtiqueta) || null),
+        horarioEntrega:       (esClientePuro || esEmpleadoDomicilio) ? (entregaCli.horario || null) : ((cuentaPrincipal && cuentaPrincipal.horarioEntrega) || null),
+        horarioEntregaEtiqueta: (esClientePuro || esEmpleadoDomicilio) ? (entregaCli.horarioEtiqueta || null) : ((cuentaPrincipal && cuentaPrincipal.horarioEntregaEtiqueta) || null),
         // Ubicación compartida en el acordeón del carrito (si la hay)
         ubicacionCliente:     (esClientePuro && entregaCli.ubicacion && entregaCli.ubicacion.lat) ? entregaCli.ubicacion : null,
         // Empleado a domicilio que aún debe pedir la ubicación al cliente
