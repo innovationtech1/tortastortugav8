@@ -3416,7 +3416,7 @@ document.addEventListener('click', function(e) {
         // Ajustar el título del nombre: para empleados es "Nombre del cliente"
         // (sin el "O", porque no hay mesas que sean la alternativa).
         var lblNombre = document.getElementById('lbl-nombre-cliente');
-        if (lblNombre) lblNombre.textContent = _esEmpModal ? 'Nombre del cliente' : 'O nombre del cliente';
+        if (lblNombre) lblNombre.textContent = 'Nombre del cliente';
 
         // Para EMPLEADOS: el tipo de servicio es solo Tortumóvil o Domicilio
         // (no manejan Comer aquí / Para llevar). Para clientes, opciones normales.
@@ -3430,6 +3430,14 @@ document.addEventListener('click', function(e) {
                     '<span style="font-size:1.3rem;">🚐</span>Tortumóvil</button>' +
                     '<button class="tipo-serv-btn" data-tipo="Domicilio" onclick="window.seleccionarTipoServicio(this,\'Domicilio\')" ' +
                     'style="padding:.7rem .4rem;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);color:#fff;border-radius:12px;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.25rem;">' +
+                    '<span style="font-size:1.3rem;">🚗</span>Domicilio</button>';
+            } else {
+                // CLIENTE: el pedido siempre es a Domicilio. No mostrar
+                // "Comer aquí" ni "Para llevar" (son opciones internas del equipo).
+                tipoCont.style.gridTemplateColumns = '1fr';
+                tipoCont.innerHTML =
+                    '<button class="tipo-serv-btn" data-tipo="Domicilio" onclick="window.seleccionarTipoServicio(this,\'Domicilio\')" ' +
+                    'style="padding:.8rem .4rem;background:rgba(255,90,0,.15);border:1.5px solid #FF5A00;color:#FF5A00;border-radius:12px;font-family:inherit;font-size:.85rem;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.25rem;">' +
                     '<span style="font-size:1.3rem;">🚗</span>Domicilio</button>';
             }
         }
