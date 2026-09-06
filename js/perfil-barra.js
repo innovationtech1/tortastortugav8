@@ -154,15 +154,13 @@ window.textoItemAgrupado = function(g, opts) {
         var items;
         if (sesion.tipo === 'empleado') {
             // Menú de EMPLEADO — cada item: [icono, etiqueta, url, soloGerente]
+            // NOTA: Tienda/Ordenar, Cocina, Disponibles, Mi Ruta y Admin YA viven
+            // en la barra inferior fija (#tt-navbar), así que NO se repiten aquí.
+            // Este menú solo lista lo que no está en esa barra.
             items = [
-                ['🏬', 'Ordenar', _raiz() + 'ordenar.html', false],
                 ['🧾', 'Mis Pedidos', _base() + 'mis-pedidos.html', false],
-                ['🔔', 'Disponibles', _base() + 'disponibles.html', false],
-                ['🛵', 'Mis Rutas', _base() + 'mi-ruta.html', false],
-                ['🍳', 'Cocina', _base() + 'cocina.html', false],
                 ['📊', 'Reportes', _base() + 'reportes.html', true],
                 ['👥', 'Clientes', _base() + 'clientes.html', true],
-                ['⚙️', 'Admin', _base() + 'admin.html', true],
                 ['📋', 'Control', _base() + 'control.html', true],
                 ['🗺️', 'Mapa', _base() + 'mapa.html', true],
             ];
