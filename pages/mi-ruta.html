@@ -1143,7 +1143,13 @@ window.cobrarEntrega = async function(metodo) {
             cobradoPor: miNombre || miId,
             cobradoEn: new Date().toISOString()
         });
-        // El onSnapshot refrescará la zona de cobro automáticamente
+        // Actualización OPTIMISTA: reflejar el cambio al instante en pantalla,
+        // sin esperar el ida-y-vuelta del onSnapshot (el snapshot lo reconfirma).
+        if (_pedidoAbierto) {
+            _pedidoAbierto.estadoPago = 'Pagado';
+            _pedidoAbierto.metodoPagoReal = metodo;
+            refrescarZonaCobro(_pedidoAbierto);
+        }
         if (window.ttAlert) window.ttAlert('✅ Cobro registrado: ' + metodo);
     } catch(err) {
         alert('Error al registrar el cobro. Revisa tu conexión.');
