@@ -164,6 +164,23 @@ const btnEl = document.getElementById('btn-share');
 // ID del pedido a usar (viene en la URL o se busca el último del cliente)
 window._pedidoActivoId = pedidoId;
 
+// Guardar el id en ESTE dispositivo para que el cliente pueda seguir su pedido
+// (mapa, estados, número de orden) en mi-pedido.html aunque la orden la haya
+// creado el equipo. Los pedidos son legibles por id.
+window._recordarPedidoSeguimiento = function(id) {
+    if (!id) return;
+    try {
+        var l = JSON.parse(localStorage.getItem('tt_mis_pedidos') || '[]');
+        if (!Array.isArray(l)) l = [];
+        if (!l.some(function(x){ return x && x.id === id; })) {
+            l.unshift({ id: id, folio: '', ts: Date.now() });
+            if (l.length > 25) l = l.slice(0, 25);
+            localStorage.setItem('tt_mis_pedidos', JSON.stringify(l));
+        }
+    } catch(e){}
+};
+window._recordarPedidoSeguimiento(pedidoId);
+
 (async function cargarPedido() {
     try {
         var p = null;
@@ -218,21 +235,22 @@ window._pedidoActivoId = pedidoId;
 window.cerrarUbicacion = function() {
     // Liberar cámara si está abierta
     if (window._camaraStream) { try { window._camaraStream.getTracks().forEach(function(t){ t.stop(); }); } catch(e){} }
-    // Intentar cerrar la pestaña; si no se puede, ir a la vista del pedido
+    // Intentar cerrar la pestaña; si no se puede, ir al SEGUIMIENTO del pedido
+    var _id = window._pedidoActivoId || pedidoId || '';
+    if (_id) window._recordarPedidoSeguimiento(_id);
+    var _dest = 'pages/mi-pedido.html' + (_id ? ('?pedido=' + encodeURIComponent(_id)) : '');
     try { window.close(); } catch(e){}
     setTimeout(function(){
-        if (!window.closed) { window.location.href = 'pages/mi-pedido.html'; }
+        if (!window.closed) { window.location.href = _dest; }
     }, 300);
 };
 
 window.regresarAMiPedido = function() {
-    // Volver a la vista del cliente. Si venimos desde ahi (misma app),
-    // history.back es lo mas fluido; si no, ir directo a mi-pedido.
-    if (document.referrer && document.referrer.indexOf('mi-pedido') >= 0) {
-        history.back();
-    } else {
-        window.location.href = 'pages/mi-pedido.html';
-    }
+    // Volver a la vista del cliente CON su pedido, para que vea el seguimiento
+    // completo (mapa en vivo, estados, número de orden).
+    var _id = window._pedidoActivoId || pedidoId || '';
+    if (_id) window._recordarPedidoSeguimiento(_id);
+    window.location.href = 'pages/mi-pedido.html' + (_id ? ('?pedido=' + encodeURIComponent(_id)) : '');
 };
 
 window.guardarReferencia = async function() {
@@ -477,6 +495,22 @@ window.compartirUbicacion = function() {
                 // Mostrar campo de referencia opcional
                 var refSec = document.getElementById('ref-section');
                 if (refSec) refSec.style.display = 'block';
+
+                // Guardar el pedido en este dispositivo y ofrecer el SEGUIMIENTO
+                // completo (mapa en vivo, estados, número de orden).
+                var _idSeg = window._pedidoActivoId || pedidoId || '';
+                if (_idSeg) window._recordarPedidoSeguimiento(_idSeg);
+                var segBtn = document.getElementById('btn-seguimiento');
+                if (!segBtn) {
+                    segBtn = document.createElement('button');
+                    segBtn.id = 'btn-seguimiento';
+                    segBtn.type = 'button';
+                    segBtn.onclick = window.regresarAMiPedido;
+                    segBtn.style.cssText = 'width:100%;margin-top:1rem;padding:.9rem;border:none;border-radius:12px;background:linear-gradient(135deg,#FF7A33,#FF5A00);color:#fff;font-family:inherit;font-size:.95rem;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(255,90,0,.35);';
+                    segBtn.innerHTML = '🛵 Ver seguimiento de mi pedido';
+                    if (btnEl && btnEl.parentNode) btnEl.parentNode.insertBefore(segBtn, btnEl.nextSibling);
+                }
+                segBtn.style.display = 'block';
             } catch(e) {
                 statusEl.innerHTML = '<span class="error">Error al enviar: ' + e.message + '. Intenta de nuevo.</span>';
                 btnEl.disabled = false;

@@ -12,6 +12,26 @@
 // Si no hay sesion de cliente (ni de staff, que tiene su propio tablero
 // completo en cocina.html), no hay nada que mostrar aqui: al login.
 (function() {
+    // ── ENLACE DE SEGUIMIENTO: mi-pedido.html?pedido=ID ──────────────
+    // Cuando el cliente abre el enlace que le enviamos (WhatsApp), guardamos ese
+    // id en ESTE dispositivo para que pueda seguir su pedido (mapa en vivo, barra
+    // de estados, número de orden, etc.) aunque la orden se haya creado desde el
+    // equipo (empleado a domicilio). Los pedidos son legibles por id (get abierto).
+    try {
+        var _qp = new URLSearchParams(window.location.search);
+        var _pid = (_qp.get('pedido') || _qp.get('p') || _qp.get('id') || '').trim();
+        if (_pid) {
+            var _lst = [];
+            try { _lst = JSON.parse(localStorage.getItem('tt_mis_pedidos') || '[]'); } catch(e){ _lst = []; }
+            if (!Array.isArray(_lst)) _lst = [];
+            if (!_lst.some(function(x){ return x && x.id === _pid; })) {
+                _lst.unshift({ id: _pid, folio: '', ts: Date.now() });
+                if (_lst.length > 25) _lst = _lst.slice(0, 25);
+                try { localStorage.setItem('tt_mis_pedidos', JSON.stringify(_lst)); } catch(e){}
+            }
+        }
+    } catch(e){}
+
     // Ventana de 12h, IGUAL que la barra de perfil. Antes eran 20 min, y por
     // eso el cliente que navegaba más de 20 minutos era expulsado a
     // "bienvenida" al tocar Mi Orden (parecía que "solo se actualizaba").
@@ -213,6 +233,9 @@ function esMio(p) {
     // Invitado sin telefono — coincidencia por nombre (respaldo para que
     // vea el pedido que acaba de hacer). Igual solo de interfaz.
     if (miNombre && (p.cliente || p.nombre || '').trim().toLowerCase() === miNombre) return true;
+    // Pedido guardado en ESTE dispositivo (creado aquí o abierto por enlace de
+    // seguimiento ?pedido=ID). Así el cliente ve la orden que le hizo el equipo.
+    try { if (p.id && _misIdsLocales().indexOf(p.id) >= 0) return true; } catch(e){}
     return false;
 }
 
