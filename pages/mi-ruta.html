@@ -1136,6 +1136,12 @@ window.cobrarEntrega = async function(metodo) {
         ? await window.ttConfirm('¿Confirmar cobro de ' + (_pedidoAbierto.total||'') + ' con ' + metodo + '?')
         : confirm('¿Confirmar cobro con ' + metodo + '?');
     if (!confirmar) return;
+    // Actualización OPTIMISTA INMEDIATA: reflejar el método al instante en
+    // pantalla, ANTES de guardar en red (el guardado y el onSnapshot lo
+    // reconfirman después). Así no hay que salir de la pantalla para verlo.
+    _pedidoAbierto.estadoPago = 'Pagado';
+    _pedidoAbierto.metodoPagoReal = metodo;
+    refrescarZonaCobro(_pedidoAbierto);
     try {
         await updateDoc(doc(db, 'pedidos', _pedidoAbierto.id), {
             estadoPago: 'Pagado',
@@ -1143,13 +1149,8 @@ window.cobrarEntrega = async function(metodo) {
             cobradoPor: miNombre || miId,
             cobradoEn: new Date().toISOString()
         });
-        // Actualización OPTIMISTA: reflejar el cambio al instante en pantalla,
-        // sin esperar el ida-y-vuelta del onSnapshot (el snapshot lo reconfirma).
-        if (_pedidoAbierto) {
-            _pedidoAbierto.estadoPago = 'Pagado';
-            _pedidoAbierto.metodoPagoReal = metodo;
-            refrescarZonaCobro(_pedidoAbierto);
-        }
+        // Reconfirmar el resaltado por si el onSnapshot re-renderizó entre medias
+        if (_pedidoAbierto) { _pedidoAbierto.metodoPagoReal = metodo; refrescarZonaCobro(_pedidoAbierto); }
         if (window.ttAlert) window.ttAlert('✅ Cobro registrado: ' + metodo);
     } catch(err) {
         alert('Error al registrar el cobro. Revisa tu conexión.');
