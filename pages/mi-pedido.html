@@ -143,7 +143,7 @@ main{max-width:640px;margin:0 auto;padding:1.2rem 1rem 3rem;}
 
 <div class="header">
     <div class="logo">🛍️ Mi Orden</div>
-    <a href="../ordenar.html" class="hbtn">🛒 Ordenar más</a>
+    <a href="../ordenar.html" class="hbtn" onclick="return window.ordenarMas ? window.ordenarMas(event) : true;">🛒 Ordenar más</a>
 </div>
 
 <main>
@@ -367,6 +367,16 @@ function renderPedidos(pedidos) {
                 '</div>';
         }
 
+        // ── Pedido PENDIENTE (solicitud sin productos): el cliente puede
+        // completarlo agregando sus productos a ESTA orden (no crear una nueva).
+        var _pendienteSol = !!p.esSolicitudUnidad ||
+            (typeof p.items === 'string' && p.items.indexOf('Pendiente') >= 0) ||
+            (!(Array.isArray(p.itemsData) && p.itemsData.length) && (Number(p.totalNum) || 0) <= 5);
+        var _cardActiva = !TTEstados.estaEntregado(p.estado) && !TTEstados.estaCancelado(p.estado);
+        var btnCompletar = (_pendienteSol && _cardActiva)
+            ? '<button onclick="completarPedido(\'' + p.id + '\')" style="display:block;width:100%;margin-top:.7rem;padding:.85rem;border:none;border-radius:12px;background:linear-gradient(135deg,#FF7A33,#FF5A00);color:#fff;font-family:inherit;font-size:.92rem;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(255,90,0,.35);">🍔 Completar mi pedido (agregar productos)</button>'
+            : '';
+
         const codigoRef = (p.codigoOrden || (p.id ? p.id.slice(-4).toUpperCase() : '----'));
         return `
         <div class="pedido-card">
@@ -383,6 +393,7 @@ function renderPedidos(pedidos) {
             ${pasos}
             ${_fmtItemsPedido(p)}
             ${_desgloseCobro(p)}
+            ${btnCompletar}
             ${btnUbic}
             ${bloqueMapa}
             ${btnCancelar}
@@ -573,6 +584,37 @@ onSnapshot(collection(db, 'pedidos'), snap => {
 let _cancelarPedidoId = null;
 let _cancelarPedidoFolio = null;
 let _cancelarPedidoData = null;
+
+// ── Completar un pedido pendiente (agregar productos a ESTA orden) ──
+// Abre el menú ligado a la orden existente (?solicitud=ID): los productos se
+// AGREGAN a este pedido en vez de crear uno nuevo.
+window.completarPedido = function(pedidoId) {
+    if (!pedidoId) return;
+    window.location.href = '../ordenar.html?solicitud=' + encodeURIComponent(pedidoId);
+};
+
+// ── "Ordenar más": si hay un pedido pendiente sin completar, avisar ──
+window.ordenarMas = function(ev) {
+    try {
+        var pend = (window._ultimosPedidos || []).find(function(p){
+            var pendiente = !!p.esSolicitudUnidad ||
+                (typeof p.items === 'string' && p.items.indexOf('Pendiente') >= 0);
+            var activa = !TTEstados.estaEntregado(p.estado) && !TTEstados.estaCancelado(p.estado) && p.archivado !== true;
+            return pendiente && activa;
+        });
+        if (pend) {
+            if (ev && ev.preventDefault) ev.preventDefault();
+            var folio = pend.folioStr || ('#' + String(pend.id || '').slice(-4).toUpperCase());
+            var ok = confirm('⚠️ Tienes un pedido pendiente ' + folio + ' que aún NO has completado (falta agregar tus productos).\n\n• Aceptar → COMPLETAR ese pedido\n• Cancelar → hacer un pedido NUEVO');
+            if (ok) window.location.href = '../ordenar.html?solicitud=' + encodeURIComponent(pend.id);
+            else window.location.href = '../ordenar.html';
+            return false;
+        }
+    } catch(e) {}
+    // Sin pendientes: ir al menú normalmente
+    window.location.href = '../ordenar.html';
+    return false;
+};
 
 // ── Compartir/actualizar ubicación del cliente en tiempo real (sin abrir otra pantalla) ──
 window.compartirUbicacionAqui = function(pedidoId, btn) {
