@@ -212,8 +212,31 @@ html { -webkit-text-size-adjust: 100%; }
     <div style="color:#888;font-size:.85rem;">Cargando estado de ubicación…</div>
   </div>
 
+  <!-- Botón: Historial de órdenes (entregadas/archivadas) -->
+  <button id="btn-historial" onclick="verHistorial()" style="width:100%;margin-bottom:1rem;padding:.8rem;
+      background:rgba(91,155,255,.1);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;
+      border-radius:12px;font-family:inherit;font-size:.9rem;font-weight:800;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;gap:.5rem;">
+    📋 Historial de órdenes
+  </button>
+
   <div id="lista-ruta">
     <div class="cargando">Cargando tu ruta…</div>
+  </div>
+</div>
+
+<!-- MODAL: Historial de órdenes entregadas/archivadas -->
+<div id="historial-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.75);
+     align-items:flex-end;justify-content:center;">
+  <div style="background:#141414;width:100%;max-width:640px;max-height:88vh;border-radius:20px 20px 0 0;
+       display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.6);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.1rem;
+         border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;background:#141414;border-radius:20px 20px 0 0;">
+      <div style="font-size:1.05rem;font-weight:900;color:#fff;">📋 Historial de órdenes</div>
+      <button onclick="cerrarHistorial()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+          color:#aaa;border-radius:8px;width:34px;height:34px;font-size:1.1rem;cursor:pointer;">✕</button>
+    </div>
+    <div id="historial-lista" style="overflow-y:auto;padding:1rem 1.1rem 2rem;flex:1;"></div>
   </div>
 </div>
 
@@ -948,12 +971,76 @@ function _programarArchivadoEntregados(lista) {
     });
 }
 
+// ── HISTORIAL DE ÓRDENES (entregadas/archivadas) ───────────────────
+window.verHistorial = function() {
+    var m = document.getElementById('historial-modal');
+    if (!m) return;
+    m.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    _renderHistorial();
+};
+window.cerrarHistorial = function() {
+    var m = document.getElementById('historial-modal');
+    if (m) m.style.display = 'none';
+    document.body.style.overflow = '';
+};
+function _renderHistorial() {
+    var cont = document.getElementById('historial-lista');
+    if (!cont) return;
+    // Aplicar el mismo filtro de repartidor (Mis órdenes / repartidor / todas)
+    var lista = _filtrarPedidosRuta(window._archivadasRuta || []);
+    // Ordenar por fecha de archivado/entrega (más reciente primero)
+    lista.sort(function(a, b){
+        var fa = Date.parse(a.archivadoEn || '') || ((a.tiempos && a.tiempos.entregada) || 0) || ((a.creado && a.creado.seconds ? a.creado.seconds*1000 : 0));
+        var fb = Date.parse(b.archivadoEn || '') || ((b.tiempos && b.tiempos.entregada) || 0) || ((b.creado && b.creado.seconds ? b.creado.seconds*1000 : 0));
+        return fb - fa;
+    });
+    if (!lista.length) {
+        cont.innerHTML = '<div style="text-align:center;color:#888;padding:2rem 1rem;font-size:.9rem;">Aún no hay órdenes en el historial.</div>';
+        return;
+    }
+    cont.innerHTML = lista.map(function(p){
+        var folio = p.folioStr || ('#' + (p.codigoOrden || (p.id ? p.id.slice(-4).toUpperCase() : '----')));
+        var fecha = _fechaMiOrden(p) || '';
+        var pago = metodoPagoInfo(p);
+        var itemsTxt = '';
+        if (Array.isArray(p.itemsData) && p.itemsData.length && window.agruparItems) {
+            itemsTxt = window.agruparItems(p.itemsData).map(function(g){
+                return (g.cantidad||1) + '× ' + (g.nombre||'Producto');
+            }).join(', ');
+        } else if (typeof p.items === 'string') {
+            itemsTxt = p.items.split(' | ').filter(Boolean).join(', ');
+        }
+        var entregada = !!p.entregado || (typeof TTEstados !== 'undefined' && TTEstados.estaEntregado(p.estado));
+        var estadoTxt = (typeof TTEstados !== 'undefined' && TTEstados.estaCancelado(p.estado)) ? '❌ Cancelado' : (entregada ? '✅ Entregado' : (p.estado || '—'));
+        return '<div style="background:#1c1c1c;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:.9rem 1rem;margin-bottom:.7rem;">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem;">' +
+              '<span style="font-weight:900;color:#FF7A33;">🎟️ ' + folio + '</span>' +
+              '<span style="font-weight:900;color:#25D366;">' + (p.total || '') + '</span>' +
+            '</div>' +
+            '<div style="font-size:.9rem;color:#fff;font-weight:700;">' + (p.cliente || p.nombre || 'Cliente') + '</div>' +
+            (fecha ? '<div style="font-size:.75rem;color:#888;margin-top:.15rem;">🗓️ ' + fecha + '</div>' : '') +
+            (itemsTxt ? '<div style="font-size:.78rem;color:#bbb;margin-top:.3rem;line-height:1.4;">🍔 ' + itemsTxt + '</div>' : '') +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;padding-top:.5rem;border-top:1px solid rgba(255,255,255,.06);font-size:.78rem;">' +
+              '<span style="color:#25D366;font-weight:700;">' + estadoTxt + '</span>' +
+              '<span style="color:#888;">' + pago.txt + '</span>' +
+            '</div>' +
+            (p.repartidorNombre ? '<div style="font-size:.72rem;color:#5B9BFF;margin-top:.3rem;">🛵 ' + p.repartidorNombre + '</div>' : '') +
+        '</div>';
+    }).join('');
+}
+
 async function escucharRuta() {
     await authReady;
     onSnapshot(collection(db, 'pedidos'), snap => {
       try {
         const todos = snap.docs.map(d => ({ id:d.id, ...d.data() }));
         window._todosPedidosRuta = todos.filter(p => p.archivado !== true);
+        // Guardar también las archivadas para el HISTORIAL (vista bajo demanda)
+        window._archivadasRuta = todos.filter(p => p.archivado === true);
+        if (document.getElementById('historial-modal') && document.getElementById('historial-modal').style.display === 'flex') {
+            _renderHistorial();
+        }
         // Poblar el filtro de repartidores (solo gerente/supervisor)
         _poblarFiltroRepartidores();
         // Aplicar el filtro seleccionado
