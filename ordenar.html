@@ -2243,7 +2243,7 @@ html { -webkit-text-size-adjust: 100%; }
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=1788310000"></script>
+<script type="module" src="js/app.js?v=1788320000"></script>
 <script>
 function editarItemCuenta(idx) {
     var cs = window._cuentasSys;
@@ -3400,6 +3400,16 @@ document.addEventListener('click', function(e) {
                 if (btnDom && !_seleccion.tipo) window.seleccionarTipoServicio(btnDom, 'Domicilio');
             }, 100);
         }
+
+        // Para EMPLEADOS: preseleccionar el tipo que la cuenta ya tiene (para no
+        // perder "Domicilio" al abrir el modal desde el carrito con "Editar").
+        if (_esEmpModal && c && c.tipoServicio) {
+            setTimeout(function(){
+                var sel = (c.tipoServicio === 'Domicilio') ? 'Domicilio' : 'Comer aquí';
+                var btnTipo = document.querySelector('.tipo-serv-btn[data-tipo="' + sel + '"]');
+                if (btnTipo && !_seleccion.tipo) window.seleccionarTipoServicio(btnTipo, sel);
+            }, 100);
+        }
     };
 
     window.cerrarModalNombreCuenta = function() {
@@ -3567,6 +3577,9 @@ document.addEventListener('click', function(e) {
 
         if (window.renderCuentasTabs) window.renderCuentasTabs();
         if (window.renderCartItems)   window.renderCartItems();
+        // Refrescar el panel de entrega del carrito (modo empleado) para que
+        // el nombre/teléfono/tipo recién guardados se reflejen de inmediato.
+        if (window.initEntregaCarrito) window.initEntregaCarrito();
 
         window.cerrarModalNombreCuenta();
     };
@@ -3790,6 +3803,10 @@ window.initEntregaCarrito = function() {
     if (!sec) return;
     function leerSes(k){ return sessionStorage.getItem(k) || localStorage.getItem(k); }
     var hayStaff = !!(leerSes('tt_emp_id') || leerSes('tt_cajero_nombre'));
+    // EMPLEADO: el tipo de pedido (Tortumóvil / Domicilio) y la recolección de
+    // datos del cliente para domicilio ahora viven DENTRO del carrito (mini
+    // selector arriba de la cuenta), no en la pantalla de inicio.
+    if (hayStaff) { sec.style.display = 'block'; _renderEntregaEmpleadoCarrito(sec); return; }
     var cliNombre = leerSes('tt_cliente_nombre');
     var esCliente = !!window._clienteActivo || (!!cliNombre && !hayStaff);
     if (!esCliente || hayStaff) { sec.style.display = 'none'; return; }
@@ -3851,6 +3868,178 @@ window.initEntregaCarrito = function() {
         _cartDetectarDireccionZona(ubi.lat, ubi.lng);
     }
     return;
+};
+
+// ═══════════════════════════════════════════════════════════
+//  ENTREGA EN MODO EMPLEADO (integrada al carrito)
+//  Mini-selector Tortumóvil / Domicilio arriba de la cuenta + recolección
+//  de datos del cliente (nombre, teléfono, zona, horario, pedir ubicación)
+//  cuando es Domicilio. Reemplaza la pantalla de inicio de tipo de pedido.
+// ═══════════════════════════════════════════════════════════
+function _cuentaActivaCarrito() {
+    var CS = window._cuentasSys;
+    return CS ? CS.cuentas.find(function(x){ return x.id === CS.activa; }) : null;
+}
+
+function _renderEntregaEmpleadoCarrito(sec) {
+    var c = _cuentaActivaCarrito();
+    var e = window._entregaCarrito || {};
+    var esDom = c ? (c.tipoServicio === 'Domicilio') : (e.tipoPedido === 'domicilio');
+    var nombre = (c && c.nombre && !/^Cuenta \d+$/.test(c.nombre)) ? c.nombre : '';
+    var tel = (c && c.telefono) ? c.telefono : (e.telefonoCliente || '');
+
+    function segBtn(tipo, label, on) {
+        return '<button type="button" onclick="window.cartSetTipoEmpleado(\'' + tipo + '\')" ' +
+            'style="padding:.55rem .4rem;border-radius:10px;font-family:inherit;font-size:.82rem;font-weight:800;cursor:pointer;' +
+            (on ? 'background:rgba(255,90,0,.2);border:1.5px solid #FF5A00;color:#FF5A00;'
+                : 'background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.14);color:#ccc;') + '">' + label + '</button>';
+    }
+
+    var html = '<div style="padding:.3rem .1rem;">';
+    html += '<div style="font-size:.66rem;color:#888;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin:0 0 .3rem;">Tipo de pedido</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.5rem;">' +
+        segBtn('pickup', '🚚 Tortumóvil', !esDom) +
+        segBtn('domicilio', '🚗 Domicilio', esDom) + '</div>';
+
+    // Resumen del cliente (nombre + teléfono ya capturados)
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:.5rem .6rem;' + (esDom ? 'margin-bottom:.5rem;' : '') + '">' +
+        '<div style="min-width:0;font-size:.78rem;color:#fff;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
+            '👤 ' + (nombre || '<span style="color:#F44336;">Falta nombre</span>') +
+            '  ·  📱 ' + (tel || '<span style="color:#F44336;">Falta teléfono</span>') +
+        '</div>' +
+        '<button onclick="window.cartEmpEditarCliente()" style="flex-shrink:0;background:rgba(255,90,0,.12);border:1px solid rgba(255,90,0,.3);color:#FF5A00;border-radius:8px;padding:.3rem .6rem;font-family:inherit;font-size:.7rem;font-weight:800;cursor:pointer;">✏️ Editar</button>' +
+    '</div>';
+
+    if (esDom) {
+        // Zona
+        html += '<div style="font-size:.66rem;color:#888;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin:.4rem 0 .3rem;">📍 Zona de entrega' + (e.zonaNombre ? ' · <span style="color:#25D366;">' + e.zonaNombre + ' ✓</span>' : '') + '</div>';
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.35rem;margin-bottom:.5rem;">' +
+            CONFIG_COLAS.zonas.map(function(z){
+                var on = e.zona === z.id;
+                return '<button type="button" onclick="window.cartEmpZona(\'' + z.id + '\',\'' + z.nombre + '\')" ' +
+                    'style="padding:.5rem .3rem;border-radius:9px;font-family:inherit;font-size:.75rem;font-weight:700;cursor:pointer;' +
+                    (on ? 'background:rgba(255,90,0,.22);border:1.5px solid #FF5A00;color:#FF5A00;'
+                        : 'background:rgba(255,90,0,.06);border:1.5px solid rgba(255,90,0,.22);color:#FF5A00;') + '">' + z.nombre + '</button>';
+            }).join('') + '</div>';
+
+        // Horario (solo tras elegir zona)
+        if (e.zona) {
+            html += '<div style="font-size:.66rem;color:#888;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin:.4rem 0 .3rem;">🕐 Horario' + (e.horarioEtiqueta ? ' · <span style="color:#25D366;">' + e.horarioEtiqueta + ' ✓</span>' : '') + '</div>';
+            html += '<div id="cartemp-horario-loading" style="font-size:.72rem;color:#888;padding:.2rem 0;">Cargando horarios…</div>';
+            html += '<div id="cartemp-horario-cont" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem;margin-bottom:.5rem;"></div>';
+        }
+
+        // Pedir ubicación al cliente (WhatsApp)
+        var ubiOk = !!(e.ubicacion && e.ubicacion.pendiente);
+        html += '<div style="font-size:.66rem;color:#888;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin:.4rem 0 .3rem;">📲 Pedir ubicación al cliente</div>';
+        html += '<div style="display:flex;gap:.35rem;">' +
+            '<input id="cartemp-tel" type="tel" inputmode="tel" placeholder="WhatsApp del cliente (10 dígitos)" value="' + (tel || '') + '" ' +
+            'style="flex:1;min-width:0;box-sizing:border-box;padding:.55rem .6rem;background:#0d0d0d;border:1.5px solid rgba(37,211,102,.4);color:#fff;border-radius:9px;font-family:inherit;font-size:.8rem;outline:none;">' +
+            '<button onclick="window.cartEmpGuardarTel()" style="flex-shrink:0;background:rgba(37,211,102,.15);border:1.5px solid rgba(37,211,102,.45);color:#25D366;border-radius:9px;padding:.4rem .7rem;font-family:inherit;font-size:.75rem;font-weight:800;cursor:pointer;">Guardar</button>' +
+        '</div>';
+        html += '<div id="cartemp-tel-status" style="font-size:.7rem;margin-top:.35rem;' + (ubiOk ? 'color:#25D366;display:block;' : 'display:none;') + '">' + (ubiOk ? '✅ Se pedirá la ubicación al cliente por WhatsApp al crear la orden.' : '') + '</div>';
+        html += '<div style="font-size:.66rem;color:#888;margin-top:.3rem;line-height:1.35;">Al crear la orden podrás enviarle el enlace por WhatsApp. La entrega es lo antes posible.</div>';
+    }
+
+    html += '</div>';
+    sec.innerHTML = html;
+
+    if (esDom && e.zona) { setTimeout(function(){ window._cartEmpCargarHorarios(); }, 0); }
+}
+
+// Cambiar tipo de pedido del empleado (Tortumóvil / Domicilio) para la cuenta activa
+window.cartSetTipoEmpleado = function(tipo) {
+    var c = _cuentaActivaCarrito();
+    window._entregaCarrito = window._entregaCarrito || {};
+    if (tipo === 'domicilio') {
+        if (c) { c.tipoServicio = 'Domicilio'; c.ordenoEnTortumovil = false; }
+        window._entregaCarrito.tipoPedido = 'domicilio';
+        try { sessionStorage.setItem('tt_tipo_pedido', 'domicilio'); } catch(e){}
+    } else {
+        if (c) {
+            c.tipoServicio = 'Comer aquí';
+            c.ordenoEnTortumovil = true;
+            c.tortumovilId = (localStorage.getItem('tt_emp_id') || sessionStorage.getItem('tt_emp_id') || '');
+            c.tortumovilNombre = (localStorage.getItem('tt_emp_nombre') || sessionStorage.getItem('tt_emp_nombre') || c.tortumovilId);
+        }
+        window._entregaCarrito.tipoPedido = 'pickup';
+        window._entregaCarrito.ubicacion = null;
+        try { sessionStorage.setItem('tt_tipo_pedido', 'pickup'); } catch(e){}
+    }
+    if (window.guardarEntregaLocal) window.guardarEntregaLocal();
+    if (window.renderCuentasTabs) window.renderCuentasTabs();
+    window.initEntregaCarrito();
+};
+
+// Editar nombre / teléfono del cliente (reusa el modal "Identificar cuenta")
+window.cartEmpEditarCliente = function() {
+    if (window.abrirModalNombreCuenta) window.abrirModalNombreCuenta();
+};
+
+// Elegir zona de entrega (empleado) — la entrega es hoy, lo antes posible
+window.cartEmpZona = function(id, nombre) {
+    window._entregaCarrito = window._entregaCarrito || {};
+    window._entregaCarrito.zona = id;
+    window._entregaCarrito.zonaNombre = nombre;
+    window._entregaCarrito.fecha = 'hoy';
+    window._entregaCarrito.fechaEtiqueta = 'Hoy';
+    window._entregaCarrito.horario = null;
+    window._entregaCarrito.horarioEtiqueta = null;
+    if (window.guardarEntregaLocal) window.guardarEntregaLocal();
+    window.initEntregaCarrito();
+};
+
+// Cargar los horarios disponibles de la zona elegida (empleado)
+window._cartEmpCargarHorarios = async function() {
+    var e = window._entregaCarrito || {};
+    var cont = document.getElementById('cartemp-horario-cont');
+    var loading = document.getElementById('cartemp-horario-loading');
+    if (!cont || !e.zona) return;
+    if (loading) { loading.style.display = 'block'; loading.textContent = 'Cargando horarios…'; }
+    cont.innerHTML = '';
+    try {
+        var slots = await consultarDisponibilidad(e.zona, e.fecha || undefined);
+        var disp = slots.filter(function(s){ return s.disponible; });
+        if (loading) loading.style.display = 'none';
+        if (!disp.length) { cont.innerHTML = '<div style="grid-column:1/-1;font-size:.72rem;color:#FF4444;">No quedan horarios disponibles hoy.</div>'; return; }
+        cont.innerHTML = disp.map(function(s){
+            var on = e.horario === s.hora;
+            return '<button type="button" data-hora="' + s.hora + '" onclick="window.cartEmpHorario(\'' + s.hora + '\',\'' + s.etiqueta + '\')" ' +
+                'style="padding:.5rem .2rem;border-radius:9px;font-family:inherit;font-size:.74rem;font-weight:700;cursor:pointer;' +
+                (on ? 'background:rgba(37,211,102,.3);border:1.5px solid #25D366;color:#25D366;'
+                    : 'background:rgba(37,211,102,.08);border:1.5px solid rgba(37,211,102,.3);color:#25D366;') + '">' + s.etiqueta + '</button>';
+        }).join('');
+    } catch(err) {
+        if (loading) { loading.style.display = 'block'; loading.textContent = 'Error al cargar horarios.'; }
+    }
+};
+
+// Elegir horario de entrega (empleado)
+window.cartEmpHorario = function(hora, etiqueta) {
+    window._entregaCarrito = window._entregaCarrito || {};
+    window._entregaCarrito.horario = hora;
+    window._entregaCarrito.horarioEtiqueta = etiqueta;
+    if (!window._entregaCarrito.fecha) { window._entregaCarrito.fecha = 'hoy'; window._entregaCarrito.fechaEtiqueta = 'Hoy'; }
+    if (window.guardarEntregaLocal) window.guardarEntregaLocal();
+    window.initEntregaCarrito();
+};
+
+// Guardar el teléfono del cliente y marcar que se pedirá su ubicación por WhatsApp
+window.cartEmpGuardarTel = function() {
+    var inp = document.getElementById('cartemp-tel');
+    var st = document.getElementById('cartemp-tel-status');
+    var tel = ((inp && inp.value) || '').replace(/[^0-9]/g, '');
+    function err(m){ if(st){ st.style.display='block'; st.style.color='#FF4444'; st.textContent=m; } if(inp){ inp.style.borderColor='#FF4444'; inp.focus(); } }
+    if (tel.length !== 10 || tel[0] === '0' || tel[0] === '1') { err('📱 Teléfono inválido. Deben ser 10 dígitos.'); return; }
+    var c = _cuentaActivaCarrito();
+    if (c) c.telefono = tel;
+    window._entregaCarrito = window._entregaCarrito || {};
+    window._entregaCarrito.ubicacion = { pendiente: true, telefono: tel, tipo: 'pedir_cliente', direccion: 'El cliente enviará su ubicación por WhatsApp' };
+    window._entregaCarrito.telefonoCliente = tel;
+    try { localStorage.setItem('tt_pedir_ubic_tel', tel); } catch(e){}
+    if (window.guardarEntregaLocal) window.guardarEntregaLocal();
+    if (window.renderCuentasTabs) window.renderCuentasTabs();
+    window.initEntregaCarrito();
 };
 
 // Detectar dirección legible y zona automáticamente (Nominatim) para el resumen del carrito
@@ -4097,10 +4286,18 @@ window.cartCompartirUbicacion = function() {
             if (ovC) { ovC.style.display = 'none'; document.body.classList.remove('modal-open'); }
             return;
         }
-        // EMPLEADO: sigue viendo la pantalla de elección si la necesita
-        if (sessionStorage.getItem('tt_entrega_lista') === '1') return;
+        // EMPLEADO: la elección de Tortumóvil / Domicilio ahora vive DENTRO del
+        // carrito (mini-selector arriba de la cuenta). Ya no se bloquea con la
+        // pantalla de inicio: se entra directo al menú con Tortumóvil por
+        // defecto y el empleado cambia a Domicilio en el carrito si aplica.
+        window._entregaCarrito = window._entregaCarrito || {};
+        if (!window._entregaCarrito.tipoPedido) window._entregaCarrito.tipoPedido = 'pickup';
+        if (!sessionStorage.getItem('tt_tipo_pedido')) {
+            try { sessionStorage.setItem('tt_tipo_pedido', window._entregaCarrito.tipoPedido); } catch(e){}
+        }
+        try { sessionStorage.setItem('tt_entrega_lista', '1'); } catch(e){}
         var ov = document.getElementById('entrega-overlay');
-        if (ov) { ov.style.display = 'block'; document.body.classList.add('cart-abierto'); }
+        if (ov) { ov.style.display = 'none'; document.body.classList.remove('cart-abierto'); }
     };
 
     window.eoElegirTipo = function(tipo) {

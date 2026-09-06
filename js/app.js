@@ -2196,6 +2196,9 @@ window.switchCuenta = function(id) {
     CS.activa = id;
     window.renderCuentasTabs();
     window.renderCartItems();
+    // Refrescar el panel de entrega (mini-selector tipo + datos) para reflejar
+    // el tipo/nombre/teléfono de la cuenta recién activada (modo empleado).
+    if (window.initEntregaCarrito) window.initEntregaCarrito();
 };
 window.cambiarCuenta = window.switchCuenta;
 
@@ -2212,6 +2215,7 @@ window.agregarNuevaCuenta = function() {
     CS.activa = CS.counter;
     window.renderCuentasTabs();
     window.renderCartItems();
+    if (window.initEntregaCarrito) window.initEntregaCarrito();
 };
 
 // ── Poner nombre a la cuenta activa (desde el input) ──
