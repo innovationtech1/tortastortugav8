@@ -1764,6 +1764,24 @@ window.enviarTodasLasCuentas = async function() {
         tomadaEn:     new Date().toISOString(),
     };
 
+    // AUTO-ASIGNAR REPARTIDOR: cuando un EMPLEADO crea una orden a domicilio, el
+    // empleado que la tomó queda asignado como repartidor y la orden va directo a
+    // SU "Mi Ruta" (no a Disponibles). Puede reasignarla después si otro la lleva.
+    // Usa las mismas llaves que disponibles.html / mi-ruta.html (tt_emp_id...).
+    if (esEmpleadoDomicilio) {
+        var _repId = (sessionStorage.getItem('tt_emp_id') || localStorage.getItem('tt_emp_id') ||
+                      sessionStorage.getItem('tt_cajero_id') || localStorage.getItem('tt_cajero_id') || '').trim();
+        var _repNom = (sessionStorage.getItem('tt_emp_nombre') || localStorage.getItem('tt_emp_nombre') ||
+                       sessionStorage.getItem('tt_cajero_nombre') || localStorage.getItem('tt_cajero_nombre') ||
+                       (window._cajeroActivo && window._cajeroActivo.nombre) || '').trim();
+        if (_repId || _repNom) {
+            data.repartidorId = _repId || _repNom;
+            data.repartidorNombre = _repNom || _repId;
+            data.repartidorAsignadoEn = new Date().toISOString();
+            data.aceptadoPorRepartidor = true;
+        }
+    }
+
     // Botón feedback
     const btn = document.querySelector('[onclick*="enviarTodasLasCuentas"]');
     const btnTxtOrig = btn ? btn.innerHTML : '';
