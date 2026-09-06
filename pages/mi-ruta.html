@@ -150,6 +150,9 @@
   .cobro-btn.cashapp  { border-color:rgba(0,214,79,.4); }
   .cobro-btn.venmo    { border-color:rgba(0,140,255,.4); }
   .cobro-btn.tarjeta  { border-color:rgba(91,155,255,.4); }
+  .cobro-btn.cobro-sel { border-color:#25D366 !important; background:rgba(37,211,102,.18);
+    box-shadow:0 0 0 2px rgba(37,211,102,.35); color:#25D366; }
+  .cobro-btn.cobro-sel::after { content:"✓"; font-size:.72rem; font-weight:900; color:#25D366; }
   .ve-pagado {
     background:rgba(37,211,102,.12); border:1px solid rgba(37,211,102,.4);
     color:#25D366; border-radius:12px; padding:1rem; text-align:center; font-weight:800;
@@ -243,11 +246,11 @@ html { -webkit-text-size-adjust: 100%; }
     <div id="ve-cobro-zona">
       <div class="cobro-titulo">💵 Cobrar al cliente</div>
       <div class="cobro-grid">
-        <button class="cobro-btn efectivo" onclick="cobrarEntrega('Efectivo')">💵<span>Efectivo</span></button>
-        <button class="cobro-btn tarjeta" onclick="cobrarEntrega('Tarjeta')">💳<span>Tarjeta</span></button>
-        <button class="cobro-btn zelle" onclick="cobrarEntrega('Zelle')">🟣<span>Zelle</span></button>
-        <button class="cobro-btn cashapp" onclick="cobrarEntrega('Cash App')">🟢<span>Cash App</span></button>
-        <button class="cobro-btn venmo" onclick="cobrarEntrega('Venmo')">🔵<span>Venmo</span></button>
+        <button class="cobro-btn efectivo" data-metodo="Efectivo" onclick="cobrarEntrega('Efectivo')">💵<span>Efectivo</span></button>
+        <button class="cobro-btn tarjeta" data-metodo="Tarjeta" onclick="cobrarEntrega('Tarjeta')">💳<span>Tarjeta</span></button>
+        <button class="cobro-btn zelle" data-metodo="Zelle" onclick="cobrarEntrega('Zelle')">🟣<span>Zelle</span></button>
+        <button class="cobro-btn cashapp" data-metodo="Cash App" onclick="cobrarEntrega('Cash App')">🟢<span>Cash App</span></button>
+        <button class="cobro-btn venmo" data-metodo="Venmo" onclick="cobrarEntrega('Venmo')">🔵<span>Venmo</span></button>
       </div>
     </div>
 
@@ -1089,15 +1092,25 @@ function initMapaEntrega(lat, lng, nombre, dir) {
 function refrescarZonaCobro(p) {
     const cobroZona = document.getElementById('ve-cobro-zona');
     const pagadoZona = document.getElementById('ve-pagado-zona');
-    if (p.estadoPago === 'Pagado') {
-        cobroZona.style.display = 'none';
-        pagadoZona.style.display = 'block';
+    const pagado = (p.estadoPago === 'Pagado');
+    // Las opciones de pago quedan SIEMPRE visibles para poder cambiar el método
+    // aunque ya se haya cobrado. Se resalta el método seleccionado y se muestra
+    // el estado "Pagado con X".
+    cobroZona.style.display = 'block';
+    pagadoZona.style.display = pagado ? 'block' : 'none';
+    if (pagado) {
         document.getElementById('ve-pagado-txt').textContent =
             '✅ Pagado' + (p.metodoPagoReal ? ' con ' + p.metodoPagoReal : '');
-    } else {
-        cobroZona.style.display = 'block';
-        pagadoZona.style.display = 'none';
     }
+    // Título dinámico
+    var titEl = cobroZona.querySelector('.cobro-titulo');
+    if (titEl) titEl.textContent = pagado ? '💵 Método de pago (toca para cambiar)' : '💵 Cobrar al cliente';
+    // Resaltar el botón del método cobrado
+    var metSel = (p.metodoPagoReal || '').toLowerCase();
+    cobroZona.querySelectorAll('.cobro-btn').forEach(function(b){
+        var m = (b.getAttribute('data-metodo') || '').toLowerCase();
+        b.classList.toggle('cobro-sel', pagado && !!m && m === metSel);
+    });
 }
 
 // Procesa el cobro (mismo patrón que el admin)
