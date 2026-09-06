@@ -657,6 +657,9 @@ function render(pedidos) {
         } else {
             itemsTxt = (typeof p.items === 'string' ? p.items : '').split(' | ').filter(Boolean);
         }
+        // Orden ENTREGADA: la tarjeta queda de solo lectura (sin botones de
+        // acción) para que ya no pueda modificarse.
+        var _entregada = !!(p.entregado || (typeof TTEstados !== 'undefined' && TTEstados.estaEntregado(p.estado)));
 
         return '<div class="pedido-card '+(p.entregado?'entregado':'')+'">' +
             // Ticket (folio) arriba a la izquierda + estado, igual que "Mi Orden"
@@ -679,6 +682,8 @@ function render(pedidos) {
             (itemsTxt.length ? '<div class="pc-linea" style="flex-direction:column;gap:.1rem;margin-top:.4rem;text-align:center;align-items:center;">'+
                 itemsTxt.map(function(it){ return '<div>• '+it+'</div>'; }).join('')+'</div>' : '') +
             '<div style="text-align:center;margin:.4rem 0;"><span class="pc-pago '+pago.clase+'">'+pago.txt+'</span></div>' +
+            // ── Botones de acción (solo si la orden NO está entregada) ──
+            (_entregada ? '' : (
             // Botón pedir ubicación (solo si el cliente aún no la compartió)
             ((!lat || !lng) ?
               '<button class="btn-pedir-ubi" style="width:100%;border:1px solid rgba(255,90,0,.4);' +
@@ -696,7 +701,8 @@ function render(pedidos) {
                 : '<button class="btn-maps" style="flex:1;margin-top:0;border:1px solid rgba(66,133,244,.4);cursor:pointer;" onclick="abrirEntrega(\''+p.id+'\')">🧭 Cómo llegar</button>') +
               '<button style="flex:1;text-align:center;background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.45);color:#25D366;border-radius:10px;padding:.6rem;font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer;" onclick="abrirEntrega(\''+p.id+'\')">💵 Cobrar'+(p.total?(' '+p.total):'')+'</button>' +
             '</div>' +
-            '<button onclick="enviarTicketWA(\''+p.id+'\')" style="width:100%;margin-top:.5rem;padding:.55rem;background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.4);color:#25D366;border-radius:8px;font-family:inherit;font-weight:700;font-size:.8rem;cursor:pointer;">📱 Enviar ticket por WhatsApp</button>' +
+            '<button onclick="enviarTicketWA(\''+p.id+'\')" style="width:100%;margin-top:.5rem;padding:.55rem;background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.4);color:#25D366;border-radius:8px;font-family:inherit;font-weight:700;font-size:.8rem;cursor:pointer;">📱 Enviar ticket por WhatsApp</button>'
+            )) +
             (p.fotoReferencia ? '<button onclick="_toggleFotoRuta(\''+p.id+'\')" style="width:100%;margin-top:.5rem;padding:.55rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;border-radius:8px;font-family:inherit;font-weight:700;font-size:.8rem;cursor:pointer;">📸 <span id="fotor-txt-'+p.id+'">Ver foto de referencia</span></button><div id="fotor-cont-'+p.id+'" style="display:none;margin-top:.5rem;"><img src="'+p.fotoReferencia+'" style="width:100%;border-radius:8px;" onclick="window.open(this.src)"></div>' : '') +
 
             // ── Estado de la orden + repartidor + cliente ──
@@ -748,7 +754,7 @@ function render(pedidos) {
                 'font-weight:700;font-size:.85rem;cursor:pointer;">🛵 Cambiar repartidor</button>') +
 
             // ── Botones de estado: En camino (paso previo) y Entregado ──
-            (p.entregado
+            (_entregada
               ? '<div style="margin-top:.7rem;text-align:center;background:rgba(37,211,102,.12);' +
                 'border:1px solid rgba(37,211,102,.35);color:#25D366;border-radius:10px;padding:.7rem;' +
                 'font-weight:800;font-size:.9rem;">🎉 Orden Entregada</div>'
