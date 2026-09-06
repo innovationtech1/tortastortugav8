@@ -155,12 +155,10 @@ window.textoItemAgrupado = function(g, opts) {
         if (sesion.tipo === 'empleado') {
             // Menú de EMPLEADO — cada item: [icono, etiqueta, url, soloGerente]
             items = [
-                ['📊', 'Dashboard', _base() + 'dashboard.html', true],
                 ['🏬', 'Ordenar', _raiz() + 'ordenar.html', false],
                 ['🧾', 'Mis Pedidos', _base() + 'mis-pedidos.html', false],
                 ['🔔', 'Disponibles', _base() + 'disponibles.html', false],
                 ['🛵', 'Mis Rutas', _base() + 'mi-ruta.html', false],
-                ['🗓️', 'Programar', _base() + 'programar.html', true],
                 ['🍳', 'Cocina', _base() + 'cocina.html', false],
                 ['📊', 'Reportes', _base() + 'reportes.html', true],
                 ['👥', 'Clientes', _base() + 'clientes.html', true],
