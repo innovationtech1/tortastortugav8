@@ -1274,7 +1274,7 @@ function cerrarOrdenModal() {
                 if (!snap.exists()) { return; }
                 var p = snap.data();
                 window._solicitudDatos = p;
-                // Precargar nombre y teléfono en los campos del cliente
+                // Precargar nombre y teléfono en los campos viejos (por si existen)
                 var n = document.getElementById('customer-name');
                 var t = document.getElementById('customer-phone');
                 if (n) n.value = p.cliente || p.nombre || '';
@@ -1283,10 +1283,68 @@ function cerrarOrdenModal() {
                 if (p.ubicacionCliente) {
                     try { sessionStorage.setItem('tt_cliente_ubicacion', JSON.stringify(p.ubicacionCliente)); } catch(e){}
                 }
+
+                // ── Precargar en el CARRITO NUEVO (sistema de cuentas) ──
+                // Copia automáticamente los datos del cliente que ya vienen en la
+                // orden disponible: nombre, teléfono, tipo (Domicilio/Tortumóvil),
+                // zona, horario y ubicación. Así el empleado NO los reescribe.
+                var _tel = String(p.telefono || '').replace(/\D/g, '');
+                var esDom = String(p.tipoEntrega || '').toLowerCase().indexOf('domicilio') >= 0 ||
+                            String(p.tipoServicio || '').toLowerCase().indexOf('domicilio') >= 0 ||
+                            !!p.zonaEntregaNombre || !!(p.ubicacionCliente && p.ubicacionCliente.lat);
+                var _aplicarDatos = function() {
+                    var CS = window._cuentasSys;
+                    if (!CS || !CS.cuentas || !CS.cuentas.length) return false;
+                    var c = CS.cuentas.find(function(x){ return x.id === CS.activa; }) || CS.cuentas[0];
+                    if (!c) return false;
+                    // Nombre: solo si la cuenta sigue genérica (no pisar lo que el
+                    // empleado ya haya escrito a mano).
+                    if (!c.nombre || /^Cuenta \d+$/.test(c.nombre)) c.nombre = p.cliente || p.nombre || c.nombre;
+                    if (!c.telefono && _tel) c.telefono = _tel;
+                    window._entregaCarrito = window._entregaCarrito || {};
+                    if (esDom) {
+                        c.tipoServicio = 'Domicilio';
+                        c.ordenoEnTortumovil = false;
+                        c.zonaEntrega = p.zonaEntrega || c.zonaEntrega || null;
+                        c.zonaEntregaNombre = p.zonaEntregaNombre || c.zonaEntregaNombre || null;
+                        window._entregaCarrito.tipoPedido = 'domicilio';
+                        window._entregaCarrito.zona = p.zonaEntrega || window._entregaCarrito.zona || 'auto';
+                        window._entregaCarrito.zonaNombre = p.zonaEntregaNombre || window._entregaCarrito.zonaNombre || 'Detectada';
+                        window._entregaCarrito.fecha = p.fechaEntrega || 'hoy';
+                        window._entregaCarrito.fechaEtiqueta = p.fechaEntregaEtiqueta || 'Hoy';
+                        window._entregaCarrito.horario = p.horarioEntrega || window._entregaCarrito.horario || null;
+                        window._entregaCarrito.horarioEtiqueta = p.horarioEntregaEtiqueta || window._entregaCarrito.horarioEtiqueta || null;
+                        if (p.ubicacionCliente && p.ubicacionCliente.lat) {
+                            window._entregaCarrito.ubicacion = p.ubicacionCliente;
+                        } else if (_tel) {
+                            window._entregaCarrito.ubicacion = { pendiente: true, telefono: _tel, tipo: 'pedir_cliente', direccion: 'El cliente enviará su ubicación por WhatsApp' };
+                            window._entregaCarrito.telefonoCliente = _tel;
+                        }
+                        try { sessionStorage.setItem('tt_tipo_pedido', 'domicilio'); } catch(e){}
+                    } else {
+                        c.tipoServicio = 'Comer aquí';
+                        c.ordenoEnTortumovil = true;
+                        window._entregaCarrito.tipoPedido = 'pickup';
+                        try { sessionStorage.setItem('tt_tipo_pedido', 'pickup'); } catch(e){}
+                    }
+                    if (window.guardarEntregaLocal) window.guardarEntregaLocal();
+                    if (window.renderCuentasTabs) window.renderCuentasTabs();
+                    if (window.renderCartItems) window.renderCartItems();
+                    if (window.initEntregaCarrito) window.initEntregaCarrito();
+                    return true;
+                };
+                // El sistema de cuentas (app.js) carga como módulo al final: puede
+                // no estar listo todavía. Reintentar unos segundos hasta aplicar.
+                var _tries = 0;
+                var _tmr = setInterval(function(){
+                    _tries++;
+                    if (_aplicarDatos() || _tries > 25) clearInterval(_tmr);
+                }, 200);
+
                 // Aviso visual de que se está tomando una orden de solicitud
                 var aviso = document.createElement('div');
                 aviso.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#FF7A33,#FF5A00);color:#fff;padding:.6rem 1rem;text-align:center;font-weight:800;font-size:.85rem;box-shadow:0 2px 8px rgba(0,0,0,.3);';
-                aviso.innerHTML = '📝 Tomando orden de: ' + (p.cliente || 'Cliente') + ' · 🛵 Solicitud tortumóvil ($5 incluido)';
+                aviso.innerHTML = '📝 Tomando orden de: ' + (p.cliente || 'Cliente') + (esDom ? ' · 🚗 Domicilio' : ' · 🛵 Tortumóvil') + ' ($5 incluido)';
                 document.body.appendChild(aviso);
                 document.body.style.paddingTop = '2.5rem';
             } catch(e) {
