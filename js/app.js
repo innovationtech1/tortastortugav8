@@ -1769,14 +1769,20 @@ window.enviarTodasLasCuentas = async function() {
     // SU "Mi Ruta" (no a Disponibles). Puede reasignarla después si otro la lleva.
     // Usa las mismas llaves que disponibles.html / mi-ruta.html (tt_emp_id...).
     if (esEmpleadoDomicilio) {
-        var _repId = (sessionStorage.getItem('tt_emp_id') || localStorage.getItem('tt_emp_id') ||
-                      sessionStorage.getItem('tt_cajero_id') || localStorage.getItem('tt_cajero_id') || '').trim();
-        var _repNom = (sessionStorage.getItem('tt_emp_nombre') || localStorage.getItem('tt_emp_nombre') ||
-                       sessionStorage.getItem('tt_cajero_nombre') || localStorage.getItem('tt_cajero_nombre') ||
-                       (window._cajeroActivo && window._cajeroActivo.nombre) || '').trim();
-        if (_repId || _repNom) {
-            data.repartidorId = _repId || _repNom;
-            data.repartidorNombre = _repNom || _repId;
+        var _sid = function(k){ return (sessionStorage.getItem(k) || localStorage.getItem(k) || '').trim(); };
+        // IMPORTANTE: repartidorId debe ser un ID REAL (no el nombre), porque el
+        // mapa en vivo del cliente ubica al repartidor por su documento en la
+        // colección "ubicaciones", que mi-ruta.html publica bajo tt_emp_id y
+        // tt_emp_docid. Si usáramos el nombre, el mapa nunca encontraría el GPS.
+        var _repId  = _sid('tt_emp_id') || _sid('tt_cajero_id');
+        var _repUid = _sid('tt_emp_docid');
+        var _repNom = _sid('tt_emp_nombre') || _sid('tt_cajero_nombre') ||
+                      (window._cajeroActivo && window._cajeroActivo.nombre) || '';
+        var _repFinalId = _repId || _repUid;
+        if (_repFinalId) {
+            data.repartidorId = _repFinalId;
+            data.repartidorNombre = _repNom || _repFinalId;
+            data.repartidorUid = _repUid || _repFinalId;   // 2º id posible del doc de ubicaciones
             data.repartidorAsignadoEn = new Date().toISOString();
             data.aceptadoPorRepartidor = true;
         }

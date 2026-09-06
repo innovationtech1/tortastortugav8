@@ -289,6 +289,7 @@ function renderPedidos(pedidos) {
         Object.keys(_ttMapas).forEach(function(pid){
             var est = _ttMapas[pid];
             if (est && est.unsub) { try { est.unsub(); } catch(e){} }
+            if (est && est.unsubUid) { try { est.unsubUid(); } catch(e){} }
             if (est && est.map) { try { est.map.remove(); } catch(e){} }
             delete _ttMapas[pid];
         });
@@ -323,12 +324,16 @@ function renderPedidos(pedidos) {
         var _esDomMapa = esDomicilio || String(p.tipoEntrega || '').toLowerCase().indexOf('domicilio') >= 0;
         // El cliente ve al repartidor en el mapa incluso si solo está PRESELECCIONADO
         // (asignado desde Disponibles sin aceptar aún la orden).
-        var repIdMapa = p.repartidorId || (p.repartidorSeleccionado && p.repartidorSeleccionado.id) || p.tortumovilId || '';
+        var repIdMapa = p.repartidorId || p.repartidorUid || (p.repartidorSeleccionado && p.repartidorSeleccionado.id) || p.tortumovilId || '';
+        // Segundo id posible del documento de ubicaciones (mi-ruta publica bajo
+        // tt_emp_id y tt_emp_docid) — respaldo si el primero no tiene señal.
+        var repUidMapa = (p.repartidorUid && p.repartidorUid !== repIdMapa) ? p.repartidorUid : '';
         var entregadoMapa = TTEstados.estaEntregado(p.estado);
         var bloqueMapa = '';
         if (_esDomMapa && repIdMapa && !entregadoMapa) {
             bloqueMapa =
                 '<div class="tt-track" data-pedido="' + p.id + '" data-rep="' + repIdMapa + '"' +
+                (repUidMapa ? ' data-repuid="' + repUidMapa + '"' : '') +
                 (p.ubicacionCliente ? ' data-clat="' + p.ubicacionCliente.lat + '" data-clng="' + p.ubicacionCliente.lng + '"' : '') +
                 ' style="margin-top:.7rem;">' +
                 '<div class="tt-track-info" style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,90,0,.1);border:1px solid rgba(255,90,0,.3);border-radius:10px 10px 0 0;padding:.6rem .8rem;font-size:.82rem;font-weight:700;color:#FF7A33;">' +
@@ -444,6 +449,7 @@ function activarMapasEnVivo() {
             if (est._repId === repId) return;
             // El repartidor CAMBIÓ: cancelar la suscripción vieja y re-suscribir al nuevo
             if (est.unsub) { try { est.unsub(); } catch(e){} }
+            if (est.unsubUid) { try { est.unsubUid(); } catch(e){} est.unsubUid = null; }
             if (est.repMarker) { try { est.map.removeLayer(est.repMarker); } catch(e){} est.repMarker = null; }
             est._repId = repId;
             var etaEl2 = bloque.querySelector('.tt-track-eta');
@@ -473,6 +479,14 @@ function activarMapasEnVivo() {
         estado.unsub = _ttOnSnapshot(docRef, function(snap) { _ttActualizarMapa(pedidoId, snap, clat, clng, etaEl); }, function(err) {
             if (etaEl) etaEl.textContent = 'Sin señal';
         });
+
+        // Respaldo: el repartidor puede publicar su GPS bajo un segundo id
+        // (tt_emp_docid). Suscribirse también a ese doc para no quedarnos sin mapa.
+        var repUid = bloque.getAttribute('data-repuid');
+        if (repUid && repUid !== repId) {
+            var docRefUid = _ttDoc(db, 'ubicaciones', repUid);
+            estado.unsubUid = _ttOnSnapshot(docRefUid, function(snap) { _ttActualizarMapa(pedidoId, snap, clat, clng, etaEl); }, function(){});
+        }
 
         setTimeout(function(){ map.invalidateSize(); }, 200);
     });
