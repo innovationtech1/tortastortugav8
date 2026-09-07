@@ -528,7 +528,13 @@ export async function renderMenu() {
                 return pts;
             }
             const nuevo = Object.assign({}, data, { _docId: d.id });
-            if (puntuar(nuevo) >= puntuar(existing)) {
+            // PRIORIDAD: el documento EDITADO MÁS RECIENTEMENTE gana (así los
+            // cambios de precio/variantes del admin siempre se reflejan, aunque
+            // exista un duplicado con imagen). Empate/sin fecha → el más completo.
+            var tN = Number(nuevo.actualizadoEn) || Date.parse(nuevo.actualizadoEn) || 0;
+            var tE = Number(existing.actualizadoEn) || Date.parse(existing.actualizadoEn) || 0;
+            var gana = (tN !== tE) ? (tN > tE) : (puntuar(nuevo) >= puntuar(existing));
+            if (gana) {
                 byNombre[key] = nuevo;
             }
         });

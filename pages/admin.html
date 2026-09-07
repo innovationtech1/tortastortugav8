@@ -2022,7 +2022,10 @@ window.guardarProducto = async function(id) {
             categoria: cat,
             descripcion: desc,
             imagen: imagen,
-            variantes: variantes
+            variantes: variantes,
+            // Marca de tiempo: el menú prefiere el documento editado más
+            // recientemente cuando hay duplicados con el mismo nombre.
+            actualizadoEn: Date.now()
         };
         console.log('📤 Enviando a Firestore:', {
             id: id,
