@@ -272,10 +272,16 @@ function render() {
             btnRepartidor = `<div class="mp-btn" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:#888;cursor:default;">🛵 Sin repartidor asignado</div>`;
         }
 
-        // Botón de cobro
+        // Botón de cobro — si ya está pagado se puede TOCAR para cambiar el método
         let btnCobro = pagado
-            ? `<button class="mp-btn mp-btn-pagado" disabled>✅ Pagado (${p.metodoPagoReal||''})</button>`
+            ? `<button class="mp-btn mp-btn-pagado" style="cursor:pointer;" onclick="abrirCobro('${p.id}')">✅ Pagado (${p.metodoPagoReal||''}) · cambiar</button>`
             : `<button class="mp-btn mp-btn-cobrar" onclick="abrirCobro('${p.id}')">💵 Cobrar ${p.total||''}</button>`;
+
+        // Botón ENTREGAR — regla: solo si ya está cobrado (pagado)
+        const entregado = !!p.entregado || (typeof TTEstados !== 'undefined' && TTEstados.estaEntregado(estado));
+        let btnEntregar = entregado
+            ? `<div class="mp-btn" style="background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.4);color:#25D366;cursor:default;">🎉 Entregado</div>`
+            : `<button class="mp-btn" style="background:linear-gradient(135deg,#25D366,#1DA851);color:#fff;" onclick="marcarEntregadoMP('${p.id}')">🎉 Marcar Entregado</button>`;
 
         return `<div class="mp-card">
             <div class="mp-card-top">
@@ -293,6 +299,7 @@ function render() {
             <div class="mp-acciones">
                 ${btnPrep}
                 ${btnCobro}
+                ${btnEntregar}
                 ${btnRepartidor}
                 ${btnUbicacion}
                 ${_tel ? `<button class="mp-btn" style="background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.4);color:#25D366;" onclick="enviarTicketWA('${p.id}')">📱 Enviar ticket WhatsApp</button>` : ''}
@@ -381,6 +388,29 @@ window.confirmarCobro = async function(metodo) {
         if (window.ttAlert) window.ttAlert('✅ Cobrado con ' + metodo);
         cerrarCobro();
     } catch(e) { alert('Error al cobrar.'); }
+};
+
+// Marcar ENTREGADO — REGLA: primero se cobra. No se puede entregar sin pagar.
+window.marcarEntregadoMP = async function(id) {
+    const p = _pedidos.find(x => x.id === id);
+    if (!p) return;
+    if (p.estadoPago !== 'Pagado') {
+        if (window.ttAlert) window.ttAlert('💵 Primero cobra el pedido. No se puede marcar como entregado sin cobrar.');
+        else alert('Primero cobra el pedido antes de marcarlo como entregado.');
+        return;
+    }
+    const confirmar = window.ttConfirm
+        ? await window.ttConfirm('¿Marcar el pedido como ENTREGADO?')
+        : confirm('¿Marcar como entregado?');
+    if (!confirmar) return;
+    try {
+        await updateDoc(doc(db, 'pedidos', id), {
+            estado: TTEstados.ESTADOS.ENTREGADO.etiqueta,
+            entregado: true,
+            'tiempos.entregada': Date.now()
+        });
+        if (window.ttAlert) window.ttAlert('🎉 Pedido marcado como entregado.');
+    } catch(e) { alert('Error al marcar como entregado.'); }
 };
 
 // Escuchar pedidos en vivo (Fase 2b: esperar sesión)
