@@ -2052,6 +2052,73 @@ window.guardarProducto = async function(id) {
         alert('❌ Error al guardar:\n' + e.message + '\n\nCódigo: ' + (e.code || 'desconocido'));
     }
 };
+
+// ── LIMPIAR PRODUCTOS DUPLICADOS ───────────────────────────────────
+// Agrupa por nombre; si hay 2+ documentos del mismo producto, conserva el
+// EDITADO MÁS RECIENTEMENTE (empate → el más completo) y borra los demás.
+window.limpiarDuplicadosProductos = async function() {
+    if (!window._adminGetDocs || !window._adminDeleteDoc) { alert('Firebase cargando, intenta en 2 segundos'); return; }
+    var btn = document.getElementById('btn-limpiar-dup');
+    var txtOrig = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Analizando…'; }
+    try {
+        var snap = await window._adminGetDocs('productos');
+        var docs = [];
+        snap.forEach(function(d){ docs.push(Object.assign({ _id: d.id }, d.data())); });
+
+        var grupos = {};
+        docs.forEach(function(p){
+            var key = (p.nombre || '').toLowerCase().trim();
+            if (!key) return;
+            (grupos[key] = grupos[key] || []).push(p);
+        });
+
+        function puntuar(p){
+            var pts = 0;
+            if (p.imagen && String(p.imagen).indexOf('data:') === 0) pts += 10;
+            else if (p.imagen) pts += 3;
+            if (p.variantes && p.variantes.length) pts += 2;
+            if (p.descripcion) pts += 1;
+            return pts;
+        }
+
+        var aBorrar = [];
+        var resumen = [];
+        Object.keys(grupos).forEach(function(k){
+            var lista = grupos[k];
+            if (lista.length < 2) return;
+            lista.sort(function(a,b){
+                var ta = Number(a.actualizadoEn) || Date.parse(a.actualizadoEn) || 0;
+                var tb = Number(b.actualizadoEn) || Date.parse(b.actualizadoEn) || 0;
+                if (ta !== tb) return tb - ta;         // más reciente primero
+                return puntuar(b) - puntuar(a);         // empate → más completo
+            });
+            var keeper = lista[0];
+            var borrar = lista.slice(1);
+            borrar.forEach(function(p){ aBorrar.push(p._id); });
+            resumen.push('• ' + (keeper.nombre || k) + ': ' + lista.length + ' copias (conservar 1, borrar ' + borrar.length + ')');
+        });
+
+        if (!aBorrar.length) { alert('✅ No se encontraron productos duplicados.'); return; }
+
+        var ok = confirm('Se encontraron duplicados:\n\n' + resumen.join('\n') +
+            '\n\n¿Borrar ' + aBorrar.length + ' documento(s) duplicado(s)?\nSe conserva el editado más recientemente de cada producto.');
+        if (!ok) return;
+
+        if (btn) btn.innerHTML = '⏳ Limpiando…';
+        var borrados = 0;
+        for (var i = 0; i < aBorrar.length; i++) {
+            try { await window._adminDeleteDoc('productos', aBorrar[i]); borrados++; } catch(e){ console.warn('No se pudo borrar', aBorrar[i], e); }
+        }
+        alert('🧹 Listo. Se borraron ' + borrados + ' duplicado(s). El menú ya muestra un solo producto por nombre.');
+        try { if (typeof cargarListaProductos === 'function') await cargarListaProductos(); } catch(e){}
+    } catch(e) {
+        console.error('Error al limpiar duplicados:', e);
+        alert('❌ Error al limpiar duplicados: ' + (e.message || e));
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = txtOrig; }
+    }
+};
 </script>
 
 
@@ -2132,6 +2199,14 @@ window.guardarProducto = async function(id) {
         ➕ Agregar Producto
       </button>
     </div>
+
+    <!-- Limpiar duplicados -->
+    <button id="btn-limpiar-dup" onclick="window.limpiarDuplicadosProductos && window.limpiarDuplicadosProductos()"
+      style="display:block;width:100%;padding:.6rem;margin-bottom:1rem;background:rgba(167,139,250,.1);
+             border:1px solid rgba(167,139,250,.35);color:#A78BFA;border-radius:10px;
+             font-family:inherit;font-size:.82rem;font-weight:800;cursor:pointer;">
+      🧹 Detectar y limpiar productos duplicados
+    </button>
 
     <!-- Lista productos -->
     <div style="font-size:.72rem;color:#888;font-weight:700;margin-bottom:.5rem;">PRODUCTOS REGISTRADOS</div>
