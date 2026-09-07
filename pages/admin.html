@@ -599,6 +599,15 @@ window.normalizarRutaImagen = function(src) {
                 Cerrar
             </button>
         </div>
+
+        <!-- Reinicio de datos de prueba -->
+        <button id="btn-reiniciar-datos" onclick="window.reiniciarDatosPrueba && window.reiniciarDatosPrueba()"
+            style="display:block;width:100%;margin-top:1rem;padding:.7rem;
+                   background:rgba(244,67,54,.08);border:1px solid rgba(244,67,54,.35);
+                   color:#F44336;border-radius:10px;font-family:inherit;font-size:.82rem;
+                   font-weight:800;cursor:pointer;">
+            🗑️ Reiniciar datos de prueba (borra pedidos y turnos)
+        </button>
     </div>
 </div>
 </div>
@@ -1413,10 +1422,13 @@ window.normalizarRutaImagen = function(src) {
             const totalOrdenes  = pedidosHoy.length;
             const ticketProm    = totalOrdenes > 0 ? totalCobrado / totalOrdenes : 0;
 
-            // ── Por cajero ───────────────────────────────────────────
+            // ── Por repartidor ───────────────────────────────────────
+            // Ventas individuales de cada repartidor. Se identifica primero por
+            // el repartidor que hizo la entrega (domicilio), luego por quien
+            // cobró / tomó la orden en tienda.
             const porCajero = {};
             pedidosHoy.forEach(p => {
-                const caj = p.cajeroNombre || p.cajeroId || 'Sin cajero';
+                const caj = (p.repartidorNombre || p.cobradoPor || p.cajeroNombre || p.cajeroId || 'Sin asignar');
                 if (!porCajero[caj]) porCajero[caj] = { ordenes: 0, total: 0 };
                 porCajero[caj].ordenes++;
                 porCajero[caj].total += parseFloat(p.total) || 0;
@@ -1445,10 +1457,12 @@ window.normalizarRutaImagen = function(src) {
             const cajEl = document.getElementById('corte-por-cajero');
             if (cajEl) {
                 cajEl.innerHTML = Object.keys(porCajero).length === 0
-                    ? '<div style="color:var(--muted);font-size:.8rem;">Sin datos de cajero en los pedidos</div>'
-                    : Object.entries(porCajero).map(([nom, data]) =>
+                    ? '<div style="color:var(--muted);font-size:.8rem;">Sin ventas por repartidor todavía</div>'
+                    : Object.entries(porCajero)
+                        .sort((a,b)=> b[1].total - a[1].total)
+                        .map(([nom, data]) =>
                         '<div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid var(--border);font-size:.83rem;">' +
-                        '<span>🏪 ' + nom + ' <span style="color:var(--muted);">(' + data.ordenes + ' órd.)</span></span>' +
+                        '<span>🛵 ' + nom + ' <span style="color:var(--muted);">(' + data.ordenes + ' órd.)</span></span>' +
                         '<strong style="color:var(--primary);">$' + data.total.toFixed(2) + '</strong></div>'
                     ).join('');
             }
@@ -2120,6 +2134,44 @@ window.limpiarDuplicadosProductos = async function() {
     } catch(e) {
         console.error('Error al limpiar duplicados:', e);
         alert('❌ Error al limpiar duplicados: ' + (e.message || e));
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = txtOrig; }
+    }
+};
+
+// ── Reiniciar datos de prueba ────────────────────────────────────────
+// Borra TODOS los pedidos, turnos de caja y ubicaciones GPS para dejar el
+// corte y los reportes en $0. NO toca productos, empleados ni clientes.
+window.reiniciarDatosPrueba = async function() {
+    if (!window._adminGetDocs || !window._adminDeleteDoc) { alert('Firebase cargando, intenta en 2 segundos'); return; }
+    var _confirm = window.ttConfirm ? window.ttConfirm : (function(m){ return Promise.resolve(confirm(m)); });
+    var ok1 = await _confirm('⚠️ Esto borrará TODOS los pedidos, turnos de caja y ubicaciones para dejar los datos en $0.\n\nNo se tocan productos, empleados ni clientes.\n\n¿Continuar?');
+    if (!ok1) return;
+    // Segunda confirmación: acción irreversible
+    var texto = prompt('Para confirmar el borrado escribe:  BORRAR');
+    if (!texto || texto.trim().toUpperCase() !== 'BORRAR') { alert('Cancelado. No se borró nada.'); return; }
+
+    var btn = document.getElementById('btn-reiniciar-datos');
+    var txtOrig = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Borrando...'; }
+    try {
+        var colecciones = ['pedidos', 'turnos_caja', 'ubicaciones'];
+        var totalBorrados = 0;
+        for (var c = 0; c < colecciones.length; c++) {
+            var col = colecciones[c];
+            var snap = await window._adminGetDocs(col);
+            var ids = [];
+            snap.forEach(function(d){ ids.push(d.id); });
+            for (var i = 0; i < ids.length; i++) {
+                try { await window._adminDeleteDoc(col, ids[i]); totalBorrados++; }
+                catch(e){ console.warn('No se pudo borrar', col, ids[i], e); }
+            }
+        }
+        alert('✅ Datos reiniciados. Se borraron ' + totalBorrados + ' registro(s).\n\nEl corte y los reportes ahora están en $0.');
+        try { if (typeof generarCorteCompleto === 'function') await generarCorteCompleto(); } catch(e){}
+    } catch(e) {
+        console.error('Error al reiniciar datos:', e);
+        alert('❌ Error al reiniciar: ' + (e.message || e));
     } finally {
         if (btn) { btn.disabled = false; btn.innerHTML = txtOrig; }
     }
