@@ -291,9 +291,9 @@ window.normalizarRutaImagen = function(src) {
         .loading-row { text-align: center; padding: 3rem; color: var(--muted); }
 
         /* Modal POS de Caja */
-        .caja-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 2000; opacity: 0; pointer-events: none; transition: 0.2s; }
+        .caja-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 2000; opacity: 0; pointer-events: none; transition: 0.2s; padding: 1rem; box-sizing: border-box; }
         .caja-overlay.active { opacity: 1; pointer-events: all; }
-        .caja-modal { background: var(--surface); border: 1px solid var(--primary); border-radius: 16px; padding: 2rem; width: 100%; max-width: 400px; text-align: center; transform: translateY(20px); transition: 0.3s; }
+        .caja-modal { background: var(--surface); border: 1px solid var(--primary); border-radius: 16px; padding: 1.4rem 1.2rem; width: 100%; max-width: 420px; text-align: center; transform: translateY(20px); transition: 0.3s; max-height: 88vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
         .caja-overlay.active .caja-modal { transform: translateY(0); }
         .caja-title { font-size: 1.3rem; margin-bottom: 0.5rem; }
         .caja-total { font-size: 2.5rem; font-weight: 800; color: var(--green); margin-bottom: 1.5rem; }
