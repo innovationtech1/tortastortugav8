@@ -357,7 +357,7 @@ function render() {
   // Cajeros
   const cajE = Object.entries(caj).sort((a,b)=>b[1].v-a[1].v);
   if (cajE.length) {
-    h += '<div class="seccion"><h3>👤 Ventas por Cajero</h3>';
+    h += '<div class="seccion"><h3>🛵 Ventas por Repartidor</h3>';
     cajE.forEach(kv => {
       const prom = kv[1].o>0 ? kv[1].v/kv[1].o : 0;
       h += '<div class="fila"><div><div style="font-weight:600;">'+kv[0]+'</div><div style="font-size:.7rem;color:#888;">'+kv[1].o+' órdenes · prom $'+prom.toFixed(2)+'</div></div><span class="morado">$'+kv[1].v.toFixed(2)+'</span></div>';
@@ -414,7 +414,7 @@ function fila(label, val, cls) {
 
 window.exportarCSV = function() {
   if (!_filtrados.length) { alert('No hay datos para exportar'); return; }
-  let csv = 'Fecha,Ticket,Cliente,Total,Metodo,Estado,Cajero\n';
+  let csv = 'Fecha,Ticket,Cliente,Total,Metodo,Estado,Repartidor\n';
   _filtrados.forEach(p => {
     const ts = tsDe(p);
     const fecha = ts ? ts.toLocaleString('es-MX') : '';

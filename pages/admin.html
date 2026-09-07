@@ -552,7 +552,7 @@ window.normalizarRutaImagen = function(src) {
         <!-- Desglose por cajero -->
         <div style="border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1rem;">
             <div style="font-weight:700;font-size:.85rem;margin-bottom:.75rem;color:var(--text);">
-                🏪 Por Cajero
+                🛵 Por Repartidor
             </div>
             <div id="corte-por-cajero">
                 <div style="color:var(--muted);font-size:.82rem;">Cargando...</div>
@@ -1459,7 +1459,7 @@ window.normalizarRutaImagen = function(src) {
                         const tot = (t.totalEfectivo||0)+(t.totalTarjeta||0);
                         return '<div style="background:var(--surface-2);border-radius:8px;padding:.65rem;margin-bottom:.4rem;">' +
                             '<div style="display:flex;justify-content:space-between;">' +
-                            '<strong style="font-size:.82rem;">' + (t.cajeroNombre||t.cajeroId||'Cajero') + '</strong>' +
+                            '<strong style="font-size:.82rem;">' + (t.cajeroNombre||t.cajeroId||'Repartidor') + '</strong>' +
                             '<span style="font-size:.75rem;font-weight:700;color:' + (t.estado==='activo'?'#25D366':'var(--muted)') + ';">' + fin2 + '</span>' +
                             '</div>' +
                             '<div style="font-size:.75rem;color:var(--muted);margin-top:.2rem;">' +
