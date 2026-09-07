@@ -388,8 +388,8 @@ window.normalizarRutaImagen = function(src) {
                     <span class="acc-card-txt">Entregas</span>
                 </button>
                 <button class="acc-card" onclick="abrirGestionEmpleados()">
-                    <span class="acc-card-ico" style="background:rgba(59,130,246,.15);color:#3B82F6;">👤</span>
-                    <span class="acc-card-txt">Cajeros</span>
+                    <span class="acc-card-ico" style="background:rgba(59,130,246,.15);color:#3B82F6;">🛵</span>
+                    <span class="acc-card-txt">Repartidores</span>
                 </button>
                 <button class="acc-card" onclick="window.location.href='../ordenar.html'">
                     <span class="acc-card-ico" style="background:rgba(255,255,255,.08);color:#ccc;">🏠</span>
@@ -1762,7 +1762,7 @@ window.normalizarRutaImagen = function(src) {
             var empleados = [];
             snap.forEach(function(d){ var e = d.data(); e._docId = d.id; empleados.push(e); });
             if (!empleados.length) {
-                lista.innerHTML = '<div style="color:#888;font-size:.82rem;text-align:center;padding:1rem;">No hay empleados registrados. Agrégalos en la sección de Cajeros.</div>';
+                lista.innerHTML = '<div style="color:#888;font-size:.82rem;text-align:center;padding:1rem;">No hay empleados registrados. Agrégalos en la sección de Repartidores.</div>';
                 return;
             }
             var asignadoId = pedido ? pedido.repartidorId : null;
@@ -2370,13 +2370,13 @@ window.limpiarDuplicadosProductos = async function() {
               max-height:88vh;overflow-y:auto;">
     <div style="width:32px;height:4px;background:rgba(255,255,255,.15);border-radius:4px;margin:0 auto .85rem;"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-      <div style="font-size:.95rem;font-weight:800;color:#3B82F6;">👤 Gestión de Cajeros</div>
+      <div style="font-size:.95rem;font-weight:800;color:#3B82F6;">🛵 Gestión de Repartidores</div>
       <button onclick="document.getElementById('cajeros-modal').style.display='none'"
         style="background:none;border:1px solid rgba(255,255,255,.1);color:#888;border-radius:8px;padding:.25rem .6rem;cursor:pointer;">✕</button>
     </div>
     <!-- Formulario nuevo cajero -->
     <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:12px;padding:1rem;margin-bottom:1rem;">
-      <div style="font-size:.75rem;color:#3B82F6;font-weight:700;margin-bottom:.65rem;">➕ NUEVO CAJERO</div>
+      <div style="font-size:.75rem;color:#3B82F6;font-weight:700;margin-bottom:.65rem;">➕ NUEVO REPARTIDOR</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.4rem;">
         <input id="caj-nombre" placeholder="Nombre" style="background:#111;border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:8px;padding:.45rem .65rem;font-family:inherit;font-size:.82rem;">
         <input id="caj-apellido" placeholder="Apellido" style="background:#111;border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:8px;padding:.45rem .65rem;font-family:inherit;font-size:.82rem;">
@@ -2386,13 +2386,13 @@ window.limpiarDuplicadosProductos = async function() {
         <input id="caj-pin" type="password" placeholder="PIN (4 dígitos)" maxlength="4" style="background:#111;border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:8px;padding:.45rem .65rem;font-family:inherit;font-size:.82rem;">
       </div>
       <select id="caj-rol" style="width:100%;background:#111;border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:8px;padding:.45rem .65rem;font-family:inherit;font-size:.82rem;margin-bottom:.5rem;">
-        <option value="cajero">Cajero</option>
+        <option value="cajero">Repartidor</option>
         <option value="gerente">Gerente</option>
         <option value="cocina">Cocina</option>
       </select>
       <button onclick="crearCajero()"
         style="width:100%;padding:.6rem;background:rgba(59,130,246,.2);border:1px solid rgba(59,130,246,.4);color:#3B82F6;border-radius:8px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
-        ➕ Crear Cajero
+        ➕ Crear Repartidor
       </button>
     </div>
     <!-- Lista de cajeros -->
@@ -2676,8 +2676,8 @@ window.crearCajero = async function() {
             if (el) el.value = '';
         });
         await cargarListaCajeros();
-        alert('Cajero ' + nombre + ' creado. ID: ' + empId + ' PIN: ' + pin);
-    } catch(e) { alert('Error al crear cajero: ' + e.message); }
+        alert('Repartidor ' + nombre + ' creado. ID: ' + empId + ' PIN: ' + pin);
+    } catch(e) { alert('Error al crear repartidor: ' + e.message); }
 };
 
 window.eliminarCajero = async function(empId, docId) {
