@@ -113,6 +113,14 @@ html { -webkit-text-size-adjust: 100%; }
   <div class="mp-stat"><div class="n" id="mp-cobrado" style="color:#25D366">$0</div><div class="l">Cobrado</div></div>
 </div>
 
+<!-- Botón: Historial de pedidos (entregados/archivados) -->
+<button id="mp-btn-historial" onclick="verHistorialMP()" style="width:100%;margin:0 0 1rem;padding:.8rem;
+    background:rgba(91,155,255,.1);border:1px solid rgba(91,155,255,.35);color:#5B9BFF;
+    border-radius:12px;font-family:inherit;font-size:.9rem;font-weight:800;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:.5rem;">
+  📋 Historial de pedidos
+</button>
+
 <div class="mp-lista" id="mp-lista">
   <div class="mp-vacio"><div class="ico">🧾</div><div>Cargando tus pedidos...</div></div>
 </div>
@@ -132,6 +140,21 @@ html { -webkit-text-size-adjust: 100%; }
       <button class="cobro-metodo" onclick="confirmarCobro('Cash App')">🟢<span>Cash App</span></button>
     </div>
     <button onclick="cerrarCobro()" style="width:100%;padding:.8rem;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:10px;font-family:inherit;font-weight:700;cursor:pointer;">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL: Historial de pedidos entregados/archivados -->
+<div id="mp-historial-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.75);
+     align-items:flex-end;justify-content:center;">
+  <div style="background:#141414;width:100%;max-width:640px;max-height:88vh;border-radius:20px 20px 0 0;
+       display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.6);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.1rem;
+         border-bottom:1px solid rgba(255,255,255,.08);">
+      <div style="font-size:1.05rem;font-weight:900;color:#fff;">📋 Historial de pedidos</div>
+      <button onclick="cerrarHistorialMP()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+          color:#aaa;border-radius:8px;width:34px;height:34px;font-size:1.1rem;cursor:pointer;">✕</button>
+    </div>
+    <div id="mp-historial-lista" style="overflow-y:auto;padding:1rem 1.1rem 2rem;flex:1;"></div>
   </div>
 </div>
 
@@ -413,6 +436,79 @@ window.marcarEntregadoMP = async function(id) {
     } catch(e) { alert('Error al marcar como entregado.'); }
 };
 
+// ── Auto-archivar pedidos ENTREGADOS a los 5 segundos ──────────────
+var _archivarProgMP = {};
+function _programarArchivadoEntregadosMP(lista) {
+    (lista || []).forEach(function(p){
+        if (!p || !p.id || p.archivado === true) return;
+        if (typeof esMio === 'function' && !esMio(p)) return;   // solo mis pedidos
+        var entregada = !!p.entregado || (typeof TTEstados !== 'undefined' && TTEstados.estaEntregado(p.estado));
+        if (entregada && !_archivarProgMP[p.id]) {
+            _archivarProgMP[p.id] = setTimeout(function(){
+                updateDoc(doc(db, 'pedidos', p.id), {
+                    archivado: true,
+                    archivadoEn: new Date().toISOString(),
+                    archivadoPor: 'auto-entregado'
+                }).catch(function(e){ console.warn('No se pudo archivar', p.id, e); });
+                delete _archivarProgMP[p.id];
+            }, 5000);
+        }
+    });
+}
+
+// ── HISTORIAL de pedidos entregados/archivados ─────────────────────
+window.verHistorialMP = function() {
+    var m = document.getElementById('mp-historial-modal');
+    if (!m) return;
+    m.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    _renderHistorialMP();
+};
+window.cerrarHistorialMP = function() {
+    var m = document.getElementById('mp-historial-modal');
+    if (m) m.style.display = 'none';
+    document.body.style.overflow = '';
+};
+function _renderHistorialMP() {
+    var cont = document.getElementById('mp-historial-lista');
+    if (!cont) return;
+    var lista = (_pedidos || []).filter(function(p){
+        return p && p.archivado === true && (typeof esMio !== 'function' || esMio(p));
+    });
+    lista.sort(function(a,b){
+        var fa = Date.parse(a.archivadoEn || '') || ((a.tiempos && a.tiempos.entregada) || 0) || ((a.creado && a.creado.seconds ? a.creado.seconds*1000 : 0));
+        var fb = Date.parse(b.archivadoEn || '') || ((b.tiempos && b.tiempos.entregada) || 0) || ((b.creado && b.creado.seconds ? b.creado.seconds*1000 : 0));
+        return fb - fa;
+    });
+    if (!lista.length) {
+        cont.innerHTML = '<div style="text-align:center;color:#888;padding:2rem 1rem;font-size:.9rem;">Aún no hay pedidos en el historial.</div>';
+        return;
+    }
+    cont.innerHTML = lista.map(function(p){
+        var folio = (p.codigoOrden ? '#'+p.codigoOrden : (p.folioStr || ('#' + (p.id||'').slice(-4).toUpperCase())));
+        var fecha = '';
+        var ts = Date.parse(p.archivadoEn || '') || ((p.creado && p.creado.seconds) ? p.creado.seconds*1000 : 0);
+        if (ts) fecha = new Date(ts).toLocaleString('es-MX', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+        var itemsTxt = (parseItems(p) || []).join(', ');
+        var entregada = !!p.entregado || (typeof TTEstados !== 'undefined' && TTEstados.estaEntregado(p.estado));
+        var estadoTxt = (typeof TTEstados !== 'undefined' && TTEstados.estaCancelado(p.estado)) ? '❌ Cancelado' : (entregada ? '✅ Entregado' : (p.estado || '—'));
+        var pagoTxt = (p.estadoPago === 'Pagado') ? ('💵 ' + (p.metodoPagoReal || 'Pagado')) : '⏳ Por pagar';
+        return '<div style="background:#1c1c1c;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:.9rem 1rem;margin-bottom:.7rem;">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem;">' +
+              '<span style="font-weight:900;color:#FF7A33;">🎟️ ' + folio + '</span>' +
+              '<span style="font-weight:900;color:#25D366;">' + (p.total || '') + '</span>' +
+            '</div>' +
+            '<div style="font-size:.9rem;color:#fff;font-weight:700;">' + (p.cliente || p.nombre || 'Cliente') + '</div>' +
+            (fecha ? '<div style="font-size:.75rem;color:#888;margin-top:.15rem;">🗓️ ' + fecha + '</div>' : '') +
+            (itemsTxt ? '<div style="font-size:.78rem;color:#bbb;margin-top:.3rem;line-height:1.4;">🍔 ' + itemsTxt + '</div>' : '') +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;padding-top:.5rem;border-top:1px solid rgba(255,255,255,.06);font-size:.78rem;">' +
+              '<span style="color:#25D366;font-weight:700;">' + estadoTxt + '</span>' +
+              '<span style="color:#888;">' + pagoTxt + '</span>' +
+            '</div>' +
+        '</div>';
+    }).join('');
+}
+
 // Escuchar pedidos en vivo (Fase 2b: esperar sesión)
 await authReady;
 onSnapshot(collection(db, 'pedidos'), snap => {
@@ -420,6 +516,11 @@ onSnapshot(collection(db, 'pedidos'), snap => {
     snap.forEach(d => _pedidos.push({ id: d.id, ...d.data() }));
     window._pedidosMP = _pedidos;
     render();
+    // Auto-archivar los pedidos ENTREGADOS a los 5s (desaparecen de la lista)
+    _programarArchivadoEntregadosMP(_pedidos);
+    // Si el historial está abierto, refrescarlo en vivo
+    var _hm = document.getElementById('mp-historial-modal');
+    if (_hm && _hm.style.display === 'flex') _renderHistorialMP();
 }, err => {
     document.getElementById('mp-lista').innerHTML = '<div class="mp-vacio"><div class="ico">⚠️</div><div>Error al cargar. Revisa tu conexión.</div></div>';
 });
