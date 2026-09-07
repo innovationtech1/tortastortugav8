@@ -175,15 +175,19 @@ window.textoItemAgrupado = function(g, opts) {
         }
 
         var html = '<div id="pb-menu" class="pb-menu">';
-        // Página actual (para no mostrar el botón que lleva a donde ya estamos)
+        // Página actual: NO se oculta su botón (para que la secuencia sea IDÉNTICA
+        // en todas las pantallas); solo se resalta como "estás aquí".
         var pagActual = window.location.pathname.split('/').pop() || 'index.html';
 
         items.forEach(function(it) {
             if (it[3] && !esGerente) return; // ocultar items de gerente a otros roles
-            // No mostrar el botón que apunta a la página en la que ya estás
             var destino = it[2].split('/').pop().split('?')[0];
-            if (destino === pagActual) return;
+            var esActual = (destino === pagActual);
             var claseGerente = it[3] ? ' pb-nav-gerente' : '';
+            // Resaltar visualmente el botón de la pantalla actual (sin quitarlo)
+            var estiloActivo = esActual
+                ? 'position:relative;background:rgba(255,90,0,.18);border-radius:10px;'
+                : 'position:relative;';
             // Insignia de contador para "Disponibles"
             var esBadge = it[2].indexOf('disponibles.html') >= 0;
             var badgeHtml = esBadge
@@ -192,7 +196,7 @@ window.textoItemAgrupado = function(g, opts) {
                   'border-radius:9px;align-items:center;justify-content:center;padding:0 4px;' +
                   'box-shadow:0 0 0 2px #141414;animation:pbBadgePulse 1.5s infinite;">0</span>'
                 : '';
-            html += '<a href="' + it[2] + '" class="pb-nav-btn' + claseGerente + '" style="position:relative;">' +
+            html += '<a href="' + it[2] + '" class="pb-nav-btn' + claseGerente + '" style="' + estiloActivo + '"' + (esActual ? ' aria-current="page"' : '') + '>' +
                 badgeHtml +
                 '<span class="pb-nav-ico">' + it[0] + '</span>' +
                 '<span class="pb-nav-lbl">' + it[1] + '</span></a>';
