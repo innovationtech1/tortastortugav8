@@ -154,15 +154,15 @@ window.textoItemAgrupado = function(g, opts) {
         var items;
         if (sesion.tipo === 'empleado') {
             // Menú de EMPLEADO — cada item: [icono, etiqueta, url, soloGerente]
-            // NOTA: Tienda/Ordenar, Cocina, Disponibles, Mi Ruta y Admin YA viven
-            // en la barra inferior fija (#tt-navbar), así que NO se repiten aquí.
-            // Este menú solo lista lo que no está en esa barra.
+            // BARRA SUPERIOR: Reportes, Clientes, Control, Mapa, Admin.
+            // (Tienda, Mis Pedidos, Mi Ruta, Disponibles y Cocina viven en la
+            // barra inferior fija #tt-navbar, así que NO se repiten aquí.)
             items = [
-                ['🧾', 'Mis Pedidos', _base() + 'mis-pedidos.html', false],
                 ['📊', 'Reportes', _base() + 'reportes.html', true],
                 ['👥', 'Clientes', _base() + 'clientes.html', true],
                 ['📋', 'Control', _base() + 'control.html', true],
                 ['🗺️', 'Mapa', _base() + 'mapa.html', true],
+                ['⚙️', 'Admin', _base() + 'admin.html', true],
             ];
         } else {
             // Menú de CLIENTE — más simple
@@ -235,13 +235,15 @@ window.textoItemAgrupado = function(g, opts) {
                         rol.indexOf('admin') >= 0 || rol.indexOf('dueñ') >= 0;
 
         // [icono, etiqueta, url, esDisponibles]
+        // Orden: Tienda, Mis Pedidos, Mi Ruta, Disponibles, Cocina.
+        // (Admin y los paneles de gerente viven en la barra superior.)
         var items = [
             ['🏬', 'Tienda',      _raiz() + 'ordenar.html',      false],
-            ['🍳', 'Cocina',      _base() + 'cocina.html',       false],
-            ['🔔', 'Disponibles', _base() + 'disponibles.html',  true ],
+            ['🧾', 'Mis Pedidos', _base() + 'mis-pedidos.html',  false],
             ['🛵', 'Mi Ruta',     _base() + 'mi-ruta.html',      false],
+            ['🔔', 'Disponibles', _base() + 'disponibles.html',  true ],
+            ['🍳', 'Cocina',      _base() + 'cocina.html',       false],
         ];
-        if (esGerente) items.push(['⚙️', 'Admin', _base() + 'admin.html', false]);
 
         var pagActual = window.location.pathname.split('/').pop().split('?')[0] || 'index.html';
 
