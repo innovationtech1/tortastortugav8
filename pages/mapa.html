@@ -22,10 +22,13 @@
   .header .salir { color:#fff; text-decoration:none; font-size:.85rem; font-weight:700; opacity:.9; }
   .barra-filtro { padding:.8rem 1rem; display:flex; gap:.6rem; align-items:center; background:var(--surface); }
   .barra-filtro select { flex:1; padding:.6rem; border-radius:10px; border:1px solid rgba(255,90,0,.3); background:#111; color:#fff; font-family:inherit; font-weight:700; font-size:16px; }
-  #mapa { width:100%; height:calc(100vh - 200px); min-height:300px; }
+  /* Mapa con margen/padding y altura acotada para permitir scroll de la página */
+  #mapa { width:auto; height:70vh; min-height:340px; margin:.9rem 1rem 1.5rem;
+          border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,.1);
+          box-shadow:0 6px 20px rgba(0,0,0,.35); }
   .leaflet-container { background:#1a1a1a; }
   .tt-emoji-icon { font-size:26px; text-align:center; line-height:1; background:none; border:none; filter:drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
-  .resumen { display:flex; gap:.5rem; padding:.7rem 1rem; background:var(--surface); border-top:1px solid rgba(255,255,255,.06); }
+  .resumen { display:flex; gap:.5rem; padding:.7rem 1rem; background:var(--surface); border-bottom:1px solid rgba(255,255,255,.06); }
   .resumen .r { flex:1; text-align:center; }
   .resumen .r .n { font-size:1.2rem; font-weight:900; }
   .resumen .r .l { font-size:.65rem; color:var(--muted); text-transform:uppercase; }
@@ -44,13 +47,13 @@
   </select>
 </div>
 
-<div id="mapa"></div>
-
 <div class="resumen" id="resumen">
   <div class="r"><div class="n" style="color:#FF7A33;" id="r-ordenes">0</div><div class="l">Órdenes</div></div>
   <div class="r"><div class="n" style="color:#5B9BFF;" id="r-reps">0</div><div class="l">Repartidores</div></div>
   <div class="r"><div class="n" style="color:#25D366;" id="r-sinasig">0</div><div class="l">Sin asignar</div></div>
 </div>
+
+<div id="mapa"></div>
 
 <script src="../js/estados.js?v=1788145000"></script>
 <script type="module">
@@ -71,6 +74,8 @@ function _initMap() {
   map = L.map('mapa', { zoomControl: true, attributionControl: false });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
   map.setView([29.4241, -98.4936], 12); // San Antonio
+  // Recalcular tamaño tras el layout (el mapa ahora tiene margen/borde)
+  setTimeout(function(){ try { map.invalidateSize(); } catch(e){} }, 300);
 }
 
 function _esActiva(p) {
