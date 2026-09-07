@@ -3979,7 +3979,10 @@ function _renderEntregaEmpleadoCarrito(sec) {
     html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:.5rem .6rem;' + (esDom ? 'margin-bottom:.5rem;' : '') + '">' +
         '<div style="min-width:0;font-size:.78rem;color:#fff;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
             '👤 ' + (nombre || '<span style="color:#F44336;">Falta nombre</span>') +
-            '  ·  📱 ' + (tel || '<span style="color:#F44336;">Falta teléfono</span>') +
+            // El teléfono solo es relevante para domicilio (para contactar al
+            // repartidor/cliente). En Tortumóvil no se pide, así que no se muestra
+            // "Falta teléfono".
+            (esDom ? ('  ·  📱 ' + (tel || '<span style="color:#F44336;">Falta teléfono</span>')) : '') +
         '</div>' +
         '<button onclick="window.cartEmpEditarCliente()" style="flex-shrink:0;background:rgba(255,90,0,.12);border:1px solid rgba(255,90,0,.3);color:#FF5A00;border-radius:8px;padding:.3rem .6rem;font-family:inherit;font-size:.7rem;font-weight:800;cursor:pointer;">✏️ Editar</button>' +
     '</div>';
