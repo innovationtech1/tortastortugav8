@@ -3798,11 +3798,11 @@ window.colBloquear = async function(hora, bloquear) {
 <script>
 // ── ARCHIVAR MULTIPLES ORDENES ──
 window.actualizarBarraArchivar = function() {
-    var checks = document.querySelectorAll('.chk-archivar:checked');
+    // La barra de archivar manual quedó OCULTA: las órdenes entregadas se
+    // archivan solas a los 5s (en Mi Ruta / Mis Pedidos). Se mantiene la función
+    // para no romper llamadas existentes, pero ya no muestra la barra.
     var barra = document.getElementById('barra-archivar');
-    var conteo = document.getElementById('conteo-archivar');
-    if (conteo) conteo.textContent = checks.length;
-    if (barra) barra.style.display = checks.length > 0 ? 'flex' : 'none';
+    if (barra) barra.style.display = 'none';
 };
 
 window.seleccionarTodasArchivar = function() {
