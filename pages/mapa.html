@@ -22,10 +22,16 @@
   .header .salir { color:#fff; text-decoration:none; font-size:.85rem; font-weight:700; opacity:.9; }
   .barra-filtro { padding:.8rem 1rem; display:flex; gap:.6rem; align-items:center; background:var(--surface); }
   .barra-filtro select { flex:1; padding:.6rem; border-radius:10px; border:1px solid rgba(255,90,0,.3); background:#111; color:#fff; font-family:inherit; font-weight:700; font-size:16px; }
-  /* Mapa con margen/padding y altura acotada para permitir scroll de la página */
-  #mapa { width:auto; height:70vh; min-height:340px; margin:.9rem 1rem 1.5rem;
+  /* Mapa con margen/padding y altura acotada para permitir scroll de la página.
+     position:relative + z-index:0 crean un CONTEXTO DE APILAMIENTO propio: así
+     las capas internas de Leaflet (marcadores z-index 600, etc.) NO se pintan
+     por encima de la barra inferior fija (que queda siempre visible). */
+  #mapa { position:relative; z-index:0; isolation:isolate;
+          width:auto; height:70vh; min-height:340px; margin:.9rem 1rem 1.5rem;
           border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,.1);
           box-shadow:0 6px 20px rgba(0,0,0,.35); }
+  /* Refuerzo: la barra inferior del equipo siempre por encima del mapa */
+  #tt-navbar { z-index:2000 !important; }
   .leaflet-container { background:#1a1a1a; }
   .tt-emoji-icon { font-size:26px; text-align:center; line-height:1; background:none; border:none; filter:drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
   .resumen { display:flex; gap:.5rem; padding:.7rem 1rem; background:var(--surface); border-bottom:1px solid rgba(255,255,255,.06); }
