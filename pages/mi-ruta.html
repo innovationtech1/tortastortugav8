@@ -1251,6 +1251,11 @@ window.cobrarEntrega = async function(metodo) {
         ? await window.ttConfirm('¿Confirmar cobro de ' + (_pedidoAbierto.total||'') + ' con ' + metodo + '?')
         : confirm('¿Confirmar cobro con ' + metodo + '?');
     if (!confirmar) return;
+    // Guardar el estado ANTERIOR para poder revertir si el guardado falla
+    // (es dinero: no debemos dejar la pantalla mostrando "Pagado" si en
+    // realidad no se guardó en la red).
+    var _pagoPrev   = _pedidoAbierto.estadoPago;
+    var _metodoPrev = _pedidoAbierto.metodoPagoReal;
     // Actualización OPTIMISTA INMEDIATA: reflejar el método al instante en
     // pantalla, ANTES de guardar en red (el guardado y el onSnapshot lo
     // reconfirman después). Así no hay que salir de la pantalla para verlo.
@@ -1268,7 +1273,13 @@ window.cobrarEntrega = async function(metodo) {
         if (_pedidoAbierto) { _pedidoAbierto.metodoPagoReal = metodo; refrescarZonaCobro(_pedidoAbierto); }
         if (window.ttAlert) window.ttAlert('✅ Cobro registrado: ' + metodo);
     } catch(err) {
-        alert('Error al registrar el cobro. Revisa tu conexión.');
+        // REVERTIR el optimismo: el cobro NO se guardó.
+        if (_pedidoAbierto) {
+            _pedidoAbierto.estadoPago = _pagoPrev;
+            _pedidoAbierto.metodoPagoReal = _metodoPrev;
+            refrescarZonaCobro(_pedidoAbierto);
+        }
+        alert('Error al registrar el cobro. Revisa tu conexión e inténtalo de nuevo.');
     }
 };
 
