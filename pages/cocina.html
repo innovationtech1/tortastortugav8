@@ -534,6 +534,28 @@ window.limpiarOrdenCocina = (id) => {
     renderGrid();
 };
 
+// Limpia de la pantalla TODO el historial visible de una sola vez (oculta,
+// no borra del sistema). Es el botón "🧹 Limpiar pantalla" de la barra del
+// historial. Agrega todos los ids visibles al set de ocultos.
+window.limpiarPantallaCocina = () => {
+    var visibles = todos.filter(function(p){
+        return TTEstados.fueraDeCocina(p.estado) && !ocultosCocina.has(p.id);
+    }).map(function(p){ return p.id; });
+    if (!visibles.length) {
+        if (window.ttAlert) window.ttAlert('No hay órdenes en el historial para limpiar.');
+        else alert('No hay órdenes en el historial para limpiar.');
+        return;
+    }
+    var msg = '¿Ocultar ' + visibles.length + ' orden(es) del historial de esta pantalla?\n\nNo se borran del sistema, solo se limpian de esta vista.';
+    var _hacer = function(){
+        visibles.forEach(function(id){ ocultosCocina.add(id); });
+        localStorage.setItem('tt_cocina_ocultos', JSON.stringify([...ocultosCocina]));
+        renderGrid();
+    };
+    if (window.ttConfirm) window.ttConfirm(msg).then(function(ok){ if (ok) _hacer(); });
+    else if (confirm(msg)) _hacer();
+};
+
 // Alterna ver el historial COMPLETO (todas las órdenes, incluidas las que se
 // quitaron individualmente) para revisar dudas o reclamos. No afecta el sistema.
 let verTodoHistorial = false;
