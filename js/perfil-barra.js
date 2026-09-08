@@ -360,34 +360,36 @@ window.textoItemAgrupado = function(g, opts) {
                     'border-bottom:2px solid rgba(255,255,255,.08); box-shadow:0 4px 12px rgba(0,0,0,.4);' +
                     'scrollbar-width:none; }' +
                 '.pb-menu::-webkit-scrollbar { display:none; }' +
-                // Botones superiores con el MISMO look que la barra inferior:
-                // sin caja ni borde, solo ícono + texto, repartidos a lo ancho.
+                // Botones superiores tipo tarjeta: degradado sutil, borde,
+                // esquinas redondeadas y sombra ligera. El activo va en naranja.
                 '.pb-nav-btn { flex:1; min-width:0; display:flex; flex-direction:column; align-items:center;' +
-                    'justify-content:center; gap:.16rem; padding:.5rem .2rem; text-decoration:none;' +
-                    'background:transparent; border:none; color:#9a9a9a; font-family:system-ui,sans-serif;' +
-                    'transition:color .15s; position:relative; }' +
+                    'justify-content:center; gap:.22rem; padding:.5rem .25rem; margin:0 .12rem; border-radius:13px;' +
+                    'text-decoration:none; background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03));' +
+                    'border:1px solid rgba(255,255,255,.12); color:#d0d0d0; font-family:system-ui,sans-serif;' +
+                    'transition:all .16s; position:relative; box-shadow:0 1px 3px rgba(0,0,0,.28); }' +
                 '.pb-nav-btn:active { transform:scale(.93); }' +
-                '.pb-nav-gerente { background:transparent; border:none; }' +
-                '.pb-nav-btn[aria-current="page"] { color:#FF5A00; }' +
-                '.pb-nav-btn[aria-current="page"]::after { content:""; position:absolute; top:0; left:24%;' +
-                    'right:24%; height:3px; background:#FF5A00; border-radius:0 0 4px 4px; }' +
-                '.pb-nav-lbl { font-size:.62rem; font-weight:800; white-space:nowrap; }' +
+                '.pb-nav-btn[aria-current="page"] { color:#FF7A33; border-color:rgba(255,90,0,.6);' +
+                    'background:linear-gradient(180deg,rgba(255,90,0,.22),rgba(255,90,0,.09));' +
+                    'box-shadow:0 2px 10px rgba(255,90,0,.22); }' +
+                '.pb-nav-lbl { font-size:.6rem; font-weight:800; white-space:nowrap; letter-spacing:.01em; }' +
                 '@keyframes pbBadgePulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.15);} }' +
-                '.pb-nav-ico { font-size:1.4rem; line-height:1; }' +
-                '@media (max-width:480px){ .pb-badge{display:none;} .pb-nombre{font-size:.85rem;} .pb-nav-btn{padding:.45rem .15rem;} .pb-nav-ico{font-size:1.3rem;} .pb-nav-lbl{font-size:.56rem;} .pb-menu{gap:0; padding:.4rem .4rem;} }' +
+                '.pb-nav-ico { font-size:1.35rem; line-height:1; filter:drop-shadow(0 1px 1px rgba(0,0,0,.4)); }' +
+                '@media (max-width:480px){ .pb-badge{display:none;} .pb-nombre{font-size:.85rem;} .pb-nav-btn{padding:.45rem .15rem; margin:0 .08rem;} .pb-nav-ico{font-size:1.25rem;} .pb-nav-lbl{font-size:.55rem;} .pb-menu{gap:0; padding:.45rem .4rem;} }' +
                 // ── Barra inferior de navegación del equipo ──
                 '#tt-navbar{ position:fixed; left:0; right:0; bottom:0; z-index:150; display:flex;' +
                     'background:linear-gradient(0deg,#0f0f0f,#1a1a1a); border-top:1px solid rgba(255,255,255,.1);' +
                     'box-shadow:0 -4px 16px rgba(0,0,0,.45); padding-bottom:env(safe-area-inset-bottom,0px); }' +
                 '.tt-nav-item{ flex:1; min-width:0; display:flex; flex-direction:column; align-items:center;' +
-                    'justify-content:center; gap:.16rem; padding:.5rem .2rem .55rem; text-decoration:none;' +
-                    'color:#9a9a9a; font-family:system-ui,sans-serif; position:relative; transition:color .15s; }' +
+                    'justify-content:center; gap:.22rem; padding:.45rem .2rem; margin:.4rem .22rem; border-radius:13px;' +
+                    'text-decoration:none; color:#d0d0d0; font-family:system-ui,sans-serif; position:relative;' +
+                    'background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03));' +
+                    'border:1px solid rgba(255,255,255,.12); box-shadow:0 1px 3px rgba(0,0,0,.28); transition:all .16s; }' +
                 '.tt-nav-item:active{ transform:scale(.93); }' +
-                '.tt-nav-item.activo{ color:#FF5A00; }' +
-                '.tt-nav-item.activo::before{ content:""; position:absolute; top:0; left:24%; right:24%;' +
-                    'height:3px; background:#FF5A00; border-radius:0 0 4px 4px; }' +
-                '.tt-nav-i{ font-size:1.4rem; line-height:1; position:relative; }' +
-                '.tt-nav-t{ font-size:.62rem; font-weight:800; letter-spacing:.01em; white-space:nowrap; }' +
+                '.tt-nav-item.activo{ color:#FF7A33; border-color:rgba(255,90,0,.6);' +
+                    'background:linear-gradient(180deg,rgba(255,90,0,.22),rgba(255,90,0,.09));' +
+                    'box-shadow:0 2px 10px rgba(255,90,0,.22); }' +
+                '.tt-nav-i{ font-size:1.35rem; line-height:1; position:relative; filter:drop-shadow(0 1px 1px rgba(0,0,0,.4)); }' +
+                '.tt-nav-t{ font-size:.6rem; font-weight:800; letter-spacing:.01em; white-space:nowrap; }' +
                 '.tt-navbar-badge{ position:absolute; top:-6px; right:-11px; background:#F44336; color:#fff;' +
                     'font-size:.6rem; font-weight:900; min-width:16px; height:16px; border-radius:8px;' +
                     'align-items:center; justify-content:center; padding:0 4px; box-shadow:0 0 0 2px #141414;' +
