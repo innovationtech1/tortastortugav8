@@ -184,10 +184,10 @@ window.textoItemAgrupado = function(g, opts) {
             var destino = it[2].split('/').pop().split('?')[0];
             var esActual = (destino === pagActual);
             var claseGerente = it[3] ? ' pb-nav-gerente' : '';
-            // Resaltar visualmente el botón de la pantalla actual (sin quitarlo)
-            var estiloActivo = esActual
-                ? 'position:relative;background:rgba(255,90,0,.18);border-radius:10px;'
-                : 'position:relative;';
+            // Resaltar la pantalla actual solo con color + indicador (sin caja),
+            // igual que la barra inferior. El highlight lo aplica el CSS via
+            // aria-current="page".
+            var estiloActivo = 'position:relative;';
             // Insignia de contador para "Disponibles"
             var esBadge = it[2].indexOf('disponibles.html') >= 0;
             var badgeHtml = esBadge
@@ -355,23 +355,26 @@ window.textoItemAgrupado = function(g, opts) {
                     'color:#fff; border-radius:8px; width:38px; height:38px; font-size:1.2rem; cursor:pointer;' +
                     'flex-shrink:0; font-family:system-ui,sans-serif; line-height:1; }' +
                 '.pb-menu-btn:active { transform:scale(.95); }' +
-                '.pb-menu { display:flex; flex-direction:row; gap:.35rem; background:#141414;' +
-                    'padding:.6rem .8rem; overflow-x:auto; -webkit-overflow-scrolling:touch;' +
+                '.pb-menu { display:flex; flex-direction:row; gap:0; background:#141414;' +
+                    'padding:.5rem .5rem; overflow-x:auto; -webkit-overflow-scrolling:touch;' +
                     'border-bottom:2px solid rgba(255,255,255,.08); box-shadow:0 4px 12px rgba(0,0,0,.4);' +
                     'scrollbar-width:none; }' +
                 '.pb-menu::-webkit-scrollbar { display:none; }' +
-                '.pb-nav-btn { display:flex; flex-direction:column; align-items:center; gap:.25rem;' +
-                    'padding:.45rem .4rem; min-width:52px; border-radius:12px; text-decoration:none;' +
-                    'background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);' +
-                    'color:#eee; font-family:system-ui,sans-serif; transition:all .18s; flex-shrink:0; }' +
-                '.pb-nav-btn:hover { background:rgba(255,90,0,.12); border-color:rgba(255,90,0,.3);' +
-                    'transform:translateY(-2px); }' +
-                '.pb-nav-btn:active { transform:scale(.94); }' +
-                '.pb-nav-gerente { background:rgba(255,90,0,.1); border-color:rgba(255,90,0,.3); }' +
-                '.pb-nav-lbl { font-size:.6rem; font-weight:700; white-space:nowrap; }' +
+                // Botones superiores con el MISMO look que la barra inferior:
+                // sin caja ni borde, solo ícono + texto, repartidos a lo ancho.
+                '.pb-nav-btn { flex:1; min-width:0; display:flex; flex-direction:column; align-items:center;' +
+                    'justify-content:center; gap:.16rem; padding:.5rem .2rem; text-decoration:none;' +
+                    'background:transparent; border:none; color:#9a9a9a; font-family:system-ui,sans-serif;' +
+                    'transition:color .15s; position:relative; }' +
+                '.pb-nav-btn:active { transform:scale(.93); }' +
+                '.pb-nav-gerente { background:transparent; border:none; }' +
+                '.pb-nav-btn[aria-current="page"] { color:#FF5A00; }' +
+                '.pb-nav-btn[aria-current="page"]::after { content:""; position:absolute; top:0; left:24%;' +
+                    'right:24%; height:3px; background:#FF5A00; border-radius:0 0 4px 4px; }' +
+                '.pb-nav-lbl { font-size:.62rem; font-weight:800; white-space:nowrap; }' +
                 '@keyframes pbBadgePulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.15);} }' +
-                '.pb-nav-ico { font-size:1.25rem; line-height:1; }' +
-                '@media (max-width:480px){ .pb-badge{display:none;} .pb-nombre{font-size:.85rem;} .pb-nav-btn{min-width:46px; padding:.4rem .3rem;} .pb-nav-ico{font-size:1.15rem;} .pb-nav-lbl{font-size:.55rem;} .pb-menu{gap:.25rem; padding:.5rem .5rem;} }' +
+                '.pb-nav-ico { font-size:1.4rem; line-height:1; }' +
+                '@media (max-width:480px){ .pb-badge{display:none;} .pb-nombre{font-size:.85rem;} .pb-nav-btn{padding:.45rem .15rem;} .pb-nav-ico{font-size:1.3rem;} .pb-nav-lbl{font-size:.56rem;} .pb-menu{gap:0; padding:.4rem .4rem;} }' +
                 // ── Barra inferior de navegación del equipo ──
                 '#tt-navbar{ position:fixed; left:0; right:0; bottom:0; z-index:150; display:flex;' +
                     'background:linear-gradient(0deg,#0f0f0f,#1a1a1a); border-top:1px solid rgba(255,255,255,.1);' +
