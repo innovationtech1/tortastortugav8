@@ -1294,8 +1294,9 @@ function renderPerfil(){
       <div id="bio-section" style="border-top:1px solid var(--bd);margin:.75rem 0;padding-top:.75rem;display:none;">
         <div style="font-size:.72rem;font-weight:800;color:var(--mu);letter-spacing:.05em;margin-bottom:.55rem;">👆 HUELLA / RECONOCIMIENTO FACIAL</div>
         <div id="bio-estado" style="font-size:.8rem;color:var(--mu);margin-bottom:.55rem;line-height:1.4;"></div>
+        <div id="bio-lista" style="margin-bottom:.55rem;"></div>
         <button type="button" id="btn-bio-activar" onclick="configurarBiometriaPerfil()" style="width:100%;padding:.75rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.45);color:#5B9BFF;border-radius:var(--rxs);font-family:inherit;font-size:.88rem;font-weight:800;cursor:pointer;">👆 Activar huella / rostro en este dispositivo</button>
-        <button type="button" id="btn-bio-quitar" onclick="quitarBiometriaPerfil()" style="display:none;width:100%;margin-top:.5rem;padding:.6rem;background:rgba(244,67,54,.1);border:1px solid rgba(244,67,54,.35);color:#F44336;border-radius:var(--rxs);font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;">Quitar biometría de este dispositivo</button>
+        <button type="button" id="btn-bio-quitar" onclick="quitarBiometriaPerfil()" style="display:none;width:100%;margin-top:.5rem;padding:.6rem;background:rgba(244,67,54,.1);border:1px solid rgba(244,67,54,.35);color:#F44336;border-radius:var(--rxs);font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;">Quitar TODAS de este dispositivo</button>
       </div>
 
       <div id="prof-edit-msg" style="font-size:.78rem;margin-bottom:.6rem;"></div>
@@ -1335,23 +1336,39 @@ window._refrescarEstadoBio = function(){
   var sec = document.getElementById('bio-section'); if(!sec) return;
   if (!_huellaDisponible()) { sec.style.display = 'none'; return; }
   sec.style.display = 'block';
-  var cred = localStorage.getItem('tt_huella_cred');
-  var mismo = cred && localStorage.getItem('tt_huella_empid') === (window._perfilEmpId || '');
   var est = document.getElementById('bio-estado');
   var bA  = document.getElementById('btn-bio-activar');
   var bQ  = document.getElementById('btn-bio-quitar');
-  if (mismo) {
-    est.innerHTML = '✅ Activado en este dispositivo. Ya puedes entrar con tu huella o rostro.';
+  var lst = document.getElementById('bio-lista');
+  var empId = window._perfilEmpId || '';
+  var storedEmp = localStorage.getItem('tt_huella_empid');
+  var mias = (storedEmp && storedEmp === empId) ? _huellaList() : [];
+
+  if (mias.length) {
+    est.innerHTML = '✅ Tienes ' + mias.length + ' acceso(s) biométrico(s) en este dispositivo.';
     est.style.color = 'var(--ok)';
-    bA.style.display = 'none'; bQ.style.display = 'block';
-  } else if (cred) {
+    lst.innerHTML = mias.map(function(x, i){
+      var fecha = x.fecha ? new Date(x.fecha).toLocaleDateString('es-MX') : '';
+      var nom = (x.label || ('Acceso ' + (i+1))).replace(/[<>&]/g,'');
+      return '<div style="display:flex;justify-content:space-between;align-items:center;background:var(--sf3);border:1px solid var(--bd);border-radius:8px;padding:.5rem .6rem;margin-bottom:.4rem;font-size:.82rem;">' +
+             '<span>👆 ' + nom + (fecha ? ' <span style="color:var(--mu);font-size:.72rem;">· ' + fecha + '</span>' : '') + '</span>' +
+             '<button type="button" onclick="quitarHuellaItem(\'' + x.id.replace(/'/g,"") + '\')" style="background:rgba(244,67,54,.12);border:1px solid rgba(244,67,54,.35);color:#F44336;border-radius:6px;padding:.22rem .55rem;font-size:.72rem;font-weight:700;cursor:pointer;">Quitar</button>' +
+             '</div>';
+    }).join('');
+    bA.style.display = 'block'; bA.innerHTML = '➕ Agregar otra huella / rostro';
+    bQ.style.display = 'block';
+  } else if (storedEmp && storedEmp !== empId) {
     est.innerHTML = '⚠️ Este dispositivo tiene biometría de otro empleado. Actívala con la tuya para reemplazarla.';
     est.style.color = '#FBB724';
-    bA.style.display = 'block'; bA.innerHTML = '👆 Usar MI huella / rostro en este dispositivo'; bQ.style.display = 'none';
+    lst.innerHTML = '';
+    bA.style.display = 'block'; bA.innerHTML = '👆 Usar MI huella / rostro en este dispositivo';
+    bQ.style.display = 'none';
   } else {
     est.innerHTML = 'Entra más rápido: activa tu huella o reconocimiento facial en este dispositivo.';
     est.style.color = 'var(--mu)';
-    bA.style.display = 'block'; bA.innerHTML = '👆 Activar huella / rostro en este dispositivo'; bQ.style.display = 'none';
+    lst.innerHTML = '';
+    bA.style.display = 'block'; bA.innerHTML = '👆 Activar huella / rostro en este dispositivo';
+    bQ.style.display = 'none';
   }
 };
 
@@ -1361,16 +1378,31 @@ window.configurarBiometriaPerfil = async function(){
     if (window.ttAlert) window.ttAlert('No se pudo leer tu PIN. Cierra sesión, entra de nuevo con tu PIN e inténtalo otra vez.');
     return;
   }
-  var ok = await window.registrarHuella(empId, pin, nombre);
-  if (ok) window._refrescarEstadoBio();
+  // Etiqueta según cuántas ya tenga este empleado
+  var n = (localStorage.getItem('tt_huella_empid') === empId) ? (_huellaList().length + 1) : 1;
+  var ok = await window.registrarHuella(empId, pin, nombre, 'Acceso ' + n);
+  if (ok) { try{ if(typeof _revisarHuellaGuardada==='function') _revisarHuellaGuardada(); }catch(e){} window._refrescarEstadoBio(); }
+};
+
+// Quitar UNA credencial biométrica de la lista
+window.quitarHuellaItem = async function(id){
+  var c = window.ttConfirm ? await window.ttConfirm('¿Quitar este acceso biométrico?') : confirm('¿Quitar este acceso?');
+  if (!c) return;
+  var lista = _huellaList().filter(function(x){ return x.id !== id; });
+  _guardarHuellaList(lista,
+    localStorage.getItem('tt_huella_empid'),
+    localStorage.getItem('tt_huella_pin'),
+    localStorage.getItem('tt_huella_nombre'));
+  try { if (typeof _revisarHuellaGuardada === 'function') _revisarHuellaGuardada(); } catch(e){}
+  window._refrescarEstadoBio();
 };
 
 window.quitarBiometriaPerfil = async function(){
   var c = window.ttConfirm
-    ? await window.ttConfirm('¿Quitar la huella / rostro de este dispositivo? Tendrás que entrar con tu PIN.')
-    : confirm('¿Quitar biometría de este dispositivo?');
+    ? await window.ttConfirm('¿Quitar TODAS las huellas / rostros de este dispositivo? Tendrás que entrar con tu PIN.')
+    : confirm('¿Quitar todas las biometrías de este dispositivo?');
   if (!c) return;
-  ['tt_huella_cred','tt_huella_empid','tt_huella_pin','tt_huella_nombre'].forEach(function(k){ localStorage.removeItem(k); });
+  _guardarHuellaList([]);  // limpia toda la lista y las llaves compat
   if (window.ttAlert) window.ttAlert('Biometría eliminada de este dispositivo.');
   try { if (typeof _revisarHuellaGuardada === 'function') _revisarHuellaGuardada(); } catch(e){}
   window._refrescarEstadoBio();
@@ -1405,27 +1437,36 @@ window.guardarPerfil = async function(){
 
   btn.textContent = 'Guardando…'; btn.disabled = true;
   try{
+    // ID REAL del documento del empleado. NO siempre es user.uid (por eso
+    // fallaba con "No document to update"); se prefiere el id del doc leído.
+    const docId = empData?.id || empData?.docId || localStorage.getItem('tt_emp_docid') || (user ? user.uid : null);
+    if(!docId){ throw new Error('No se encontró tu ficha de empleado. Cierra sesión y entra de nuevo.'); }
     // Guardar datos en Firestore
-    await updateDoc(doc(db,'empleados',user.uid),{ nombre, apellido, telefono:tel, puesto });
+    await updateDoc(doc(db,'empleados',docId),{ nombre, apellido, telefono:tel, puesto });
     empData.nombre = nombre; empData.apellido = apellido;
     empData.telefono = tel; empData.puesto = puesto;
-    await updateProfile(user,{displayName:`${nombre} ${apellido}`});
+    if(user){ try{ await updateProfile(user,{displayName:`${nombre} ${apellido}`}); }catch(_){} }
 
     // Cambiar credencial si se ingresó
     if(pwNew){
       const esPINnuevo = /^\d{4,6}$/.test(pwNew);
       if(esPINnuevo){
-        // Actualizar PIN en Firestore
-        const docId = empData?.id || empData?.docId || (user ? user.uid : null);
-        if(docId) await updateDoc(doc(db,'empleados',docId), { pin: pwNew });
+        // Actualizar PIN en Firestore (mismo docId resuelto arriba)
+        await updateDoc(doc(db,'empleados',docId), { pin: pwNew });
         if(empData) empData.pin = pwNew;
-        // Mantener sincronizada la contraseña real de Firebase Auth
-        // (empId+PIN) — si no se actualiza aquí, el proximo login con el
-        // PIN nuevo fallaria en Auth y caeria a modo "solo Firestore".
+        window._perfilPin = pwNew;
+        // Mantener sincronizada la contraseña real de Firebase Auth (empId+PIN)
         if(user && empData?.empleadoId){
           try{ await updatePassword(user, `${empData.empleadoId}${pwNew}`); }
           catch(ePw){ console.warn('No se pudo sincronizar Auth con el nuevo PIN:', ePw.message); }
         }
+        // Si hay biometría de este empleado en el dispositivo, actualizar el
+        // PIN que desbloquea (si no, entrar con huella usaría el PIN viejo).
+        try{
+          if(localStorage.getItem('tt_huella_empid') === (empData?.empleadoId||'')){
+            localStorage.setItem('tt_huella_pin', pwNew);
+          }
+        }catch(_){}
       } else if(user){
         // Actualizar contraseña Firebase Auth (solo si tiene cuenta Auth)
         await updatePassword(user, pwNew);
@@ -1918,6 +1959,32 @@ function _huellaDisponible() {
     return !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.create);
 }
 
+// ── Lista de huellas/rostros registrados en ESTE dispositivo ──────
+// Modelo multi-credencial: tt_huella_list = [{id, label, fecha}, ...]
+// Todas pertenecen al MISMO empleado (tt_huella_empid). Se conservan
+// tt_huella_cred/pin/nombre para compatibilidad con el botón del login.
+function _huellaList() {
+    try {
+        var raw = localStorage.getItem('tt_huella_list');
+        if (raw) { var a = JSON.parse(raw); if (Array.isArray(a)) return a; }
+    } catch(e) {}
+    // Migración desde el modelo antiguo (una sola credencial)
+    var c = localStorage.getItem('tt_huella_cred');
+    return c ? [{ id: c, label: 'Acceso 1', fecha: Date.now() }] : [];
+}
+function _guardarHuellaList(lista, empId, pin, nombre) {
+    if (lista && lista.length) {
+        localStorage.setItem('tt_huella_list', JSON.stringify(lista));
+        localStorage.setItem('tt_huella_cred', lista[0].id); // primario (compat)
+        if (empId)  localStorage.setItem('tt_huella_empid', empId);
+        if (pin)    localStorage.setItem('tt_huella_pin', pin);
+        if (nombre) localStorage.setItem('tt_huella_nombre', nombre);
+    } else {
+        ['tt_huella_list','tt_huella_cred','tt_huella_empid','tt_huella_pin','tt_huella_nombre']
+            .forEach(function(k){ localStorage.removeItem(k); });
+    }
+}
+
 // Al cargar, si este dispositivo tiene una huella registrada, mostrar el botón
 function _revisarHuellaGuardada() {
     try {
@@ -1936,7 +2003,7 @@ function _revisarHuellaGuardada() {
 }
 
 // Registrar huella para el empleado que ACABA de entrar con PIN
-window.registrarHuella = async function(empId, pin, nombre) {
+window.registrarHuella = async function(empId, pin, nombre, label) {
     if (!_huellaDisponible()) {
         if (window.ttAlert) window.ttAlert('Este dispositivo no soporta huella dactilar.');
         return false;
@@ -1959,15 +2026,16 @@ window.registrarHuella = async function(empId, pin, nombre) {
         });
 
         if (cred) {
-            // Guardar el id de la credencial + las credenciales del empleado
-            // (cifrado ligero por dispositivo). Al entrar con huella, la
-            // biometría desbloquea estas credenciales.
+            // Guardar la credencial en la LISTA (permite varias huellas/rostros).
             const credId = btoa(String.fromCharCode.apply(null, new Uint8Array(cred.rawId)));
-            localStorage.setItem('tt_huella_cred', credId);
-            localStorage.setItem('tt_huella_empid', empId);
-            localStorage.setItem('tt_huella_pin', pin);
-            localStorage.setItem('tt_huella_nombre', nombre || empId);
-            if (window.ttAlert) window.ttAlert('✅ Huella registrada. Ya puedes entrar con huella en este dispositivo.');
+            // Si el dispositivo tenía biometría de OTRO empleado, empezar de cero.
+            var prevEmp = localStorage.getItem('tt_huella_empid');
+            var lista = (prevEmp && prevEmp !== empId) ? [] : _huellaList();
+            if (!lista.some(function(x){ return x.id === credId; })) {
+                lista.push({ id: credId, label: label || ('Acceso ' + (lista.length + 1)), fecha: Date.now() });
+            }
+            _guardarHuellaList(lista, empId, pin, nombre || empId);
+            if (window.ttAlert) window.ttAlert('✅ Huella/rostro registrado. Ya puedes entrar con biometría en este dispositivo.');
             return true;
         }
     } catch(e) {
@@ -1983,23 +2051,26 @@ window.entrarConHuella = async function() {
         msg('msg-login','er','Este dispositivo no soporta huella.');
         return;
     }
-    const credIdB64 = localStorage.getItem('tt_huella_cred');
+    const lista = _huellaList();
     const empId = localStorage.getItem('tt_huella_empid');
     const pin = localStorage.getItem('tt_huella_pin');
-    if (!credIdB64 || !empId || !pin) {
+    if (!lista.length || !empId || !pin) {
         msg('msg-login','er','No hay huella registrada en este dispositivo.');
         return;
     }
     try {
         const challenge = new Uint8Array(32);
         crypto.getRandomValues(challenge);
-        const rawId = Uint8Array.from(atob(credIdB64), c => c.charCodeAt(0));
+        // Aceptar CUALQUIERA de las credenciales registradas en el dispositivo
+        const allow = lista.map(function(x){
+            return { type: 'public-key', id: Uint8Array.from(atob(x.id), c => c.charCodeAt(0)) };
+        });
 
         // Pedir la verificación biométrica
         const assertion = await navigator.credentials.get({
             publicKey: {
                 challenge: challenge,
-                allowCredentials: [{ type: 'public-key', id: rawId }],
+                allowCredentials: allow,
                 userVerification: 'required',
                 timeout: 60000,
             }
