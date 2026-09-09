@@ -1237,7 +1237,7 @@ function renderPerfil(){
   const R=ROLES[rolActual];
   const puestos = ['cajero','cocinero','mesero','repartidor','limpieza','otro'];
   el('prof-body').innerHTML=`
-    /* AVATAR + NOMBRE CON EDICION */
+    <!-- AVATAR + NOMBRE CON EDICION -->
     <div style="background:var(--sf2);border-radius:var(--rxs);padding:.9rem;margin-bottom:.7rem;display:flex;align-items:center;gap:.8rem;">
       <div class="av av-${R.css}" style="width:50px;height:50px;font-size:1.25rem;" id="prof-av">${(empData.nombre[0]||'')+(empData.apellido[0]||'')}</div>
       <div style="flex:1;">
@@ -1247,7 +1247,7 @@ function renderPerfil(){
       <button onclick="abrirEditPerfil()" style="background:var(--pglow);border:1px solid rgba(255,90,0,.3);color:var(--primary);border-radius:6px;padding:.28rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit;">✏️ Editar perfil</button>
     </div>
 
-    /* FORMULARIO DE EDICION */
+    <!-- FORMULARIO DE EDICION -->
     <div id="prof-edit-form" style="display:none;background:var(--sf2);border:1px solid rgba(255,90,0,.25);border-radius:var(--rxs);padding:1rem;margin-bottom:.7rem;">
       <div style="font-size:.76rem;font-weight:800;color:var(--mu);letter-spacing:.05em;margin-bottom:.75rem;">EDITAR INFORMACIÓN</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.6rem;">
@@ -1270,7 +1270,7 @@ function renderPerfil(){
           ${puestos.map(p=>`<option value="${p}" ${empData.puesto===p?'selected':''}>${p.charAt(0).toUpperCase()+p.slice(1)}</option>`).join('')}
         </select>
       </div>
-      /* CAMBIO DE CONTRASENA */
+      <!-- CAMBIO DE CONTRASENA -->
       <div style="border-top:1px solid var(--bd);margin:.75rem 0 .75rem;padding-top:.75rem;">
         <div style="font-size:.72rem;font-weight:800;color:var(--mu);letter-spacing:.05em;margin-bottom:.55rem;"><span id="pw-section-label">CAMBIAR CONTRASEÑA / PIN (opcional)</span></div>
         <div style="margin-bottom:.6rem;">
@@ -1288,6 +1288,14 @@ function renderPerfil(){
           </div>
         </div>
         <div id="pw-match-msg" style="font-size:.72rem;min-height:.85rem;margin-top:-.3rem;margin-bottom:.4rem;"></div>
+      </div>
+
+      <!-- ACCESO BIOMETRICO (huella / rostro) -->
+      <div id="bio-section" style="border-top:1px solid var(--bd);margin:.75rem 0;padding-top:.75rem;display:none;">
+        <div style="font-size:.72rem;font-weight:800;color:var(--mu);letter-spacing:.05em;margin-bottom:.55rem;">👆 HUELLA / RECONOCIMIENTO FACIAL</div>
+        <div id="bio-estado" style="font-size:.8rem;color:var(--mu);margin-bottom:.55rem;line-height:1.4;"></div>
+        <button type="button" id="btn-bio-activar" onclick="configurarBiometriaPerfil()" style="width:100%;padding:.75rem;background:rgba(91,155,255,.12);border:1px solid rgba(91,155,255,.45);color:#5B9BFF;border-radius:var(--rxs);font-family:inherit;font-size:.88rem;font-weight:800;cursor:pointer;">👆 Activar huella / rostro en este dispositivo</button>
+        <button type="button" id="btn-bio-quitar" onclick="quitarBiometriaPerfil()" style="display:none;width:100%;margin-top:.5rem;padding:.6rem;background:rgba(244,67,54,.1);border:1px solid rgba(244,67,54,.35);color:#F44336;border-radius:var(--rxs);font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;">Quitar biometría de este dispositivo</button>
       </div>
 
       <div id="prof-edit-msg" style="font-size:.78rem;margin-bottom:.6rem;"></div>
@@ -1314,6 +1322,58 @@ window.abrirEditPerfil = function(){
   if(el('edit-pw-new')) el('edit-pw-new').value='';
   if(el('edit-pw-confirm')) el('edit-pw-confirm').value='';
   if(el('pw-match-msg')) el('pw-match-msg').textContent='';
+  // Datos del empleado actual para la biometría
+  window._perfilEmpId  = (empData && empData.empleadoId) || localStorage.getItem('tt_emp_id') || '';
+  window._perfilPin    = (empData && empData.pin) || localStorage.getItem('tt_emp_pin') || '';
+  window._perfilNombre = (empData ? ((empData.nombre||'')+' '+(empData.apellido||'')).trim() : '') || localStorage.getItem('tt_emp_nombre') || window._perfilEmpId;
+  try { window._refrescarEstadoBio(); } catch(e){}
+};
+
+// ── BIOMETRÍA EN EL PERFIL (huella / rostro) ──────────────────────
+// Reutiliza el sistema de huella del login (registrarHuella/tt_huella_*).
+window._refrescarEstadoBio = function(){
+  var sec = document.getElementById('bio-section'); if(!sec) return;
+  if (!_huellaDisponible()) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  var cred = localStorage.getItem('tt_huella_cred');
+  var mismo = cred && localStorage.getItem('tt_huella_empid') === (window._perfilEmpId || '');
+  var est = document.getElementById('bio-estado');
+  var bA  = document.getElementById('btn-bio-activar');
+  var bQ  = document.getElementById('btn-bio-quitar');
+  if (mismo) {
+    est.innerHTML = '✅ Activado en este dispositivo. Ya puedes entrar con tu huella o rostro.';
+    est.style.color = 'var(--ok)';
+    bA.style.display = 'none'; bQ.style.display = 'block';
+  } else if (cred) {
+    est.innerHTML = '⚠️ Este dispositivo tiene biometría de otro empleado. Actívala con la tuya para reemplazarla.';
+    est.style.color = '#FBB724';
+    bA.style.display = 'block'; bA.innerHTML = '👆 Usar MI huella / rostro en este dispositivo'; bQ.style.display = 'none';
+  } else {
+    est.innerHTML = 'Entra más rápido: activa tu huella o reconocimiento facial en este dispositivo.';
+    est.style.color = 'var(--mu)';
+    bA.style.display = 'block'; bA.innerHTML = '👆 Activar huella / rostro en este dispositivo'; bQ.style.display = 'none';
+  }
+};
+
+window.configurarBiometriaPerfil = async function(){
+  var empId = window._perfilEmpId, pin = window._perfilPin, nombre = window._perfilNombre;
+  if (!empId || !pin) {
+    if (window.ttAlert) window.ttAlert('No se pudo leer tu PIN. Cierra sesión, entra de nuevo con tu PIN e inténtalo otra vez.');
+    return;
+  }
+  var ok = await window.registrarHuella(empId, pin, nombre);
+  if (ok) window._refrescarEstadoBio();
+};
+
+window.quitarBiometriaPerfil = async function(){
+  var c = window.ttConfirm
+    ? await window.ttConfirm('¿Quitar la huella / rostro de este dispositivo? Tendrás que entrar con tu PIN.')
+    : confirm('¿Quitar biometría de este dispositivo?');
+  if (!c) return;
+  ['tt_huella_cred','tt_huella_empid','tt_huella_pin','tt_huella_nombre'].forEach(function(k){ localStorage.removeItem(k); });
+  if (window.ttAlert) window.ttAlert('Biometría eliminada de este dispositivo.');
+  try { if (typeof _revisarHuellaGuardada === 'function') _revisarHuellaGuardada(); } catch(e){}
+  window._refrescarEstadoBio();
 };
 
 window.cancelarEditPerfil = function(){
