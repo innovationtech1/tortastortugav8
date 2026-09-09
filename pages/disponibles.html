@@ -742,11 +742,19 @@ window.mostrarAyudaPermiso = function() {
 function pintarYo() {
     if (!_mapa || !_miPos) return;
     if (_marcadorYo) _mapa.removeLayer(_marcadorYo);
-    _marcadorYo = L.circleMarker([_miPos.lat, _miPos.lng], {
+    var latlng = [_miPos.lat, _miPos.lng];
+    _marcadorYo = L.circleMarker(latlng, {
         radius:9, color:'#fff', weight:2, fillColor:'#FF5A00', fillOpacity:1
     }).addTo(_mapa).bindPopup('🚚 Tu tortumóvil');
-    // Centrar la primera vez
-    if (!_mapa._centradoYo) { _mapa.setView([_miPos.lat, _miPos.lng], 13); _mapa._centradoYo = true; }
+    if (!_mapa._centradoYo) {
+        // Centrar la primera vez
+        _mapa.setView(latlng, 15); _mapa._centradoYo = true;
+    } else if (!_mapa.getBounds().pad(-0.15).contains(latlng)) {
+        // SEGUIR al repartidor: si el punto naranja se acerca al borde o se
+        // sale de la vista, recentrar el mapa para no perderlo. Mientras el
+        // punto esté cómodo dentro de la vista, se respeta el paneo manual.
+        _mapa.panTo(latlng, { animate:true, duration:0.6 });
+    }
 }
 
 // Distancia en línea recta (haversine) en km
