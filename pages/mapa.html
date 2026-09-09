@@ -34,6 +34,7 @@
   #tt-navbar { z-index:2000 !important; }
   .leaflet-container { background:#1a1a1a; }
   .tt-emoji-icon { font-size:26px; text-align:center; line-height:1; background:none; border:none; filter:drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+  .tt-emoji-icon.tt-off { filter:grayscale(1) drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
   .resumen { display:flex; gap:.5rem; padding:.7rem 1rem; background:var(--surface); border-bottom:1px solid rgba(255,255,255,.06); }
   .resumen .r { flex:1; text-align:center; }
   .resumen .r .n { font-size:1.2rem; font-weight:900; }
@@ -74,6 +75,17 @@ var COLORES = ['#FF5A00','#5B9BFF','#25D366','#A78BFA','#FBB724','#F44336','#00B
 function _colorRep(nombre) {
   var h = 0; for (var i=0;i<nombre.length;i++) h = nombre.charCodeAt(i) + ((h<<5)-h);
   return COLORES[Math.abs(h) % COLORES.length];
+}
+// "hace X" legible a partir de un timestamp (ms)
+function _haceCuanto(ts) {
+  if (!ts) return 'sin datos';
+  var s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (s < 60) return 'hace ' + s + ' s';
+  var m = Math.floor(s / 60);
+  if (m < 60) return 'hace ' + m + ' min';
+  var h = Math.floor(m / 60);
+  if (h < 24) return 'hace ' + h + ' h';
+  return 'hace ' + Math.floor(h / 24) + ' d';
 }
 
 function _initMap() {
@@ -138,17 +150,27 @@ function render() {
   });
 
   // Marcadores de REPARTIDORES (GPS en vivo) + líneas a sus órdenes
+  var _vistosRep = {};
   Object.keys(_ubicaciones).forEach(function(repId){
     var u = _ubicaciones[repId];
     if (!u || typeof u.lat !== 'number') return;
     var repNom = (u.nombre || repId).trim();
     // Si hay filtro, solo mostrar ese repartidor
     if (_filtro !== '__todos__' && repNom.toLowerCase() !== _filtro.toLowerCase()) return;
+    // Evitar marcador DOBLE: la ubicación se guarda bajo empleadoId y bajo uid
+    var claveRep = String(u.repartidorId || repNom).toLowerCase();
+    if (_vistosRep[claveRep]) return; _vistosRep[claveRep] = true;
 
+    // Estado en vivo: EN LÍNEA si la última señal es de hace < 2 min
+    var edad = Date.now() - (u.actualizado || 0);
+    var enLinea = (u.actualizado && edad >= 0 && edad < 120000);
     var color = _colorRep(repNom);
-    var icon = L.divIcon({ html:'🛵', className:'tt-emoji-icon', iconSize:[32,32], iconAnchor:[16,16] });
-    var m = L.marker([u.lat, u.lng], { icon: icon }).addTo(map);
-    m.bindPopup('<b>🛵 ' + repNom + '</b><br>Repartidor en vivo');
+    var icon = L.divIcon({ html:'🛵', className:'tt-emoji-icon' + (enLinea?'':' tt-off'), iconSize:[32,32], iconAnchor:[16,16] });
+    var m = L.marker([u.lat, u.lng], { icon: icon, opacity: enLinea ? 1 : 0.45 }).addTo(map);
+    m.bindPopup('<b>🛵 ' + repNom + '</b><br>' +
+      (enLinea ? '<span style="color:#25D366;font-weight:800;">🟢 En línea</span>'
+               : '<span style="color:#F44336;font-weight:800;">🔴 Desconectado</span>') +
+      '<br><span style="color:#888;font-size:12px;">Última señal: ' + _haceCuanto(u.actualizado) + '</span>');
     _markers.push(m);
     puntos.push([u.lat, u.lng]);
 
@@ -223,6 +245,10 @@ onSnapshot(collection(db, 'ubicaciones'), function(snap){
 });
 
 setTimeout(function(){ if (map) map.invalidateSize(); }, 300);
+
+// Refrescar cada 30 s para actualizar "en línea / hace X min" y marcar como
+// desconectados a los que dejaron de enviar señal (aunque no lleguen eventos).
+setInterval(function(){ try { render(); } catch(e){} }, 30000);
 </script>
 <script src="../js/perfil-barra.js?v=1788800000"></script>
 </body>

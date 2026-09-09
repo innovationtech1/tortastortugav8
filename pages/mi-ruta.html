@@ -464,6 +464,14 @@ if (miId) {
     setTimeout(_actualizarInterruptorUbi, 500);
 }
 
+// LATIDO: reenviar la última posición cada 45 s aunque el repartidor esté
+// parado, para que en el Mapa siga apareciendo EN LÍNEA (no "desconectado").
+setInterval(function(){
+    if (_watchId !== null && _miPosActual) {
+        _guardarUbicacion({ coords: { latitude:_miPosActual.lat, longitude:_miPosActual.lng, accuracy:null } });
+    }
+}, 45000);
+
 // ── Menú de navegación ──
 window.toggleNavMenu = function() {
     const ov = document.getElementById('nav-menu-overlay');
