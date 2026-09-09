@@ -87,6 +87,8 @@
 </style>
 <link rel="stylesheet" href="../css/leaflet/leaflet.css" />
 <script src="../js/leaflet/leaflet.js"></script>
+<!-- Generador de PDF para el ticket digital del cliente -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style id="ios-compat">
 /* ── Compatibilidad iOS / Safari ── */
@@ -350,6 +352,7 @@ function render() {
                 ${btnRepartidor}
                 ${btnUbicacion}
                 ${_tel ? `<button class="mp-btn" style="background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.4);color:#25D366;" onclick="enviarTicketWA('${p.id}')">📱 Enviar ticket WhatsApp</button>` : ''}
+                <button class="mp-btn" style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.4);color:#3B82F6;" onclick="enviarTicketPDF('${p.id}')">📄 Ticket PDF</button>
             </div>
         </div>`;
     }).join('');
@@ -437,6 +440,146 @@ window._armarTicketWA = function(p) {
     L.push('¡Gracias por tu compra! 🐢');
     return L.join('\n');
 };
+
+// ── Generar y enviar el TICKET EN PDF por WhatsApp ────────────────
+// Un enlace wa.me solo manda texto; para enviar un ARCHIVO PDF se genera
+// aquí y se comparte con el selector del sistema (Web Share API con
+// archivos), que en el teléfono incluye WhatsApp. Respaldo: descargar.
+window.enviarTicketPDF = async function(pedidoId) {
+    var p = (window._pedidos || _pedidos || []).find(function(x){ return x.id === pedidoId; });
+    if (!p) { alert('No se encontró el pedido.'); return; }
+    if (!(window.jspdf && window.jspdf.jsPDF)) { alert('El generador de PDF está cargando, intenta en 2 segundos.'); return; }
+    try {
+        var blob = _construirTicketPDF(p);
+        var folio = String(p.folioStr || p.folio || '').replace(/[^\w-]/g, '') || 'ticket';
+        var nombreArch = 'Ticket_TortasTortuga_' + folio + '.pdf';
+        var file = new File([blob], nombreArch, { type: 'application/pdf' });
+        var texto = 'Aquí está tu ticket de compra 🐢 ¡Gracias por tu preferencia!';
+        // 1) Compartir el ARCHIVO (WhatsApp aparece en el selector del teléfono)
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: 'Ticket Tortas Tortuga', text: texto });
+            return;
+        }
+        // 2) Respaldo: descargar el PDF para adjuntarlo manualmente
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url; a.download = nombreArch; document.body.appendChild(a); a.click();
+        setTimeout(function(){ try { URL.revokeObjectURL(url); a.remove(); } catch(e){} }, 2000);
+        if (window.ttAlert) window.ttAlert('📄 Ticket PDF descargado. Ábrelo/compártelo en WhatsApp para enviarlo al cliente.');
+        else alert('Ticket PDF descargado. Compártelo en WhatsApp para enviarlo al cliente.');
+    } catch(e) {
+        if (e && e.name === 'AbortError') return; // el usuario canceló el compartir
+        console.error('Error al generar el ticket PDF:', e);
+        alert('No se pudo generar el PDF: ' + (e.message || e));
+    }
+};
+
+// Dibuja el ticket con jsPDF y devuelve un Blob (formato recibo 80 mm)
+function _construirTicketPDF(p) {
+    var jsPDF = window.jspdf.jsPDF;
+    var W = 80, M = 6, innerW = W - M * 2;
+    function money(n){ return '$' + (Number(n) || 0).toFixed(2); }
+
+    var folio = p.folioStr || ('#' + (p.folio || ''));
+    var fecha = (function(){
+        var d = (p.creado && p.creado.seconds) ? new Date(p.creado.seconds * 1000)
+              : (p.tomadaEn ? new Date(p.tomadaEn) : new Date());
+        try { return d.toLocaleString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+        catch(e){ return d.toLocaleString(); }
+    })();
+    var cliente = p.cliente || p.nombre || 'Cliente';
+    var tel = p.telefono || p.telefonoCliente || '';
+    var cajero = (p.cajeroNombre || '').trim().toLowerCase();
+    var creadoPorEmpleado = cajero && cajero !== 'sistema';
+    var esDom = (p.tipo === 'domicilio' || p.tipoServicio === 'Domicilio' || !!p.repartidorNombre);
+    var canal = (p.ordenoEnTortumovil === true) ? 'Tortumovil' : (!creadoPorEmpleado ? 'Online' : (esDom ? 'Domicilio' : 'Tortumovil'));
+
+    var grupos = [];
+    var items = p.itemsData;
+    if (Array.isArray(items) && items.length) {
+        grupos = window.agruparItems ? window.agruparItems(items) : items.map(function(i){ i.cantidad = i.cantidad || 1; return i; });
+    } else if (typeof p.items === 'string' && p.items.indexOf('Pendiente') < 0) {
+        grupos = p.items.split(' | ').map(function(s){ var idx = s.lastIndexOf(' - $'); return { cantidad:1, nombre: idx>0?s.slice(0,idx):s, precio: idx>0?(parseFloat(s.slice(idx+4))||0):0 }; });
+    }
+    var d = p.desglose || {};
+
+    // Medir el envoltorio de los nombres de artículos
+    var tmp = new jsPDF({ unit:'mm', format:[W, 300] });
+    tmp.setFont('helvetica','normal'); tmp.setFontSize(9);
+    var itemLineas = grupos.map(function(g){
+        var etq = (g.cantidad || 1) + 'x ' + (g.nombre || '') + (g.variante ? ' (' + g.variante + ')' : '');
+        return tmp.splitTextToSize(etq, innerW - 16);
+    });
+
+    // Altura dinámica
+    var y = 24 + 6 + 5 + (tel ? 5 : 0) + 5 + 4 + 4;
+    itemLineas.forEach(function(ls){ y += ls.length * 4 + 1; });
+    y += 5;
+    var filas = 0;
+    if (d.subtotal != null) filas++; if (d.descuento) filas++; if (d.impuesto != null) filas++; if (d.propina) filas++; if (p.cargoServicio) filas++;
+    y += filas * 4.5 + 9 + 7 + 5 + 8;
+    var H = Math.max(95, y);
+
+    var doc = new jsPDF({ unit:'mm', format:[W, H] });
+    // Encabezado naranja
+    doc.setFillColor(255,90,0); doc.rect(0,0,W,18,'F');
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(15);
+    doc.text('TORTAS TORTUGA', W/2, 9, { align:'center' });
+    doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    doc.text('Ticket de compra', W/2, 14, { align:'center' });
+
+    var cy = 24;
+    doc.setTextColor(255,90,0); doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text(String(folio), M, cy);
+    doc.setTextColor(90,90,90); doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    doc.text(fecha, W - M, cy, { align:'right' });
+    cy += 6;
+    doc.setTextColor(20,20,20); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.text(cliente, M, cy); cy += 5;
+    doc.setFont('helvetica','normal'); doc.setTextColor(70,70,70);
+    if (tel) { doc.text('Tel: ' + tel, M, cy); cy += 5; }
+    doc.text('Compra: ' + canal, M, cy); cy += 4;
+    doc.setDrawColor(210,210,210); doc.line(M, cy, W - M, cy); cy += 4;
+
+    doc.setFont('helvetica','bold'); doc.setTextColor(20,20,20); doc.setFontSize(9);
+    doc.text('Tu orden', M, cy); cy += 4;
+    doc.setFont('helvetica','normal');
+    grupos.forEach(function(g, i){
+        var ls = itemLineas[i];
+        doc.setTextColor(30,30,30);
+        ls.forEach(function(line, j){ doc.text(line, M, cy + j*4); });
+        if (g.precio) { doc.setTextColor(20,20,20); doc.text(money(g.precio), W - M, cy, { align:'right' }); }
+        cy += ls.length * 4 + 1;
+    });
+    cy += 1; doc.setDrawColor(210,210,210); doc.line(M, cy, W - M, cy); cy += 4;
+
+    doc.setFontSize(9); doc.setTextColor(70,70,70);
+    function fila(label, val){ doc.text(label, M, cy); doc.text(val, W - M, cy, { align:'right' }); cy += 4.5; }
+    if (d.subtotal != null) fila('Subtotal', money(d.subtotal));
+    if (d.descuento) fila('Descuento', '-' + money(d.descuento));
+    if (d.impuesto != null) fila('Impuesto', money(d.impuesto));
+    if (d.propina) fila('Propina', money(d.propina));
+    if (p.cargoServicio) fila('Envio', money(p.cargoServicio));
+    cy += 1;
+    doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(0,150,60);
+    doc.text('TOTAL', M, cy); doc.text(String(p.total || money(p.totalNum)), W - M, cy, { align:'right' }); cy += 7;
+
+    var pagado = (p.estadoPago === 'Pagado'); var met = '';
+    if (pagado) {
+        if (p.pagoDividido && Array.isArray(p.pagosDivididos) && p.pagosDivididos.length)
+            met = p.pagosDivididos.map(function(x){ return x.metodo + ' ' + money(x.monto); }).join(' + ');
+        else met = p.metodoPagoReal || p.metodoPago || '';
+    }
+    doc.setFontSize(9); doc.setFont('helvetica','bold');
+    if (pagado) { doc.setTextColor(0,150,60); doc.text('PAGADO' + (met ? (' - ' + met) : ''), M, cy); }
+    else { doc.setTextColor(230,140,0); doc.text('POR PAGAR', M, cy); }
+    cy += 5;
+    doc.setDrawColor(210,210,210); doc.line(M, cy, W - M, cy); cy += 5;
+    doc.setFont('helvetica','normal'); doc.setTextColor(120,120,120); doc.setFontSize(8);
+    doc.text('Gracias por tu compra!', W/2, cy, { align:'center' });
+
+    return doc.output('blob');
+}
 
 window.cambiarEstado = async function(id, estado) {
     try {
