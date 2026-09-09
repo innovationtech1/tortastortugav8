@@ -368,32 +368,60 @@ window.enviarTicketWA = function(pedidoId) {
     window.open(url, '_blank');
 };
 
-// Armar el texto del ticket para WhatsApp
+// Armar el TICKET DIGITAL completo para WhatsApp (mismo detalle que el impreso)
 window._armarTicketWA = function(p) {
+    function money(n){ return '$' + (Number(n)||0).toFixed(2); }
+    function fechaTicket(){
+        var d = (p.creado && p.creado.seconds) ? new Date(p.creado.seconds*1000)
+              : (p.tomadaEn ? new Date(p.tomadaEn) : new Date());
+        try { return d.toLocaleString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+        catch(e){ return d.toLocaleString(); }
+    }
     var L = [];
     L.push('🐢 *TORTAS TORTUGA*');
-    L.push('━━━━━━━━━━━━━');
-    L.push('Pedido ' + (p.folioStr || ('#'+(p.folio||''))));
-    if (p.cliente || p.nombre) L.push('Cliente: ' + (p.cliente || p.nombre));
-    L.push('');
+    L.push('_Ticket de compra_');
+    L.push('━━━━━━━━━━━━━━');
+    L.push('🧾 ' + (p.folioStr || ('#'+(p.folio||''))) + '   ·   ' + fechaTicket());
+    if (p.cliente || p.nombre) L.push('👤 ' + (p.cliente || p.nombre));
+    var _tel = p.telefono || p.telefonoCliente || '';
+    if (_tel) L.push('📞 ' + _tel);
+    var esDom = (p.tipo === 'domicilio' || p.tipoServicio === 'Domicilio');
+    L.push(esDom ? '🚗 Domicilio' : '🚚 Para llevar / Tortumóvil');
+    L.push('━━━━━━━━━━━━━━');
     L.push('🛍️ *Tu orden:*');
     var items = p.itemsData;
     if (Array.isArray(items) && items.length) {
         var grupos = window.agruparItems ? window.agruparItems(items) : items.map(function(i){ i.cantidad=i.cantidad||1; return i; });
         grupos.forEach(function(g){
-            L.push('• ' + g.cantidad + '× ' + g.nombre + (g.variante ? ' ('+g.variante+')' : '') + (g.precio ? ' — $' + g.precio.toFixed(2) : ''));
+            L.push('• ' + g.cantidad + '× ' + g.nombre + (g.variante ? ' ('+g.variante+')' : '') + (g.precio ? '  ' + money(g.precio) : ''));
+            if (Array.isArray(g.modificaciones) && g.modificaciones.length) {
+                g.modificaciones.forEach(function(m){ L.push('    – ' + (m && m.nombre ? m.nombre : m)); });
+            }
         });
     } else if (typeof p.items === 'string' && p.items.indexOf('Pendiente') < 0) {
-        L.push('• ' + p.items);
+        p.items.split(' | ').forEach(function(s){ L.push('• ' + s); });
     } else {
         L.push('• (Orden por definir)');
     }
-    L.push('');
-    L.push('━━━━━━━━━━━━━');
-    if (p.cargoServicio) L.push('🛵 Envío: $' + Number(p.cargoServicio).toFixed(2));
-    L.push('💵 *Total: ' + (p.total || '$0.00') + '*');
-    L.push(p.estadoPago === 'Pagado' ? '✅ Pagado' : '⏳ Por pagar');
-    L.push('');
+    L.push('━━━━━━━━━━━━━━');
+    var d = p.desglose || {};
+    if (d.subtotal != null) L.push('Subtotal:   ' + money(d.subtotal));
+    if (d.descuento)       L.push('Descuento: -' + money(d.descuento));
+    if (d.impuesto != null) L.push('Impuesto:   ' + money(d.impuesto));
+    if (d.propina)         L.push('Propina:    ' + money(d.propina));
+    if (p.cargoServicio)   L.push('Envío:      ' + money(p.cargoServicio));
+    L.push('💵 *TOTAL: ' + (p.total || money(p.totalNum)) + '*');
+    // Estado y método de pago (incluye pago dividido)
+    if (p.estadoPago === 'Pagado') {
+        var met;
+        if (p.pagoDividido && Array.isArray(p.pagosDivididos) && p.pagosDivididos.length) {
+            met = p.pagosDivididos.map(function(x){ return x.metodo + ' ' + money(x.monto); }).join(' + ');
+        } else { met = p.metodoPagoReal || p.metodoPago || ''; }
+        L.push('✅ Pagado' + (met ? ' — ' + met : ''));
+    } else {
+        L.push('⏳ Por pagar');
+    }
+    L.push('━━━━━━━━━━━━━━');
     L.push('¡Gracias por tu compra! 🐢');
     return L.join('\n');
 };
