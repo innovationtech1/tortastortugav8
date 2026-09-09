@@ -1103,6 +1103,10 @@ window.normalizarRutaImagen = function(src) {
                     estado: p.estado || '',
                     estadoPago: p.estadoPago || 'Pendiente',
                     metodoPagoReal: p.metodoPagoReal || p.metodoPago || '',
+                    // Conservar el reparto de pago dividido para que el corte/
+                    // reportes lo repartan por método aun después del cierre.
+                    pagoDividido: p.pagoDividido || false,
+                    pagosDivididos: Array.isArray(p.pagosDivididos) ? p.pagosDivididos : [],
                     cajeroNombre: p.cajeroNombre || '',
                     cobradoPor: p.cobradoPor || '',
                     // ── Repartidor que hizo la entrega (delivery) ──
@@ -1364,16 +1368,42 @@ window.normalizarRutaImagen = function(src) {
             const inicio = new Date(y, m-1, d, 0, 0, 0);
             const fin    = new Date(y, m-1, d+1, 0, 0, 0); // próximo día
 
-            // ── Pedidos: usar pedidosDB (ya cargado por onSnapshot) ────
-            // Si pedidosDB está vacío, intentar con todos sin filtrar fecha
-            let pedidosHoy = (pedidosDB || []).filter(p => {
-                if (!p.creado?.seconds) return true; // incluir sin fecha
-                const ts = new Date(p.creado.seconds * 1000);
+            // Fecha de un registro (pedido activo o venta cerrada), igual que Reportes
+            function _corteTs(p) {
+                if (p.creado?.seconds) return new Date(p.creado.seconds*1000);
+                if (p.tomadaEn) return new Date(p.tomadaEn);
+                if (p.fechaOriginal?.seconds) return new Date(p.fechaOriginal.seconds*1000);
+                if (p.cerradoEn) return new Date(p.cerradoEn);
+                return null;
+            }
+
+            // ── Fuentes: pedidos activos (onSnapshot) + VENTAS cerradas ──
+            // Igual que Reportes: se unen ambas colecciones sin duplicar (una
+            // venta cerrada con "Cerrar Sistema" reemplaza a su pedido original).
+            var _fuente = (pedidosDB || []).slice();
+            var _idsCerrados = new Set();
+            try {
+                const fm = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+                const snapVen = await fm.getDocs(fm.collection(db, 'ventas'));
+                var _ventas = [];
+                snapVen.forEach(function(dv){
+                    var v = { id: dv.id, _origen: 'ventas', ...dv.data() };
+                    _ventas.push(v);
+                    if (v.pedidoOriginalId) _idsCerrados.add(v.pedidoOriginalId);
+                });
+                _fuente = _fuente.filter(function(p){ return !_idsCerrados.has(p.id); }).concat(_ventas);
+            } catch(e) { console.warn('No se pudo leer ventas para el corte:', e); }
+
+            // ── Filtrar por la fecha del corte ────────────────────────
+            // Si no hay nada ese día, se muestran todos (con aviso).
+            let pedidosHoy = _fuente.filter(function(p){
+                var ts = _corteTs(p);
+                if (!ts) return true; // incluir sin fecha
                 return ts >= inicio && ts < fin;
             });
 
             // Si no hay pedidos hoy, mostrar todos disponibles con aviso
-            const todosLosPedidos = pedidosDB || [];
+            const todosLosPedidos = _fuente;
             const sinFiltro = pedidosHoy.length === 0 && todosLosPedidos.length > 0;
             if (sinFiltro) pedidosHoy = todosLosPedidos;
 
@@ -1541,7 +1571,7 @@ window.normalizarRutaImagen = function(src) {
                       pedidosHoy.length + ' orden(es) · $' + pedidosHoy.reduce((s,p)=>s+(parseFloat(p.total)||0),0).toFixed(2) +
                       '</div>' +
                       pedidosHoy.slice(0,15).map(p => {
-                          const hora = p.creado?.seconds ? new Date(p.creado.seconds*1000).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) : '';
+                          const _hts = _corteTs(p); const hora = _hts ? _hts.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) : '';
                           return '<div style="display:flex;justify-content:space-between;font-size:.78rem;padding:.3rem 0;border-bottom:1px solid var(--border);">' +
                               '<span>' + (p.cliente||p.nombre||'Cliente') + ' <span style="color:var(--muted);">' + hora + '</span></span>' +
                               '<span style="color:var(--primary);font-weight:700;">$' + (parseFloat(p.total)||0).toFixed(2) + '</span></div>';
