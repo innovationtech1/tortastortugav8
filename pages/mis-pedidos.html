@@ -476,7 +476,7 @@ window.enviarTicketPDF = async function(pedidoId) {
 
 // Datos del negocio (aparecen en el pie del ticket)
 var TT_NEGOCIO = {
-    slogan: 'Pare de sufrir',
+    slogan: 'Pare de sufrir, no se castigue',
     tel: '210-TORTA-10  |  210-86782-10',
     horario: 'Lun - Sab  10:00 AM - 6:00 PM',
     extra: 'We cater!'
@@ -564,8 +564,8 @@ function _construirTicketPDF(p) {
     itemLineas.forEach(function(ls){ y += ls.length * 4.2 + 1.5; });
     y += 3 + boxH + 4;          // caja de totales
     y += 8;                     // pastilla de pago
-    y += 16;                    // pie (slogan + tel + horario)
-    var H = Math.max(120, y);
+    y += 22;                    // pie (slogan + We cater + tel + horario + gracias)
+    var H = Math.max(124, y);
 
     var doc = new jsPDF({ unit:'mm', format:[W, H] });
 
@@ -652,8 +652,10 @@ function _construirTicketPDF(p) {
     // Pie con datos del negocio
     doc.setDrawColor(230, 200, 180); doc.setLineWidth(0.3);
     doc.line(M, cy, W - M, cy); cy += 4.5;
-    doc.setFont('helvetica','bolditalic'); doc.setTextColor(ORANGE[0], ORANGE[1], ORANGE[2]); doc.setFontSize(8);
-    doc.text('"' + TT_NEGOCIO.slogan + '"  ' + TT_NEGOCIO.extra, W/2, cy, { align:'center' }); cy += 4.5;
+    doc.setFont('helvetica','bolditalic'); doc.setTextColor(ORANGE[0], ORANGE[1], ORANGE[2]); doc.setFontSize(7.5);
+    doc.text('"' + TT_NEGOCIO.slogan + '"', W/2, cy, { align:'center' }); cy += 4;
+    doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
+    doc.text(TT_NEGOCIO.extra, W/2, cy, { align:'center' }); cy += 4.2;
     doc.setFont('helvetica','normal'); doc.setTextColor(GREY[0], GREY[1], GREY[2]); doc.setFontSize(7.5);
     doc.text(TT_NEGOCIO.tel, W/2, cy, { align:'center' }); cy += 3.8;
     doc.text(TT_NEGOCIO.horario, W/2, cy, { align:'center' }); cy += 4.2;
