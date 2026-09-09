@@ -539,13 +539,8 @@ window.normalizarRutaImagen = function(src) {
             <div style="font-weight:700;font-size:.85rem;margin-bottom:.75rem;color:var(--text);">
                 💳 Desglose por Método de Pago
             </div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:.4rem;">
-                <span>💵 Efectivo</span>
-                <strong id="corte-efectivo" style="color:#25D366;">$0.00</strong>
-            </div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:.4rem;">
-                <span>💳 Tarjeta (Stripe)</span>
-                <strong id="corte-tarjeta" style="color:#3B82F6;">$0.00</strong>
+            <div id="corte-metodos-lista">
+                <div style="color:var(--muted);font-size:.82rem;">Cargando...</div>
             </div>
             <div style="display:flex;justify-content:space-between;padding-top:.5rem;
                         border-top:1px solid var(--border);margin-top:.4rem;">
@@ -1400,27 +1395,54 @@ window.normalizarRutaImagen = function(src) {
                 if (turnos.length === 0) turnos = todosTurnos; // mostrar todos si no hay hoy
             } catch(e) { console.warn('Error cargando turnos_caja:', e); }
 
-            // ── Totales ──────────────────────────────────────────────
-            let totalEfectivo = 0, totalTarjeta = 0;
-
-            turnos.forEach(t => {
-                totalEfectivo += t.totalEfectivo || 0;
-                totalTarjeta  += t.totalTarjeta  || 0;
-            });
-
-            // Si no hay turnos, calcular desde pedidos
-            if (totalEfectivo + totalTarjeta === 0) {
-                pedidosHoy.forEach(p => {
-                    const met = (p.metodoPago || '').toLowerCase();
-                    const tot = parseFloat(p.total) || 0;
-                    if (met === 'tarjeta') totalTarjeta += tot;
-                    else totalEfectivo += tot;
-                });
+            // ── Helpers (MISMA lógica que Reportes para que los datos CUADREN) ──
+            // El total real vive en totalNum (numérico); p.total es texto "$52.00".
+            function _corteTotalDe(p) {
+                if (typeof p.totalNum === 'number') return p.totalNum;
+                var t = p.total;
+                if (typeof t === 'string') return parseFloat(t.replace(/[^0-9.]/g,'')) || 0;
+                return parseFloat(t) || 0;
+            }
+            function _corteNormMetodo(m) {
+                var s = (m || '').toString().trim().toLowerCase();
+                if (!s) return 'Pendiente';
+                if (s.indexOf('efec') >= 0)  return 'Efectivo';
+                if (s.indexOf('cash') >= 0)  return 'Cash App';
+                if (s.indexOf('zelle') >= 0) return 'Zelle';
+                if (s.indexOf('venmo') >= 0) return 'Venmo';
+                if (s.indexOf('tarj') >= 0 || s.indexOf('card') >= 0 || s.indexOf('stripe') >= 0) return 'Tarjeta';
+                return s.charAt(0).toUpperCase() + s.slice(1);
             }
 
-            const totalCobrado  = totalEfectivo + totalTarjeta;
+            // ── Totales y desglose por método (desde pedidos, igual que Reportes) ──
+            // Solo las órdenes YA COBRADAS suman en su método real. Los pagos
+            // divididos se reparten en cada forma de pago. Lo no cobrado va aparte.
+            var porMetodo = {};
+            var totalVentas = 0, totalCobrado = 0, porCobrar = 0;
+            pedidosHoy.forEach(function(p) {
+                var monto = _corteTotalDe(p);
+                totalVentas += monto;
+                if (p.estadoPago === 'Pagado') {
+                    totalCobrado += monto;
+                    if (p.pagoDividido && Array.isArray(p.pagosDivididos) && p.pagosDivididos.length) {
+                        p.pagosDivididos.forEach(function(x){
+                            var m = _corteNormMetodo(x.metodo);
+                            porMetodo[m] = (porMetodo[m] || 0) + (parseFloat(x.monto) || 0);
+                        });
+                    } else {
+                        var m = _corteNormMetodo(p.metodoPagoReal || p.metodoPago);
+                        porMetodo[m] = (porMetodo[m] || 0) + monto;
+                    }
+                } else {
+                    porCobrar += monto;
+                }
+            });
+            // Compatibilidad con la impresión (Efectivo / Tarjeta)
+            var totalEfectivo = porMetodo['Efectivo'] || 0;
+            var totalTarjeta  = porMetodo['Tarjeta']  || 0;
+
             const totalOrdenes  = pedidosHoy.length;
-            const ticketProm    = totalOrdenes > 0 ? totalCobrado / totalOrdenes : 0;
+            const ticketProm    = totalOrdenes > 0 ? totalVentas / totalOrdenes : 0;
 
             // ── Por repartidor ───────────────────────────────────────
             // Ventas individuales de cada repartidor. Se identifica primero por
@@ -1429,9 +1451,10 @@ window.normalizarRutaImagen = function(src) {
             const porCajero = {};
             pedidosHoy.forEach(p => {
                 const caj = (p.repartidorNombre || p.cobradoPor || p.cajeroNombre || p.cajeroId || 'Sin asignar');
-                if (!porCajero[caj]) porCajero[caj] = { ordenes: 0, total: 0 };
+                if (!porCajero[caj]) porCajero[caj] = { ordenes: 0, total: 0, cobrado: 0 };
                 porCajero[caj].ordenes++;
-                porCajero[caj].total += parseFloat(p.total) || 0;
+                porCajero[caj].total += _corteTotalDe(p);
+                if (p.estadoPago === 'Pagado') porCajero[caj].cobrado += _corteTotalDe(p);
             });
 
             // ── Actualizar DOM ───────────────────────────────────────
@@ -1443,14 +1466,34 @@ window.normalizarRutaImagen = function(src) {
                 resEl.innerHTML = aviso +
                     '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.5rem;">' +
                     statBox('📦','Órdenes', totalOrdenes, 'var(--primary)') +
-                    statBox('💰','Total', '$'+totalCobrado.toFixed(2), '#25D366') +
+                    statBox('💰','Ventas', '$'+totalVentas.toFixed(2), '#25D366') +
                     statBox('🧾','Prom.', '$'+ticketProm.toFixed(2), '#F59E0B') +
                     '</div>';
             }
 
             const setEl = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val; };
-            setEl('corte-efectivo',      '$' + totalEfectivo.toFixed(2));
-            setEl('corte-tarjeta',       '$' + totalTarjeta.toFixed(2));
+            // Desglose por método (dinámico: Efectivo, Cash App, Tarjeta, Zelle, Venmo...)
+            var _ordenMet = ['Efectivo','Tarjeta','Cash App','Zelle','Venmo'];
+            var _colorMet = { 'Efectivo':'#25D366','Tarjeta':'#3B82F6','Cash App':'#25D366','Zelle':'#A78BFA','Venmo':'#3B82F6' };
+            var _iconMet  = { 'Efectivo':'💵','Tarjeta':'💳','Cash App':'🟢','Zelle':'🟣','Venmo':'🔵' };
+            var _clavesMet = Object.keys(porMetodo).sort(function(a,b){
+                var ia = _ordenMet.indexOf(a), ib = _ordenMet.indexOf(b);
+                if (ia < 0) ia = 99; if (ib < 0) ib = 99;
+                return ia - ib;
+            });
+            var metEl = document.getElementById('corte-metodos-lista');
+            if (metEl) {
+                var htmlMet = _clavesMet.length ? _clavesMet.map(function(m){
+                    return '<div style="display:flex;justify-content:space-between;margin-bottom:.4rem;">' +
+                        '<span>' + (_iconMet[m] || '💰') + ' ' + m + '</span>' +
+                        '<strong style="color:' + (_colorMet[m] || '#ccc') + ';">$' + porMetodo[m].toFixed(2) + '</strong></div>';
+                }).join('') : '<div style="color:var(--muted);font-size:.82rem;">Sin cobros registrados</div>';
+                if (porCobrar > 0.005) {
+                    htmlMet += '<div style="display:flex;justify-content:space-between;margin-bottom:.4rem;">' +
+                        '<span>⏳ Por cobrar</span><strong style="color:#F59E0B;">$' + porCobrar.toFixed(2) + '</strong></div>';
+                }
+                metEl.innerHTML = htmlMet;
+            }
             setEl('corte-total-cobrado', '$' + totalCobrado.toFixed(2));
 
             // Por cajero
@@ -1506,7 +1549,7 @@ window.normalizarRutaImagen = function(src) {
                       (pedidosHoy.length > 15 ? '<div style="color:var(--muted);font-size:.75rem;margin-top:.4rem;">... y ' + (pedidosHoy.length-15) + ' más</div>' : '');
             }
 
-            window._corteData = { fechaStr, totalOrdenes, totalEfectivo, totalTarjeta, totalCobrado, ticketProm, porCajero, turnos };
+            window._corteData = { fechaStr, totalOrdenes, totalVentas, totalEfectivo, totalTarjeta, totalCobrado, porCobrar, porMetodo, ticketProm, porCajero, turnos };
         };
 
 
@@ -1530,15 +1573,18 @@ window.normalizarRutaImagen = function(src) {
                 '',
                 '  RESUMEN',
                 '  Órdenes del día: ' + d.totalOrdenes,
+                '  Ventas totales:  $' + (d.totalVentas||0).toFixed(2),
                 '  Ticket promedio: $' + d.ticketProm.toFixed(2),
                 '',
-                '  COBROS',
-                '  💵 Efectivo:  $' + d.totalEfectivo.toFixed(2),
-                '  💳 Tarjeta:   $' + d.totalTarjeta.toFixed(2),
+                '  COBROS POR MÉTODO',
+                ...Object.keys(d.porMetodo || {}).map(function(m){
+                    return '  ' + m + ':  $' + d.porMetodo[m].toFixed(2);
+                }),
+                ...((d.porCobrar||0) > 0.005 ? ['  Por cobrar: $' + d.porCobrar.toFixed(2)] : []),
                 '  ─────────────────────────',
-                '  TOTAL:        $' + d.totalCobrado.toFixed(2),
+                '  TOTAL COBRADO: $' + d.totalCobrado.toFixed(2),
                 '',
-                '  POR CAJERO',
+                '  POR REPARTIDOR',
                 ...Object.entries(d.porCajero).map(([n,v]) =>
                     '  ' + n + ': ' + v.ordenes + ' órd. / $' + v.total.toFixed(2)
                 ),
