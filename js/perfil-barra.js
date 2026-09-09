@@ -158,7 +158,9 @@ window.textoItemAgrupado = function(g, opts) {
             // (Tienda, Mis Pedidos, Mi Ruta, Disponibles y Cocina viven en la
             // barra inferior fija #tt-navbar, así que NO se repiten aquí.)
             items = [
-                ['📊', 'Reportes', _base() + 'reportes.html', true],
+                // Reportes visible para TODO el equipo: cada empleado ve sus
+                // ventas (default "Mis ventas") y puede ver el total general.
+                ['📊', 'Reportes', _base() + 'reportes.html', false],
                 ['👥', 'Clientes', _base() + 'clientes.html', true],
                 ['📋', 'Control', _base() + 'control.html', true],
                 ['🗺️', 'Mapa', _base() + 'mapa.html', true],
