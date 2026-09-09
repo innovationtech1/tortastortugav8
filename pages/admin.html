@@ -607,6 +607,107 @@ window.normalizarRutaImagen = function(src) {
 </div>
 </div>
 
+<!-- ══ MODAL BRANDED INNOVATIONTECH (confirmaciones de alto riesgo) ══ -->
+<style>
+  .it-ov { position:fixed; inset:0; background:rgba(3,10,24,.86); backdrop-filter:blur(3px);
+           display:none; align-items:center; justify-content:center; z-index:100050; padding:1.2rem; }
+  .it-ov.activo { display:flex; }
+  .it-modal { width:100%; max-width:400px; border-radius:20px; padding:1.6rem 1.4rem 1.4rem;
+              background:radial-gradient(120% 90% at 50% 0%, #0E3D7A 0%, #0A2E63 45%, #061B3D 100%);
+              border:2px solid transparent;
+              background-origin:border-box;
+              box-shadow:0 20px 60px rgba(0,0,0,.7), 0 0 0 1px rgba(0,212,255,.15) inset;
+              position:relative; text-align:center; color:#EAF2FF;
+              animation:itPop .22s cubic-bezier(.2,.9,.3,1.3); }
+  /* Anillo dorado del borde (doble borde con gradiente) */
+  .it-modal::before { content:""; position:absolute; inset:-2px; border-radius:20px; padding:2px;
+              background:linear-gradient(160deg,#F0DD96,#B8891E 30%,#7A5A12 55%,#E8D48A 80%,#B8891E);
+              -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+              -webkit-mask-composite:xor; mask-composite:exclude; pointer-events:none; }
+  @keyframes itPop { from{ transform:scale(.9); opacity:0; } to{ transform:scale(1); opacity:1; } }
+  .it-logo { width:92px; height:92px; margin:0 auto .5rem; filter:drop-shadow(0 4px 10px rgba(0,0,0,.5)); }
+  .it-brand { font-size:1.02rem; font-weight:900; letter-spacing:.06em; color:#E8E8E8;
+              text-shadow:0 1px 2px rgba(0,0,0,.6); }
+  .it-brand span { color:#35C8FF; }
+  .it-tagline { font-size:.6rem; font-weight:700; letter-spacing:.18em; color:#C9A227;
+                text-transform:uppercase; margin-bottom:.9rem; }
+  .it-divisor { height:2px; margin:.2rem auto 1rem; width:80%;
+                background:linear-gradient(90deg,transparent,#C9A227,#35C8FF,#C9A227,transparent); border-radius:2px; }
+  .it-title { font-size:1.12rem; font-weight:900; letter-spacing:.02em; margin:0 0 .7rem;
+              color:#FFD36B; text-shadow:0 1px 3px rgba(0,0,0,.5); }
+  .it-msg { font-size:.86rem; line-height:1.5; color:#D6E3F5; text-align:left;
+            background:rgba(0,20,50,.4); border:1px solid rgba(53,200,255,.18); border-radius:12px;
+            padding:.85rem .9rem; }
+  .it-msg b { color:#EAF2FF; }
+  .it-rojo { color:#FF6B5A !important; font-weight:900; }
+  .it-lista { margin:.5rem 0 .3rem; padding-left:1.1rem; }
+  .it-lista li { margin:.15rem 0; color:#B9CCE6; }
+  .it-nota { font-size:.76rem; color:#7FA8D6; font-style:italic; }
+  .it-input { width:100%; margin-top:.9rem; padding:.75rem .8rem; border-radius:12px;
+              background:#04122B; border:1.5px solid rgba(201,162,39,.5); color:#fff;
+              font-family:inherit; font-size:1.05rem; font-weight:800; text-align:center; letter-spacing:.15em; }
+  .it-input:focus { outline:none; border-color:#35C8FF; box-shadow:0 0 0 3px rgba(53,200,255,.2); }
+  .it-btns { display:flex; gap:.6rem; margin-top:1.1rem; }
+  .it-btn { flex:1; padding:.8rem; border-radius:12px; font-family:inherit; font-size:.9rem;
+            font-weight:800; cursor:pointer; transition:transform .12s, filter .12s; }
+  .it-btn:active { transform:scale(.95); }
+  .it-cancel { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.25); color:#CFE0F5; }
+  .it-ok { border:none; color:#fff; background:linear-gradient(135deg,#C0392B,#8E1B12);
+           box-shadow:0 4px 14px rgba(192,57,43,.4); }
+  .it-ok:disabled { filter:grayscale(.6) brightness(.7); cursor:not-allowed; box-shadow:none; }
+</style>
+<div class="it-ov" id="it-modal-overlay">
+  <div class="it-modal">
+    <div class="it-logo">
+      <svg viewBox="0 0 200 200" width="92" height="92" aria-hidden="true">
+        <defs>
+          <linearGradient id="itRing" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#F0DD96"/><stop offset="35%" stop-color="#B8891E"/>
+            <stop offset="65%" stop-color="#7A5A12"/><stop offset="100%" stop-color="#E8D48A"/>
+          </linearGradient>
+          <radialGradient id="itCtr" cx="50%" cy="42%" r="70%">
+            <stop offset="0%" stop-color="#1E6FC4"/><stop offset="60%" stop-color="#0A2E63"/>
+            <stop offset="100%" stop-color="#04122B"/>
+          </radialGradient>
+          <linearGradient id="itL" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#95A0AB"/>
+          </linearGradient>
+          <linearGradient id="itT" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#EA5142"/><stop offset="100%" stop-color="#8E1B12"/>
+          </linearGradient>
+        </defs>
+        <circle cx="100" cy="100" r="97" fill="url(#itRing)"/>
+        <circle cx="100" cy="100" r="97" fill="none" stroke="#5A4310" stroke-width="1.5" stroke-dasharray="3 3"/>
+        <circle cx="100" cy="100" r="84" fill="#04122B"/>
+        <circle cx="100" cy="100" r="72" fill="url(#itCtr)" stroke="#00D4FF" stroke-opacity=".35" stroke-width="1.5"/>
+        <g stroke="#35C8FF" stroke-opacity=".55" stroke-width="1.6" fill="none">
+          <path d="M34 100 H66"/><path d="M134 100 H166"/><path d="M100 34 V60"/><path d="M100 150 V166"/>
+          <path d="M52 62 L70 80"/><path d="M148 138 L130 120"/>
+        </g>
+        <g fill="#35C8FF"><circle cx="34" cy="100" r="3.2"/><circle cx="166" cy="100" r="3.2"/>
+          <circle cx="100" cy="34" r="3.2"/><circle cx="100" cy="166" r="3.2"/></g>
+        <text x="82" y="120" font-family="Georgia,'Times New Roman',serif" font-size="66" font-weight="900" fill="url(#itL)">L</text>
+        <text x="103" y="120" font-family="Georgia,'Times New Roman',serif" font-size="66" font-weight="900" fill="url(#itT)">T</text>
+        <text x="100" y="146" text-anchor="middle" font-family="system-ui,sans-serif" font-size="16" font-weight="900" letter-spacing="2.5" fill="#E8E8E8">TECH</text>
+        <path id="itArcTop" d="M100,100 m-79,0 a79,79 0 1,1 158,0" fill="none"/>
+        <text font-family="system-ui,sans-serif" font-size="12.5" font-weight="800" letter-spacing="2.4" fill="#2A1B02">
+          <textPath href="#itArcTop" startOffset="50%" text-anchor="middle">INNOVATIONTECH</textPath>
+        </text>
+      </svg>
+    </div>
+    <div class="it-brand">INNOVATION<span>TECH</span></div>
+    <div class="it-tagline">Tecnología y Marketing Digital</div>
+    <div class="it-divisor"></div>
+    <h3 class="it-title" id="it-title">—</h3>
+    <div class="it-msg" id="it-msg">—</div>
+    <input type="text" class="it-input" id="it-input" style="display:none;" autocomplete="off" autocapitalize="characters">
+    <div class="it-btns">
+      <button class="it-btn it-cancel" id="it-cancel">Cancelar</button>
+      <button class="it-btn it-ok" id="it-ok">Aceptar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // NOTA: el login por contraseña (tortuga2025 / supervisor) se eliminó.
 // El acceso ahora lo controla exclusivamente el gate de sesión real al
@@ -2221,14 +2322,69 @@ window.limpiarDuplicadosProductos = async function() {
 //   pedidos, ventas, turnos_caja, turnos, cancelaciones, canjes,
 //   slots_entrega, ubicaciones, contadores (folios).
 // NO toca: productos (menú), empleados, clientes ni usuarios.
+// Modal de confirmación branded InnovationTech. Devuelve Promesa<boolean>.
+// opts: { titulo, mensaje(HTML), okLabel, cancelLabel, requiereTexto, placeholder }
+window._itConfirm = function(opts) {
+    opts = opts || {};
+    return new Promise(function(resolve) {
+        var ov = document.getElementById('it-modal-overlay');
+        var titEl = document.getElementById('it-title');
+        var msgEl = document.getElementById('it-msg');
+        var inp = document.getElementById('it-input');
+        var ok = document.getElementById('it-ok');
+        var cancel = document.getElementById('it-cancel');
+        if (!ov) { resolve(false); return; }
+        titEl.innerHTML = opts.titulo || '';
+        msgEl.innerHTML = opts.mensaje || '';
+        ok.textContent = opts.okLabel || 'Aceptar';
+        cancel.textContent = opts.cancelLabel || 'Cancelar';
+        var req = opts.requiereTexto || null;
+        function validar() {
+            if (!req) { ok.disabled = false; return; }
+            ok.disabled = (inp.value.trim().toUpperCase() !== req.toUpperCase());
+        }
+        if (req) { inp.style.display = 'block'; inp.value = ''; inp.placeholder = opts.placeholder || ''; }
+        else { inp.style.display = 'none'; }
+        validar();
+        function cerrar(val) {
+            ov.classList.remove('activo');
+            ok.onclick = null; cancel.onclick = null; inp.oninput = null;
+            document.removeEventListener('keydown', onKey);
+            resolve(val);
+        }
+        function onKey(e) { if (e.key === 'Escape') cerrar(false); }
+        ok.onclick = function() { if (req && inp.value.trim().toUpperCase() !== req.toUpperCase()) return; cerrar(true); };
+        cancel.onclick = function() { cerrar(false); };
+        if (req) inp.oninput = validar;
+        document.addEventListener('keydown', onKey);
+        ov.classList.add('activo');
+        if (req) setTimeout(function(){ try { inp.focus(); } catch(e){} }, 80);
+    });
+};
+
 window.reiniciarDatosPrueba = async function() {
     if (!window._adminGetDocs || !window._adminDeleteDoc) { alert('Firebase cargando, intenta en 2 segundos'); return; }
-    var _confirm = window.ttConfirm ? window.ttConfirm : (function(m){ return Promise.resolve(confirm(m)); });
-    var ok1 = await _confirm('⚠️ Esto borrará TODO lo de cobros, ventas y reportes almacenado desde el inicio:\n\n• Pedidos y ventas\n• Turnos y cortes de caja\n• Cancelaciones y canjes\n• Reservas de horario y ubicaciones\n• Contadores de folio (vuelve a #001)\n\nNO se tocan productos, empleados ni clientes.\n\n¿Continuar?');
+    // PASO 1 — Aviso de pérdida total (modal branded InnovationTech)
+    var ok1 = await window._itConfirm({
+        titulo: 'BORRADO TOTAL DE VENTAS',
+        mensaje: 'Si presionas <b>ACEPTAR</b> se perderán <b class="it-rojo">PARA SIEMPRE</b> todos los datos de ventas, cobros y reportes almacenados desde el inicio:' +
+                 '<ul class="it-lista"><li>Pedidos y ventas</li><li>Turnos y cortes de caja</li><li>Cancelaciones y canjes</li><li>Reservas de horario y ubicaciones</li><li>Contadores de folio (vuelve a #001)</li></ul>' +
+                 '<span class="it-nota">No se tocan productos, empleados ni clientes.</span><br><br>' +
+                 '<b class="it-rojo">Esta información NO se podrá recuperar.</b>',
+        okLabel: 'Continuar',
+        cancelLabel: 'Cancelar'
+    });
     if (!ok1) return;
-    // Segunda confirmación: acción irreversible
-    var texto = prompt('Para confirmar el borrado TOTAL escribe:  BORRAR');
-    if (!texto || texto.trim().toUpperCase() !== 'BORRAR') { alert('Cancelado. No se borró nada.'); return; }
+    // PASO 2 — Punto de no retorno (requiere escribir BORRAR)
+    var ok2 = await window._itConfirm({
+        titulo: 'NO HAY VUELTA ATRÁS',
+        mensaje: 'Una vez que hagas esto <b class="it-rojo">no habrá vuelta atrás</b>. El borrado es <b>definitivo e irreversible</b>.<br><br>Para confirmar, escribe <b>BORRAR</b> abajo.',
+        requiereTexto: 'BORRAR',
+        placeholder: 'Escribe BORRAR',
+        okLabel: 'BORRAR TODO',
+        cancelLabel: 'Cancelar'
+    });
+    if (!ok2) return;
 
     var btn = document.getElementById('btn-reiniciar-datos');
     var txtOrig = btn ? btn.innerHTML : '';
