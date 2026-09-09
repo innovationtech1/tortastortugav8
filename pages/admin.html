@@ -1568,13 +1568,13 @@ window.normalizarRutaImagen = function(src) {
                 ordEl.innerHTML = pedidosHoy.length === 0
                     ? '<div style="color:var(--muted);">Sin órdenes</div>'
                     : '<div style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem;">' +
-                      pedidosHoy.length + ' orden(es) · $' + pedidosHoy.reduce((s,p)=>s+(parseFloat(p.total)||0),0).toFixed(2) +
+                      pedidosHoy.length + ' orden(es) · $' + pedidosHoy.reduce((s,p)=>s+_corteTotalDe(p),0).toFixed(2) +
                       '</div>' +
                       pedidosHoy.slice(0,15).map(p => {
                           const _hts = _corteTs(p); const hora = _hts ? _hts.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) : '';
                           return '<div style="display:flex;justify-content:space-between;font-size:.78rem;padding:.3rem 0;border-bottom:1px solid var(--border);">' +
                               '<span>' + (p.cliente||p.nombre||'Cliente') + ' <span style="color:var(--muted);">' + hora + '</span></span>' +
-                              '<span style="color:var(--primary);font-weight:700;">$' + (parseFloat(p.total)||0).toFixed(2) + '</span></div>';
+                              '<span style="color:var(--primary);font-weight:700;">$' + _corteTotalDe(p).toFixed(2) + '</span></div>';
                       }).join('') +
                       (pedidosHoy.length > 15 ? '<div style="color:var(--muted);font-size:.75rem;margin-top:.4rem;">... y ' + (pedidosHoy.length-15) + ' más</div>' : '');
             }
@@ -2636,7 +2636,7 @@ window.cargarReporte = function(periodo) {
     var metodos = {};
     filtrados.forEach(function(p) {
         var m = p.metodoPagoReal || p.metodoPago || 'pendiente';
-        metodos[m] = (metodos[m]||0) + (parseFloat(p.total)||0);
+        metodos[m] = (metodos[m]||0) + totalDe(p);
     });
 
     // Top productos
@@ -2657,7 +2657,7 @@ window.cargarReporte = function(periodo) {
         var ts = p.creado?.seconds ? new Date(p.creado.seconds*1000) : null;
         if (!ts) return;
         var dia = ts.toLocaleDateString('es-MX',{month:'short',day:'numeric'});
-        porDia[dia] = (porDia[dia]||0) + (parseFloat(p.total)||0);
+        porDia[dia] = (porDia[dia]||0) + totalDe(p);
     });
 
     var h = '';
