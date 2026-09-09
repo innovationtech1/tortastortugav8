@@ -476,11 +476,20 @@ window.enviarTicketPDF = async function(pedidoId) {
 
 // Datos del negocio (aparecen en el pie del ticket)
 var TT_NEGOCIO = {
-    slogan: 'Sabor a paso firme',
+    slogan: 'Pare de sufrir',
     tel: '210-TORTA-10  |  210-86782-10',
     horario: 'Lun - Sab  10:00 AM - 6:00 PM',
     extra: 'We cater!'
 };
+
+// Quita emojis y símbolos que el PDF (fuente estándar) no puede dibujar
+// (aparecían como "Ø=Þ—" antes del nombre del cliente).
+function _soloTexto(s){
+    return String(s == null ? '' : s)
+        .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}]/gu, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
 
 // Dibuja una tortuga vectorial (color crema) centrada en (cx,cy)
 function _dibujarTortuga(doc, cx, cy, s) {
@@ -538,7 +547,7 @@ function _construirTicketPDF(p) {
     var tmp = new jsPDF({ unit:'mm', format:[W, 300] });
     tmp.setFont('helvetica','normal'); tmp.setFontSize(9);
     var itemLineas = grupos.map(function(g){
-        var etq = (g.cantidad || 1) + 'x ' + (g.nombre || '') + (g.variante ? ' (' + g.variante + ')' : '');
+        var etq = (g.cantidad || 1) + 'x ' + _soloTexto(g.nombre || '') + (g.variante ? ' (' + _soloTexto(g.variante) + ')' : '');
         return tmp.splitTextToSize(etq, innerW - 16);
     });
 
@@ -583,7 +592,7 @@ function _construirTicketPDF(p) {
     cy += 6.5;
     // Cliente / tel / canal
     doc.setTextColor(DARK[0], DARK[1], DARK[2]); doc.setFont('helvetica','bold'); doc.setFontSize(9.5);
-    doc.text(cliente, M, cy); cy += 5;
+    doc.text('Nombre: ' + _soloTexto(cliente), M, cy); cy += 5;
     doc.setFont('helvetica','normal'); doc.setTextColor(90,90,90); doc.setFontSize(8);
     if (tel) { doc.text('Tel: ' + tel, M, cy); cy += 4.5; }
     doc.text('Compra: ' + canal, M, cy); cy += 4;
