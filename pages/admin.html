@@ -552,7 +552,7 @@ window.normalizarRutaImagen = function(src) {
         <!-- Desglose por cajero -->
         <div style="border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1rem;">
             <div style="font-weight:700;font-size:.85rem;margin-bottom:.75rem;color:var(--text);">
-                🛵 Por Repartidor
+                🛵 Por Repartidor <span style="font-weight:600;color:var(--muted);font-size:.72rem;">(solo cobrado)</span>
             </div>
             <div id="corte-por-cajero">
                 <div style="color:var(--muted);font-size:.82rem;">Cargando...</div>
@@ -1599,16 +1599,17 @@ window.normalizarRutaImagen = function(src) {
             const ticketProm    = totalOrdenes > 0 ? totalVentas / totalOrdenes : 0;
 
             // ── Por repartidor ───────────────────────────────────────
-            // Ventas individuales de cada repartidor. Se identifica primero por
-            // el repartidor que hizo la entrega (domicilio), luego por quien
+            // Ventas individuales de cada repartidor: SOLO lo realmente cobrado
+            // (se ignoran las órdenes pendientes de pago). Se identifica primero
+            // por el repartidor que hizo la entrega (domicilio), luego por quien
             // cobró / tomó la orden en tienda.
             const porCajero = {};
             pedidosHoy.forEach(p => {
+                if (p.estadoPago !== 'Pagado') return; // solo lo cobrado
                 const caj = (p.repartidorNombre || p.cobradoPor || p.cajeroNombre || p.cajeroId || 'Sin asignar');
-                if (!porCajero[caj]) porCajero[caj] = { ordenes: 0, total: 0, cobrado: 0 };
+                if (!porCajero[caj]) porCajero[caj] = { ordenes: 0, total: 0 };
                 porCajero[caj].ordenes++;
                 porCajero[caj].total += _corteTotalDe(p);
-                if (p.estadoPago === 'Pagado') porCajero[caj].cobrado += _corteTotalDe(p);
             });
 
             // ── Actualizar DOM ───────────────────────────────────────
@@ -1654,12 +1655,12 @@ window.normalizarRutaImagen = function(src) {
             const cajEl = document.getElementById('corte-por-cajero');
             if (cajEl) {
                 cajEl.innerHTML = Object.keys(porCajero).length === 0
-                    ? '<div style="color:var(--muted);font-size:.8rem;">Sin ventas por repartidor todavía</div>'
+                    ? '<div style="color:var(--muted);font-size:.8rem;">Sin ventas cobradas todavía</div>'
                     : Object.entries(porCajero)
                         .sort((a,b)=> b[1].total - a[1].total)
                         .map(([nom, data]) =>
                         '<div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid var(--border);font-size:.83rem;">' +
-                        '<span>🛵 ' + nom + ' <span style="color:var(--muted);">(' + data.ordenes + ' órd.)</span></span>' +
+                        '<span>🛵 ' + nom + ' <span style="color:var(--muted);">(' + data.ordenes + ' cobrada' + (data.ordenes===1?'':'s') + ')</span></span>' +
                         '<strong style="color:var(--primary);">$' + data.total.toFixed(2) + '</strong></div>'
                     ).join('');
             }
