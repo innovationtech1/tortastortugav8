@@ -2692,8 +2692,8 @@ window.reiniciarDatosPrueba = async function() {
      style="position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9000;
             display:none;align-items:flex-end;justify-content:center;">
   <div style="background:#1C1C1C;border:1px solid rgba(255,255,255,.1);
-              border-radius:20px 20px 0 0;padding:1.5rem;width:100%;max-width:560px;
-              max-height:88vh;overflow-y:auto;">
+              border-radius:20px 20px 0 0;padding:1.5rem 1.5rem 6rem;width:100%;max-width:560px;
+              max-height:86vh;overflow-y:auto;-webkit-overflow-scrolling:touch;">
     <div style="width:32px;height:4px;background:rgba(255,255,255,.15);border-radius:4px;margin:0 auto .85rem;"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
       <div style="font-size:.95rem;font-weight:800;color:#3B82F6;">🛵 Gestión de Repartidores</div>
@@ -2722,9 +2722,74 @@ window.reiniciarDatosPrueba = async function() {
       </button>
     </div>
     <!-- Lista de cajeros -->
-    <div style="font-size:.72rem;color:#888;font-weight:700;margin-bottom:.5rem;">CAJEROS REGISTRADOS</div>
+    <div style="font-size:.72rem;color:#888;font-weight:700;margin-bottom:.5rem;">EMPLEADOS REGISTRADOS</div>
     <div id="cajeros-lista">
       <div style="color:#555;font-size:.82rem;text-align:center;padding:1rem;">Cargando...</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR EMPLEADO/REPARTIDOR -->
+<div id="cajero-edit-modal" onclick="if(event.target===this)this.style.display='none'"
+     style="position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9500;
+            display:none;align-items:flex-end;justify-content:center;">
+  <div style="background:#1C1C1C;border:1px solid rgba(59,130,246,.3);
+              border-radius:20px 20px 0 0;padding:1.5rem 1.5rem 6rem;width:100%;max-width:560px;
+              max-height:86vh;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+    <div style="width:32px;height:4px;background:rgba(255,255,255,.15);border-radius:4px;margin:0 auto .85rem;"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <div style="font-size:.95rem;font-weight:800;color:#3B82F6;">✏️ Editar empleado</div>
+      <button onclick="document.getElementById('cajero-edit-modal').style.display='none'"
+        style="background:none;border:1px solid rgba(255,255,255,.1);color:#888;border-radius:8px;padding:.25rem .6rem;cursor:pointer;">✕</button>
+    </div>
+    <input type="hidden" id="ced-docid">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.55rem;">
+      <div>
+        <div style="font-size:.7rem;color:#888;margin-bottom:.2rem;">Nombre</div>
+        <input id="ced-nombre" style="width:100%;background:#111;border:1px solid rgba(255,255,255,.12);color:#fff;border-radius:8px;padding:.55rem .65rem;font-family:inherit;font-size:.85rem;">
+      </div>
+      <div>
+        <div style="font-size:.7rem;color:#888;margin-bottom:.2rem;">Apellido</div>
+        <input id="ced-apellido" style="width:100%;background:#111;border:1px solid rgba(255,255,255,.12);color:#fff;border-radius:8px;padding:.55rem .65rem;font-family:inherit;font-size:.85rem;">
+      </div>
+    </div>
+    <div style="margin-bottom:.55rem;">
+      <div style="font-size:.7rem;color:#888;margin-bottom:.2rem;">ID de empleado</div>
+      <input id="ced-empid" disabled style="width:100%;background:#0c0c0c;border:1px solid rgba(255,255,255,.08);color:#888;border-radius:8px;padding:.55rem .65rem;font-family:inherit;font-size:.85rem;">
+    </div>
+    <div style="margin-bottom:.55rem;">
+      <div style="font-size:.7rem;color:#888;margin-bottom:.2rem;">Teléfono (10 dígitos)</div>
+      <input id="ced-tel" type="tel" maxlength="10" oninput="this.value=this.value.replace(/\D/g,'')" style="width:100%;background:#111;border:1px solid rgba(255,255,255,.12);color:#fff;border-radius:8px;padding:.55rem .65rem;font-family:inherit;font-size:.85rem;">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.55rem;">
+      <div>
+        <div style="font-size:.7rem;color:#888;margin-bottom:.2rem;">Puesto</div>
+        <select id="ced-puesto" style="width:100%;background:#111;border:1px solid rgba(255,255,255,.12);color:#fff;border-radius:8px;padding:.55rem .65rem;font-family:inherit;font-size:.85rem;">
+          <option value="repartidor">Repartidor</option>
+          <option value="cajero">Cajero</option>
+          <option value="cocinero">Cocinero</option>
+          <option value="mesero">Mesero</option>
+          <option value="limpieza">Limpieza</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:.7rem;color:#888;margin-bottom:.2rem;">Rol (acceso)</div>
+        <select id="ced-rol" style="width:100%;background:#111;border:1px solid rgba(255,255,255,.12);color:#fff;border-radius:8px;padding:.55rem .65rem;font-family:inherit;font-size:.85rem;">
+          <option value="cajero">Repartidor / Cajero</option>
+          <option value="gerente">Gerente</option>
+          <option value="cocina">Cocina</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-bottom:.7rem;">
+      <div style="font-size:.7rem;color:#888;margin-bottom:.2rem;">Nuevo PIN (4 dígitos) — opcional</div>
+      <input id="ced-pin" type="tel" maxlength="4" oninput="this.value=this.value.replace(/\D/g,'')" placeholder="Dejar vacío para no cambiar" style="width:100%;background:#111;border:1px solid rgba(255,255,255,.12);color:#fff;border-radius:8px;padding:.55rem .65rem;font-family:inherit;font-size:.85rem;">
+    </div>
+    <div id="ced-msg" style="font-size:.78rem;margin-bottom:.5rem;"></div>
+    <div style="display:flex;gap:.5rem;">
+      <button onclick="guardarEdicionCajero()" id="ced-guardar" style="flex:1;padding:.75rem;background:linear-gradient(135deg,#3B82F6,#2563EB);border:none;color:#fff;border-radius:10px;font-family:inherit;font-size:.88rem;font-weight:800;cursor:pointer;">💾 Guardar cambios</button>
+      <button onclick="document.getElementById('cajero-edit-modal').style.display='none'" style="padding:.75rem 1rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:#aaa;border-radius:10px;font-family:inherit;font-size:.88rem;cursor:pointer;">Cancelar</button>
     </div>
   </div>
 </div>
@@ -2961,16 +3026,26 @@ window.cargarListaCajeros = async function() {
             var row = document.createElement('div');
             row.style.cssText = 'background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.65rem;margin-bottom:.4rem;display:flex;justify-content:space-between;align-items:center;';
             var info = document.createElement('div');
+            info.style.cssText = 'min-width:0;flex:1;';
             info.innerHTML = '<div style="font-size:.85rem;font-weight:700;">' + (e.nombre||'') + ' ' + (e.apellido||'') + '</div>'
-                + '<div style="font-size:.72rem;color:#888;">' + (e.empleadoId||e.id) + ' &middot; ' + (e.rol||'cajero') + '</div>';
+                + '<div style="font-size:.72rem;color:#888;">' + (e.empleadoId||e.id) + ' &middot; ' + (e.rol||'cajero') + (e.telefono?(' &middot; '+e.telefono):'') + '</div>';
+            var acciones = document.createElement('div');
+            acciones.style.cssText = 'display:flex;gap:.35rem;flex-shrink:0;';
+            var btnEd = document.createElement('button');
+            btnEd.textContent = '✏️';
+            btnEd.title = 'Editar';
+            btnEd.style.cssText = 'background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.35);color:#3B82F6;border-radius:7px;padding:.25rem .55rem;font-size:.82rem;cursor:pointer;';
+            btnEd.onclick = function() { abrirEditarCajero(e); };
             var btn = document.createElement('button');
             btn.textContent = String.fromCodePoint(128465);
-            btn.style.cssText = 'background:rgba(244,67,54,.15);border:1px solid rgba(244,67,54,.3);color:#F44336;border-radius:7px;padding:.25rem .55rem;font-size:.72rem;cursor:pointer;';
+            btn.style.cssText = 'background:rgba(244,67,54,.15);border:1px solid rgba(244,67,54,.3);color:#F44336;border-radius:7px;padding:.25rem .55rem;font-size:.82rem;cursor:pointer;';
             btn.setAttribute('data-eid', e.empleadoId || e.id);
             btn.setAttribute('data-did', e.id);
             btn.onclick = function() { eliminarCajero(this.getAttribute('data-eid'), this.getAttribute('data-did')); };
+            acciones.appendChild(btnEd);
+            acciones.appendChild(btn);
             row.appendChild(info);
-            row.appendChild(btn);
+            row.appendChild(acciones);
             lista.appendChild(row);
         });
     } catch(e) { lista.innerHTML = '<div style="color:#F44336;font-size:.8rem;">Error: ' + e.message + '</div>'; }
@@ -3004,6 +3079,49 @@ window.crearCajero = async function() {
         await cargarListaCajeros();
         alert('Repartidor ' + nombre + ' creado. ID: ' + empId + ' PIN: ' + pin);
     } catch(e) { alert('Error al crear repartidor: ' + e.message); }
+};
+
+// Abrir el editor con los datos del empleado
+window.abrirEditarCajero = function(e) {
+    if (!e) return;
+    document.getElementById('ced-docid').value   = e.id || '';
+    document.getElementById('ced-nombre').value   = e.nombre || '';
+    document.getElementById('ced-apellido').value = e.apellido || '';
+    document.getElementById('ced-empid').value    = e.empleadoId || e.id || '';
+    document.getElementById('ced-tel').value      = e.telefono || '';
+    document.getElementById('ced-pin').value      = '';
+    var pst = document.getElementById('ced-puesto'); if (pst) pst.value = (e.puesto || 'repartidor');
+    var rl  = document.getElementById('ced-rol');    if (rl)  rl.value  = (e.rol || 'cajero');
+    document.getElementById('ced-msg').textContent = '';
+    document.getElementById('cajero-edit-modal').style.display = 'flex';
+};
+
+window.guardarEdicionCajero = async function() {
+    var docId  = document.getElementById('ced-docid').value;
+    var nombre = document.getElementById('ced-nombre').value.trim();
+    var apell  = document.getElementById('ced-apellido').value.trim();
+    var tel    = document.getElementById('ced-tel').value.replace(/\D/g,'');
+    var puesto = document.getElementById('ced-puesto').value;
+    var rol    = document.getElementById('ced-rol').value;
+    var pin    = document.getElementById('ced-pin').value.replace(/\D/g,'');
+    var msg    = document.getElementById('ced-msg');
+    var btn    = document.getElementById('ced-guardar');
+    if (!docId) { msg.textContent = '❌ No se pudo identificar al empleado.'; msg.style.color = '#F44336'; return; }
+    if (nombre.length < 2) { msg.textContent = '❌ El nombre es muy corto.'; msg.style.color = '#F44336'; return; }
+    if (tel && tel.length !== 10) { msg.textContent = '❌ El teléfono debe tener 10 dígitos.'; msg.style.color = '#F44336'; return; }
+    if (pin && pin.length !== 4) { msg.textContent = '❌ El PIN debe ser de 4 dígitos.'; msg.style.color = '#F44336'; return; }
+    if (!window._adminUpdateDoc) { msg.textContent = 'Firebase cargando, intenta en 2 segundos.'; msg.style.color = '#FBB724'; return; }
+    var datos = { nombre: nombre, apellido: apell, telefono: tel, puesto: puesto, rol: rol };
+    if (pin) datos.pin = pin;
+    btn.disabled = true; var txt = btn.innerHTML; btn.innerHTML = '⏳ Guardando...';
+    try {
+        await window._adminUpdateDoc(docId, datos, 'empleados');
+        msg.textContent = '✅ Cambios guardados.'; msg.style.color = '#25D366';
+        await cargarListaCajeros();
+        setTimeout(function(){ document.getElementById('cajero-edit-modal').style.display = 'none'; }, 900);
+    } catch(e) {
+        msg.textContent = '❌ Error al guardar: ' + (e.message || e); msg.style.color = '#F44336';
+    } finally { btn.disabled = false; btn.innerHTML = txt; }
 };
 
 window.eliminarCajero = async function(empId, docId) {
