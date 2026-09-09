@@ -385,8 +385,20 @@ window._armarTicketWA = function(p) {
     if (p.cliente || p.nombre) L.push('👤 ' + (p.cliente || p.nombre));
     var _tel = p.telefono || p.telefonoCliente || '';
     if (_tel) L.push('📞 ' + _tel);
-    var esDom = (p.tipo === 'domicilio' || p.tipoServicio === 'Domicilio');
-    L.push(esDom ? '🚗 Domicilio' : '🚚 Para llevar / Tortumóvil');
+    // Canal de compra (cómo se hizo la orden):
+    //  • Online     → el cliente la hizo desde su perfil (cajeroNombre = Sistema)
+    //  • Tortumóvil → un empleado la tomó en la unidad (ordenoEnTortumovil)
+    //  • Domicilio  → un empleado la tomó (por llamada) para entrega a domicilio
+    (function(){
+        var cajero = (p.cajeroNombre || '').trim().toLowerCase();
+        var creadoPorEmpleado = cajero && cajero !== 'sistema';
+        var esDom = (p.tipo === 'domicilio' || p.tipoServicio === 'Domicilio' || !!p.repartidorNombre);
+        var canal;
+        if (p.ordenoEnTortumovil === true) canal = '🚚 Tortumóvil';
+        else if (!creadoPorEmpleado)       canal = '🌐 Online';
+        else                                canal = esDom ? '🚗 Domicilio' : '🚚 Tortumóvil';
+        L.push(canal);
+    })();
     L.push('━━━━━━━━━━━━━━');
     L.push('🛍️ *Tu orden:*');
     var items = p.itemsData;
