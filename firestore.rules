@@ -105,16 +105,35 @@ service cloud.firestore {
       allow update: if !('totalNum' in request.resource.data)
                     || (request.resource.data.totalNum is number
                         && request.resource.data.totalNum >= 0);
-      allow delete: if resource.data.archivado == true;
+      // Borrar: archivadas (auto-archivado) o el GERENTE (reinicio de datos
+      // de prueba / limpieza operativa desde el panel admin).
+      allow delete: if resource.data.archivado == true || esGerente();
     }
 
-    // ── VENTAS (registro contable permanente) ──
-    // Público para crear (modo PIN), nunca editable ni borrable.
+    // ── VENTAS (registro contable) ──
+    // Público para crear (modo PIN), nunca editable. Solo el GERENTE puede
+    // borrar (reinicio de datos de prueba / limpieza desde el panel admin).
     match /ventas/{ventaId} {
       allow read:   if true;
       allow create: if true;
       allow update: if false;
-      allow delete: if false;
+      allow delete: if esGerente();
+    }
+
+    // ── CANCELACIONES (bitácora de órdenes canceladas) ──
+    match /cancelaciones/{cancelacionId} {
+      allow read:   if esStaff();
+      allow create: if true;
+      allow update: if false;
+      allow delete: if esGerente();
+    }
+
+    // ── CANJES (canjes de lealtad / promos) ──
+    match /canjes/{canjeId} {
+      allow read:   if esStaff();
+      allow create: if true;
+      allow update: if false;
+      allow delete: if esGerente();
     }
 
     // ── CONTADORES (folios diarios) ──
@@ -207,8 +226,9 @@ service cloud.firestore {
       allow create, update: if request.resource.data.lat is number
                             && request.resource.data.lng is number
                             && request.resource.data.size() < 15;
-      // La app NUNCA borra ubicaciones → cerrado (antes: if true).
-      allow delete: if false;
+      // Borrar: solo el GERENTE (reinicio de datos de prueba / limpieza del
+      // mapa desde el panel admin). La operación normal nunca borra.
+      allow delete: if esGerente();
     }
 
     // Todo lo demás: denegado
