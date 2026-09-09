@@ -61,6 +61,13 @@
   .cobro-metodos { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin:1rem 0; }
   .cobro-metodo { padding:.9rem; border-radius:12px; border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.04); color:#fff; font-family:inherit; font-size:.9rem; font-weight:700; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:.3rem; }
   .cobro-metodo:active { transform:scale(.96); }
+  /* ── Pago dividido (2 o más formas de pago en una orden) ── */
+  .cobro-split-toggle { width:100%; padding:.75rem; border-radius:12px; border:1px dashed rgba(255,90,0,.5); background:rgba(255,90,0,.08); color:#FF7A33; font-family:inherit; font-size:.9rem; font-weight:800; cursor:pointer; margin-bottom:.8rem; }
+  .split-row { display:flex; gap:.5rem; margin-bottom:.55rem; align-items:center; }
+  .split-met { flex:1; min-width:0; padding:.6rem .5rem; border-radius:10px; background:#111; border:1px solid rgba(255,255,255,.15); color:#fff; font-family:inherit; font-size:.88rem; font-weight:700; }
+  .split-monto { width:105px; padding:.6rem .5rem; border-radius:10px; background:#111; border:1px solid rgba(255,255,255,.15); color:#fff; font-family:inherit; font-size:1rem; font-weight:700; text-align:right; }
+  .split-del { flex-shrink:0; background:rgba(244,67,54,.12); border:1px solid rgba(244,67,54,.35); color:#F44336; border-radius:10px; width:40px; height:40px; font-size:1rem; cursor:pointer; }
+  .split-resumen { text-align:center; font-size:.9rem; color:#ccc; margin:.6rem 0 .9rem; }
   /* ── Stepper de seguimiento (círculos de estado), igual que "Mi Orden" ── */
   .tt-stepper{position:relative;display:flex;margin:.7rem 0 .5rem;}
   .tt-stepper .tt-track-bg,.tt-stepper .tt-track-fill{position:absolute;top:15px;height:3px;border-radius:3px;z-index:0;}
@@ -133,13 +140,29 @@ html { -webkit-text-size-adjust: 100%; }
     <div style="font-size:1.6rem;font-weight:900;color:var(--green);text-align:center;">
       <span id="cobro-total">$0</span>
     </div>
-    <div class="cobro-metodos">
-      <button class="cobro-metodo" onclick="confirmarCobro('Efectivo')">💵<span>Efectivo</span></button>
-      <button class="cobro-metodo" onclick="confirmarCobro('Tarjeta')">💳<span>Tarjeta</span></button>
-      <button class="cobro-metodo" onclick="confirmarCobro('Zelle')">🟣<span>Zelle</span></button>
-      <button class="cobro-metodo" onclick="confirmarCobro('Cash App')">🟢<span>Cash App</span></button>
+    <!-- Vista 1: cobro rápido (un solo método) -->
+    <div id="cobro-simple">
+      <div class="cobro-metodos">
+        <button class="cobro-metodo" onclick="confirmarCobro('Efectivo')">💵<span>Efectivo</span></button>
+        <button class="cobro-metodo" onclick="confirmarCobro('Tarjeta')">💳<span>Tarjeta</span></button>
+        <button class="cobro-metodo" onclick="confirmarCobro('Zelle')">🟣<span>Zelle</span></button>
+        <button class="cobro-metodo" onclick="confirmarCobro('Cash App')">🟢<span>Cash App</span></button>
+        <button class="cobro-metodo" onclick="confirmarCobro('Venmo')">🔵<span>Venmo</span></button>
+      </div>
+      <button class="cobro-split-toggle" onclick="togglePagoDividido(true)">➗ Pago dividido (2 o más formas)</button>
     </div>
-    <button onclick="cerrarCobro()" style="width:100%;padding:.8rem;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:10px;font-family:inherit;font-weight:700;cursor:pointer;">Cancelar</button>
+
+    <!-- Vista 2: pago dividido -->
+    <div id="cobro-dividido" style="display:none;">
+      <div style="font-size:.8rem;color:var(--muted);text-align:center;margin:.4rem 0 .8rem;">Reparte el total entre varias formas de pago</div>
+      <div id="split-rows"></div>
+      <button onclick="agregarSplitRow()" style="width:100%;padding:.6rem;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:#fff;font-family:inherit;font-weight:700;cursor:pointer;margin-bottom:.4rem;">➕ Agregar forma de pago</button>
+      <div class="split-resumen" id="split-resumen">—</div>
+      <button id="split-confirmar" onclick="confirmarCobroDividido()" style="width:100%;padding:.85rem;background:linear-gradient(135deg,#25D366,#1DA851);border:none;color:#fff;border-radius:12px;font-family:inherit;font-size:.95rem;font-weight:800;cursor:pointer;margin-bottom:.5rem;">✅ Confirmar pago dividido</button>
+      <button onclick="togglePagoDividido(false)" style="width:100%;padding:.6rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:#ccc;border-radius:10px;font-family:inherit;font-weight:700;cursor:pointer;">← Volver al cobro rápido</button>
+    </div>
+
+    <button onclick="cerrarCobro()" style="width:100%;padding:.8rem;margin-top:.5rem;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:10px;font-family:inherit;font-weight:700;cursor:pointer;">Cancelar</button>
   </div>
 </div>
 
@@ -385,12 +408,20 @@ window.cambiarEstado = async function(id, estado) {
     } catch(e) { alert('Error al cambiar estado.'); }
 };
 
+var _cobroTotalNum = 0;
+var METODOS_PAGO = ['Efectivo','Tarjeta','Zelle','Cash App','Venmo'];
+
 window.abrirCobro = function(id) {
     _cobroId = id;
     const p = _pedidos.find(x => x.id === id);
     if (!p) return;
     document.getElementById('cobro-info').textContent = (p.cliente||'Cliente') + ' · ' + (p.folioStr||'');
     document.getElementById('cobro-total').textContent = p.total || '$0';
+    // Total numérico para validar el pago dividido
+    _cobroTotalNum = parseFloat(String(p.total || '0').replace(/[^0-9.]/g, '')) || 0;
+    // Siempre abrir en modo rápido y limpio
+    togglePagoDividido(false);
+    document.getElementById('split-rows').innerHTML = '';
     document.getElementById('cobro-overlay').style.display = 'flex';
 };
 
@@ -405,12 +436,93 @@ window.confirmarCobro = async function(metodo) {
         await updateDoc(doc(db, 'pedidos', _cobroId), {
             estadoPago: 'Pagado',
             metodoPagoReal: metodo,
+            // Al cobrar con un solo método, limpiar cualquier división previa
+            pagoDividido: false,
+            pagosDivididos: [],
             cobradoPor: miNombre || miId,
             cobradoEn: new Date().toISOString()
         });
         if (window.ttAlert) window.ttAlert('✅ Cobrado con ' + metodo);
         cerrarCobro();
     } catch(e) { alert('Error al cobrar.'); }
+};
+
+// ── PAGO DIVIDIDO: cobrar una orden con 2 o más formas de pago ─────────
+window.togglePagoDividido = function(on) {
+    var simple = document.getElementById('cobro-simple');
+    var dividido = document.getElementById('cobro-dividido');
+    if (simple)   simple.style.display   = on ? 'none' : 'block';
+    if (dividido) dividido.style.display = on ? 'block' : 'none';
+    if (on) {
+        var cont = document.getElementById('split-rows');
+        // Al entrar, si no hay filas, arrancar con 2 (el caso típico: efectivo + otra)
+        if (cont && cont.children.length === 0) { agregarSplitRow('Efectivo'); agregarSplitRow('Zelle'); }
+        _recalcSplit();
+    }
+};
+
+function _optsMetodos(sel) {
+    return METODOS_PAGO.map(function(m){ return '<option value="'+m+'"'+(m===sel?' selected':'')+'>'+m+'</option>'; }).join('');
+}
+
+window.agregarSplitRow = function(metodo, monto) {
+    var cont = document.getElementById('split-rows');
+    if (!cont) return;
+    var met = (typeof metodo === 'string') ? metodo : 'Efectivo';
+    var row = document.createElement('div');
+    row.className = 'split-row';
+    row.innerHTML =
+        '<select class="split-met" onchange="_recalcSplit()">' + _optsMetodos(met) + '</select>' +
+        '<input class="split-monto" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00" value="' + (monto!=null?monto:'') + '" oninput="_recalcSplit()">' +
+        '<button class="split-del" title="Quitar" onclick="this.parentNode.remove(); _recalcSplit();">✕</button>';
+    cont.appendChild(row);
+    _recalcSplit();
+};
+
+window._recalcSplit = function() {
+    var rows = document.querySelectorAll('#split-rows .split-row');
+    var suma = 0;
+    rows.forEach(function(r){ suma += parseFloat(r.querySelector('.split-monto').value) || 0; });
+    var falta = _cobroTotalNum - suma;
+    var okExacto = Math.abs(falta) < 0.005;
+    var res = document.getElementById('split-resumen');
+    var btn = document.getElementById('split-confirmar');
+    if (res) {
+        res.innerHTML = 'Suma: <b style="color:#fff;">$' + suma.toFixed(2) + '</b> / Total: $' + _cobroTotalNum.toFixed(2) + '<br>' +
+            (okExacto ? '<span style="color:#25D366;font-weight:800;">✅ Cuadra con el total</span>'
+              : (falta > 0 ? '<span style="color:#F59E0B;font-weight:800;">Falta $' + falta.toFixed(2) + '</span>'
+                           : '<span style="color:#F44336;font-weight:800;">Sobra $' + (-falta).toFixed(2) + '</span>'));
+    }
+    if (btn) { btn.disabled = !okExacto; btn.style.opacity = okExacto ? '1' : '.5'; btn.style.cursor = okExacto ? 'pointer' : 'not-allowed'; }
+};
+
+window.confirmarCobroDividido = async function() {
+    if (!_cobroId) return;
+    var rows = document.querySelectorAll('#split-rows .split-row');
+    var pagos = [], suma = 0;
+    rows.forEach(function(r){
+        var met = r.querySelector('.split-met').value;
+        var mon = parseFloat(r.querySelector('.split-monto').value) || 0;
+        if (mon > 0) { pagos.push({ metodo: met, monto: Math.round(mon*100)/100 }); suma += mon; }
+    });
+    if (pagos.length < 2) { alert('Agrega al menos 2 formas de pago con monto.'); return; }
+    if (Math.abs(suma - _cobroTotalNum) >= 0.005) { alert('La suma de los montos no cuadra con el total del pedido.'); return; }
+    // Resumir por método (por si repiten el mismo método en dos filas)
+    var porMet = {};
+    pagos.forEach(function(x){ porMet[x.metodo] = (porMet[x.metodo] || 0) + x.monto; });
+    var etiqueta = Object.keys(porMet).map(function(m){ return m + ' $' + porMet[m].toFixed(2); }).join(' + ');
+    try {
+        await updateDoc(doc(db, 'pedidos', _cobroId), {
+            estadoPago: 'Pagado',
+            metodoPagoReal: etiqueta,
+            pagoDividido: true,
+            pagosDivididos: pagos,
+            cobradoPor: miNombre || miId,
+            cobradoEn: new Date().toISOString()
+        });
+        if (window.ttAlert) window.ttAlert('✅ Cobro dividido registrado: ' + etiqueta);
+        cerrarCobro();
+    } catch(e) { alert('Error al registrar el cobro dividido.'); }
 };
 
 // Marcar ENTREGADO — REGLA: primero se cobra. No se puede entregar sin pagar.
