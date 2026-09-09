@@ -301,11 +301,20 @@ html { -webkit-text-size-adjust: 100%; }
                font-family:inherit;font-size:1rem;font-weight:800;cursor:pointer;">
         🎉 Marcar Entregado
     </button>
+
+    <!-- Enviar el ticket al cliente -->
+    <div style="display:flex;gap:.5rem;margin-top:.6rem;">
+      <button onclick="ttTicketWAActual()" style="flex:1;padding:.75rem;border-radius:12px;border:1px solid rgba(37,211,102,.4);background:rgba(37,211,102,.12);color:#25D366;font-family:inherit;font-size:.85rem;font-weight:800;cursor:pointer;">📱 Ticket WhatsApp</button>
+      <button onclick="ttTicketPDFActual()" style="flex:1;padding:.75rem;border-radius:12px;border:1px solid rgba(59,130,246,.4);background:rgba(59,130,246,.12);color:#3B82F6;font-family:inherit;font-size:.85rem;font-weight:800;cursor:pointer;">📄 Ticket PDF</button>
+    </div>
   </div>
 </div>
 
 <script src="../js/tt-alert.js"></script>
 <script src="../js/estados.js?v=1788145000"></script>
+<!-- Ticket digital (texto WhatsApp + PDF de marca) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="../js/ticket.js?v=1789010000"></script>
 <script type="module">
 import { db, authReady } from '../js/firebase-config.js';
 import { collection, onSnapshot, doc, updateDoc, setDoc, serverTimestamp, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
@@ -1402,6 +1411,16 @@ window.confirmarCobroDivididoRuta = async function() {
         }
         alert('Error al registrar el cobro dividido. Revisa tu conexión.');
     }
+};
+
+// Enviar el ticket (texto WhatsApp / PDF) de la orden abierta al cliente
+window.ttTicketWAActual = function() {
+    if (!_pedidoAbierto) { alert('Abre una orden primero.'); return; }
+    if (window.ttEnviarTicketWA) window.ttEnviarTicketWA(_pedidoAbierto);
+};
+window.ttTicketPDFActual = function() {
+    if (!_pedidoAbierto) { alert('Abre una orden primero.'); return; }
+    if (window.ttEnviarTicketPDF) window.ttEnviarTicketPDF(_pedidoAbierto);
 };
 
 // El REPARTIDOR marca la orden como Entregada (cierra su parte del flujo)
