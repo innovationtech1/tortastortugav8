@@ -38,18 +38,51 @@
 
   // Palabras de TAMAÑO/VARIANTE → la palabra clave que aparece en el label
   // (los labels del menú usan SINGLE / DOUBLE / TRIPLE en inglés).
+  // Se incluyen muchos sinónimos para que el dictado los reconozca fácil.
   var TAMANOS = {
+    // ── Sencilla (la más chica, $14) ──
     'single': 'single', 'sencilla': 'single', 'sencillo': 'single',
-    'simple': 'single', 'chica': 'single', 'chico': 'single', 'individual': 'single',
-    'double': 'double', 'doble': 'double', 'mediana': 'double', 'mediano': 'double',
-    'triple': 'triple', 'grande': 'triple'
+    'simple': 'single', 'chica': 'single', 'chico': 'single', 'chiquita': 'single',
+    'pequena': 'single', 'pequeno': 'single', 'individual': 'single',
+    'mini': 'single', 'basica': 'single', 'basico': 'single', 'normal': 'single',
+    'una carne': 'single', 'mid': 'single', 'singular': 'single',
+    // ── Doble (mediana, $16) ──
+    'double': 'double', 'doble': 'double', 'duble': 'double', 'dable': 'double',
+    'mediana': 'double', 'mediano': 'double', 'media': 'double',
+    'dos carnes': 'double', 'doblada': 'double', 'doblado': 'double',
+    // ── Triple (la más grande, $17) ──
+    'triple': 'triple', 'tripol': 'triple', 'tripel': 'triple',
+    'grande': 'triple', 'grandota': 'triple', 'completa': 'triple',
+    'tres carnes': 'triple', 'la mas grande': 'triple', 'maxima': 'triple',
+    'full': 'triple', 'especial': 'triple'
+  };
+
+  // Precio → tamaño (para pedir "la de 14", "una de 17"...)
+  var PRECIO_A_TAMANO = {
+    '14': 'single', 'catorce': 'single',
+    '16': 'double', 'dieciseis': 'double',
+    '17': 'triple', 'diecisiete': 'triple'
   };
 
   // Detectar si el texto menciona un tamaño; devuelve 'single'|'double'|'triple' o null
   function detectarTamano(texto) {
+    var t = ' ' + (texto || '') + ' ';
+    // 1) Frases de dos palabras primero (una carne, dos carnes, la mas grande...)
+    var frases = ['una carne', 'dos carnes', 'tres carnes', 'la mas grande'];
+    for (var f = 0; f < frases.length; f++) {
+      if (t.indexOf(' ' + frases[f] + ' ') >= 0 || t.indexOf(frases[f]) >= 0) return TAMANOS[frases[f]];
+    }
+    // 2) Palabra suelta de tamaño
     var palabras = (texto || '').split(' ');
     for (var i = 0; i < palabras.length; i++) {
       if (TAMANOS[palabras[i]]) return TAMANOS[palabras[i]];
+    }
+    // 3) Por precio: "de 14", "de 16", "de 17" (con o sin la palabra "de")
+    for (var j = 0; j < palabras.length; j++) {
+      if (PRECIO_A_TAMANO[palabras[j]]) {
+        // evitar confundir cantidades: solo si NO es la primera palabra (que suele ser cantidad)
+        if (j > 0) return PRECIO_A_TAMANO[palabras[j]];
+      }
     }
     return null;
   }
@@ -106,26 +139,76 @@
     });
   }
 
-  // Encontrar el mejor producto para un fragmento de texto dictado
+  // Palabras de relleno que NO ayudan a identificar el producto
+  // (tamaños, precios, conectores, artículos, "de", etc.)
+  var RELLENO = {
+    'de': 1, 'la': 1, 'el': 1, 'los': 1, 'las': 1, 'un': 1, 'una': 1, 'uno': 1,
+    'con': 1, 'sin': 1, 'por': 1, 'favor': 1, 'quiero': 1, 'dame': 1, 'ponme': 1,
+    'me': 1, 'da': 1, 'gusta': 1, 'torta': 1, 'tortuga': 1, 'combo': 1,
+    'or': 1, 'and': 1, 'the': 1, 'a': 1, 'of': 1
+  };
+  // Palabras que ya se interpretan como tamaño/precio → no sirven para producto
+  function esTamanoOPrecio(w) {
+    return !!(TAMANOS[w] || PRECIO_A_TAMANO[w]);
+  }
+
+  // Palabras clave "distintivas" de cada producto: las de su nombre que NO
+  // son relleno genérico (torta, tortuga, combo...). Ej: "original",
+  // "turkey", "ham", "shrimp", "pork", "vegan", "kids", "miche".
+  function palabrasClave(nombreNorm) {
+    return nombreNorm.split(' ').filter(function (w) {
+      return w.length > 2 && !RELLENO[w];
+    });
+  }
+
+  // Encontrar el mejor producto para un fragmento de texto dictado.
+  // Estrategia: lo importante es que CUALQUIER palabra distintiva del
+  // producto aparezca en lo que dijo el usuario (exacta o muy parecida).
+  // No se exige que estén todas (la gente dice "turkey", no el nombre entero).
   function emparejar(fragmento, productos) {
     var fn = normalizar(fragmento);
     if (!fn) return null;
+
+    // Tokens dichos por el usuario, quitando relleno, tamaños y precios
+    var tokensDichos = fn.split(' ').filter(function (w) {
+      return w.length > 1 && !RELLENO[w] && !esTamanoOPrecio(w);
+    });
+
     var mejor = null, mejorScore = 0;
+
     productos.forEach(function (p) {
+      var claves = palabrasClave(p.nombreNorm);
+      if (!claves.length) return;
+
       var score = 0;
-      // 1) Coincidencia por contención de palabras clave
-      var palabras = p.nombreNorm.split(' ').filter(function (w) { return w.length > 2; });
-      var hits = palabras.filter(function (w) { return fn.indexOf(w) >= 0; }).length;
-      if (palabras.length) score = hits / palabras.length;
-      // 2) Reforzar con similitud global
-      var sim = similitud(fn, p.nombreNorm);
-      score = Math.max(score, sim);
-      // 3) Si el nombre del producto está contenido literal, es casi seguro
-      if (fn.indexOf(p.nombreNorm) >= 0 && p.nombreNorm.length > 3) score = 1;
+
+      // 1) ¿Alguna palabra clave del producto aparece (exacta o aprox) en lo dicho?
+      //    Tomamos el MEJOR acierto de palabra clave, no el promedio: basta una
+      //    palabra distintiva bien reconocida para identificar el producto.
+      var mejorClave = 0;
+      claves.forEach(function (clave) {
+        // contención directa de la palabra clave en el texto dicho
+        if (fn.indexOf(clave) >= 0) { mejorClave = Math.max(mejorClave, 1); return; }
+        // o similitud fuerte con alguna palabra dicha (tolera errores de dictado)
+        tokensDichos.forEach(function (tk) {
+          var s = similitud(tk, clave);
+          if (s > mejorClave) mejorClave = s;
+        });
+      });
+      score = mejorClave;
+
+      // 2) Bonus: si varias palabras clave aciertan, más seguro todavía
+      var aciertos = claves.filter(function (clave) { return fn.indexOf(clave) >= 0; }).length;
+      if (claves.length > 1 && aciertos >= 2) score = Math.min(1, score + 0.15);
+
+      // 3) Si el nombre completo (sin número de lista) está contenido, es seguro
+      if (p.nombreNorm.length > 3 && fn.indexOf(p.nombreNorm.replace(/^\d+\s*/, '')) >= 0) score = 1;
+
       if (score > mejorScore) { mejorScore = score; mejor = p; }
     });
-    // Umbral mínimo para considerar que sí lo reconoció
-    return mejorScore >= 0.45 ? { producto: mejor, score: mejorScore } : null;
+
+    // Umbral: una palabra clave con ~0.7 de parecido ya cuenta (tolera dictado)
+    return mejorScore >= 0.7 ? { producto: mejor, score: mejorScore } : null;
   }
 
   // ── Interpretar la frase completa en una lista de items ─────────
@@ -144,16 +227,19 @@
     var trozos = limpio.split(',').map(function (t) { return t.trim(); }).filter(Boolean);
     var items = [];
 
+    // Palabras de cortesía que pueden ir antes de la cantidad ("dame dos...")
+    var CORTESIA = { 'quiero': 1, 'dame': 1, 'ponme': 1, 'me': 1, 'da': 1, 'agrega': 1, 'añade': 1, 'anade': 1, 'tambien': 1, 'porfa': 1, 'favor': 1 };
+
     trozos.forEach(function (trozo) {
-      // Detectar cantidad al inicio del trozo
-      var palabras = trozo.split(' ');
+      var palabras = trozo.split(' ').filter(Boolean);
+      // Saltar palabras de cortesía al inicio ("dame", "quiero"...)
+      var k = 0;
+      while (k < palabras.length && CORTESIA[palabras[k]]) k++;
+      // Detectar cantidad en la primera palabra útil
       var cantidad = 1;
-      var resto = trozo;
-      var num = palabraANumero(palabras[0]);
-      if (num != null) {
-        cantidad = num;
-        resto = palabras.slice(1).join(' ');
-      }
+      var num = palabraANumero(palabras[k]);
+      if (num != null) { cantidad = num; k++; }
+      var resto = palabras.slice(k).join(' ');
       // Detectar tamaño (sencilla/doble/triple) en este trozo
       var tamano = detectarTamano(trozo);
       var match = emparejar(resto, productos);
