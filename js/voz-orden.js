@@ -36,6 +36,42 @@
     return null;
   }
 
+  // Palabras de TAMAÑO/VARIANTE → la palabra clave que aparece en el label
+  // (los labels del menú usan SINGLE / DOUBLE / TRIPLE en inglés).
+  var TAMANOS = {
+    'single': 'single', 'sencilla': 'single', 'sencillo': 'single',
+    'simple': 'single', 'chica': 'single', 'chico': 'single', 'individual': 'single',
+    'double': 'double', 'doble': 'double', 'mediana': 'double', 'mediano': 'double',
+    'triple': 'triple', 'grande': 'triple'
+  };
+
+  // Detectar si el texto menciona un tamaño; devuelve 'single'|'double'|'triple' o null
+  function detectarTamano(texto) {
+    var palabras = (texto || '').split(' ');
+    for (var i = 0; i < palabras.length; i++) {
+      if (TAMANOS[palabras[i]]) return TAMANOS[palabras[i]];
+    }
+    return null;
+  }
+
+  // Elegir la variante de un producto según el tamaño pedido.
+  // Devuelve { label, precio, idx } o null si el producto no tiene variantes.
+  function elegirVariante(prodRef, tamano) {
+    var vars = (prodRef && prodRef.variantes) || [];
+    if (!vars.length) return null;
+    // Si pidió un tamaño, buscar la variante cuyo label lo contenga
+    if (tamano) {
+      for (var i = 0; i < vars.length; i++) {
+        var lblNorm = normalizar(vars[i].label || '');
+        if (lblNorm.indexOf(tamano) >= 0) {
+          return { label: vars[i].label || '', precio: parseFloat(vars[i].precio) || 0, idx: i };
+        }
+      }
+    }
+    // Si no pidió tamaño (o no se encontró): usar la primera variante por defecto
+    return { label: vars[0].label || '', precio: parseFloat(vars[0].precio) || 0, idx: 0 };
+  }
+
   // Distancia simple para tolerar errores de dictado (Levenshtein acotado)
   function similitud(a, b) {
     a = a || ''; b = b || '';
@@ -118,12 +154,17 @@
         cantidad = num;
         resto = palabras.slice(1).join(' ');
       }
+      // Detectar tamaño (sencilla/doble/triple) en este trozo
+      var tamano = detectarTamano(trozo);
       var match = emparejar(resto, productos);
       if (match) {
+        var variante = elegirVariante(match.producto.ref, tamano);
         items.push({
           producto: match.producto,
           cantidad: cantidad,
-          confianza: match.score
+          confianza: match.score,
+          tamano: tamano,
+          variante: variante // { label, precio, idx } o null
         });
       }
     });
@@ -145,15 +186,23 @@
 
     items.forEach(function (it) {
       var p = it.producto;
+      var v = it.variante; // { label, precio, idx } o null
+      var precio = v ? v.precio : p.precio;
+      var varLabel = v ? v.label : '';
+      var varIdx = v ? v.idx : 0;
+      // Lista completa de variantes (para poder cambiarla desde el carrito)
+      var variantesDisp = ((p.ref && p.ref.variantes) || []).map(function (vv) {
+        return { label: vv.label || '', precio: parseFloat(vv.precio) || 0 };
+      });
       for (var i = 0; i < it.cantidad; i++) {
         ca.items.push({
-          id: p.ref.id || ('voz_' + Date.now() + '_' + i),
+          id: (p.ref && (p.ref.productId || p.ref.id)) || ('voz_' + Date.now() + '_' + i),
           nombre: p.nombre,
-          precio: p.precio,
-          precioBase: p.precio,
-          variante: '',
-          varianteIdx: 0,
-          variantesDisp: [],
+          precio: precio,
+          precioBase: precio,
+          variante: varLabel,
+          varianteIdx: varIdx,
+          variantesDisp: variantesDisp,
           categoria: p.categoria,
           tipo: p.tipo,
           modificaciones: []
@@ -185,12 +234,24 @@
     } else {
       var total = 0;
       var filas = items.map(function (it, idx) {
-        var sub = it.producto.precio * it.cantidad;
+        var precioU = it.variante ? it.variante.precio : it.producto.precio;
+        var sub = precioU * it.cantidad;
         total += sub;
         var dudoso = it.confianza < 0.65;
+        // Etiqueta corta del tamaño elegido (Sencilla/Doble/Triple)
+        var tamTxt = '';
+        if (it.tamano === 'single') tamTxt = 'Sencilla';
+        else if (it.tamano === 'double') tamTxt = 'Doble';
+        else if (it.tamano === 'triple') tamTxt = 'Triple';
+        // Si el producto tiene variantes pero no se dijo tamaño, avisar que va por defecto
+        var tieneVars = it.producto.ref && it.producto.ref.variantes && it.producto.ref.variantes.length > 1;
+        var subtitulo = '';
+        if (tamTxt) subtitulo = '<div style="font-size:.72rem;color:#FF9D5C;font-weight:600;">🍴 ' + tamTxt + '</div>';
+        else if (tieneVars) subtitulo = '<div style="font-size:.68rem;color:#888;">tamaño por defecto · di "sencilla/doble/triple"</div>';
         return '<div style="display:flex;align-items:center;gap:.6rem;background:rgba(255,255,255,.04);border:1px solid ' + (dudoso ? 'rgba(251,183,36,.4)' : 'rgba(37,211,102,.3)') + ';border-radius:10px;padding:.6rem .7rem;margin-bottom:.5rem;">' +
           '<span style="font-size:1rem;font-weight:900;color:#FF7A33;min-width:2rem;">' + it.cantidad + '×</span>' +
           '<div style="flex:1;min-width:0;"><div style="font-size:.9rem;font-weight:700;color:#fff;line-height:1.2;">' + it.producto.nombre + '</div>' +
+          subtitulo +
           (dudoso ? '<div style="font-size:.68rem;color:#FBB724;">⚠️ ¿es correcto?</div>' : '') + '</div>' +
           '<span style="font-size:.85rem;font-weight:800;color:#25D366;">$' + sub.toFixed(2) + '</span>' +
           '<button onclick="window._vozQuitar(' + idx + ')" style="background:rgba(255,68,68,.15);border:1px solid rgba(255,68,68,.4);color:#FF6B6B;width:28px;height:28px;border-radius:7px;cursor:pointer;font-family:inherit;">✕</button>' +
@@ -239,7 +300,7 @@
         '<div style="font-size:3.5rem;margin-bottom:.6rem;animation:vozPulse 1s ease-in-out infinite;">🎤</div>' +
         '<div style="font-size:1.05rem;font-weight:800;color:#fff;margin-bottom:.4rem;">Escuchando…</div>' +
         '<div id="voz-parcial" style="font-size:.85rem;color:#FF7A33;min-height:1.2rem;margin-bottom:1rem;">Di tu orden en voz alta</div>' +
-        '<div style="font-size:.72rem;color:#888;line-height:1.5;margin-bottom:1.2rem;">Ejemplo: "dos original torta tortuga y una agua de horchata"</div>' +
+        '<div style="font-size:.72rem;color:#888;line-height:1.5;margin-bottom:1.2rem;">Ejemplo: "dos original torta <b>triple</b> y una <b>doble</b> turkey"<br>Di <b>sencilla</b>, <b>doble</b> o <b>triple</b> para el tamaño.</div>' +
         '<button onclick="window._vozCancelarEscucha()" style="width:100%;padding:.75rem;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#ccc;border-radius:12px;font-family:inherit;font-weight:700;font-size:.85rem;cursor:pointer;">Cancelar</button>' +
       '</div>';
     document.body.appendChild(ov);
